@@ -35,6 +35,9 @@ public class SidebarService implements ISidebarService {
     public static boolean init(JavaPlugin plugin) {
         if (null == instance) {
             instance = new SidebarService();
+            if (instance.sidebarHandler == null) {
+                return false;
+            }
 
             var log = Bukkit.getLogger();
 
@@ -118,6 +121,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay) {
+        if (sidebarHandler == null) return;
         BwSidebar sidebar = sidebars.getOrDefault(player.getUniqueId(), null);
 
         // check if we might need to remove the existing sidebar
@@ -255,14 +259,17 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshTitles() {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> v.getHandle().refreshTitle());
     }
 
     public void refreshPlaceholders() {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> v.getHandle().refreshPlaceholders());
     }
 
     public void refreshPlaceholders(IArena arena) {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (v.getArena() != null)
                 if (v.getArena().equals(arena)) {
@@ -272,10 +279,12 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshTabList() {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> v.getHandle().playerTabRefreshAnimation());
     }
 
     public void refreshTabHeaderFooter() {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v && null != v.getHeaderFooter()) {
                 this.sidebarHandler.sendHeaderFooter(v.getPlayer(), v.getHeaderFooter());
@@ -284,6 +293,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshHealth() {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena()) {
                 v.getHandle().playerHealthRefreshAnimation();
@@ -300,6 +310,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshHealth(IArena arena, Player player, int health) {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
                 v.getHandle().setPlayerHealth(player, health);
@@ -308,6 +319,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleReJoin(IArena arena, Player player) {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
                 v.giveUpdateTabFormat(player, false);
@@ -316,6 +328,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleJoin(IArena arena, Player player, @Nullable Boolean spectator) {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
                 if (!v.getPlayer().equals(player)) {
@@ -326,6 +339,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void applyLobbyTab(Player player) {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (null == v.getArena()) {
                 if (!v.getPlayer().equals(player)) {
@@ -336,6 +350,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleInvisibility(ITeam team, Player player, boolean toggle) {
+        if (sidebarHandler == null) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(team.getArena())) {
                 v.handleInvisibilityPotion(player, toggle);

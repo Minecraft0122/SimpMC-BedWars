@@ -148,12 +148,7 @@ public class BedWars extends JavaPlugin {
             return;
         }
 
-        try {
-            Class.forName("com.destroystokyo.paper.PaperConfig");
-            isPaper = true;
-        } catch (ClassNotFoundException e) {
-            isPaper = false;
-        }
+        isPaper = detectPaper();
 
         plugin = this;
 
@@ -164,6 +159,10 @@ public class BedWars extends JavaPlugin {
         try {
             supp = Class.forName("com.andrei1058.bedwars.support.version." + version + "." + version);
         } catch (ClassNotFoundException e) {
+            supp = getPaperFallbackSupport();
+        }
+
+        if (supp == null) {
             serverSoftwareSupport = false;
             this.getLogger().severe("I can't run on your version: " + version);
             return;
@@ -506,9 +505,7 @@ public class BedWars extends JavaPlugin {
         if (SidebarService.init(this)) {
             out.info("Initializing SidebarLib by andrei1058");
         } else {
-            this.getLogger().severe("SidebarLib by andrei1058 does not support your server version");
-            Bukkit.getPluginManager().disablePlugin(this);
-            return;
+            this.getLogger().warning("SidebarLib by andrei1058 does not support your server version; continuing without built-in sidebars.");
         }
 
         // Halloween Special
@@ -664,6 +661,56 @@ public class BedWars extends JavaPlugin {
                 return v12;
         }
         return v13;
+    }
+
+    private static boolean detectPaper() {
+        for (String className : Arrays.asList(
+                "com.destroystokyo.paper.PaperConfig",
+                "io.papermc.paper.configuration.Configuration",
+                "io.papermc.paper.plugin.configuration.PluginMeta"
+        )) {
+            try {
+                Class.forName(className);
+                return true;
+            } catch (ClassNotFoundException ignored) {
+            }
+        }
+        return Bukkit.getName().toLowerCase(Locale.ROOT).contains("paper")
+                || Bukkit.getVersion().toLowerCase(Locale.ROOT).contains("paper");
+    }
+
+    private Class<?> getPaperFallbackSupport() {
+        if (!isPaper || !isAtLeastMinecraftVersion(1, 21, 4)) {
+            return null;
+        }
+
+        try {
+            getLogger().info("Using Paper API fallback support for " + Bukkit.getBukkitVersion() + " (" + version + ").");
+            return Class.forName("com.andrei1058.bedwars.support.version.v1_21_R3.v1_21_R3");
+        } catch (ClassNotFoundException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isAtLeastMinecraftVersion(int major, int minor, int patch) {
+        String minecraftVersion = Bukkit.getBukkitVersion().split("-")[0];
+        String[] parts = minecraftVersion.split("\\.");
+        int currentMajor = parseVersionPart(parts, 0);
+        int currentMinor = parseVersionPart(parts, 1);
+        int currentPatch = parseVersionPart(parts, 2);
+
+        if (currentMajor != major) return currentMajor > major;
+        if (currentMinor != minor) return currentMinor > minor;
+        return currentPatch >= patch;
+    }
+
+    private static int parseVersionPart(String[] parts, int index) {
+        if (index >= parts.length) return 0;
+        try {
+            return Integer.parseInt(parts[index]);
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
     }
 
     public static ServerType getServerType() {
