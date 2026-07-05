@@ -123,7 +123,17 @@ public class v1_21_R3 extends VersionSupport {
 
     @Override
     public boolean isTool(ItemStack itemStack) {
-        return itemStack != null && Tag.ITEMS_TOOLS.isTagged(itemStack.getType());
+        if (itemStack == null) return false;
+        String type = itemStack.getType().name();
+        return isSword(itemStack)
+                || isAxe(itemStack)
+                || type.endsWith("_PICKAXE")
+                || type.endsWith("_SHOVEL")
+                || type.endsWith("_HOE")
+                || type.equals("SHEARS")
+                || type.equals("FLINT_AND_STEEL")
+                || type.equals("FISHING_ROD")
+                || type.equals("BRUSH");
     }
 
     @Override
@@ -204,8 +214,9 @@ public class v1_21_R3 extends VersionSupport {
     public double getDamage(ItemStack itemStack) {
         if (itemStack == null) return 0D;
         ItemMeta meta = itemStack.getItemMeta();
+        Attribute attackDamage = attribute("attack_damage", "generic.attack_damage", "ATTACK_DAMAGE", "GENERIC_ATTACK_DAMAGE");
         if (meta != null) {
-            Collection<AttributeModifier> modifiers = meta.getAttributeModifiers(Attribute.ATTACK_DAMAGE);
+            Collection<AttributeModifier> modifiers = attackDamage == null ? null : meta.getAttributeModifiers(attackDamage);
             if (modifiers != null && !modifiers.isEmpty()) {
                 double damage = 1D;
                 for (AttributeModifier modifier : modifiers) {
@@ -671,9 +682,9 @@ public class v1_21_R3 extends VersionSupport {
         entity.setCanPickupItems(false);
         entity.setAI(true);
 
-        setAttribute(entity, Attribute.MAX_HEALTH, health);
-        setAttribute(entity, Attribute.MOVEMENT_SPEED, speed);
-        setAttribute(entity, Attribute.ATTACK_DAMAGE, damage);
+        setAttribute(entity, attribute("max_health", "generic.max_health", "MAX_HEALTH", "GENERIC_MAX_HEALTH"), health);
+        setAttribute(entity, attribute("movement_speed", "generic.movement_speed", "MOVEMENT_SPEED", "GENERIC_MOVEMENT_SPEED"), speed);
+        setAttribute(entity, attribute("attack_damage", "generic.attack_damage", "ATTACK_DAMAGE", "GENERIC_ATTACK_DAMAGE"), damage);
         entity.setHealth(Math.min(health, entity.getMaxHealth()));
 
         if (entity instanceof Mob mob) {
@@ -683,10 +694,26 @@ public class v1_21_R3 extends VersionSupport {
     }
 
     private void setAttribute(LivingEntity entity, Attribute attribute, double value) {
+        if (attribute == null) return;
         AttributeInstance attributeInstance = entity.getAttribute(attribute);
         if (attributeInstance != null) {
             attributeInstance.setBaseValue(value);
         }
+    }
+
+    private Attribute attribute(String... candidates) {
+        for (String candidate : candidates) {
+            NamespacedKey key = NamespacedKey.minecraft(candidate.toLowerCase(Locale.ROOT));
+            Attribute attribute = Registry.ATTRIBUTE.get(key);
+            if (attribute != null) {
+                return attribute;
+            }
+            try {
+                return Attribute.valueOf(candidate.toUpperCase(Locale.ROOT).replace('.', '_'));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        return null;
     }
 
     private void refreshDespawnableTargets() {

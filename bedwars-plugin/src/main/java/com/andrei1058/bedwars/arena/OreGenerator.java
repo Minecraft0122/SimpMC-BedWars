@@ -154,7 +154,7 @@ public class OreGenerator implements IGenerator {
                 int oreCount = 0;
 
                 for (Entity e : location.getWorld().getNearbyEntities(location, 3, 3, 3)) {
-                    if (e.getType() == EntityType.DROPPED_ITEM) {
+                    if (e.getType() == EntityType.ITEM) {
                         Item i = (Item) e;
                         if (i.getItemStack().getType() == ore.getType()) {
                             oreCount++;

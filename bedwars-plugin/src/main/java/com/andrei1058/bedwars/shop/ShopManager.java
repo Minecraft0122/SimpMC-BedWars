@@ -417,7 +417,7 @@ public class ShopManager extends ConfigManager {
      */
     public static ItemMeta hideItemStuff(ItemMeta im) {
         if (im != null) {
-            im.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_POTION_EFFECTS, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON);
+            im.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON);
         }
         return im;
     }
@@ -429,7 +429,7 @@ public class ShopManager extends ConfigManager {
         ItemStack i = new ItemStack(itemStack);
         ItemMeta im = i.getItemMeta();
         if (im != null) {
-            im.addEnchant(Enchantment.ARROW_DAMAGE, 1, true);
+            im.addEnchant(Enchantment.POWER, 1, true);
             i.setItemMeta(hideItemStuff(im));
         }
         return i;

@@ -424,7 +424,7 @@ public class UpgradesManager {
         }
         ItemStack i = new ItemStack(m, Integer.parseInt(upgrades.getYml().getString(path + ".display-item.amount")), (short) upgrades.getYml().getInt(path + ".display-item.data"));
         if (upgrades.getYml().getBoolean(path + ".display-item.enchanted")) {
-            i.addUnsafeEnchantment(Enchantment.DURABILITY, 1);
+            i.addUnsafeEnchantment(Enchantment.UNBREAKING, 1);
             ItemMeta im = i.getItemMeta();
             if (im != null) {
                 im.addItemFlags(ItemFlag.HIDE_ENCHANTS);

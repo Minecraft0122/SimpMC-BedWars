@@ -193,7 +193,7 @@ public class Misc {
         im.setDisplayName(name);
         im.setLore(lore);
         if (enchanted) {
-            im.addEnchant(Enchantment.LUCK, 1, true);
+            im.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
             im.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
         i.setItemMeta(im);
@@ -224,7 +224,7 @@ public class Misc {
         im.setDisplayName(name);
         im.setLore(lore);
         if (enchanted) {
-            im.addEnchant(Enchantment.LUCK, 1, true);
+            im.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
             im.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
         i.setItemMeta(im);

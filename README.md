@@ -12,19 +12,13 @@ BedWars is a mini-game where you have to defend your bed and destroy the others.
 Once your bed is destroyed, you cannot respawn.
 
 # System requirements
-This software runs on [Spigot](https://www.spigotmc.org/) and NMS.
-Spigot forks without compiled NMS code are not supported.
-Officially supported servers are [spigot](https://www.spigotmc.org/) and [paper](https://papermc.io/).
-It is required to use **Java 11** or newer.
+This fork targets [Paper](https://papermc.io/) **1.21.1 or newer** using the Paper API.
+Spigot, legacy NMS builds, Minecraft versions below 1.21.1, and Folia are not supported.
+It is required to use **Java 21** or newer.
 
 The internal world restore system is based on zipping and unzipping maps which can become
-heavy if you are still making use of HDDs and you do not have a decent CPU, for a better
-and faster restore system we recommend using one of the following solutions:
-- [SlimeWorldManager](https://www.spigotmc.org/resources/slimeworldmanager.69974/) plug-in (v2.2.1 **only**)
-- [AdvancedWorldManager](https://www.spigotmc.org/resources/advanced-slimeworldmanager.87209/) plug-in (v2.8.0 **only**)
-- [AdvancedSlimePaper](https://github.com/InfernalSuite/AdvancedSlimePaper) server jar (**1.20 or newer**)
-
-BedWars1058 will hook into it and do everything for you, no additional configuration is needed.
+heavy if you are still making use of HDDs and you do not have a decent CPU. Use an SSD and a
+reasonably fast processor for arena-heavy servers.
 
 # Pre-made setups and community add-ons
 
@@ -33,7 +27,7 @@ You can find a list of pre-made server setups and a lot of community add-ons [on
 # Main features
 
 ###### Flexible | Ways you can run the plugin:
-- **SHARED**: can run among other mini-games on the same spigot instance. Games will only be accessible via commands.
+- **SHARED**: can run among other mini-games on the same Paper instance. Games will only be accessible via commands.
 - **MULTIARENA**: will require an entire server instance for hosting the mini-game. It will protect the lobby world and games can be joined via commands, NPCs, signs and GUIs.
 - **BUNGEE-LEGACY**: the old classic bungee mode where a game means an entire server instance. You'll be added to the game when joining the server. Arena status will be displayed as MOTD.
 - **BUNGEE**: a brand new scalable bungee mode. It can host multiple arenas on the same server instance, clone and start new arenas when needed so other players can join. The server can be automatically restarted after a certain amount of games played. This will require installing [BedWarsProxy](https://www.spigotmc.org/resources/bedwarsproxy.66642/) on your lobby servers so players can join. And of course, you can run as many servers as you want in bungee mode.
@@ -108,7 +102,6 @@ Inactive players for more than 45 seconds can't pick-up items from generators.
 
 ###### Map Restore System:
 - the default restore adapter from BedWars1058 is based on un-loading the map, un-zipping a backup and loading it again. This may be heavy for servers with cheap hardware. We recommend using gaming processors and a SSD.
-- to improve performance we added support for SlimeWorldManager, which loads maps way faster with less performance impact thanks to its slime format. We really encourage you installing this plugin. No manual conversion is required. BedWars1058 will handle everything. Read how to install it here.
 - you can also implement your own map adapter trough the API.
 - it may seem heavy than other plugins because we don't simply keep track of modified blocks. We need to restore the entire map because server owners can allow players to destroy the maps like on a SkyWars game. Regions like generators, NPCs and team spawns will be protected.
 

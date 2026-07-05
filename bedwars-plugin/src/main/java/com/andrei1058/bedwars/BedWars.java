@@ -26,7 +26,6 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.levels.Level;
 import com.andrei1058.bedwars.api.party.Party;
-import com.andrei1058.bedwars.api.server.RestoreAdapter;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.server.VersionSupport;
 import com.andrei1058.bedwars.arena.Arena;
@@ -79,6 +78,7 @@ import com.andrei1058.bedwars.support.preloadedparty.PrePartyListener;
 import com.andrei1058.bedwars.support.vault.*;
 import com.andrei1058.bedwars.support.vipfeatures.VipFeatures;
 import com.andrei1058.bedwars.support.vipfeatures.VipListeners;
+import com.andrei1058.bedwars.support.version.v1_21_R3.v1_21_R3;
 import com.andrei1058.vipfeatures.api.IVipFeatures;
 import com.andrei1058.vipfeatures.api.MiniGameAlreadyRegistered;
 import org.bukkit.Bukkit;
@@ -92,15 +92,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.generator.ChunkGenerator;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "CallToPrintStackTrace"})
@@ -122,7 +118,7 @@ public class BedWars extends JavaPlugin {
     private static Chat chat = new NoChat();
     protected static Level level;
     private static Economy economy;
-    private static final String version = Bukkit.getServer().getClass().getName().split("\\.")[3];
+    private static final String version = Bukkit.getBukkitVersion().split("-")[0];
     private static String lobbyWorld = "";
     private static boolean shuttingDown = false;
 
@@ -138,51 +134,35 @@ public class BedWars extends JavaPlugin {
     @Override
     public void onLoad() {
 
-        //Spigot support
-        try {
-            Class.forName("org.spigotmc.SpigotConfig");
-        } catch (Exception ignored) {
-            this.getLogger().severe("I can't run on your server software. Please check:");
-            this.getLogger().severe("https://gitlab.com/andrei1058/BedWars1058/wikis/compatibility");
+        isPaper = detectPaper();
+        if (!isPaper) {
+            this.getLogger().severe("BedWars1058 now supports Paper 1.21.1+ only.");
+            this.getLogger().severe("Please run this plugin on Paper or a compatible Paper fork.");
             serverSoftwareSupport = false;
             return;
         }
 
-        isPaper = detectPaper();
+        if (detectFolia()) {
+            this.getLogger().severe("Folia is not supported by this BedWars1058 build.");
+            serverSoftwareSupport = false;
+            return;
+        }
+
+        if (!isAtLeastMinecraftVersion(1, 21, 1)) {
+            serverSoftwareSupport = false;
+            this.getLogger().severe("I can't run on your Minecraft version: " + version);
+            this.getLogger().severe("This build requires Paper 1.21.1 or newer.");
+            return;
+        }
 
         plugin = this;
-
-        /* Load version support */
-        //noinspection rawtypes
-        Class supp;
-
-        try {
-            supp = Class.forName("com.andrei1058.bedwars.support.version." + version + "." + version);
-        } catch (ClassNotFoundException e) {
-            supp = getPaperFallbackSupport();
-        }
-
-        if (supp == null) {
-            serverSoftwareSupport = false;
-            this.getLogger().severe("I can't run on your version: " + version);
-            return;
-        }
 
         api = new API();
         Bukkit.getServicesManager().register(com.andrei1058.bedwars.api.BedWars.class, api, this, ServicePriority.Highest);
 
-        try {
-            //noinspection unchecked
-            nms = (VersionSupport) supp.getConstructor(Class.forName("org.bukkit.plugin.Plugin"), String.class).newInstance(this, version);
-        } catch (InstantiationException | NoSuchMethodException | InvocationTargetException | IllegalAccessException |
-                 ClassNotFoundException e) {
-            e.printStackTrace();
-            serverSoftwareSupport = false;
-            this.getLogger().severe("Could not load support for server version: " + version);
-            return;
-        }
+        nms = new v1_21_R3(this, version);
 
-        this.getLogger().info("Loading support for paper/spigot: " + version);
+        this.getLogger().info("Loading Paper API support for Minecraft " + version + ".");
 
         // Setup languages
         new English();
@@ -217,10 +197,8 @@ public class BedWars extends JavaPlugin {
 
         nms.registerVersionListeners();
 
-        if (!this.handleWorldAdapter()) {
-            api.setRestoreAdapter(new InternalAdapter(this));
-            getLogger().info("Using internal world restore system.");
-        }
+        api.setRestoreAdapter(new InternalAdapter(this));
+        getLogger().info("Using internal world restore system.");
 
         /* Register commands */
         nms.registerCommand(mainCmd, new MainCommand(mainCmd));
@@ -514,57 +492,6 @@ public class BedWars extends JavaPlugin {
         // TNT Spoil Feature
         SpoilPlayerTNTFeature.init();
 
-        // Warn user if current server version support is deprecated
-        this.performDeprecationCheck();
-    }
-
-    /**
-     * Try loading custom adapter support.
-     *
-     * @return true when custom adapter was registered.
-     */
-    private boolean handleWorldAdapter() {
-        Plugin swmPlugin = Bukkit.getPluginManager().getPlugin("SlimeWorldManager");
-
-        if (null == swmPlugin) {
-            return false;
-        }
-        PluginDescriptionFile pluginDescription = swmPlugin.getDescription();
-        if (null == pluginDescription) {
-            return false;
-        }
-
-        String[] versionString = pluginDescription.getVersion().split("\\.");
-
-
-        try {
-            int major = Integer.parseInt(versionString[0]);
-            int minor = Integer.parseInt(versionString[1]);
-            int release = versionString.length > 2 ? Integer.parseInt(versionString[2]) : 0;
-
-            String adapterPath;
-            if (major == 2 && minor == 2 && release == 1) {
-                adapterPath = "com.andrei1058.bedwars.arena.mapreset.slime.SlimeAdapter";
-            } else if (major == 2 && minor == 8 && release == 0) {
-                adapterPath = "com.andrei1058.bedwars.arena.mapreset.slime.AdvancedSlimeAdapter";
-            } else if (major > 2 || major == 2 && minor >= 10) {
-                adapterPath = "com.andrei1058.bedwars.arena.mapreset.slime.SlimePaperAdapter";
-            } else {
-                return false;
-            }
-
-            Constructor<?> constructor = Class.forName(adapterPath).getConstructor(Plugin.class);
-            getLogger().info("Loading restore adapter: " + adapterPath + " ...");
-
-            RestoreAdapter candidate = (RestoreAdapter) constructor.newInstance(this);
-            api.setRestoreAdapter(candidate);
-            getLogger().info("Hook into " + candidate.getDisplayName() + " as restore adapter.");
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            this.getLogger().info("Something went wrong! Using internal reset adapter...");
-        }
-        return false;
     }
 
     private void registerDelayedCommands() {
@@ -654,12 +581,6 @@ public class BedWars extends JavaPlugin {
     }
 
     public static String getForCurrentVersion(String v18, String v12, String v13) {
-        switch (getServerVersion()) {
-            case "v1_8_R3":
-                return v18;
-            case "v1_12_R1":
-                return v12;
-        }
         return v13;
     }
 
@@ -679,16 +600,12 @@ public class BedWars extends JavaPlugin {
                 || Bukkit.getVersion().toLowerCase(Locale.ROOT).contains("paper");
     }
 
-    private Class<?> getPaperFallbackSupport() {
-        if (!isPaper || !isAtLeastMinecraftVersion(1, 21, 4)) {
-            return null;
-        }
-
+    private static boolean detectFolia() {
         try {
-            getLogger().info("Using Paper API fallback support for " + Bukkit.getBukkitVersion() + " (" + version + ").");
-            return Class.forName("com.andrei1058.bedwars.support.version.v1_21_R3.v1_21_R3");
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
         } catch (ClassNotFoundException ignored) {
-            return null;
+            return Bukkit.getName().toLowerCase(Locale.ROOT).contains("folia");
         }
     }
 
@@ -768,7 +685,7 @@ public class BedWars extends JavaPlugin {
 
     /**
      * Get the server version
-     * Ex: v1_8_R3
+     * Ex: 1.21.1
      *
      * @since v0.6.5beta
      */
@@ -801,15 +718,6 @@ public class BedWars extends JavaPlugin {
 
     public static void setParty(Party party) {
         BedWars.party = party;
-    }
-
-    public void performDeprecationCheck() {
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            if (Arrays.stream(nms.getClass().getAnnotations()).anyMatch(annotation -> annotation instanceof Deprecated)) {
-                this.getLogger().warning("Support for "+getServerVersion()+" is scheduled for removal. " +
-                        "Please consider upgrading your server software to a newer Minecraft version.");
-            }
-        });
     }
 
     @Override
