@@ -70,8 +70,16 @@ public class v1_21_R3 extends VersionSupport {
     private boolean blastResistanceWarningSent = false;
 
     public v1_21_R3(Plugin plugin, String name) {
-        super(plugin, name);
+        super(plugin, minecraftVersionName(name));
         loadDefaultEffects();
+    }
+
+    private static String minecraftVersionName(String fallback) {
+        String bukkitVersion = Bukkit.getBukkitVersion();
+        if (bukkitVersion != null && !bukkitVersion.isBlank()) {
+            return bukkitVersion.split("-")[0];
+        }
+        return fallback == null || fallback.isBlank() ? "1.21+" : fallback;
     }
 
     @Override
@@ -798,7 +806,16 @@ public class v1_21_R3 extends VersionSupport {
 
     private Material materialOf(String material) {
         if (material == null || material.isBlank()) return null;
-        String normalized = material.toUpperCase(Locale.ROOT);
+        String normalized = material.trim().toUpperCase(Locale.ROOT)
+                .replace('-', '_')
+                .replace(' ', '_');
+        if (normalized.startsWith("MINECRAFT:")) {
+            normalized = normalized.substring("MINECRAFT:".length());
+        }
+        int legacyDataSeparator = normalized.indexOf(':');
+        if (legacyDataSeparator > 0 && normalized.substring(legacyDataSeparator + 1).chars().allMatch(Character::isDigit)) {
+            normalized = normalized.substring(0, legacyDataSeparator);
+        }
         normalized = switch (normalized) {
             case "SNOW_BALL" -> "SNOWBALL";
             case "FIREBALL" -> "FIRE_CHARGE";
@@ -813,7 +830,7 @@ public class v1_21_R3 extends VersionSupport {
             case "MONSTER_EGG" -> "HORSE_SPAWN_EGG";
             default -> normalized;
         };
-        return Material.matchMaterial(normalized, true);
+        return Material.getMaterial(normalized);
     }
 
     private double defaultWeaponDamage(Material material) {
