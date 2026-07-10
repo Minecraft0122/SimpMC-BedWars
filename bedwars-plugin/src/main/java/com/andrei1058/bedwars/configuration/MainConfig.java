@@ -33,7 +33,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
 import static com.andrei1058.bedwars.BedWars.getForCurrentVersion;
@@ -378,14 +377,6 @@ public class MainConfig extends ConfigManager {
 
         BedWars.setDebug(yml.getBoolean("debug"));
         new ConfigManager(plugin, "bukkit", Bukkit.getWorldContainer().getPath()).set("ticks-per.autosave", -1);
-
-        Bukkit.spigot().getConfig().set("commands.send-namespaced", false);
-        try {
-            Bukkit.spigot().getConfig().save("spigot.yml");
-        } catch (IOException e) {
-            //noinspection CallToPrintStackTrace
-            e.printStackTrace();
-        }
 
         try {
             BedWars.setServerType(ServerType.valueOf(Objects.requireNonNull(yml.getString("serverType")).toUpperCase()));

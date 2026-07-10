@@ -12,8 +12,8 @@ BedWars is a mini-game where you have to defend your bed and destroy the others.
 Once your bed is destroyed, you cannot respawn.
 
 # System requirements
-This fork targets [Paper](https://papermc.io/) **1.21.1 or newer** using the Paper API.
-Spigot, legacy NMS builds, Minecraft versions below 1.21.1, and Folia are not supported.
+This fork targets [Paper](https://papermc.io/) **1.21.11 or newer** using the Paper API.
+Spigot, legacy NMS builds, Minecraft versions below 1.21.11, and Folia are not supported.
 It is required to use **Java 21** or newer.
 
 The internal world restore system is based on zipping and unzipping maps which can become
@@ -125,7 +125,7 @@ If you are not a programmer you can help answering people in the [Issues](https:
 
 # 3rd party libraries
 - [bStats](https://bstats.org/getting-started/include-metrics)
-- [SidebarLib](https://github.com/andrei1058/SiderbarLib)
+- Native Paper/Bukkit scoreboard support
 - [Commons IO](https://mvnrepository.com/artifact/commons-io/commons-io)
 - [HikariCP](https://mvnrepository.com/artifact/com.zaxxer/HikariCP)
 - [SLF4J](http://www.slf4j.org/)

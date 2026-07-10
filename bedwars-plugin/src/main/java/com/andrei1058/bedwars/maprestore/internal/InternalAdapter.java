@@ -52,6 +52,12 @@ public class InternalAdapter extends RestoreAdapter {
         super(plugin);
     }
 
+    private static void keepSpawnLoaded(World world) {
+        if (world == null) return;
+        Location spawn = world.getSpawnLocation();
+        world.setChunkForceLoaded(spawn.getBlockX() >> 4, spawn.getBlockZ() >> 4, true);
+    }
+
     @Override
     public void onEnable(IArena a) {
         Bukkit.getScheduler().runTask(getOwner(), () -> {
@@ -88,7 +94,7 @@ public class InternalAdapter extends RestoreAdapter {
                     if (w == null){
                         throw new IllegalStateException("World should be null");
                     }
-                    w.setKeepSpawnInMemory(true);
+                    keepSpawnLoaded(w);
                     w.setAutoSave(false);
                 });
             });
@@ -154,12 +160,12 @@ public class InternalAdapter extends RestoreAdapter {
                         s.getPlayer().sendMessage(ChatColor.GREEN + "Loading " + s.getWorldName() + " from Bukkit worlds container.");
                         deleteWorldTrash(s.getWorldName());
                         World w = Bukkit.createWorld(wc);
-                        w.setKeepSpawnInMemory(true);
+                        keepSpawnLoaded(w);
                     } else {
                         try {
                             s.getPlayer().sendMessage(ChatColor.GREEN + "Creating a new void map: " + s.getWorldName());
                             World w = Bukkit.createWorld(wc);
-                            w.setKeepSpawnInMemory(true);
+                            keepSpawnLoaded(w);
                             Bukkit.getScheduler().runTaskLater(plugin, s::teleportPlayer, 20L);
                         } catch (Exception ex){
                             ex.printStackTrace();

@@ -1,18 +1,63 @@
 package com.andrei1058.spigot.sidebar;
 
+import io.papermc.paper.scoreboard.numbers.NumberFormat;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Criteria;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
+import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Sidebar {
 
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
+    private static final String SIDEBAR_OBJECTIVE = "bw_sidebar";
+    private static final String HEALTH_BELOW_OBJECTIVE = "bw_health";
+    private static final String HEALTH_TAB_OBJECTIVE = "bw_health_tab";
+    private static final String LINE_TEAM_PREFIX = "bw_l_";
+    private static final String TAB_TEAM_PREFIX = "bw_t_";
+    private static final String[] LINE_ENTRIES = {
+            ChatColor.BLACK.toString(),
+            ChatColor.DARK_BLUE.toString(),
+            ChatColor.DARK_GREEN.toString(),
+            ChatColor.DARK_AQUA.toString(),
+            ChatColor.DARK_RED.toString(),
+            ChatColor.DARK_PURPLE.toString(),
+            ChatColor.GOLD.toString(),
+            ChatColor.GRAY.toString(),
+            ChatColor.DARK_GRAY.toString(),
+            ChatColor.BLUE.toString(),
+            ChatColor.GREEN.toString(),
+            ChatColor.AQUA.toString(),
+            ChatColor.RED.toString(),
+            ChatColor.LIGHT_PURPLE.toString(),
+            ChatColor.YELLOW.toString()
+    };
+
     private SidebarLine title;
     private final List<SidebarLine> lines = new ArrayList<>();
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
+    private final Map<UUID, Scoreboard> scoreboards = new HashMap<>();
+    private final Map<UUID, Scoreboard> previousScoreboards = new HashMap<>();
+    private final Map<String, PlayerTab> tabs = new HashMap<>();
+    private SidebarLine healthLine = new SidebarLine();
+    private boolean healthEnabled = false;
+    private boolean healthInTab = false;
 
     public Sidebar(@NotNull SidebarLine title, @NotNull Collection<SidebarLine> lines,
                    @NotNull Collection<PlaceholderProvider> placeholders) {
@@ -22,13 +67,34 @@ public class Sidebar {
     }
 
     public void add(@NotNull Player player) {
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager == null) {
+            return;
+        }
+        Scoreboard scoreboard = manager.getNewScoreboard();
+        scoreboards.put(player.getUniqueId(), scoreboard);
+        previousScoreboards.put(player.getUniqueId(), player.getScoreboard());
+        player.setScoreboard(scoreboard);
+        render(scoreboard);
+        tabs.values().forEach(tab -> applyTab(scoreboard, tab));
+        renderHealth(scoreboard);
     }
 
     public void remove(@NotNull Player player) {
+        Scoreboard scoreboard = scoreboards.remove(player.getUniqueId());
+        Scoreboard previous = previousScoreboards.remove(player.getUniqueId());
+        if (scoreboard == null) {
+            return;
+        }
+        if (player.getScoreboard().equals(scoreboard)) {
+            ScoreboardManager manager = Bukkit.getScoreboardManager();
+            player.setScoreboard(previous == null && manager != null ? manager.getMainScoreboard() : previous);
+        }
     }
 
     public void clearLines() {
         lines.clear();
+        renderAll();
     }
 
     @NotNull
@@ -38,14 +104,17 @@ public class Sidebar {
 
     public void removePlaceholder(@NotNull String placeholder) {
         placeholders.removeIf(provider -> provider.getPlaceholder().equals(placeholder));
+        renderAll();
     }
 
     public void addPlaceholder(@NotNull PlaceholderProvider placeholderProvider) {
         placeholders.add(placeholderProvider);
+        renderAll();
     }
 
     public void setTitle(@NotNull SidebarLine title) {
         this.title = title;
+        refreshTitle();
     }
 
     @NotNull
@@ -55,6 +124,7 @@ public class Sidebar {
 
     public void addLine(@NotNull SidebarLine line) {
         lines.add(line);
+        renderAll();
     }
 
     @NotNull
@@ -63,36 +133,222 @@ public class Sidebar {
     }
 
     public void refreshTitle() {
+        scoreboards.values().forEach(scoreboard -> {
+            Objective objective = scoreboard.getObjective(SIDEBAR_OBJECTIVE);
+            if (objective != null) {
+                objective.displayName(component(renderText(title, placeholders)));
+            }
+        });
     }
 
     public void refreshPlaceholders() {
+        renderAll();
     }
 
     public void playerTabRefreshAnimation() {
+        scoreboards.values().forEach(scoreboard -> tabs.values().forEach(tab -> applyTab(scoreboard, tab)));
     }
 
     public void playerHealthRefreshAnimation() {
+        scoreboards.values().forEach(this::renderHealthTitle);
     }
 
     public void setPlayerHealth(@NotNull Player player, int health) {
+        scoreboards.values().forEach(scoreboard -> {
+            Objective belowName = scoreboard.getObjective(HEALTH_BELOW_OBJECTIVE);
+            if (belowName != null) {
+                belowName.getScore(player.getName()).setScore(health);
+            }
+            Objective tab = scoreboard.getObjective(HEALTH_TAB_OBJECTIVE);
+            if (tab != null) {
+                tab.getScore(player.getName()).setScore(health);
+            }
+        });
     }
 
     public void removeTabs() {
+        tabs.clear();
+        scoreboards.values().forEach(Sidebar::removeTabTeams);
     }
 
     public void hidePlayersHealth() {
+        healthEnabled = false;
+        scoreboards.values().forEach(scoreboard -> {
+            unregisterObjective(scoreboard, HEALTH_BELOW_OBJECTIVE);
+            unregisterObjective(scoreboard, HEALTH_TAB_OBJECTIVE);
+        });
     }
 
     public void showPlayersHealth(@NotNull SidebarLine line, boolean inTab) {
+        healthLine = line;
+        healthInTab = inTab;
+        healthEnabled = true;
+        scoreboards.values().forEach(this::renderHealth);
     }
 
     @NotNull
     public PlayerTab playerTabCreate(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
                                      @NotNull SidebarLine suffix, @NotNull PlayerTab.PushingRule pushingRule,
                                      @NotNull ConcurrentLinkedQueue<PlaceholderProvider> placeholders) {
-        return new PlayerTab(identifier, player);
+        PlayerTab tab = new PlayerTab(identifier, player, prefix, suffix, pushingRule, placeholders);
+        tab.setUpdateCallback(this::applyTabToAll);
+        tabs.put(identifier, tab);
+        applyTabToAll(tab);
+        return tab;
     }
 
     public void removeTab(@NotNull String identifier) {
+        PlayerTab tab = tabs.remove(identifier);
+        if (tab == null) {
+            return;
+        }
+        String teamName = teamName(identifier);
+        scoreboards.values().forEach(scoreboard -> {
+            Team team = scoreboard.getTeam(teamName);
+            if (team != null) {
+                team.unregister();
+            }
+        });
+    }
+
+    private void renderAll() {
+        scoreboards.values().forEach(this::render);
+    }
+
+    private void render(@NotNull Scoreboard scoreboard) {
+        removeLineTeams(scoreboard);
+        unregisterObjective(scoreboard, SIDEBAR_OBJECTIVE);
+
+        Objective objective = scoreboard.registerNewObjective(
+                SIDEBAR_OBJECTIVE,
+                Criteria.DUMMY,
+                component(renderText(title, placeholders))
+        );
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        objective.numberFormat(NumberFormat.blank());
+
+        int visibleLines = Math.min(lines.size(), LINE_ENTRIES.length);
+        for (int index = 0; index < visibleLines; index++) {
+            SidebarLine line = lines.get(index);
+            String entry = LINE_ENTRIES[index];
+            Team team = scoreboard.registerNewTeam(LINE_TEAM_PREFIX + index);
+            team.addEntry(entry);
+            team.prefix(component(renderText(line, placeholders)));
+
+            Score score = objective.getScore(entry);
+            score.setScore(visibleLines - index);
+            if (line instanceof ScoredLine scoredLine && scoredLine.getScore() != null) {
+                String fixedScore = replacePlaceholders(scoredLine.getScore(), placeholders);
+                score.numberFormat(NumberFormat.fixed(component(fixedScore)));
+            }
+        }
+    }
+
+    private void renderHealth(@NotNull Scoreboard scoreboard) {
+        if (!healthEnabled) {
+            return;
+        }
+        Objective belowName = getOrCreateObjective(scoreboard, HEALTH_BELOW_OBJECTIVE, DisplaySlot.BELOW_NAME);
+        belowName.numberFormat(NumberFormat.noStyle());
+
+        if (healthInTab) {
+            Objective tab = getOrCreateObjective(scoreboard, HEALTH_TAB_OBJECTIVE, DisplaySlot.PLAYER_LIST);
+            tab.numberFormat(NumberFormat.noStyle());
+        } else {
+            unregisterObjective(scoreboard, HEALTH_TAB_OBJECTIVE);
+        }
+        renderHealthTitle(scoreboard);
+    }
+
+    private void renderHealthTitle(@NotNull Scoreboard scoreboard) {
+        if (!healthEnabled) {
+            return;
+        }
+        Component title = component(renderText(healthLine, placeholders));
+        Objective belowName = scoreboard.getObjective(HEALTH_BELOW_OBJECTIVE);
+        if (belowName != null) {
+            belowName.displayName(title);
+        }
+        Objective tab = scoreboard.getObjective(HEALTH_TAB_OBJECTIVE);
+        if (tab != null) {
+            tab.displayName(title);
+        }
+    }
+
+    private Objective getOrCreateObjective(@NotNull Scoreboard scoreboard, @NotNull String name, @NotNull DisplaySlot slot) {
+        Objective objective = scoreboard.getObjective(name);
+        if (objective == null) {
+            objective = scoreboard.registerNewObjective(name, Criteria.DUMMY, component(""));
+        }
+        objective.setDisplaySlot(slot);
+        return objective;
+    }
+
+    private void applyTabToAll(@NotNull PlayerTab tab) {
+        scoreboards.values().forEach(scoreboard -> applyTab(scoreboard, tab));
+    }
+
+    private void applyTab(@NotNull Scoreboard scoreboard, @NotNull PlayerTab tab) {
+        Team team = scoreboard.getTeam(teamName(tab.getIdentifier()));
+        if (team == null) {
+            team = scoreboard.registerNewTeam(teamName(tab.getIdentifier()));
+        }
+
+        team.prefix(component(renderText(tab.getPrefix(), tab.getPlaceholders())));
+        team.suffix(component(renderText(tab.getSuffix(), tab.getPlaceholders())));
+        team.setOption(
+                Team.Option.NAME_TAG_VISIBILITY,
+                tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER
+                        ? Team.OptionStatus.NEVER
+                        : Team.OptionStatus.ALWAYS
+        );
+        if (!team.hasEntry(tab.getPlayer().getName())) {
+            team.addEntry(tab.getPlayer().getName());
+        }
+    }
+
+    private static void unregisterObjective(@NotNull Scoreboard scoreboard, @NotNull String name) {
+        Objective objective = scoreboard.getObjective(name);
+        if (objective != null) {
+            objective.unregister();
+        }
+    }
+
+    private static void removeLineTeams(@NotNull Scoreboard scoreboard) {
+        for (int i = 0; i < LINE_ENTRIES.length; i++) {
+            Team team = scoreboard.getTeam(LINE_TEAM_PREFIX + i);
+            if (team != null) {
+                team.unregister();
+            }
+        }
+    }
+
+    private static void removeTabTeams(@NotNull Scoreboard scoreboard) {
+        for (Team team : new ArrayList<>(scoreboard.getTeams())) {
+            if (team.getName().startsWith(TAB_TEAM_PREFIX)) {
+                team.unregister();
+            }
+        }
+    }
+
+    private static String teamName(@NotNull String identifier) {
+        return TAB_TEAM_PREFIX + Integer.toHexString(identifier.hashCode());
+    }
+
+    static String renderText(@NotNull SidebarLine line, @NotNull Collection<PlaceholderProvider> placeholders) {
+        return replacePlaceholders(line.getLine(), placeholders);
+    }
+
+    static String replacePlaceholders(String text, @NotNull Collection<PlaceholderProvider> placeholders) {
+        String result = text == null ? "" : text;
+        for (PlaceholderProvider placeholder : placeholders) {
+            String value = placeholder.getValue();
+            result = result.replace(placeholder.getPlaceholder(), value == null ? "" : value);
+        }
+        return ChatColor.translateAlternateColorCodes('&', result);
+    }
+
+    static Component component(String legacyText) {
+        return LEGACY.deserialize(legacyText == null ? "" : legacyText);
     }
 }

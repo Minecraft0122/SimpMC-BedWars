@@ -35,6 +35,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
+import org.bukkit.block.data.Openable;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Fireball;
 import org.bukkit.entity.ItemFrame;
@@ -48,7 +49,6 @@ import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.material.Openable;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
 
@@ -173,7 +173,7 @@ public class Interact implements Listener {
                             e.setCancelled(true);
                             break;
                     }
-                    if (b.getState() instanceof Openable) {
+                    if (b.getBlockData() instanceof Openable) {
                         e.setCancelled(true);
                     }
                 }

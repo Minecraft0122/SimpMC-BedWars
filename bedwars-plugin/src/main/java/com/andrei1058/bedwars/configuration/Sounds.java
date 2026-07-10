@@ -25,11 +25,14 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.NextEvent;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Locale;
 
 import static com.andrei1058.bedwars.BedWars.plugin;
 import static com.andrei1058.bedwars.api.configuration.ConfigPath.*;
@@ -96,11 +99,25 @@ public class Sounds {
     }
 
     private static Sound getSound(String path) {
-        try {
-            return Sound.valueOf(sounds.getString(path + ".sound"));
-        } catch (Exception ex) {
-            return Sound.valueOf(BedWars.getForCurrentVersion("AMBIENCE_THUNDER", "ENTITY_LIGHTNING_THUNDER", "ITEM_TRIDENT_THUNDER"));
+        Sound sound = resolveSound(sounds.getString(path + ".sound"));
+        return sound == null ? resolveSound("ITEM_TRIDENT_THUNDER") : sound;
+    }
+
+    public static Sound resolveSound(String name) {
+        if (name == null || name.isBlank()) return null;
+        String normalized = name.trim().toLowerCase(Locale.ROOT);
+
+        NamespacedKey directKey = NamespacedKey.fromString(normalized);
+        if (directKey != null) {
+            Sound sound = Registry.SOUNDS.get(directKey);
+            if (sound != null) return sound;
         }
+
+        if (normalized.startsWith("minecraft:")) {
+            normalized = normalized.substring("minecraft:".length());
+        }
+        normalized = normalized.replace('_', '.');
+        return Registry.SOUNDS.get(NamespacedKey.minecraft(normalized));
     }
 
     public static void playSound(String path, List<Player> players) {

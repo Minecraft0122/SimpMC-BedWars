@@ -8,12 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        paper_api:
-          - 1.21.1-R0.1-SNAPSHOT
-          - 1.21.11-R0.1-SNAPSHOT
     steps:
       - uses: actions/checkout@v4
 
@@ -25,12 +19,12 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn -B -U -DskipTests "-Dpaper.api.version=${{ matrix.paper_api }}" package -s ci_settings.xml
+        run: mvn -B -U -DskipTests package -s ci_settings.xml
 
       - name: Upload plugin jar
         uses: actions/upload-artifact@v4
         with:
-          name: BedWars1058-plugin-${{ matrix.paper_api }}
+          name: BedWars1058-plugin
           path: |
             bedwars-plugin/target/*.jar
             !bedwars-plugin/target/original-*.jar

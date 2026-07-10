@@ -716,10 +716,6 @@ public class v1_21_R3 extends VersionSupport {
             if (attribute != null) {
                 return attribute;
             }
-            try {
-                return Attribute.valueOf(candidate.toUpperCase(Locale.ROOT).replace('.', '_'));
-            } catch (IllegalArgumentException ignored) {
-            }
         }
         return null;
     }

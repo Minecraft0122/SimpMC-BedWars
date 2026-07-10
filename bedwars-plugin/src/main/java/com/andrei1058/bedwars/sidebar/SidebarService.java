@@ -75,7 +75,7 @@ public class SidebarService implements ISidebarService {
                     log.warning("Scoreboard title refresh interval is set to: " + titleRefreshInterval);
                     log.warning("If you expect performance issues please increase its timer.");
                 }
-                Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new RefreshTitleTask(), 1L, titleRefreshInterval);
+                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshTitleTask(), 1L, titleRefreshInterval);
             }
             MetricsManager.appendPie("sb_title_refresh_interval", () -> String.valueOf(titleRefreshInterval));
 

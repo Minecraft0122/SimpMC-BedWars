@@ -32,6 +32,7 @@ import com.andrei1058.bedwars.api.events.gameplay.GeneratorUpgradeEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Cuboid;
+import com.andrei1058.bedwars.configuration.Sounds;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -183,7 +184,10 @@ public class OreGenerator implements IGenerator {
                     Player player = (Player) o;
                     ItemStack item = ore.clone();
                     item.setAmount(amount);
-                    player.playSound(player.getLocation(), Sound.valueOf(BedWars.getForCurrentVersion("ITEM_PICKUP", "ENTITY_ITEM_PICKUP", "ENTITY_ITEM_PICKUP")), 0.6f, 1.3f);
+                    Sound pickupSound = Sounds.resolveSound("ENTITY_ITEM_PICKUP");
+                    if (pickupSound != null) {
+                        player.playSound(player.getLocation(), pickupSound, 0.6f, 1.3f);
+                    }
                     Collection<ItemStack> excess = player.getInventory().addItem(item).values();
                     for (ItemStack value : excess) {
                         dropItem(player.getLocation(), value.getAmount());

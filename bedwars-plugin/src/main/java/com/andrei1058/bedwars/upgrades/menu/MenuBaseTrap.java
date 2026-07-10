@@ -328,10 +328,7 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
 
         Sound sound = null;
         if (UpgradesManager.getConfiguration().getYml().get(name + ".sound") != null) {
-            try {
-                sound = Sound.valueOf(UpgradesManager.getConfiguration().getYml().getString(name + ".sound"));
-            } catch (Exception ignored) {
-            }
+            sound = Sounds.resolveSound(UpgradesManager.getConfiguration().getYml().getString(name + ".sound"));
         }
         if (!Sounds.playSound(sound, trapTeam.getMembers())) {
             Sounds.playSound("trap-sound", trapTeam.getMembers());

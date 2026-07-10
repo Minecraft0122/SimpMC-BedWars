@@ -136,7 +136,7 @@ public class BedWars extends JavaPlugin {
 
         isPaper = detectPaper();
         if (!isPaper) {
-            this.getLogger().severe("BedWars1058 now supports Paper 1.21.1+ only.");
+            this.getLogger().severe("BedWars1058 now supports Paper 1.21.11+ only.");
             this.getLogger().severe("Please run this plugin on Paper or a compatible Paper fork.");
             serverSoftwareSupport = false;
             return;
@@ -148,10 +148,10 @@ public class BedWars extends JavaPlugin {
             return;
         }
 
-        if (!isAtLeastMinecraftVersion(1, 21, 1)) {
+        if (!isAtLeastMinecraftVersion(1, 21, 11)) {
             serverSoftwareSupport = false;
             this.getLogger().severe("I can't run on your Minecraft version: " + version);
-            this.getLogger().severe("This build requires Paper 1.21.1 or newer.");
+            this.getLogger().severe("This build requires Paper 1.21.11 or newer.");
             return;
         }
 
@@ -481,9 +481,9 @@ public class BedWars extends JavaPlugin {
 
         // Initialize sidebar manager
         if (SidebarService.init(this)) {
-            out.info("Initializing SidebarLib by andrei1058");
+            out.info("Initializing Paper scoreboard sidebar support.");
         } else {
-            this.getLogger().warning("SidebarLib by andrei1058 does not support your server version; continuing without built-in sidebars.");
+            this.getLogger().warning("Paper scoreboard sidebar support could not be initialized; continuing without built-in sidebars.");
         }
 
         // Halloween Special
@@ -685,7 +685,7 @@ public class BedWars extends JavaPlugin {
 
     /**
      * Get the server version
-     * Ex: 1.21.1
+     * Ex: 1.21.11
      *
      * @since v0.6.5beta
      */

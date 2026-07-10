@@ -30,6 +30,7 @@ import com.andrei1058.bedwars.api.events.server.ArenaDisableEvent;
 import com.andrei1058.bedwars.api.events.server.ArenaEnableEvent;
 import com.andrei1058.bedwars.api.events.server.ArenaRestartEvent;
 import com.andrei1058.bedwars.arena.Misc;
+import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.levels.internal.PlayerLevel;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
@@ -49,8 +50,8 @@ public class HalloweenListener implements Listener {
     private final Sound ghastSound;
 
     public HalloweenListener() {
-        ambienceSound = Sound.valueOf(BedWars.getForCurrentVersion("AMBIENCE_CAVE", "AMBIENT_CAVE", "AMBIENT_CAVE"));
-        ghastSound = Sound.valueOf(BedWars.getForCurrentVersion("GHAST_SCREAM2", "ENTITY_GHAST_SCREAM", "ENTITY_GHAST_SCREAM"));
+        ambienceSound = Sounds.resolveSound(BedWars.getForCurrentVersion("AMBIENCE_CAVE", "AMBIENT_CAVE", "AMBIENT_CAVE"));
+        ghastSound = Sounds.resolveSound(BedWars.getForCurrentVersion("GHAST_SCREAM2", "ENTITY_GHAST_SCREAM", "ENTITY_GHAST_SCREAM"));
     }
 
     @EventHandler
@@ -76,7 +77,9 @@ public class HalloweenListener implements Listener {
         if (e.getKiller() != null) {
             Location location = e.getVictim().getLocation().add(0, 1, 0);
             if (location.getBlock().getType() == Material.AIR) {
-                location.getWorld().playSound(location, ghastSound, 2f, 1f);
+                if (ghastSound != null) {
+                    location.getWorld().playSound(location, ghastSound, 2f, 1f);
+                }
                 if (!Misc.isBuildProtected(location, e.getArena())) {
                     location.getBlock().setType(Material.valueOf(BedWars.getForCurrentVersion("WEB", "WEB", "COBWEB")));
                     e.getArena().addPlacedBlock(location.getBlock());
@@ -106,7 +109,11 @@ public class HalloweenListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinArenaEvent e) {
         if (!e.isSpectator()) {
-            Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> e.getPlayer().getWorld().playSound(e.getPlayer().getLocation(), ambienceSound, 3f, 1f), 20L);
+            Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
+                if (ambienceSound != null) {
+                    e.getPlayer().getWorld().playSound(e.getPlayer().getLocation(), ambienceSound, 3f, 1f);
+                }
+            }, 20L);
         }
     }
 
