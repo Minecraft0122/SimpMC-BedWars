@@ -1,34 +1,29 @@
-# Contributing to BedWars1058
+# Contributing to SimpMC-BedWars
 👍 First off, thanks for taking the time to contribute!
 
-The following is a set of guidelines for contributing to BedWars1058. 
-These are mostly guidelines, not rules. Use your best judgment, and feel free 
+The following is a set of guidelines for contributing to SimpMC-BedWars.
+These are mostly guidelines, not rules. Use your best judgment, and feel free
 to propose changes to this document in a pull request.
 
 ### What should I know before I get started?
-#### BedWars1058 and its structure
+#### SimpMC-BedWars and its structure
 
 ![Structure](.github/assets/contributing/structure.png)  
-We have a module for the public API called `bedwars-api` where we expose 
+We have a module for the public API called `simpmc-bedwars-api` where we expose
 some parts of the mini-game. The magic happens in the `bedwars-plugin`
-module and the others starting by `versionsupport_` are used to handle specific
-version-based code. Since BedWars1058 has multi-version support and it does not
-rely on Reflection we need to create a new module for each new MC version.
-`versionsupport_common` defines what needs to be handled differently 
-by each MC version support.
+module and the version support modules are focused on Paper 1.21.11+.
+`simpmc-bedwars-versionsupport-common` defines shared version-support behavior.
 
 ## How Can I Contribute?
 #### Reporting Bugs
 
-When you are [creating a bug report](https://github.com/andrei1058/BedWars1058/issues/new), please include as many details as possible.
+When you are creating a bug report, please include as many details as possible.
 Fill out the required template, the information it asks for helps us resolve issues faster.
 
 > **Note:** If you find a **Closed** issue that seems like it is the same thing that you're experiencing, open a new issue and include a link to the original issue in the body of your new one.
 
 ### Suggesting Enhancements
-Enhancement suggestions are tracked as GitHub issues, so you need to 
-[open a new issue](https://github.com/andrei1058/BedWars1058/issues/new) 
-and provide the following information:  
+Enhancement suggestions are tracked as GitHub issues. Please provide the following information:
 - Use a clear and descriptive title for the issue to identify the suggestion.
 - Provide a step-by-step description of the suggested enhancement in as many details as possible.
 - Describe the current behavior and explain which behavior you expected to see instead and why.
@@ -37,7 +32,7 @@ and provide the following information:
 
 
 ### Your First Code Contribution
-Unsure where to begin contributing to BedWars1058? 
+Unsure where to begin contributing to SimpMC-BedWars?
 You can start by looking through these `beginner` and `help-wanted` issues:
 - [Beginner issues](beginner) - issues which should only require a few lines of code, and a test or two.
 - [Help wanted issues](help-wanted) - issues which should be a bit more involved than beginner issues.

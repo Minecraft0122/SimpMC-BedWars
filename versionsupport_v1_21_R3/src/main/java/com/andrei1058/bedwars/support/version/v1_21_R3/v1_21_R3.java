@@ -67,8 +67,6 @@ import java.util.logging.Level;
 @SuppressWarnings("unused")
 public class v1_21_R3 extends VersionSupport {
 
-    private boolean blastResistanceWarningSent = false;
-
     public v1_21_R3(Plugin plugin, String name) {
         super(plugin, minecraftVersionName(name));
         loadDefaultEffects();
@@ -347,10 +345,7 @@ public class v1_21_R3 extends VersionSupport {
 
     @Override
     public void registerTntWhitelist(float endStoneBlast, float glassBlast) {
-        if (!blastResistanceWarningSent) {
-            getPlugin().getLogger().warning("Paper 1.21+ support uses event-based blast protection; block blast resistance is not modified.");
-            blastResistanceWarningSent = true;
-        }
+        // Paper 1.21.11+ uses event-based blast protection instead of mutating block resistance.
     }
 
     @Override

@@ -46,7 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class VersionSupport {
 
     private static String name2;
-    public static String PLUGIN_TAG_GENERIC_KEY = "BedWars1058";
+    public static String PLUGIN_TAG_GENERIC_KEY = "SimpMC-BedWars";
     public static String PLUGIN_TAG_TIER_KEY = "tierIdentifier";
 
     private Effect eggBridge;
@@ -255,12 +255,12 @@ public abstract class VersionSupport {
     public abstract String getTag(ItemStack itemStack, String key);
 
     /**
-     * Check if an item has a BedWars1058 NBTTag
+     * Check if an item has a SimpMC-BedWars NBTTag
      */
     public abstract boolean isCustomBedWarsItem(ItemStack i);
 
     /**
-     * Get the NBTTag from a BedWars1058 item
+     * Get the NBTTag from a SimpMC-BedWars item
      */
     public abstract String getCustomData(ItemStack i);
 

@@ -73,7 +73,7 @@ public class MySQL implements Database {
     public boolean connect() {
         HikariConfig hikariConfig = new HikariConfig();
 
-        hikariConfig.setPoolName("BedWars1058MySQLPool");
+        hikariConfig.setPoolName("SimpMC-BedWars-MySQLPool");
 
         hikariConfig.setMaximumPoolSize(poolSize);
         hikariConfig.setMaxLifetime(maxLifetime * 1000L);

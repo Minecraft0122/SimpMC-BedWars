@@ -117,6 +117,16 @@ public class Sidebar {
         refreshTitle();
     }
 
+    public void setContent(@NotNull SidebarLine title, @NotNull Collection<SidebarLine> lines,
+                           @NotNull Collection<PlaceholderProvider> placeholders) {
+        this.title = title;
+        this.lines.clear();
+        this.lines.addAll(lines);
+        this.placeholders.clear();
+        this.placeholders.addAll(placeholders);
+        renderAll();
+    }
+
     @NotNull
     public SidebarLine getTitle() {
         return title;
@@ -212,6 +222,9 @@ public class Sidebar {
     }
 
     private void renderAll() {
+        if (scoreboards.isEmpty()) {
+            return;
+        }
         scoreboards.values().forEach(this::render);
     }
 

@@ -4,12 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.andrei1058.bedwars</groupId>
-        <artifactId>BedWars1058</artifactId>
+        <groupId>com.simpmc.bedwars</groupId>
+        <artifactId>SimpMC-BedWars</artifactId>
         <version>25.2</version>
     </parent>
 
-    <artifactId>versionsupport_v1_21_R3</artifactId>
+    <artifactId>simpmc-bedwars-versionsupport-v1_21_R3</artifactId>
 
     <dependencies>
         <dependency>
@@ -19,15 +19,15 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.andrei1058.bedwars</groupId>
-            <artifactId>bedwars-api</artifactId>
+            <groupId>com.simpmc.bedwars</groupId>
+            <artifactId>simpmc-bedwars-api</artifactId>
             <version>${project.version}</version>
             <type>jar</type>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.andrei1058.bedwars</groupId>
-            <artifactId>versionsupport-common</artifactId>
+            <groupId>com.simpmc.bedwars</groupId>
+            <artifactId>simpmc-bedwars-versionsupport-common</artifactId>
             <version>${project.version}</version>
             <type>jar</type>
             <scope>provided</scope>

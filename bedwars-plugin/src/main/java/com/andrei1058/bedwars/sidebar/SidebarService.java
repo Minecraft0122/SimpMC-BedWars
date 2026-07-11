@@ -27,6 +27,9 @@ import static com.andrei1058.bedwars.api.language.Language.getScoreboard;
 
 public class SidebarService implements ISidebarService {
 
+    private static final int MIN_GENERAL_REFRESH_INTERVAL = 20;
+    private static final int MIN_TITLE_REFRESH_INTERVAL = 4;
+
     private static SidebarService instance;
 
     private final SidebarManager sidebarHandler;
@@ -39,71 +42,62 @@ public class SidebarService implements ISidebarService {
                 return false;
             }
 
-            var log = Bukkit.getLogger();
+            var log = plugin.getLogger();
 
             int playerListRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH);
+            int effectivePlayerListRefreshInterval = playerListRefreshInterval;
             if (playerListRefreshInterval < 1) {
-                Bukkit.getLogger().info("Scoreboard names list refresh is disabled. (It is set to " + playerListRefreshInterval + ").");
+                log.info("Scoreboard names list refresh is disabled. (It is set to " + playerListRefreshInterval + ").");
             } else {
-                if (playerListRefreshInterval < 20) {
-                    log.warning("Scoreboard names list refresh interval is set to: " + playerListRefreshInterval);
-                    log.warning("It is not recommended to use a value under 20 ticks.");
-                    log.warning("If you expect performance issues please increase its timer.");
-                }
-                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshPlayerListTask(), 1L, playerListRefreshInterval);
+                effectivePlayerListRefreshInterval = refreshInterval(playerListRefreshInterval, MIN_GENERAL_REFRESH_INTERVAL);
+                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshPlayerListTask(), 1L, effectivePlayerListRefreshInterval);
             }
-            MetricsManager.appendPie("sb_list_refresh_interval", () -> String.valueOf(playerListRefreshInterval));
+            final int playerListMetric = effectivePlayerListRefreshInterval;
+            MetricsManager.appendPie("sb_list_refresh_interval", () -> String.valueOf(playerListMetric));
 
             int placeholdersRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_PLACEHOLDERS_REFRESH_INTERVAL);
+            int effectivePlaceholdersRefreshInterval = placeholdersRefreshInterval;
             if (placeholdersRefreshInterval < 1) {
                 log.info("Scoreboard placeholders refresh is disabled. (It is set to " + placeholdersRefreshInterval + ").");
             } else {
-                if (placeholdersRefreshInterval < 20) {
-                    log.warning("Scoreboard placeholders refresh interval is set to: " + placeholdersRefreshInterval);
-                    log.warning("It is not recommended to use a value under 20 ticks.");
-                    log.warning("If you expect performance issues please increase its timer.");
-                }
-                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshPlaceholdersTask(), 1L, placeholdersRefreshInterval);
+                effectivePlaceholdersRefreshInterval = refreshInterval(placeholdersRefreshInterval, MIN_GENERAL_REFRESH_INTERVAL);
+                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshPlaceholdersTask(), 1L, effectivePlaceholdersRefreshInterval);
             }
-            MetricsManager.appendPie("sb_placeholder_refresh_interval", () -> String.valueOf(placeholdersRefreshInterval));
+            final int placeholdersMetric = effectivePlaceholdersRefreshInterval;
+            MetricsManager.appendPie("sb_placeholder_refresh_interval", () -> String.valueOf(placeholdersMetric));
 
             int titleRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_TITLE_REFRESH_INTERVAL);
+            int effectiveTitleRefreshInterval = titleRefreshInterval;
             if (titleRefreshInterval < 1) {
                 log.info("Scoreboard title refresh is disabled. (It is set to " + titleRefreshInterval + ").");
             } else {
-                if (titleRefreshInterval < 4) {
-                    log.warning("Scoreboard title refresh interval is set to: " + titleRefreshInterval);
-                    log.warning("If you expect performance issues please increase its timer.");
-                }
-                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshTitleTask(), 1L, titleRefreshInterval);
+                effectiveTitleRefreshInterval = refreshInterval(titleRefreshInterval, MIN_TITLE_REFRESH_INTERVAL);
+                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshTitleTask(), 1L, effectiveTitleRefreshInterval);
             }
-            MetricsManager.appendPie("sb_title_refresh_interval", () -> String.valueOf(titleRefreshInterval));
+            final int titleMetric = effectiveTitleRefreshInterval;
+            MetricsManager.appendPie("sb_title_refresh_interval", () -> String.valueOf(titleMetric));
 
             int healthAnimationInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_REFRESH);
+            int effectiveHealthAnimationInterval = healthAnimationInterval;
             if (healthAnimationInterval < 1) {
                 log.info("Scoreboard health animation refresh is disabled. (It is set to " + healthAnimationInterval + ").");
             } else {
-                if (healthAnimationInterval < 20) {
-                    log.warning("Scoreboard health animation refresh interval is set to: " + healthAnimationInterval);
-                    log.warning("It is not recommended to use a value under 20 ticks.");
-                    log.warning("If you expect performance issues please increase its timer.");
-                }
-                Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new RefreshLifeTask(), 1L, healthAnimationInterval);
+                effectiveHealthAnimationInterval = refreshInterval(healthAnimationInterval, MIN_GENERAL_REFRESH_INTERVAL);
+                Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new RefreshLifeTask(), 1L, effectiveHealthAnimationInterval);
             }
-            MetricsManager.appendPie("sb_health_refresh_interval", () -> String.valueOf(healthAnimationInterval));
+            final int healthMetric = effectiveHealthAnimationInterval;
+            MetricsManager.appendPie("sb_health_refresh_interval", () -> String.valueOf(healthMetric));
 
             int tabHeaderFooterRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL);
+            int effectiveTabHeaderFooterRefreshInterval = tabHeaderFooterRefreshInterval;
             if (tabHeaderFooterRefreshInterval < 1 || !config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE)) {
                 log.info("Scoreboard Tab header-footer refresh is disabled.");
             } else {
-                if (tabHeaderFooterRefreshInterval < 20) {
-                    log.warning("Scoreboard tab header-footer refresh interval is set to: " + tabHeaderFooterRefreshInterval);
-                    log.warning("It is not recommended to use a value under 20 ticks.");
-                    log.warning("If you expect performance issues please increase its timer.");
-                }
-                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshTabHeaderFooterTask(), 1L, tabHeaderFooterRefreshInterval);
+                effectiveTabHeaderFooterRefreshInterval = refreshInterval(tabHeaderFooterRefreshInterval, MIN_GENERAL_REFRESH_INTERVAL);
+                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshTabHeaderFooterTask(), 1L, effectiveTabHeaderFooterRefreshInterval);
             }
-            MetricsManager.appendPie("sb_header_footer_refresh_interval", () -> String.valueOf(tabHeaderFooterRefreshInterval));
+            final int headerFooterMetric = effectiveTabHeaderFooterRefreshInterval;
+            MetricsManager.appendPie("sb_header_footer_refresh_interval", () -> String.valueOf(headerFooterMetric));
 
             var lobbySidebar = config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR) &&
                     BedWars.getServerType() == ServerType.MULTIARENA;
@@ -118,6 +112,10 @@ public class SidebarService implements ISidebarService {
 
     private SidebarService() {
         sidebarHandler = SidebarManager.init();
+    }
+
+    private static int refreshInterval(int configuredInterval, int minimumInterval) {
+        return Math.max(configuredInterval, minimumInterval);
     }
 
     public void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay) {
@@ -259,17 +257,17 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshTitles() {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> v.getHandle().refreshTitle());
     }
 
     public void refreshPlaceholders() {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> v.getHandle().refreshPlaceholders());
     }
 
     public void refreshPlaceholders(IArena arena) {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (v.getArena() != null)
                 if (v.getArena().equals(arena)) {
@@ -279,12 +277,12 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshTabList() {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> v.getHandle().playerTabRefreshAnimation());
     }
 
     public void refreshTabHeaderFooter() {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v && null != v.getHeaderFooter()) {
                 this.sidebarHandler.sendHeaderFooter(v.getPlayer(), v.getHeaderFooter());
@@ -293,7 +291,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshHealth() {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena()) {
                 v.getHandle().playerHealthRefreshAnimation();
@@ -310,7 +308,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshHealth(IArena arena, Player player, int health) {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
                 v.getHandle().setPlayerHealth(player, health);
@@ -319,7 +317,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleReJoin(IArena arena, Player player) {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
                 v.giveUpdateTabFormat(player, false);
@@ -328,7 +326,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleJoin(IArena arena, Player player, @Nullable Boolean spectator) {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
                 if (!v.getPlayer().equals(player)) {
@@ -339,7 +337,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void applyLobbyTab(Player player) {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null == v.getArena()) {
                 if (!v.getPlayer().equals(player)) {
@@ -350,7 +348,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleInvisibility(ITeam team, Player player, boolean toggle) {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(team.getArena())) {
                 v.handleInvisibilityPotion(player, toggle);

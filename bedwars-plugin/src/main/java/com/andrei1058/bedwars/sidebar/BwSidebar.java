@@ -72,6 +72,7 @@ public class BwSidebar implements ISidebar {
             return;
         }
         tabList.onSidebarRemoval();
+        SidebarManager.getInstance().clearHeaderFooterCache(player);
         handle.remove(player);
     }
 
@@ -93,13 +94,7 @@ public class BwSidebar implements ISidebar {
             handle = SidebarService.getInstance().getSidebarHandler().createSidebar(title, lines, placeholders);
             handle.add(player);
         } else {
-            handle.clearLines();
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                new ArrayList<>(handle.getPlaceholders()).forEach(p -> handle.removePlaceholder(p.getPlaceholder()));
-                placeholders.forEach(p -> handle.addPlaceholder(p));
-                handle.setTitle(title);
-                lines.forEach(l -> handle.addLine(l));
-            }, 2L);
+            handle.setContent(title, lines, placeholders);
         }
         tabList.handlePlayerList();
         assignTabHeaderFooter();
@@ -111,13 +106,14 @@ public class BwSidebar implements ISidebar {
 
     @SuppressWarnings("ConstantConditions")
     public SidebarLine normalizeTitle(@Nullable List<String> titleArray) {
+        if (null == titleArray || titleArray.isEmpty()) {
+            return EMPTY_TITLE;
+        }
         String[] data = new String[titleArray.size()];
         for (int x = 0; x < titleArray.size(); x++) {
             data[x] = titleArray.get(x);
         }
-        return null == titleArray || titleArray.isEmpty() ?
-                EMPTY_TITLE :
-                new SidebarLineAnimated(data);
+        return new SidebarLineAnimated(data);
     }
 
     /**
@@ -560,7 +556,7 @@ public class BwSidebar implements ISidebar {
         this.headerFooter = new TabHeaderFooter(
                 this.normalizeLines(lang.l(headerPath)),
                 this.normalizeLines(lang.l(footerPath)),
-                getPlaceholders(this.getPlayer())
+                withPersistentPlaceholders(getPlaceholders(this.getPlayer()))
         );
 
         SidebarManager.getInstance().sendHeaderFooter(player, headerFooter);
@@ -605,5 +601,11 @@ public class BwSidebar implements ISidebar {
 
     public void setTopStatistics(@Nullable StatisticsOrdered topStatistics) {
         this.topStatistics = topStatistics;
+    }
+
+    @NotNull
+    private ConcurrentLinkedQueue<PlaceholderProvider> withPersistentPlaceholders(@NotNull ConcurrentLinkedQueue<PlaceholderProvider> placeholders) {
+        placeholders.addAll(this.persistentProviders);
+        return placeholders;
     }
 }

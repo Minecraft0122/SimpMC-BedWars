@@ -3,10 +3,10 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>BedWars1058</artifactId>
-        <groupId>com.andrei1058.bedwars</groupId>
+        <artifactId>SimpMC-BedWars</artifactId>
+        <groupId>com.simpmc.bedwars</groupId>
         <version>25.2</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>bedwars-api</artifactId>
+    <artifactId>simpmc-bedwars-api</artifactId>
 </project>

@@ -1,11 +1,6 @@
-![Logo](./.github/assets/logo_open_source.png)
+# SimpMC-BedWars
 
-
-As from November 1st 2021 BedWars1058 by Andrei Dascălu becomes open source under GNU GPL 3.0 license. If you are a developer I would really appreciate if you'd come with pull requests instead of making hundreds of forks. Let's make updates available for everyone!
-
-[![Discord](https://discordapp.com/api/guilds/201345265821679617/widget.png?style=shield)](https://discord.gg/XdJfN2X)
-
-[![Crowdin](https://support.crowdin.com/assets/badges/localization-at-white-rounded-bordered@1x.svg)](https://crowdin.com/project/bedwars1058)
+SimpMC-BedWars is a Paper 1.21.11+ BedWars mini-game plugin maintained for modern Paper servers.
 
 # Description
 BedWars is a mini-game where you have to defend your bed and destroy the others.  
@@ -22,7 +17,7 @@ reasonably fast processor for arena-heavy servers.
 
 # Pre-made setups and community add-ons
 
-You can find a list of pre-made server setups and a lot of community add-ons [on BedWars1058 Wiki](https://wiki.andrei1058.com/docs/BedWars1058/addons).
+Pre-made setups and community add-ons should be tested against this Paper-only fork before use.
 
 # Main features
 
@@ -36,7 +31,7 @@ You can find a list of pre-made server setups and a lot of community add-ons [on
 - each player can receive messages, holograms, GUIs etc. in their desired language. /bw lang.
 - you can either remove or add new languages.
 - team names, group names, shop contents and a lot more can be translated in your languages.
-- custom titles and subtitles for [starting countdown](https://gitlab.com/andrei1058/BedWars1058/-/wikis/language-configuration#custom-title-sub-title-for-arena-countdown).
+- custom titles and subtitles for the arena starting countdown.
 
 ###### Lobby removal | Optional:
 The waiting-lobby inside the map can be removed once the game starts.
@@ -101,7 +96,7 @@ Inactive players for more than 45 seconds can't pick-up items from generators.
 - join items can execute commands.
 
 ###### Map Restore System:
-- the default restore adapter from BedWars1058 is based on un-loading the map, un-zipping a backup and loading it again. This may be heavy for servers with cheap hardware. We recommend using gaming processors and a SSD.
+- the default restore adapter from SimpMC-BedWars is based on un-loading the map, un-zipping a backup and loading it again. This may be heavy for servers with cheap hardware. We recommend using gaming processors and a SSD.
 - you can also implement your own map adapter trough the API.
 - it may seem heavy than other plugins because we don't simply keep track of modified blocks. We need to restore the entire map because server owners can allow players to destroy the maps like on a SkyWars game. Regions like generators, NPCs and team spawns will be protected.
 
@@ -116,12 +111,9 @@ If you get disconnected, or if you leave a game (configurable) you can re-join i
 - Halloween special. It is enabled automatically based on your machine timezone and will provide cool effects.
 
 # Contributing
-Any help is appreciated, just give a quick look at [CONTRIBUTING.md](https://github.com/andrei1058/BedWars1058/blob/master/CONTRIBUTING.md) first!
+Any help is appreciated. Please test changes on Paper 1.21.11 or newer before opening a pull request.
 
-If you are not a programmer you can help answering people in the [Issues](https://github.com/andrei1058/BedWars1058/issues) section or even [translate the plugin in your languae on Crowdin](https://crowdin.com/project/bedwars1058).
-
-### Translation progress
-[Translation Chart](https://badges.awesome-crowdin.com/translation-12780139-594479.png)
+Issues and pull requests are tracked in the SimpMC-BedWars repository.
 
 # 3rd party libraries
 - [bStats](https://bstats.org/getting-started/include-metrics)
@@ -129,6 +121,3 @@ If you are not a programmer you can help answering people in the [Issues](https:
 - [Commons IO](https://mvnrepository.com/artifact/commons-io/commons-io)
 - [HikariCP](https://mvnrepository.com/artifact/com.zaxxer/HikariCP)
 - [SLF4J](http://www.slf4j.org/)
-
-# Contact
-[![Discord Server](https://discordapp.com/api/guilds/201345265821679617/widget.png?style=banner3)](https://discord.gg/XdJfN2X)

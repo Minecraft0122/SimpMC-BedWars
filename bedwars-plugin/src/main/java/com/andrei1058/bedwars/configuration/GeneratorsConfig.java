@@ -31,8 +31,8 @@ public class GeneratorsConfig extends ConfigManager {
         super(plugin, name, dir);
 
         YamlConfiguration yml = getYml();
-        yml.options().header(plugin.getDescription().getName() + " by andrei1058." +
-                "\ngenerators.yml Documentation: https://gitlab.com/andrei1058/BedWars1058/wikis/generators-configuration\n");
+        yml.options().header(plugin.getDescription().getName() + " by SimpMC." +
+                "\ngenerators.yml configuration for Paper 1.21.11+ servers.\n");
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_DELAY, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_AMOUNT, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_DELAY, 6);

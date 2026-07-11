@@ -136,14 +136,14 @@ public class BedWars extends JavaPlugin {
 
         isPaper = detectPaper();
         if (!isPaper) {
-            this.getLogger().severe("BedWars1058 now supports Paper 1.21.11+ only.");
+            this.getLogger().severe("SimpMC-BedWars supports Paper 1.21.11+ only.");
             this.getLogger().severe("Please run this plugin on Paper or a compatible Paper fork.");
             serverSoftwareSupport = false;
             return;
         }
 
         if (detectFolia()) {
-            this.getLogger().severe("Folia is not supported by this BedWars1058 build.");
+            this.getLogger().severe("Folia is not supported by this SimpMC-BedWars build.");
             serverSoftwareSupport = false;
             return;
         }
@@ -218,7 +218,7 @@ public class BedWars extends JavaPlugin {
 
         /* Check if lobby location is set. Required for non Bungee servers */
         if (config.getLobbyWorldName().isEmpty() && serverType != ServerType.BUNGEE) {
-            out.log(java.util.logging.Level.WARNING, "Lobby location is not set!");
+            out.info("Lobby location is not set yet. Use /bw setLobby after setup if this server needs a lobby.");
         }
 
         /* Load lobby world if not main level
@@ -435,7 +435,7 @@ public class BedWars extends JavaPlugin {
 
         /* Prevent issues on reload */
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.kickPlayer("BedWars1058 was RELOADED! (do not reload plugins)");
+            p.kickPlayer("SimpMC-BedWars was reloaded. Please restart the server instead of reloading plugins.");
         }
 
         /* Load sounds configuration */
