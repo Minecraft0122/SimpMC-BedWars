@@ -36,7 +36,6 @@ import org.bukkit.event.entity.EntityDropItemEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -44,7 +43,6 @@ import static com.andrei1058.bedwars.support.version.common.VersionCommon.api;
 
 public class ItemDropPickListener {
 
-    // 1.11 or older
     public static class PlayerDrop implements Listener {
         @EventHandler
         public void onDrop(PlayerDropItemEvent e){
@@ -52,16 +50,6 @@ public class ItemDropPickListener {
         }
     }
 
-    // 1.11 or older
-    public static class PlayerPickup implements Listener {
-        @SuppressWarnings("deprecation")
-        @EventHandler
-        public void onDrop(PlayerPickupItemEvent e){
-            if (managePickup(e.getItem(), e.getPlayer())) e.setCancelled(true);
-        }
-    }
-
-    // 1.13 or newer
     public static class EntityDrop implements Listener {
         @EventHandler
         public void onDrop(EntityDropItemEvent e){
@@ -69,7 +57,6 @@ public class ItemDropPickListener {
         }
     }
 
-    // 1.12 or newer
     public static class EntityPickup implements Listener {
         @EventHandler
         public void onPickup(EntityPickupItemEvent e){
@@ -77,7 +64,6 @@ public class ItemDropPickListener {
         }
     }
 
-    // 1.9 or newer
     public static class ArrowCollect implements Listener {
         @EventHandler
         public void onArrowPick(PlayerPickupArrowEvent e){

@@ -52,29 +52,24 @@ public class BlockStatusListener implements Listener {
         if (a == null) return;
         for (Block s : a.getSigns()) {
             if (!(s.getState() instanceof Sign)) continue;
-            String path = "", data = "";
+            String path = "";
             switch (a.getStatus()) {
                 case waiting:
                     path = ConfigPath.SIGNS_STATUS_BLOCK_WAITING_MATERIAL;
-                    data = ConfigPath.SIGNS_STATUS_BLOCK_WAITING_DATA;
                     break;
                 case playing:
                     path = ConfigPath.SIGNS_STATUS_BLOCK_PLAYING_MATERIAL;
-                    data = ConfigPath.SIGNS_STATUS_BLOCK_STARTING_DATA;
                     break;
                 case starting:
-                    path = ConfigPath.SIGNS_STATUS_BLOCK_PLAYING_MATERIAL;
-                    data = ConfigPath.SIGNS_STATUS_BLOCK_PLAYING_DATA;
+                    path = ConfigPath.SIGNS_STATUS_BLOCK_STARTING_MATERIAL;
                     break;
                 case restarting:
                     path = ConfigPath.SIGNS_STATUS_BLOCK_RESTARTING_MATERIAL;
-                    data = ConfigPath.SIGNS_STATUS_BLOCK_RESTARTING_DATA;
                     break;
                 default:
                     throw new IllegalStateException("Unhandled game status!");
             }
             BedWars.nms.setJoinSignBackground(s.getState(), Material.valueOf(BedWars.signs.getString(path)));
-            BedWars.nms.setJoinSignBackgroundBlockData(s.getState(), (byte) BedWars.signs.getInt(data));
         }
     }
 }

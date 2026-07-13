@@ -50,8 +50,8 @@ public class HalloweenListener implements Listener {
     private final Sound ghastSound;
 
     public HalloweenListener() {
-        ambienceSound = Sounds.resolveSound(BedWars.getForCurrentVersion("AMBIENCE_CAVE", "AMBIENT_CAVE", "AMBIENT_CAVE"));
-        ghastSound = Sounds.resolveSound(BedWars.getForCurrentVersion("GHAST_SCREAM2", "ENTITY_GHAST_SCREAM", "ENTITY_GHAST_SCREAM"));
+        ambienceSound = Sounds.resolveSound("AMBIENT_CAVE");
+        ghastSound = Sounds.resolveSound("ENTITY_GHAST_SCREAM");
     }
 
     @EventHandler
@@ -81,7 +81,7 @@ public class HalloweenListener implements Listener {
                     location.getWorld().playSound(location, ghastSound, 2f, 1f);
                 }
                 if (!Misc.isBuildProtected(location, e.getArena())) {
-                    location.getBlock().setType(Material.valueOf(BedWars.getForCurrentVersion("WEB", "WEB", "COBWEB")));
+                    location.getBlock().setType(Material.valueOf("COBWEB"));
                     e.getArena().addPlacedBlock(location.getBlock());
                     location.getBlock().setMetadata("give-bw-exp", new FixedMetadataValue(BedWars.plugin, "ok"));
                     CobWebRemover remover = CobWebRemover.getByArena(e.getArena());

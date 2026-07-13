@@ -568,11 +568,6 @@ public class v1_21_R3 extends VersionSupport {
     }
 
     @Override
-    public int getVersion() {
-        return 11;
-    }
-
-    @Override
     public String getMainLevel() {
         if (!Bukkit.getWorlds().isEmpty()) {
             return Bukkit.getWorlds().get(0).getName();

@@ -147,7 +147,7 @@ public class BwSidebar implements ISidebar {
                                 .replace("{TeamColor}", team.getColor().chat().toString())
                                 .replace("{TeamName}", teamName);
 
-                        if (line.contains("{TeamStatus}") && getAPI().getVersionSupport().getVersion() >= 10) {
+                        if (line.contains("{TeamStatus}")) {
                             line = line.replace("{TeamStatus}", "");
                             scoreLine = "{Team" + team.getName() + "Status}";
                         } else {

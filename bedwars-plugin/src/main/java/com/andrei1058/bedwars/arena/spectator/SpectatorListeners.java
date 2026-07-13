@@ -101,7 +101,7 @@ public class SpectatorListeners implements Listener {
         if (!a.isSpectator(p)) return;
 
         // Teleporter heads
-        if (nms.isPlayerHead(i.getType().toString(), 3) && nms.itemStackDataCompare(i, (short) 3)) {
+        if (nms.isPlayerHead(i.getType().toString(), 3)) {
             if (nms.isCustomBedWarsItem(i)) {
                 e.setCancelled(true);
 

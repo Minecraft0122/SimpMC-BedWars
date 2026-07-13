@@ -203,12 +203,7 @@ public class BedWars extends JavaPlugin {
         /* Register commands */
         nms.registerCommand(mainCmd, new MainCommand(mainCmd));
 
-        // newer versions do not seem to like delayed registration of commands
-        if (nms.getVersion() >= 9) {
-            this.registerDelayedCommands();
-        } else {
-            Bukkit.getScheduler().runTaskLater(this, this::registerDelayedCommands, 20L);
-        }
+        this.registerDelayedCommands();
 
         /* Setup plugin messaging channel */
         Bukkit.getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
@@ -578,10 +573,6 @@ public class BedWars extends JavaPlugin {
         if (debug) {
             plugin.getLogger().info("DEBUG: " + message);
         }
-    }
-
-    public static String getForCurrentVersion(String v18, String v12, String v13) {
-        return v13;
     }
 
     private static boolean detectPaper() {

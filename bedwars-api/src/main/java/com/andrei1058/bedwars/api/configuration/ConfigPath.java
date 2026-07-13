@@ -210,13 +210,9 @@ public class ConfigPath {
     public static final String SOUNDS_KILL = "kill";
 
     public static final String SIGNS_STATUS_BLOCK_WAITING_MATERIAL = "status-block.waiting.material";
-    public static final String SIGNS_STATUS_BLOCK_WAITING_DATA = "status-block.waiting.data";
     public static final String SIGNS_STATUS_BLOCK_STARTING_MATERIAL = "status-block.starting.material";
-    public static final String SIGNS_STATUS_BLOCK_STARTING_DATA = "status-block.starting.data";
     public static final String SIGNS_STATUS_BLOCK_PLAYING_MATERIAL = "status-block.playing.material";
-    public static final String SIGNS_STATUS_BLOCK_PLAYING_DATA = "status-block.playing.data";
     public static final String SIGNS_STATUS_BLOCK_RESTARTING_MATERIAL = "status-block.restarting.material";
-    public static final String SIGNS_STATUS_BLOCK_RESTARTING_DATA = "status-block.restarting.data";
 
     private static final String GENERAL_PARTY_SETTINGS_PATH = "party-settings";
     public static final String GENERAL_ENABLE_PARTY_CMD = GENERAL_PARTY_SETTINGS_PATH + ".enable-party-cmd";
@@ -271,7 +267,6 @@ public class ConfigPath {
     public static final String SHOP_SPECIAL_TOWER_MATERIAL = SHOP_SPECIALS_PATH + ".tower.material";
     public static final String SHOP_SPECIAL_SILVERFISH_ENABLE = SHOP_SPECIALS_PATH + ".silverfish.enable";
     public static final String SHOP_SPECIAL_SILVERFISH_MATERIAL = SHOP_SPECIALS_PATH + ".silverfish.material";
-    public static final String SHOP_SPECIAL_SILVERFISH_DATA = SHOP_SPECIALS_PATH + ".silverfish.data";
     public static final String SHOP_SPECIAL_SILVERFISH_HEALTH = SHOP_SPECIALS_PATH + ".silverfish.health";
     public static final String SHOP_SPECIAL_SILVERFISH_DAMAGE = SHOP_SPECIALS_PATH + ".silverfish.damage";
     public static final String SHOP_SPECIAL_SILVERFISH_SPEED = SHOP_SPECIALS_PATH + ".silverfish.speed";
@@ -279,7 +274,6 @@ public class ConfigPath {
 
     public static final String SHOP_SPECIAL_IRON_GOLEM_ENABLE = SHOP_SPECIALS_PATH + ".iron-golem.enable";
     public static final String SHOP_SPECIAL_IRON_GOLEM_MATERIAL = SHOP_SPECIALS_PATH + ".iron-golem.material";
-    public static final String SHOP_SPECIAL_IRON_GOLEM_DATA = SHOP_SPECIALS_PATH + ".iron-golem.data";
     public static final String SHOP_SPECIAL_IRON_GOLEM_HEALTH = SHOP_SPECIALS_PATH + ".iron-golem.health";
     public static final String SHOP_SPECIAL_IRON_GOLEM_DESPAWN = SHOP_SPECIALS_PATH + ".iron-golem.despawn";
     public static final String SHOP_SPECIAL_IRON_GOLEM_SPEED = SHOP_SPECIALS_PATH + ".iron-golem.speed";

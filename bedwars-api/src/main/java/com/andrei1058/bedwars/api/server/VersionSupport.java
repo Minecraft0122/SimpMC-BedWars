@@ -351,22 +351,6 @@ public abstract class VersionSupport {
     }
 
     /**
-     * Item Data compare
-     * This will always return true on versions major or equal 1.13
-     */
-    public boolean itemStackDataCompare(ItemStack i, short data) {
-        return true;
-    }
-
-    /**
-     * Set block data
-     * For versions before 1.13
-     */
-    public void setJoinSignBackgroundBlockData(BlockState b, byte data) {
-
-    }
-
-    /**
      * Change the block behind the join sign.
      */
     public abstract void setJoinSignBackground(BlockState b, Material material);
@@ -422,8 +406,6 @@ public abstract class VersionSupport {
     public static String getName() {
         return name2;
     }
-
-    public abstract int getVersion();
 
     public Plugin getPlugin() {
         return plugin;
