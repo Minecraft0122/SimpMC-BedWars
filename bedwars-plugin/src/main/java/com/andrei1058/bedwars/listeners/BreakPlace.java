@@ -149,12 +149,10 @@ public class BreakPlace implements Listener {
                 return;
             }
 
-            for (Region r : a.getRegionsList()) {
-                if (r.isInRegion(e.getBlock().getLocation()) && r.isProtected()) {
-                    e.setCancelled(true);
-                    p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
-                    return;
-                }
+            if (isShopUpgradeOrGeneratorProtected(a, e.getBlock().getLocation())) {
+                e.setCancelled(true);
+                p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
+                return;
             }
 
             // prevent modifying wood if protected
@@ -356,8 +354,10 @@ public class BreakPlace implements Listener {
                 }
             }
 
+            boolean placedBlock = a.isBlockPlaced(e.getBlock());
             for (Region r : a.getRegionsList()) {
-                if (r.isInRegion(e.getBlock().getLocation()) && r.isProtected()) {
+                if (r.isInRegion(e.getBlock().getLocation()) && r.isProtected()
+                        && !(placedBlock && isSpawnProtectedLocation(a, e.getBlock().getLocation()))) {
                     e.setCancelled(true);
                     p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
                     return;
@@ -365,7 +365,7 @@ public class BreakPlace implements Listener {
             }
 
             if (!a.isAllowMapBreak()) {
-                if (!a.isBlockPlaced(e.getBlock())) {
+                if (!placedBlock) {
                     p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
                     e.setCancelled(true);
                 }
@@ -479,8 +479,8 @@ public class BreakPlace implements Listener {
                 return;
             }
 
-            // Protected areas around spawns/shops/upgrades/generators
-            if (isProtectedLocation(a, waterLocation)) {
+            // Protected areas around shops/upgrades/generators. Team spawn remains buildable so players can defend beds.
+            if (isShopUpgradeOrGeneratorProtected(a, waterLocation)) {
                 e.setCancelled(true);
                 p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
                 return;
@@ -593,10 +593,19 @@ public class BreakPlace implements Listener {
         }
     }
 
-    private boolean isProtectedLocation(@NotNull IArena a, @NotNull Location location) {
+    private boolean isSpawnProtectedLocation(@NotNull IArena a, @NotNull Location location) {
         try {
             for (ITeam t : a.getTeams()) {
                 if (t.getSpawn().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION)) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private boolean isShopUpgradeOrGeneratorProtected(@NotNull IArena a, @NotNull Location location) {
+        try {
+            for (ITeam t : a.getTeams()) {
                 if (t.getShop().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_SHOP_PROTECTION)) return true;
                 if (t.getTeamUpgrades().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_UPGRADES_PROTECTION)) return true;
                 for (IGenerator o : t.getGenerators()) {

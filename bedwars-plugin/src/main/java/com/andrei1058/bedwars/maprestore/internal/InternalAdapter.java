@@ -103,6 +103,7 @@ public class InternalAdapter extends RestoreAdapter {
 
     @Override
     public void onRestart(IArena a) {
+        Arena.markRestoring(a.getArenaName());
         Bukkit.getScheduler().runTask(getOwner(), () -> {
             if (BedWars.getServerType() == ServerType.BUNGEE) {
                 if (Arena.getGamesBeforeRestart() == 0) {

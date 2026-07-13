@@ -109,6 +109,7 @@ public class Arena implements IArena {
     private static final HashMap<Player, IArena> arenaByPlayer = new HashMap<>();
     private static final HashMap<String, IArena> arenaByIdentifier = new HashMap<>();
     private static final LinkedList<IArena> arenas = new LinkedList<>();
+    private static final Set<String> restoringArenas = ConcurrentHashMap.newKeySet();
     private static int gamesBeforeRestart = config.getInt(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_MODE_GAMES_BEFORE_RESTART);
     public static HashMap<UUID, Integer> afkCheck = new HashMap<>();
     public static HashMap<UUID, Integer> magicMilk = new HashMap<>();
@@ -217,11 +218,13 @@ public class Arena implements IArena {
         if (yml.get("Team") == null) {
             if (p != null) p.sendMessage("You didn't set any team for arena: " + name);
             plugin.getLogger().severe("You didn't set any team for arena: " + name);
+            clearRestoring(name);
             return;
         }
         if (yml.getConfigurationSection("Team").getKeys(false).size() < 2) {
             if (p != null) p.sendMessage("§cYou must set at least 2 teams on: " + name);
             plugin.getLogger().severe("You must set at least 2 teams on: " + name);
+            clearRestoring(name);
             return;
         }
         maxInTeam = yml.getInt("maxInTeam");
@@ -240,6 +243,7 @@ public class Arena implements IArena {
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(name)) {
             if (p != null) p.sendMessage(ChatColor.RED + "There isn't any map called " + name);
             plugin.getLogger().log(Level.WARNING, "There isn't any map called " + name);
+            clearRestoring(name);
             return;
         }
 
@@ -274,9 +278,13 @@ public class Arena implements IArena {
         if (yml.get("waiting.Loc") == null) {
             if (p != null) p.sendMessage("§cWaiting spawn not set on: " + name);
             plugin.getLogger().severe("Waiting spawn not set on: " + name);
+            clearRestoring(name);
             return;
         }
-        if (error) return;
+        if (error) {
+            clearRestoring(name);
+            return;
+        }
         yKillHeight = yml.getInt(ConfigPath.ARENA_Y_LEVEL_KILL);
         addToEnableQueue(this);
         Language.saveIfNotExists(Messages.ARENA_DISPLAY_GROUP_PATH + getGroup().toLowerCase(), String.valueOf(getGroup().charAt(0)).toUpperCase() + group.substring(1).toLowerCase());
@@ -341,6 +349,7 @@ public class Arena implements IArena {
         arenas.add(this);
         arenaByName.put(getArenaName(), this);
         arenaByIdentifier.put(worldName, this);
+        clearRestoring(getArenaName());
         world.getWorldBorder().setCenter(cm.getArenaLoc("waiting.Loc"));
         world.getWorldBorder().setSize(yml.getInt("worldBorder"));
 
@@ -2567,6 +2576,24 @@ public class Arena implements IArena {
 
         // check amount of active clones
         return config.getInt(ConfigPath.GENERAL_CONFIGURATION_AUTO_SCALE_LIMIT) > activeClones;
+    }
+
+    public static void markRestoring(@NotNull String arenaName) {
+        restoringArenas.add(arenaName.toLowerCase(Locale.ROOT));
+    }
+
+    public static void clearRestoring(@NotNull String arenaName) {
+        restoringArenas.remove(arenaName.toLowerCase(Locale.ROOT));
+    }
+
+    public static boolean isRestoring(@NotNull String arenaName) {
+        String normalized = arenaName.toLowerCase(Locale.ROOT);
+        if (restoringArenas.contains(normalized)) return true;
+        for (IArena arena : enableQueue) {
+            if (arena.getArenaName().equalsIgnoreCase(arenaName)) return true;
+        }
+        IArena arena = getArenaByName(arenaName);
+        return arena != null && arena.getStatus() == GameState.restarting;
     }
 
     @Override

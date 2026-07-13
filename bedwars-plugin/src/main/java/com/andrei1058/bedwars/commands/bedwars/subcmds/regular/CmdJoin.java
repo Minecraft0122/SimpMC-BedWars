@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
 import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -74,7 +75,13 @@ public class CmdJoin extends SubCommand {
             }
             return true;
         } else if (Arena.getArenaByName(args[0]) != null) {
-            if (Arena.getArenaByName(args[0]).addPlayer(p, false)){
+            IArena arena = Arena.getArenaByName(args[0]);
+            if (arena.getStatus() == GameState.restarting) {
+                sendArenaRestoringMessage(p, args[0]);
+                Sounds.playSound("join-denied", p);
+                return true;
+            }
+            if (arena.addPlayer(p, false)){
                 Sounds.playSound("join-allowed", p);
             } else {
                 Sounds.playSound("join-denied", p);
@@ -88,8 +95,17 @@ public class CmdJoin extends SubCommand {
             }
             return true;
         }
+        if (Arena.isRestoring(args[0])) {
+            sendArenaRestoringMessage(p, args[0]);
+            Sounds.playSound("join-denied", p);
+            return true;
+        }
         s.sendMessage(getMsg(p, Messages.COMMAND_JOIN_GROUP_OR_ARENA_NOT_FOUND).replace("{name}", args[0]));
         return true;
+    }
+
+    private void sendArenaRestoringMessage(Player player, String arenaName) {
+        player.sendMessage("§c▪ §7Arena §e" + arenaName + " §7is resetting. Please try again in a few seconds.");
     }
 
     @Override

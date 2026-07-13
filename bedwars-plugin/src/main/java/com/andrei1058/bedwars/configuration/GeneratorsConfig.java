@@ -32,7 +32,7 @@ public class GeneratorsConfig extends ConfigManager {
 
         YamlConfiguration yml = getYml();
         yml.options().header(plugin.getDescription().getName() + " by SimpMC." +
-                "\ngenerators.yml configuration for Paper 1.21.11+ servers.\n");
+                "\ngenerators.yml configuration for Paper 1.21.11 servers.\n");
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_DELAY, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_AMOUNT, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_DELAY, 6);

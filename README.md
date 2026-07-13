@@ -1,14 +1,14 @@
 # SimpMC-BedWars
 
-SimpMC-BedWars is a Paper 1.21.11+ BedWars mini-game plugin maintained for modern Paper servers.
+SimpMC-BedWars is a Paper 1.21.11 BedWars mini-game plugin maintained for modern Paper servers.
 
 # Description
 BedWars is a mini-game where you have to defend your bed and destroy the others.  
 Once your bed is destroyed, you cannot respawn.
 
 # System requirements
-This fork targets [Paper](https://papermc.io/) **1.21.11 or newer** using the Paper API.
-Spigot, legacy NMS builds, Minecraft versions below 1.21.11, and Folia are not supported.
+This fork targets [Paper](https://papermc.io/) **1.21.11 only** using the Paper API.
+Spigot, legacy NMS builds, Minecraft versions other than 1.21.11, and Folia are not supported.
 It is required to use **Java 21** or newer.
 
 The internal world restore system is based on zipping and unzipping maps which can become
@@ -111,7 +111,7 @@ If you get disconnected, or if you leave a game (configurable) you can re-join i
 - Halloween special. It is enabled automatically based on your machine timezone and will provide cool effects.
 
 # Contributing
-Any help is appreciated. Please test changes on Paper 1.21.11 or newer before opening a pull request.
+Any help is appreciated. Please test changes on Paper 1.21.11 before opening a pull request.
 
 Issues and pull requests are tracked in the SimpMC-BedWars repository.
 

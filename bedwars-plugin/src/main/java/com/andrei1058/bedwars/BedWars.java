@@ -136,7 +136,7 @@ public class BedWars extends JavaPlugin {
 
         isPaper = detectPaper();
         if (!isPaper) {
-            this.getLogger().severe("SimpMC-BedWars supports Paper 1.21.11+ only.");
+            this.getLogger().severe("SimpMC-BedWars supports Paper 1.21.11 only.");
             this.getLogger().severe("Please run this plugin on Paper or a compatible Paper fork.");
             serverSoftwareSupport = false;
             return;
@@ -148,10 +148,10 @@ public class BedWars extends JavaPlugin {
             return;
         }
 
-        if (!isAtLeastMinecraftVersion(1, 21, 11)) {
+        if (!isExactMinecraftVersion(1, 21, 11)) {
             serverSoftwareSupport = false;
             this.getLogger().severe("I can't run on your Minecraft version: " + version);
-            this.getLogger().severe("This build requires Paper 1.21.11 or newer.");
+            this.getLogger().severe("This build supports Paper 1.21.11 only because newer world formats are not yet supported.");
             return;
         }
 
@@ -609,16 +609,12 @@ public class BedWars extends JavaPlugin {
         }
     }
 
-    private static boolean isAtLeastMinecraftVersion(int major, int minor, int patch) {
+    private static boolean isExactMinecraftVersion(int major, int minor, int patch) {
         String minecraftVersion = Bukkit.getBukkitVersion().split("-")[0];
         String[] parts = minecraftVersion.split("\\.");
-        int currentMajor = parseVersionPart(parts, 0);
-        int currentMinor = parseVersionPart(parts, 1);
-        int currentPatch = parseVersionPart(parts, 2);
-
-        if (currentMajor != major) return currentMajor > major;
-        if (currentMinor != minor) return currentMinor > minor;
-        return currentPatch >= patch;
+        return parseVersionPart(parts, 0) == major
+                && parseVersionPart(parts, 1) == minor
+                && parseVersionPart(parts, 2) == patch;
     }
 
     private static int parseVersionPart(String[] parts, int index) {

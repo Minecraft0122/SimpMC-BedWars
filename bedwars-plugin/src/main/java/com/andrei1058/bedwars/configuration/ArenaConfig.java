@@ -41,7 +41,7 @@ public class ArenaConfig extends ConfigManager {
         super(plugin, name, dir);
 
         YamlConfiguration yml = getYml();
-        yml.options().header(plugin.getName() + " arena configuration file for Paper 1.21.11+ servers.");
+        yml.options().header(plugin.getName() + " arena configuration file for Paper 1.21.11 servers.");
         yml.addDefault("group", "Default");
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
         yml.addDefault("minPlayers", 2);
