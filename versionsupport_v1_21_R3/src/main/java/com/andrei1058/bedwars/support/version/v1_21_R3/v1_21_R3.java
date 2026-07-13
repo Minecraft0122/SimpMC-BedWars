@@ -507,7 +507,7 @@ public class v1_21_R3 extends VersionSupport {
     @Override
     public String getShopUpgradeIdentifier(ItemStack itemStack) {
         String value = getTag(itemStack, VersionSupport.PLUGIN_TAG_TIER_KEY);
-        return value == null ? "null" : value;
+        return value == null ? "" : value;
     }
 
     @Override
