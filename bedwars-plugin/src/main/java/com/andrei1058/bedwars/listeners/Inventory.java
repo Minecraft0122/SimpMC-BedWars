@@ -195,7 +195,7 @@ public class Inventory implements Listener {
                 Objects.requireNonNull(ss).setSetupType(SetupType.ASSISTED);
             }
             if (!Objects.requireNonNull(ss).startSetup()) {
-                ss.getPlayer().sendMessage(ChatColor.RED + "Could not start setup session. Pleas check the console.");
+                ss.getPlayer().sendMessage(ChatColor.RED + "无法启动竞技场设置会话，请查看控制台。");
             }
             p.closeInventory();
             return;

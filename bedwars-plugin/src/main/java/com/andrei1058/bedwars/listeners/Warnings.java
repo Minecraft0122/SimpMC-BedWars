@@ -22,13 +22,13 @@ public class Warnings implements Listener {
 
         if (Bukkit.getPluginManager().isPluginEnabled("Multiverse-Core")) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                player.sendMessage(ChatColor.RED + "[SimpMC-BedWars] Multiverse-Core detected! Please remove it or make sure it won't touch BedWars maps!");
+                player.sendMessage(ChatColor.RED + "[SimpMC-BedWars] 检测到 Multiverse-Core！请移除它，或确保它不会管理 BedWars 地图！");
             }, 5); // run after 5 ticks to make sure its after any update spam on join
         }
 
         if(Bukkit.getServer().getSpawnRadius() > 0) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                player.sendMessage(ChatColor.RED + "[SimpMC-BedWars] Your spawn-protection in server.properties is enabled. "+ChatColor.YELLOW+"This might mess with BedWars arenas!"+ChatColor.GRAY+" It is highly reccomend setting it to 0.");
+                player.sendMessage(ChatColor.RED + "[SimpMC-BedWars] server.properties 中的 spawn-protection 已启用。"+ChatColor.YELLOW+"这可能影响竞技场！"+ChatColor.GRAY+"强烈建议将其设为 0。");
             }, 5);
         }
     }

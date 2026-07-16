@@ -53,40 +53,39 @@ public class SetSpawn extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null) {
-            //s.sendMessage("§c ▪ §7You're not in a setup session!");
             return false;
         }
         if (args.length < 1) {
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "Usage: /" + mainCmd + " setSpawn <team>");
+            p.sendMessage(ss.getPrefix() + ChatColor.RED + "用法：/" + mainCmd + " setSpawn <队伍>");
             if (ss.getConfig().getYml().get("Team") != null) {
                 for (String team : Objects.requireNonNull(ss.getConfig().getYml().getConfigurationSection("Team")).getKeys(false)) {
                     if (ss.getConfig().getYml().get("Team." + team + ".Spawn") == null) {
-                        p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "Set spawn for: " + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "(click to set)", ChatColor.WHITE + "Set spawn for " + ss.getTeamColor(team) + team, "/" + mainCmd + " setSpawn " + team, ClickEvent.Action.RUN_COMMAND));
+                        p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "为队伍设置出生点：" + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "（点击设置）", ChatColor.WHITE + "设置 " + ss.getTeamColor(team) + team + " 的出生点", "/" + mainCmd + " setSpawn " + team, ClickEvent.Action.RUN_COMMAND));
                     }
                 }
             }
         } else {
             if (ss.getConfig().getYml().get("Team." + args[0]) == null) {
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "Could not find target team: " + ChatColor.RED + args[0]);
+                p.sendMessage(ss.getPrefix() + ChatColor.RED + "找不到目标队伍：" + args[0]);
                 if (ss.getConfig().getYml().get("Team") != null) {
-                    p.sendMessage(ss.getPrefix() + "Teams list: ");
+                    p.sendMessage(ss.getPrefix() + "队伍列表：");
                     for (String team : Objects.requireNonNull(ss.getConfig().getYml().getConfigurationSection("Team")).getKeys(false)) {
-                        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "(click to set)", ChatColor.WHITE + "Set spawn for " + ss.getTeamColor(team) + team, "/" + mainCmd + " setSpawn " + team, ClickEvent.Action.RUN_COMMAND));
+                        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "（点击设置）", ChatColor.WHITE + "设置 " + ss.getTeamColor(team) + team + " 的出生点", "/" + mainCmd + " setSpawn " + team, ClickEvent.Action.RUN_COMMAND));
                     }
                 }
             } else {
                 if (ss.getConfig().getYml().get("Team." + args[0] + ".Spawn") != null) {
-                    removeArmorStand("spawn", ss.getConfig().getArenaLoc("Team." + args[0] + ".Spawn"), ss.getConfig().getString("Team." + args[0] + ".Spawn"));
+                    removeArmorStand("出生点", ss.getConfig().getArenaLoc("Team." + args[0] + ".Spawn"), ss.getConfig().getString("Team." + args[0] + ".Spawn"));
                 }
                 ss.getConfig().saveArenaLoc("Team." + args[0] + ".Spawn", p.getLocation());
                 String teamm = ss.getTeamColor(args[0]) + args[0];
-                p.sendMessage(ChatColor.GOLD + " " + '▪' + " " + "Spawn set for: " + teamm);
-                com.andrei1058.bedwars.commands.Misc.createArmorStand(teamm + " " + ChatColor.GOLD + "SPAWN SET", p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
+                p.sendMessage(ChatColor.GOLD + " " + '▪' + " " + "已设置出生点：" + teamm);
+                com.andrei1058.bedwars.commands.Misc.createArmorStand(teamm + " " + ChatColor.GOLD + "出生点已设置", p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
                 Location bed = ss.autoDetectBed(args[0], true);
                 if (bed != null) {
-                    p.sendMessage(ss.getPrefix() + ChatColor.GREEN + "Bed automatically detected for: " + teamm);
+                    p.sendMessage(ss.getPrefix() + ChatColor.GREEN + "已自动识别床位：" + teamm);
                 } else {
-                    p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "No bed found within the team island radius.");
+                    p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "在队伍岛屿半径内没有找到床。");
                 }
                 if (ss.getConfig().getYml().get("Team") != null) {
                     StringBuilder remainging = new StringBuilder();
@@ -96,7 +95,7 @@ public class SetSpawn extends SubCommand {
                         }
                     }
                     if (remainging.toString().length() > 0) {
-                        p.sendMessage(ss.getPrefix() + "Remaining: " + remainging.toString());
+                        p.sendMessage(ss.getPrefix() + "尚未设置：" + remainging);
                     }
                 }
             }

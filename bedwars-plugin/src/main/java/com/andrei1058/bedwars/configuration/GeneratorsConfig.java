@@ -31,8 +31,8 @@ public class GeneratorsConfig extends ConfigManager {
         super(plugin, name, dir);
 
         YamlConfiguration yml = getYml();
-        yml.options().header(plugin.getDescription().getName() + " by SimpMC." +
-                "\ngenerators.yml configuration for Paper 1.21.11 servers.\n");
+        yml.options().header(plugin.getDescription().getName() + "，由 SimpMC 维护。" +
+                "\ngenerators.yml 资源生成器配置，适用于 Paper 1.21.11 服务器。\n");
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_DELAY, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_AMOUNT, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_DELAY, 6);
@@ -64,6 +64,8 @@ public class GeneratorsConfig extends ConfigManager {
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_SPAWN_LIMIT, 8);
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_START, 1440);
         yml.options().copyDefaults(true);
-        updateToLatestVersion(1);
+        setComments("Default", "默认资源生成器参数；delay 和 start 的单位为秒。", "amount 为每次生成数量，spawn-limit 为地面物品上限。");
+        setComments(ConfigPath.GENERATOR_STACK_ITEMS, "是否将生成的资源物品堆叠，开启可降低实体数量。");
+        updateToLatestVersion(2);
     }
 }

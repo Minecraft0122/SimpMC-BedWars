@@ -49,7 +49,7 @@ public class ShopManager extends ConfigManager {
     }
 
     private void saveDefaults() {
-        getYml().options().header("Shop with quick buy and tiers");
+        getYml().options().header("物品商店配置：快捷购买、分类与分级商品");
 
         //quick buy
         getYml().addDefault(ConfigPath.SHOP_SETTINGS_QUICK_BUY_BUTTON_MATERIAL, "NETHER_STAR");
@@ -379,7 +379,11 @@ public class ShopManager extends ConfigManager {
         }
 
         getYml().options().copyDefaults(true);
-        updateToLatestVersion(1);
+        setComments("shop-settings", "物品商店菜单、快捷购买按钮和分隔栏设置。");
+        setComments(ConfigPath.SHOP_SPECIAL_SILVERFISH_ENABLE, "特殊物品设置：蠹虫、铁傀儡和防御塔。");
+        setComments(ConfigPath.SHOP_QUICK_DEFAULTS_PATH, "新玩家默认快捷购买栏的物品路径与槽位。");
+        setComments(ConfigPath.SHOP_PATH_CATEGORY_BLOCKS, "商店分类及商品；可自定义价格、货币、数量和购买效果。");
+        updateToLatestVersion(2);
     }
 
     private void loadShop() {

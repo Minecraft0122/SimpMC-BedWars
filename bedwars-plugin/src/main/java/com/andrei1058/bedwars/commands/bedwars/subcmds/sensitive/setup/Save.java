@@ -53,7 +53,6 @@ public class Save extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null) {
-            //s.sendMessage("§c ▪ §7You're not in a setup session!");
             return false;
         }
 
@@ -61,9 +60,9 @@ public class Save extends SubCommand {
         if (!missingBeds.isEmpty()) {
             StringJoiner teams = new StringJoiner(", ");
             missingBeds.forEach(teams::add);
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "Could not find a bed near these team spawns: " + teams);
-            p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "Set the team spawns closer to their beds, or use /"
-                    + getParent().getName() + " setBed <team> manually.");
+            p.sendMessage(ss.getPrefix() + ChatColor.RED + "在以下队伍出生点附近找不到床：" + teams);
+            p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "请将队伍出生点设得更靠近床，或使用 /"
+                    + getParent().getName() + " setBed <队伍> 手动设置。");
             return true;
         }
 
@@ -80,9 +79,9 @@ public class Save extends SubCommand {
             TeleportManager.teleport(p, Bukkit.getWorlds().get(0).getSpawnLocation());
         }
         ss.done();
-        p.sendMessage(ss.getPrefix() + "Arena changes saved!");
-        p.sendMessage(ss.getPrefix() + "You can now enable it using:");
-        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + "/" + getParent().getName() + " enableArena " + ss.getWorldName() + ChatColor.GRAY +" (click to enable)", ChatColor.GREEN + "Enable this arena.", "/" + getParent().getName() + " enableArena " + ss.getWorldName(), ClickEvent.Action.RUN_COMMAND));
+        p.sendMessage(ss.getPrefix() + "竞技场修改已保存！");
+        p.sendMessage(ss.getPrefix() + "现在可以使用以下命令启用：");
+        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + "/" + getParent().getName() + " enableArena " + ss.getWorldName() + ChatColor.GRAY +"（点击启用）", ChatColor.GREEN + "启用此竞技场", "/" + getParent().getName() + " enableArena " + ss.getWorldName(), ClickEvent.Action.RUN_COMMAND));
         return true;
     }
 

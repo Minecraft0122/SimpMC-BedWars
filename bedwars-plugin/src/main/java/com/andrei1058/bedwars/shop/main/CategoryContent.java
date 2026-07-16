@@ -432,7 +432,7 @@ public class CategoryContent implements ICategoryContent {
     public static void takeMoney(Player player, Material currency, int amount) {
         if (currency == Material.AIR) {
             if (!BedWars.getEconomy().isEconomy()) {
-                player.sendMessage("§4§lERROR: This requires Vault Support! Please install Vault plugin!");
+                player.sendMessage("§4§l错误：此功能需要 Vault 支持，请安装 Vault 插件！");
                 return;
             }
             BedWars.getEconomy().buyAction(player, amount);

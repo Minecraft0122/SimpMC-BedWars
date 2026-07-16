@@ -55,17 +55,17 @@ import static com.andrei1058.bedwars.BedWars.mainCmd;
 public class NPC extends SubCommand {
 
     //main usage
-    private final List<BaseComponent> MAIN_USAGE = Arrays.asList(Misc.msgHoverClick("§f\n§c▪ §7Usage: §e/" + mainCmd + " " + getSubCommandName() + " add", "§fUse this command to create a join NPC.\n§fClick to see the syntax.", "/"+getParent().getName()+" "+getSubCommandName()+" add", ClickEvent.Action.RUN_COMMAND),
-            Misc.msgHoverClick("§c▪ §7Usage: §e/" + mainCmd + " " + getSubCommandName() + " remove", "§fStay in front of a NPC in order to remove it.", "/"+getParent().getName()+" "+getSubCommandName()+" remove", ClickEvent.Action.SUGGEST_COMMAND));
+    private final List<BaseComponent> MAIN_USAGE = Arrays.asList(Misc.msgHoverClick("§f\n§c▪ §7用法：§e/" + mainCmd + " " + getSubCommandName() + " add", "§f使用此命令创建加入游戏的 NPC。\n§f点击查看命令格式。", "/"+getParent().getName()+" "+getSubCommandName()+" add", ClickEvent.Action.RUN_COMMAND),
+            Misc.msgHoverClick("§c▪ §7用法：§e/" + mainCmd + " " + getSubCommandName() + " remove", "§f站在 NPC 面前以将其删除。", "/"+getParent().getName()+" "+getSubCommandName()+" remove", ClickEvent.Action.SUGGEST_COMMAND));
     @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
-    private final List<BaseComponent> ADD_USAGE = Arrays.asList(Misc.msgHoverClick("f\n§c▪ §7Usage: §e§o/" + getParent().getName() + " " + getSubCommandName() + " add <skin> <arenaGroup> <§7line1§9\\n§7line2§e>\n§7You can use §e{players} §7for the players count in this arena §7group.", "Click to use.", "/"+getParent().getName()+" "+getSubCommandName()+" add", ClickEvent.Action.SUGGEST_COMMAND));
+    private final List<BaseComponent> ADD_USAGE = Arrays.asList(Misc.msgHoverClick("f\n§c▪ §7用法：§e§o/" + getParent().getName() + " " + getSubCommandName() + " add <皮肤> <竞技场组> <§7第一行§9\\n§7第二行§e>\n§7可使用 §e{players} §7显示该竞技场组的玩家数量。", "点击填入命令。", "/"+getParent().getName()+" "+getSubCommandName()+" add", ClickEvent.Action.SUGGEST_COMMAND));
 
     public NPC(ParentCommand parent, String name) {
         super(parent, name);
         showInList(true);
         setPriority(12);
         setPermission(Permissions.PERMISSION_NPC);
-        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + "         §8   - §ecreate a join NPC", "§fCreate a join NPC  \n§fClick for more details.",
+        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + "         §8   - §e创建加入游戏的 NPC", "§f创建加入游戏的 NPC。\n§f点击查看更多详情。",
                 "/" + getParent().getName() + " " + getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
     }
 
@@ -98,21 +98,21 @@ public class NPC extends SubCommand {
             net.citizensnpcs.api.npc.NPC npc = JoinNPC.spawnNPC(p.getLocation(), name, args[2], args[1], null);
             assert npc != null;
             npcs.add(BedWars.config.stringLocationConfigFormat(p.getLocation()) + "," + args[1] + "," + name + "," + args[2] + "," + npc.getId());
-            String NPC_SET = "§a§c▪ §bNPC: %name% §bwas set!";
+            String NPC_SET = "§a§c▪ §bNPC：%name% §b已设置！";
             p.sendMessage(NPC_SET.replace("%name%", name.replace("&", "§").replace("\\\\n", " ")));
-            p.sendMessage("§a§c▪ §bTarget groups: " + ChatColor.GOLD + args[2]);
+            p.sendMessage("§a§c▪ §b目标竞技场组：" + ChatColor.GOLD + args[2]);
             BedWars.config.set(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE, npcs);
 
         } else if (args[0].equalsIgnoreCase("remove")) {
 
             List<Entity> e = p.getNearbyEntities(4, 4, 4);
-            String NO_NPCS = "§c▪ §bThere isn't any NPC nearby.";
+            String NO_NPCS = "§c▪ §b附近没有 NPC。";
             if (e.isEmpty()) {
                 p.sendMessage(NO_NPCS);
                 return true;
             }
             if (BedWars.config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE) == null) {
-                String NO_SET = "§c▪ §bThere isn't any NPC set yet!";
+                String NO_SET = "§c▪ §b尚未设置任何 NPC！";
                 p.sendMessage(NO_SET);
                 return true;
             }
@@ -139,7 +139,7 @@ public class NPC extends SubCommand {
             }
             BedWars.config.set(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE, locations);
             npc.destroy();
-            String NPC_REMOVED = "§c▪ §bThe target NPC was removed!";
+            String NPC_REMOVED = "§c▪ §b目标 NPC 已删除！";
             p.sendMessage(NPC_REMOVED);
         } else {
             for (BaseComponent bc : MAIN_USAGE){

@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.function.Consumer;
@@ -147,6 +148,7 @@ public class ConfigManager {
         migration.accept(configuration);
         configuration.options().copyDefaults(true);
         configuration.set(CONFIG_VERSION_PATH, latestVersion);
+        configuration.setComments(CONFIG_VERSION_PATH, List.of("配置文件架构版本，请勿手动修改。"));
         return true;
     }
 
@@ -368,6 +370,13 @@ public class ConfigManager {
      */
     public YamlConfiguration getYml() {
         return yml;
+    }
+
+    /**
+     * Add user-facing documentation above a configuration entry.
+     */
+    public void setComments(String path, String... comments) {
+        yml.setComments(path, Arrays.asList(comments));
     }
 
     /**

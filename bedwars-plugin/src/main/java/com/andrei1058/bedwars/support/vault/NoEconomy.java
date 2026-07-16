@@ -35,11 +35,11 @@ public class NoEconomy implements Economy {
 
     @Override
     public void giveMoney(Player p, double money) {
-        p.sendMessage("§cVault support missing!");
+        p.sendMessage("§c缺少 Vault 经济支持！");
     }
 
     @Override
     public void buyAction(Player p, double cost) {
-        p.sendMessage("§cVault support missing!");
+        p.sendMessage("§c缺少 Vault 经济支持！");
     }
 }

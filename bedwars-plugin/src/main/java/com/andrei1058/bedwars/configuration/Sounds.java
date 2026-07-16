@@ -89,8 +89,9 @@ public class Sounds {
         addDefSound("ender-pearl-landed", "ENTITY_ENDERMAN_TELEPORT");
         addDefSound("pop-up-tower-build", "ENTITY_CHICKEN_EGG");
         yml.options().copyDefaults(true);
+        sounds.setComments("game-end", "声音配置：sound 为 Bukkit 声音名称，volume 为音量，pitch 为音调。", "如需关闭某个提示音，可将调用该声音的配置设为 none。");
 
-        sounds.updateToLatestVersion(1, config -> {
+        sounds.updateToLatestVersion(2, config -> {
             config.set("bought", null);
             config.set("insufficient-money", null);
             config.set("player-kill", null);

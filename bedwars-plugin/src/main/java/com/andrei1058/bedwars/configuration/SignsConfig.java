@@ -41,7 +41,9 @@ public class SignsConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SIGNS_STATUS_BLOCK_PLAYING_MATERIAL, "RED_CONCRETE");
         yml.addDefault(ConfigPath.SIGNS_STATUS_BLOCK_RESTARTING_MATERIAL, "RED_CONCRETE");
         yml.options().copyDefaults(true);
-        updateToLatestVersion(1, config -> {
+        setComments("format", "竞技场告示牌的四行显示格式。", "可用占位符包括 [arena]、[on]、[max]、[type]、[status]。");
+        setComments(ConfigPath.SIGNS_STATUS_BLOCK_WAITING_MATERIAL, "不同竞技场状态对应的告示牌背板材质。");
+        updateToLatestVersion(2, config -> {
             List<String> format = new ArrayList<>(config.getStringList("format"));
             List<String> defaults = Arrays.asList("&a[arena]", "", "&2[on]&9/&2[max] &7([type])", "[status]");
             while (format.size() < defaults.size()) {

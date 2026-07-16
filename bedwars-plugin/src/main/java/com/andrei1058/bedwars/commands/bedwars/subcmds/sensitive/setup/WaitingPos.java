@@ -51,30 +51,30 @@ public class WaitingPos extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null){
-            s.sendMessage("§c ▪ §7You're not in a setup session!");
+            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
         if (args.length == 0) {
-            p.sendMessage("§c▪ §7Usage: /" + mainCmd + " "+getSubCommandName()+" 1 or 2");
+            p.sendMessage("§c▪ §7用法：/" + mainCmd + " "+getSubCommandName()+" 1 或 2");
         } else {
             if (args[0].equalsIgnoreCase("1") || args[0].equalsIgnoreCase("2")) {
-                p.sendMessage("§6 ▪ §7Pos " + args[0] + " set!");
+                p.sendMessage("§6 ▪ §7已设置位置 " + args[0] + "！");
                 ss.getConfig().saveArenaLoc("waiting.Pos" + args[0], p.getLocation());
                 ss.getConfig().reload();
                 if (ss.getConfig().getYml().get("waiting.Pos1") == null){
-                    p.sendMessage("§c ▪ §7Set the remaining position:");
-                    p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/"+ BedWars.mainCmd+" waitingPos 1", "§dSet pos 1", "/"+getParent().getName()+" waitingPos 1", ClickEvent.Action.RUN_COMMAND));
+                    p.sendMessage("§c ▪ §7请设置剩余位置：");
+                    p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/"+ BedWars.mainCmd+" waitingPos 1", "§d设置位置 1", "/"+getParent().getName()+" waitingPos 1", ClickEvent.Action.RUN_COMMAND));
                 } else if (ss.getConfig().getYml().get("waiting.Pos2") == null){
-                    p.sendMessage("§c ▪ §7Set the remaining position:");
-                    p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/"+ BedWars.mainCmd+" waitingPos 2", "§dSet pos 2", "/"+getParent().getName()+" waitingPos 2", ClickEvent.Action.RUN_COMMAND));
+                    p.sendMessage("§c ▪ §7请设置剩余位置：");
+                    p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/"+ BedWars.mainCmd+" waitingPos 2", "§d设置位置 2", "/"+getParent().getName()+" waitingPos 2", ClickEvent.Action.RUN_COMMAND));
                 }
             } else {
-                p.sendMessage("§c▪ §7Usage: /" + mainCmd + " "+getSubCommandName()+" 1 or 2");
+                p.sendMessage("§c▪ §7用法：/" + mainCmd + " "+getSubCommandName()+" 1 或 2");
             }
         }
         if (!((ss.getConfig().getYml().get("waiting.Pos1") == null || ss.getConfig().getYml().get("waiting.Pos2") == null))){
             Bukkit.dispatchCommand(p, BedWars.mainCmd+" cmds");
-            s.sendMessage("§6 ▪ §7Set teams spawn if you didn't!");
+            s.sendMessage("§6 ▪ §7如果尚未设置，请继续设置各队伍出生点！");
         }
         return true;
     }

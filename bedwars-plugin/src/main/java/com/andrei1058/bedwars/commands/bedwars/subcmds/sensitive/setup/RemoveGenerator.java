@@ -116,9 +116,9 @@ public class RemoveGenerator extends SubCommand {
             }
 
             if (nearest == null) {
-                p.sendMessage(ss.getPrefix() + "Could not find any nearby generator (Range 2x2).");
-                p.sendMessage(ss.getPrefix() + "You mast stand close to the generator hologram's you want to remove.");
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "Could not find any nearby generator.", 5, 40, 5);
+                p.sendMessage(ss.getPrefix() + "附近没有找到资源点（范围 2×2）。");
+                p.sendMessage(ss.getPrefix() + "请站在需要移除的资源点全息文字旁边。");
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "附近没有找到资源点。", 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                 return true;
             }
@@ -128,8 +128,8 @@ public class RemoveGenerator extends SubCommand {
                 list.remove(toRemove[1]);
 
                 ss.getConfig().set("generator." + toRemove[0], list);
-                p.sendMessage(ss.getPrefix() + "Removed " + toRemove[0] + " generator at location: X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + toRemove[0] + " generator removed.", 5, 40, 5);
+                p.sendMessage(ss.getPrefix() + "已移除 " + toRemove[0] + " 资源点，坐标：X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已移除 " + toRemove[0] + " 资源点。", 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
                 Misc.removeArmorStand(toRemove[0], nearest, toRemove[1]);
                 return true;
@@ -139,18 +139,18 @@ public class RemoveGenerator extends SubCommand {
                 ss.getConfig().set("Team." + toRemove[2] + ".Emerald", new ArrayList<>());
                 ss.getConfig().set("Team." + toRemove[2] + ".Iron", new ArrayList<>());
                 ss.getConfig().set("Team." + toRemove[2] + ".Gold", new ArrayList<>());
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ss.getTeamColor(toRemove[2]) + toRemove[2] + " generator was removed.", 5, 40, 5);
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ss.getTeamColor(toRemove[2]) + toRemove[2] + " 的资源点已移除。", 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
                 Misc.removeArmorStand(null, nearest, toRemove[1]);
-                p.sendMessage(ss.getPrefix() + ss.getTeamColor(toRemove[2]) + toRemove[2] + ChatColor.getLastColors(ss.getPrefix()) + " generators were removed!");
+                p.sendMessage(ss.getPrefix() + "已移除 " + ss.getTeamColor(toRemove[2]) + toRemove[2] + ChatColor.getLastColors(ss.getPrefix()) + " 的全部资源点！");
                 return true;
             }
 
             List<String> list = ss.getConfig().getList("Team." + toRemove[2] + "." + toRemove[0]);
             list.remove(toRemove[1]);
             ss.getConfig().set("Team." + toRemove[2] + "." + toRemove[0], list);
-            p.sendMessage(ss.getPrefix() + "Removed " + ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.getLastColors(ss.getPrefix()) + toRemove[0] + " generator at location: X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
-            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.GREEN + toRemove[0] + " generator removed.", 5, 40, 5);
+            p.sendMessage(ss.getPrefix() + "已移除 " + ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.getLastColors(ss.getPrefix()) + toRemove[0] + " 资源点，坐标：X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
+            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.GREEN + toRemove[0] + " 资源点已移除。", 5, 40, 5);
             Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
             Misc.removeArmorStand(toRemove[0], nearest, toRemove[1]);
             return true;

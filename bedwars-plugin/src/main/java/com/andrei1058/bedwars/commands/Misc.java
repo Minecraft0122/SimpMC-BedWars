@@ -36,6 +36,7 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Locale;
 
 public class Misc {
 
@@ -68,7 +69,7 @@ public class Misc {
                     if (e.getMetadata("bw1058-loc").get(0).asString().equalsIgnoreCase(configLoc)) {
                         if (contains != null){
                             if (!contains.isEmpty()){
-                                if (ChatColor.stripColor(e.getCustomName()).contains(contains)){
+                                if (ChatColor.stripColor(e.getCustomName()).toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))){
                                     e.remove();
                                     return;
                                 }
@@ -83,7 +84,7 @@ public class Misc {
             }
             if (e.getType() == EntityType.ARMOR_STAND) {
                 if (!((ArmorStand) e).isVisible()) {
-                    if (contains != null && e.getCustomName().contains(contains)) {
+                    if (contains != null && e.getCustomName().toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))) {
                         e.remove();
                     }
                 }

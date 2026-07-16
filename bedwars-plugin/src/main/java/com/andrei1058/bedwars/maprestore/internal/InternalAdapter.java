@@ -158,13 +158,13 @@ public class InternalAdapter extends RestoreAdapter {
                 try {
                     File level = new File(Bukkit.getWorldContainer(), s.getWorldName() + "/region");
                     if (level.exists()) {
-                        s.getPlayer().sendMessage(ChatColor.GREEN + "Loading " + s.getWorldName() + " from Bukkit worlds container.");
+                        s.getPlayer().sendMessage(ChatColor.GREEN + "正在从 Bukkit 世界目录加载 " + s.getWorldName() + "。");
                         deleteWorldTrash(s.getWorldName());
                         World w = Bukkit.createWorld(wc);
                         keepSpawnLoaded(w);
                     } else {
                         try {
-                            s.getPlayer().sendMessage(ChatColor.GREEN + "Creating a new void map: " + s.getWorldName());
+                            s.getPlayer().sendMessage(ChatColor.GREEN + "正在创建新的虚空地图：" + s.getWorldName());
                             World w = Bukkit.createWorld(wc);
                             keepSpawnLoaded(w);
                             Bukkit.getScheduler().runTaskLater(plugin, s::teleportPlayer, 20L);

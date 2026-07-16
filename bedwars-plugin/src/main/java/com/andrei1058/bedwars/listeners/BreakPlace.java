@@ -414,7 +414,7 @@ public class BreakPlace implements Listener {
                 }
                 IArena a = Arena.getArenaByName(e.getLine(1));
                 if (a != null) {
-                    p.sendMessage("§a▪ §7Sign saved for arena: " + e.getLine(1));
+                    p.sendMessage("§a▪ §7已保存竞技场告示牌：" + e.getLine(1));
                     a.addSign(e.getBlock().getLocation());
                     Sign b = (Sign) e.getBlock().getState();
                     int line = 0;
@@ -427,7 +427,7 @@ public class BreakPlace implements Listener {
                     b.update(true);
                 }
             } else {
-                p.sendMessage("§c▪ §7You didn't set any arena yet!");
+                p.sendMessage("§c▪ §7你还没有设置任何竞技场！");
             }
         }
     }

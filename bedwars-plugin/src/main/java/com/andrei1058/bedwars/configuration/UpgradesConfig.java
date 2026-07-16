@@ -143,7 +143,10 @@ public class UpgradesConfig extends ConfigManager {
             addDefaultDisplayItem("separator-back", "ARROW", 0, 1, false);
         }
         yml.options().copyDefaults(true);
-        updateToLatestVersion(1);
+        setComments("default-upgrades-settings", "队伍升级菜单布局、陷阱价格和队列上限。");
+        setComments("upgrade-swords", "升级项由价格、货币、显示物品和 receive 动作组成。");
+        setComments("category-traps", "陷阱分类菜单内容及槽位。");
+        updateToLatestVersion(2);
     }
 
     private void addDefaultDisplayItem(String path, String material, int data, int amount, boolean enchanted) {

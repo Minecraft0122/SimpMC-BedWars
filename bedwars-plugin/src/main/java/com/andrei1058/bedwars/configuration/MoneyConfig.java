@@ -23,6 +23,7 @@ public class MoneyConfig extends ConfigManager {
         money.getYml ().addDefault ( "money-rewards.bed-destroyed", 60 );
         money.getYml ().addDefault ( "money-rewards.final-kill", 40 );
         money.getYml ().addDefault ( "money-rewards.regular-kill", 10 );
-        money.updateToLatestVersion(1);
+        money.setComments("money-rewards", "使用 Vault 经济系统时，各类游戏行为奖励的金币数量。");
+        money.updateToLatestVersion(2);
     }
 }

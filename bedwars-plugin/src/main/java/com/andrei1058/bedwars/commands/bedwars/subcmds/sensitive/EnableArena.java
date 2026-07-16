@@ -45,7 +45,7 @@ public class EnableArena extends SubCommand {
 
     public EnableArena(ParentCommand parent, String name) {
         super(parent, name);
-        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " "+getSubCommandName()+" §6<worldName>","§fEnable an arena.",
+        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " "+getSubCommandName()+" §6<世界名>","§f启用竞技场。",
                 "/" + getParent().getName() + " "+getSubCommandName()+ " ", ClickEvent.Action.SUGGEST_COMMAND));
         showInList(true);
         setPriority(5);
@@ -58,27 +58,27 @@ public class EnableArena extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 1) {
-            p.sendMessage("§c▪ §7Usage: §o/" + getParent().getName() + " enableRotation <mapName>");
+            p.sendMessage("§c▪ §7用法：§o/" + getParent().getName() + " enableArena <地图名>");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {
-            p.sendMessage("§c▪ §7" + args[0] + " doesn't exist!");
+            p.sendMessage("§c▪ §7竞技场 " + args[0] + " 不存在！");
             return true;
         }
 
         for (IArena mm : Arena.getEnableQueue()){
             if (mm.getArenaName().equalsIgnoreCase(args[0])){
-                p.sendMessage("§c▪ §7This arena is already in the enable queue!");
+                p.sendMessage("§c▪ §7该竞技场已经在启用队列中！");
                 return true;
             }
         }
 
         IArena aa = Arena.getArenaByName(args[0]);
         if (aa != null) {
-            p.sendMessage("§c▪ §7This arena is already enabled!");
+            p.sendMessage("§c▪ §7该竞技场已经启用！");
             return true;
         }
-        p.sendMessage("§6 ▪ §7Enabling arena...");
+        p.sendMessage("§6 ▪ §7正在启用竞技场……");
         new Arena(args[0], p);
         return true;
     }

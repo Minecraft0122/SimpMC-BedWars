@@ -124,7 +124,7 @@ public class SetupSession implements ISetupSession {
      * @return return is broken. do not use it.
      */
     public boolean startSetup() {
-        getPlayer().sendMessage("§6 ▪ §7Loading " + getWorldName());
+        getPlayer().sendMessage("§6 ▪ §7正在加载 " + getWorldName());
         cm = new ArenaConfig(BedWars.plugin, getWorldName(), plugin.getDataFolder().getPath() + "/Arenas");
         BedWars.getAPI().getRestoreAdapter().onSetupSessionStart(this);
         return true;
@@ -134,15 +134,15 @@ public class SetupSession implements ISetupSession {
         Inventory inv = Bukkit.createInventory(null, 9, getInvName());
         ItemStack assisted = new ItemStack(Material.GLOWSTONE_DUST);
         ItemMeta am = assisted.getItemMeta();
-        am.setDisplayName("§e§lASSISTED SETUP");
-        am.setLore(Arrays.asList("", "§aEasy and quick setup!", "§7For beginners and lazy staff :D", "", "§3Reduced options."));
+        am.setDisplayName("§e§l引导式设置");
+        am.setLore(Arrays.asList("", "§a简单快速地创建竞技场", "§7适合首次配置竞技场的管理员", "", "§3仅显示必要选项"));
         assisted.setItemMeta(am);
         inv.setItem(getAssistedSlot(), assisted);
 
         ItemStack advanced = new ItemStack(Material.REDSTONE);
         ItemMeta amm = advanced.getItemMeta();
-        amm.setDisplayName("§c§lADVANCED SETUP");
-        amm.setLore(Arrays.asList("", "§aDetailed setup!", "§7For experienced staff :D", "", "§3Advanced options."));
+        amm.setDisplayName("§c§l高级设置");
+        amm.setLore(Arrays.asList("", "§a完整配置竞技场", "§7适合熟悉插件的管理员", "", "§3显示全部高级选项"));
         advanced.setItemMeta(amm);
         inv.setItem(getAdvancedSlot(), advanced);
 
@@ -155,7 +155,7 @@ public class SetupSession implements ISetupSession {
     public void cancel() {
         getSetupSessions().remove(this);
         if (isStarted()) {
-            player.sendMessage("§6 ▪ §7" + getWorldName() + " setup cancelled!");
+            player.sendMessage("§6 ▪ §7已取消 " + getWorldName() + " 的设置。");
             done();
         }
     }
@@ -218,7 +218,7 @@ public class SetupSession implements ISetupSession {
     public void teleportPlayer() {
         World w = Bukkit.getWorld(getWorldName());
         if (w == null) {
-            player.sendMessage(getPrefix() + ChatColor.RED + "Could not load the arena world.");
+            player.sendMessage(getPrefix() + ChatColor.RED + "无法加载竞技场世界。");
             return;
         }
         player.getInventory().clear();
@@ -234,14 +234,14 @@ public class SetupSession implements ISetupSession {
         for (int x = 0; x < 10; x++) {
             getPlayer().sendMessage(" ");
         }
-        player.sendMessage(ChatColor.GREEN + "You were teleported to the " + ChatColor.GOLD + getWorldName() + ChatColor.GREEN + "'s spawn.");
+        player.sendMessage(ChatColor.GREEN + "已传送到 " + ChatColor.GOLD + getWorldName() + ChatColor.GREEN + " 的出生点。");
         if (getSetupType() == SetupType.ASSISTED && getConfig().getYml().get("waiting.Loc") == null) {
             player.sendMessage("");
-            player.sendMessage(ChatColor.GREEN + "Hello " + player.getDisplayName() + "!");
-            player.sendMessage(ChatColor.WHITE + "Please set the waiting spawn.");
-            player.sendMessage(ChatColor.WHITE + "It is the place where players will wait the game to start.");
-            player.spigot().sendMessage(Misc.msgHoverClick(ChatColor.BLUE + "     ▪     " + ChatColor.GOLD + "CLICK HERE TO SET THE WAITING LOBBY    " + ChatColor.BLUE + " ▪", ChatColor.LIGHT_PURPLE + "Click to set the waiting spawn.", "/" + BedWars.mainCmd + " setWaitingSpawn", ClickEvent.Action.RUN_COMMAND));
-            player.spigot().sendMessage(MainCommand.createTC(ChatColor.YELLOW + "Or type: " + ChatColor.GRAY + "/" + BedWars.mainCmd + " to see the command list.", "/" + BedWars.mainCmd + "", ChatColor.WHITE + "Show commands list."));
+            player.sendMessage(ChatColor.GREEN + "你好，" + player.getDisplayName() + "！");
+            player.sendMessage(ChatColor.WHITE + "请先设置等待大厅出生点。");
+            player.sendMessage(ChatColor.WHITE + "玩家将在这里等待游戏开始。");
+            player.spigot().sendMessage(Misc.msgHoverClick(ChatColor.BLUE + "     ▪     " + ChatColor.GOLD + "点击设置等待大厅    " + ChatColor.BLUE + " ▪", ChatColor.LIGHT_PURPLE + "点击设置等待大厅出生点", "/" + BedWars.mainCmd + " setWaitingSpawn", ClickEvent.Action.RUN_COMMAND));
+            player.spigot().sendMessage(MainCommand.createTC(ChatColor.YELLOW + "或输入：" + ChatColor.GRAY + "/" + BedWars.mainCmd + " 查看命令列表。", "/" + BedWars.mainCmd, ChatColor.WHITE + "显示命令列表"));
         } else {
             Bukkit.dispatchCommand(player, BedWars.mainCmd + " cmds");
         }
@@ -340,7 +340,7 @@ public class SetupSession implements ISetupSession {
      */
     public void displayAvailableTeams() {
         if (getConfig().getYml().get("Team") != null) {
-            getPlayer().sendMessage(getPrefix() + "Available teams: ");
+            getPlayer().sendMessage(getPrefix() + "可用队伍：");
             for (String team : Objects.requireNonNull(getConfig().getYml().getConfigurationSection("Team")).getKeys(false)) {
                 getPlayer().sendMessage(getPrefix() + TeamColor.getChatColor(Objects.requireNonNull(getConfig().getYml().getString("Team." + team + ".Color"))) + team);
             }
@@ -402,7 +402,7 @@ public class SetupSession implements ISetupSession {
         }
 
         if (getConfig().getYml().isString(bedPath)) {
-            removeArmorStand("bed", getConfig().getArenaLoc(bedPath), null);
+            removeArmorStand("床位", getConfig().getArenaLoc(bedPath), null);
         }
         getConfig().getYml().set(bedPath, getConfig().stringLocationArenaFormat(found));
         getConfig().save();

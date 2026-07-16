@@ -39,14 +39,14 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 2;
+    private static final int CONFIG_VERSION = 3;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
 
         YamlConfiguration yml = getYml();
 
-        yml.options().header(plugin.getDescription().getName() + " by SimpMC.\n");
+        yml.options().header(plugin.getDescription().getName() + "，由 SimpMC 维护。\n");
         yml.addDefault("serverType", "MULTIARENA");
         yml.addDefault("language", "en");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, Collections.singletonList("your language iso here"));
@@ -212,6 +212,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_GAME_END_SB_TOP_STATISTIC, DefaultStatistics.KILLS.toString());
         yml.addDefault(ConfigPath.GENERAL_GAME_END_SB_TOP_HIDE_MISSING, true);
         yml.options().copyDefaults(true);
+        addConfigurationComments();
         updateToLatestVersion(CONFIG_VERSION, MainConfig::migrateLegacyConfig);
 
         //set default server language
@@ -260,6 +261,23 @@ public class MainConfig extends ConfigManager {
         }
 
         BedWars.setLobbyWorld(getLobbyWorldName());
+    }
+
+    private void addConfigurationComments() {
+        setComments("serverType", "服务器运行模式：MULTIARENA、SHARED 或 BUNGEE。", "修改后需要完整重启服务器。");
+        setComments("language", "服务器默认语言代码，例如 zh_cn。");
+        setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");
+        setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "游戏计时设置，单位请参考对应配置项名称。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
+        setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");
+        setComments(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, "火球爆炸、击退、冷却与伤害设置。");
+        setComments("database.enable", "是否使用 MySQL；关闭时使用本地 SQLite。", "启用前请正确填写下面的连接信息。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置，大小必须是 9 的倍数。");
+        setComments(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅掉入虚空时是否传送回大厅出生点。");
     }
 
     private static void migrateLegacyConfig(YamlConfiguration yml) {

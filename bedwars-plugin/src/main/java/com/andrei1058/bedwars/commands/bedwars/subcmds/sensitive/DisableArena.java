@@ -44,7 +44,7 @@ public class DisableArena extends SubCommand {
         super(parent, name);
         setPriority(6);
         showInList(true);
-        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " "+getSubCommandName()+" §6<worldName>", "§fDisable an arena.\nThis will remove the players \n§ffrom the arena before disabling.",
+        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " "+getSubCommandName()+" §6<世界名>", "§f禁用竞技场。\n禁用前会将玩家移出竞技场。",
                 "/" + getParent().getName() + " "+getSubCommandName()+" ", ClickEvent.Action.SUGGEST_COMMAND));
         setPermission(Permissions.PERMISSION_ARENA_DISABLE);
     }
@@ -55,23 +55,23 @@ public class DisableArena extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 1) {
-            p.sendMessage("§c▪ §7Usage: §o/" + getParent().getName() + " "+getSubCommandName()+" <mapName>");
+            p.sendMessage("§c▪ §7用法：§o/" + getParent().getName() + " "+getSubCommandName()+" <地图名>");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {
-            p.sendMessage("§c▪ §7" + args[0] + " doesn't exist!");
+            p.sendMessage("§c▪ §7竞技场 " + args[0] + " 不存在！");
             return true;
         }
         IArena a = Arena.getArenaByName(args[0]);
         if (a == null) {
-            p.sendMessage("§c▪ §7This arena is disabled yet!");
+            p.sendMessage("§c▪ §7该竞技场已经禁用！");
             return true;
         }
         if (a.getStatus() == GameState.playing) {
-            p.sendMessage("§6 ▪ §7There is a game running on this Arena, please disable after the game!");
+            p.sendMessage("§6 ▪ §7该竞技场正在游戏中，请在游戏结束后禁用！");
             return true;
         }
-        p.sendMessage("§6 ▪ §7Disabling arena...");
+        p.sendMessage("§6 ▪ §7正在禁用竞技场……");
         a.disable();
         return true;
     }

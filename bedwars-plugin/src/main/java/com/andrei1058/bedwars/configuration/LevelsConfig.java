@@ -70,7 +70,10 @@ public class LevelsConfig extends ConfigManager {
         levels.getYml().addDefault("progress-bar.locked-color", "&7");
         levels.getYml().addDefault("progress-bar.format", "&8 [{progress}&8]");
 
-        levels.updateToLatestVersion(1);
+        levels.setComments("levels", "等级名称与升级所需经验；支持 5-10 形式的等级范围。");
+        levels.setComments("xp-rewards", "各类游戏行为奖励的经验值。");
+        levels.setComments("progress-bar", "经验进度条的字符、颜色与显示格式。");
+        levels.updateToLatestVersion(2);
     }
 
     @NotNull

@@ -125,16 +125,16 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
                         Bukkit.dispatchCommand(s, getName() + " cmds");
                     } else {
                         s.sendMessage("");
-                        s.sendMessage("§8§l" + dot + " §6" + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion() + " §7- §c Admin Commands");
+                        s.sendMessage("§8§l" + dot + " §6" + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion() + " §7- §c管理员命令");
                         s.sendMessage("");
                         sendSubCommands((Player) s);
                     }
                 } else {
-                    s.sendMessage("§f   bw safemode §eenable/ disable");
+                    s.sendMessage("§f   bw safemode §eenable/disable §7（启用/禁用安全模式）");
                 }
             } else {
                 if (s instanceof ConsoleCommandSender) {
-                    s.sendMessage("§fNo console commands available atm.");
+                    s.sendMessage("§f当前没有可用的控制台命令。");
                     return true;
                 }
                 /* Send player commands */
@@ -229,7 +229,7 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         if (BedWars.getServerType() == ServerType.BUNGEE) return true;
         if (config.getLobbyWorldName().isEmpty()) {
             if (p != null) {
-                p.sendMessage("§c▪ §7You have to set the lobby location first!");
+                p.sendMessage("§c▪ §7请先设置大厅位置！");
             }
             return false;
         }

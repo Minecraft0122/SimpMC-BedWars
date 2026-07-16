@@ -115,7 +115,7 @@ public class PumpkinContent extends CategoryContent {
 
         pumpkin.setAmount(12);
         ItemMeta itemMeta = pumpkin.getItemMeta();
-        itemMeta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "Happy Halloween!");
+        itemMeta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "万圣节快乐！");
         itemMeta.setLore(Arrays.asList("", cColor + String.valueOf(tier.getPrice()) + " " + cColor + translatedCurrency, " ", buyStatus));
         pumpkin.setItemMeta(itemMeta);
         return pumpkin;

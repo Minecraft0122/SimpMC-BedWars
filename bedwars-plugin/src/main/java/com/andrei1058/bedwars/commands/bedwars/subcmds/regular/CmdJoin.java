@@ -46,7 +46,7 @@ public class CmdJoin extends SubCommand {
         setPriority(19);
         showInList(false);
         setDisplayInfo(com.andrei1058.bedwars.commands.bedwars.MainCommand.createTC("§6 ▪ §7/"+ com.andrei1058.bedwars.commands.bedwars.MainCommand.getInstance().getName()+" join §e<random/ arena/ groupName>",
-                "/"+getParent().getName()+" "+getSubCommandName(), "§fJoin an arena by name or by group.\n§f/bw join random - join random arena."));
+                "/"+getParent().getName()+" "+getSubCommandName(), "§f按名称或竞技场组加入游戏。\n§f/bw join random - 随机加入竞技场。"));
     }
 
     @Override
@@ -105,7 +105,7 @@ public class CmdJoin extends SubCommand {
     }
 
     private void sendArenaRestoringMessage(Player player, String arenaName) {
-        player.sendMessage("§c▪ §7Arena §e" + arenaName + " §7is resetting. Please try again in a few seconds.");
+        player.sendMessage("§c▪ §7竞技场 §e" + arenaName + " §7正在重置，请稍后再试。");
     }
 
     @Override

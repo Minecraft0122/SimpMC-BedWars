@@ -42,8 +42,8 @@ public class Reload extends SubCommand {
         setPriority(11);
         showInList(true);
         setPermission(Permissions.PERMISSION_RELOAD);
-        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " "+getSubCommandName()+"       §8 - §ereload messages",
-                "§fReload messages.\n§cNot recommended!", "/"+ getParent().getName() + " "+getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
+        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " "+getSubCommandName()+"       §8 - §e重载语言文件",
+                "§f重载语言消息。\n§c不建议在游戏运行中使用！", "/"+ getParent().getName() + " "+getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
     }
 
     @Override
@@ -55,7 +55,7 @@ public class Reload extends SubCommand {
         }
         for (Language l : Language.getLanguages()){
             l.reload();
-            s.sendMessage("§6 ▪ §7"+l.getLangName()+" reloaded!");
+            s.sendMessage("§6 ▪ §7已重载语言："+l.getLangName());
         }
         return true;
     }

@@ -194,14 +194,14 @@ public class Arena implements IArena {
                 if (mm.getArenaName().equalsIgnoreCase(name)) {
                     plugin.getLogger().severe("Tried to load arena " + name + " but it is already in the enable queue.");
                     if (p != null)
-                        p.sendMessage(ChatColor.RED + "Tried to load arena " + name + " but it is already in the enable queue.");
+                        p.sendMessage(ChatColor.RED + "竞技场 " + name + " 已在启用队列中。");
                     return;
                 }
             }
             if (getArenaByName(name) != null) {
                 plugin.getLogger().severe("Tried to load arena " + name + " but it is already enabled.");
                 if (p != null)
-                    p.sendMessage(ChatColor.RED + "Tried to load arena " + name + " but it is already enabled.");
+                    p.sendMessage(ChatColor.RED + "竞技场 " + name + " 已启用。");
                 return;
             }
         }
@@ -216,13 +216,13 @@ public class Arena implements IArena {
 
         yml = cm.getYml();
         if (yml.get("Team") == null) {
-            if (p != null) p.sendMessage("You didn't set any team for arena: " + name);
+            if (p != null) p.sendMessage("§c竞技场尚未设置任何队伍：" + name);
             plugin.getLogger().severe("You didn't set any team for arena: " + name);
             clearRestoring(name);
             return;
         }
         if (yml.getConfigurationSection("Team").getKeys(false).size() < 2) {
-            if (p != null) p.sendMessage("§cYou must set at least 2 teams on: " + name);
+            if (p != null) p.sendMessage("§c竞技场至少需要设置 2 个队伍：" + name);
             plugin.getLogger().severe("You must set at least 2 teams on: " + name);
             clearRestoring(name);
             return;
@@ -241,7 +241,7 @@ public class Arena implements IArena {
 
 
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(name)) {
-            if (p != null) p.sendMessage(ChatColor.RED + "There isn't any map called " + name);
+            if (p != null) p.sendMessage(ChatColor.RED + "找不到地图：" + name);
             plugin.getLogger().log(Level.WARNING, "There isn't any map called " + name);
             clearRestoring(name);
             return;
@@ -255,28 +255,28 @@ public class Arena implements IArena {
             try {
                 TeamColor.valueOf(colorS);
             } catch (Exception e) {
-                if (p != null) p.sendMessage("§cInvalid color at team: " + team + " in arena: " + name);
+                if (p != null) p.sendMessage("§c队伍 " + team + " 的颜色无效，竞技场：" + name);
                 plugin.getLogger().severe("Invalid color at team: " + team + " in arena: " + name);
                 error = true;
             }
             for (String stuff : Arrays.asList("Color", "Spawn", "Bed", "Shop", "Upgrade", "Iron", "Gold")) {
                 if (yml.get("Team." + team + "." + stuff) == null) {
-                    if (p != null) p.sendMessage("§c" + stuff + " not set for " + team + " team on: " + name);
+                    if (p != null) p.sendMessage("§c队伍 " + team + " 尚未设置 " + stuff + "，竞技场：" + name);
                     plugin.getLogger().severe(stuff + " not set for " + team + " team on: " + name);
                     error = true;
                 }
             }
         }
         if (yml.get("generator.Diamond") == null) {
-            if (p != null) p.sendMessage("§cThere isn't set any Diamond generator on: " + name);
+            if (p != null) p.sendMessage("§c竞技场尚未设置钻石生成点：" + name);
             plugin.getLogger().severe("There isn't set any Diamond generator on: " + name);
         }
         if (yml.get("generator.Emerald") == null) {
-            if (p != null) p.sendMessage("§cThere isn't set any Emerald generator on: " + name);
+            if (p != null) p.sendMessage("§c竞技场尚未设置绿宝石生成点：" + name);
             plugin.getLogger().severe("There isn't set any Emerald generator on: " + name);
         }
         if (yml.get("waiting.Loc") == null) {
-            if (p != null) p.sendMessage("§cWaiting spawn not set on: " + name);
+            if (p != null) p.sendMessage("§c竞技场尚未设置等待大厅出生点：" + name);
             plugin.getLogger().severe("Waiting spawn not set on: " + name);
             clearRestoring(name);
             return;

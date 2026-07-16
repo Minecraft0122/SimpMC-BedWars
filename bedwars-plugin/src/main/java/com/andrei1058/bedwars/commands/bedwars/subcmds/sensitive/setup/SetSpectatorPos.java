@@ -49,14 +49,13 @@ public class SetSpectatorPos extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null) {
-            //s.sendMessage("§c ▪ §7You're not in a setup session!");
             return false;
         }
         if (args.length != 0) {
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "Usage: /" + mainCmd + " " + getSubCommandName());
+            p.sendMessage(ss.getPrefix() + ChatColor.RED + "用法：/" + mainCmd + " " + getSubCommandName());
         } else {
             ss.getConfig().saveArenaLoc(ConfigPath.ARENA_SPEC_LOC, p.getLocation());
-            p.sendMessage(ss.getPrefix() + "Spectator location set!");
+            p.sendMessage(ss.getPrefix() + "已设置观战出生点！");
         }
         return true;
     }

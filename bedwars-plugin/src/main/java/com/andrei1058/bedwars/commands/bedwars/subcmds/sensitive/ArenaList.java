@@ -51,8 +51,8 @@ public class ArenaList extends SubCommand {
         super(parent, name);
         setPriority(3);
         showInList(true);
-        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + com.andrei1058.bedwars.commands.bedwars.MainCommand.getInstance().getName() + " " + getSubCommandName() + ((getArenas().size() == 0) ? " §c(0 set)" : " §a(" + getArenas().size() + " set)"),
-                "§fShow available arenas", "/" + MainCommand.getInstance().getName() + " " + getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
+        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + com.andrei1058.bedwars.commands.bedwars.MainCommand.getInstance().getName() + " " + getSubCommandName() + ((getArenas().size() == 0) ? " §c（已设置 0 个）" : " §a（已设置 " + getArenas().size() + " 个）"),
+                "§f显示可用竞技场", "/" + MainCommand.getInstance().getName() + " " + getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
     }
 
     @Override
@@ -78,10 +78,10 @@ public class ArenaList extends SubCommand {
             start = 0;
         }
 
-        p.sendMessage(color(" \n&1|| &3" + plugin.getName() + "&7 Instantiated games: \n "));
+        p.sendMessage(color(" \n&1|| &3" + plugin.getName() + "&7 已加载的竞技场：\n "));
 
         if (arenas.isEmpty()) {
-            p.sendMessage(ChatColor.RED + "No arenas to display.");
+            p.sendMessage(ChatColor.RED + "没有可显示的竞技场。");
             return true;
         }
 
@@ -90,11 +90,11 @@ public class ArenaList extends SubCommand {
         arenas.subList(start, limit).forEach(arena -> {
             String gameState = arena.getDisplayStatus(Language.getPlayerLanguage(p));
             String msg = color(
-                    "ID: &e" + arena.getWorldName() +
-                            " &fG: &e" + arena.getDisplayGroup(p) +
-                            " &fP: &e" + (arena.getPlayers().size() + arena.getSpectators().size()) +
-                            " &fS: " + gameState +
-                            " &fWl: &e" + (Bukkit.getWorld(arena.getWorldName()) != null)
+                    "ID：&e" + arena.getWorldName() +
+                            " &f组：&e" + arena.getDisplayGroup(p) +
+                            " &f人数：&e" + (arena.getPlayers().size() + arena.getSpectators().size()) +
+                            " &f状态：" + gameState +
+                            " &f世界已加载：&e" + (Bukkit.getWorld(arena.getWorldName()) != null ? "是" : "否")
             );
 
 
@@ -104,7 +104,7 @@ public class ArenaList extends SubCommand {
         p.sendMessage(" ");
 
         if (arenas.size() > ARENAS_PER_PAGE * page) {
-            p.sendMessage(ChatColor.GRAY + "Type /" + ChatColor.GREEN + MainCommand.getInstance().getName() + " arenaList " + ++page + ChatColor.GRAY + " for next page.");
+            p.sendMessage(ChatColor.GRAY + "输入 /" + ChatColor.GREEN + MainCommand.getInstance().getName() + " arenaList " + ++page + ChatColor.GRAY + " 查看下一页。");
         }
         return true;
     }

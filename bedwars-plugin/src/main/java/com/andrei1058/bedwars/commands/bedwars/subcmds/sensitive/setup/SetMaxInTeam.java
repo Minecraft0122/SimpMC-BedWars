@@ -48,20 +48,20 @@ public class SetMaxInTeam extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null){
-            s.sendMessage("§c ▪ §7You're not in a setup session!");
+            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
         if (args.length == 0) {
-            p.sendMessage("§c▪ §7Usage: /" + mainCmd + " setMaxInTeam <int>");
+            p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
         } else {
             try {
                 Integer.parseInt(args[0]);
             } catch (Exception ex) {
-                p.sendMessage("§c▪ §7Usage: /" + mainCmd + " setMaxInTeam <int>");
+                p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
                 return true;
             }
             ss.getConfig().set("maxInTeam", Integer.valueOf(args[0]));
-            p.sendMessage("§6 ▪ §7Max in team set!");
+            p.sendMessage("§6 ▪ §7已设置每队最大人数！");
         }
         return true;
     }

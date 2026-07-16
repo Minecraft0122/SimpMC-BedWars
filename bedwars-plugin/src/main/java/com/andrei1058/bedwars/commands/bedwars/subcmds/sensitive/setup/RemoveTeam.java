@@ -56,21 +56,20 @@ public class RemoveTeam extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null) {
-            //s.sendMessage("§c ▪ §7You're not in a setup session!");
             return false;
         }
         if (args.length < 1) {
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "Usage: /" + mainCmd + " removeTeam <teamName>");
+            p.sendMessage(ss.getPrefix() + ChatColor.RED + "用法：/" + mainCmd + " removeTeam <队伍名>");
             if (ss.getConfig().getYml().get("Team") != null) {
-                p.sendMessage(ss.getPrefix() + "Available teams: ");
+                p.sendMessage(ss.getPrefix() + "可用队伍：");
                 for (String team : Objects.requireNonNull(ss.getConfig().getYml().getConfigurationSection("Team")).getKeys(false)) {
-                    p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + TeamColor.getChatColor(team) + team, ChatColor.GRAY + "Remove " + TeamColor.getChatColor(team) + team + " " + ChatColor.GRAY + "(click to remove)", "/" + mainCmd + " removeTeam " + team, ClickEvent.Action.RUN_COMMAND));
+                    p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + TeamColor.getChatColor(team) + team, ChatColor.GRAY + "移除 " + TeamColor.getChatColor(team) + team + " " + ChatColor.GRAY + "（点击移除）", "/" + mainCmd + " removeTeam " + team, ClickEvent.Action.RUN_COMMAND));
                 }
             }
         } else {
             if (ss.getConfig().getYml().get("Team." + args[0] + ".Color") == null) {
-                p.sendMessage(ss.getPrefix() + "This team doesn't exist: " + args[0]);
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "Team not found: " + args[0], 5, 40, 5);
+                p.sendMessage(ss.getPrefix() + "队伍不存在：" + args[0]);
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "找不到队伍：" + args[0], 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
             } else {
                 if (ss.getConfig().getYml().get("Team." + args[0] + ".Iron") != null) {
@@ -97,8 +96,8 @@ public class RemoveTeam extends SubCommand {
                 if (ss.getConfig().getYml().get("Team." + args[0] + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC) != null) {
                     removeArmorStand(null, ss.getConfig().getArenaLoc("Team." + args[0] + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC), null);
                 }
-                p.sendMessage(ss.getPrefix() + "Team removed: " + ss.getTeamColor(args[0]) + args[0]);
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "Team removed: " + ss.getTeamColor(args[0]) + args[0], 5, 40, 5);
+                p.sendMessage(ss.getPrefix() + "已移除队伍：" + ss.getTeamColor(args[0]) + args[0]);
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已移除队伍：" + ss.getTeamColor(args[0]) + args[0], 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
                 ss.getConfig().set("Team." + args[0], null);
             }

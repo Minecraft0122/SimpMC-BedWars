@@ -43,21 +43,21 @@ public class SetBuildHeight extends SubCommand {
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
 
         if (ss == null){
-            s.sendMessage("§c ▪ §7You're not in a setup session!");
+            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
 
         if (args.length == 0) {
-            p.sendMessage("§c▪ §7Usage: /" + mainCmd + " setMaxBuildHeight <int>");
+            p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxBuildHeight <整数>");
         } else {
             try {
                 Integer.parseInt(args[0]);
             } catch (Exception ex) {
-                p.sendMessage("§c▪ §7Usage: /" + mainCmd + " setMaxBuildHeight <int>");
+                p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxBuildHeight <整数>");
                 return true;
             }
             ss.getConfig().set("max-build-y", Integer.valueOf(args[0]));
-            p.sendMessage("§6 ▪ §7Max build height Y set to §e" + args[0] + "§7!");
+            p.sendMessage("§6 ▪ §7最大建造高度已设为 Y=§e" + args[0] + "§7！");
         }
         return true;
     }

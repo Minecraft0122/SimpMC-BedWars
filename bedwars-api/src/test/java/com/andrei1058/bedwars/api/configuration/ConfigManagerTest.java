@@ -61,6 +61,7 @@ class ConfigManagerTest {
         assertFalse(ConfigManager.applyVersionedMigration(configuration, 1,
                 yml -> yml.set("must-not-run", true)));
         assertFalse(configuration.contains("must-not-run"));
+        assertTrue(configuration.saveToString().contains("配置文件架构版本"));
     }
 
     @Test

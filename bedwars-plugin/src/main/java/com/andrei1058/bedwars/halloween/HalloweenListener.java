@@ -101,7 +101,7 @@ public class HalloweenListener implements Listener {
             if (level != null) {
                 e.getBlock().getDrops().clear();
                 level.addXp(5, PlayerXpGainEvent.XpSource.OTHER);
-                e.getPlayer().sendMessage(ChatColor.GOLD + "+5 xp!");
+                e.getPlayer().sendMessage(ChatColor.GOLD + "+5 经验值！");
             }
         }
     }

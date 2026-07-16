@@ -45,8 +45,8 @@ public class CmdStart extends SubCommand {
         super(parent, name);
         setPriority(15);
         showInList(true);
-        setDisplayInfo(com.andrei1058.bedwars.commands.bedwars.MainCommand.createTC("§6 ▪ §7/"+ MainCommand.getInstance().getName()+" "+getSubCommandName()+" §8 - §eforce start an arena",
-                "/"+getParent().getName()+" "+getSubCommandName(), "§fForcestart an arena.\n§fPermission: §c"+Permissions.PERMISSION_FORCESTART));
+        setDisplayInfo(com.andrei1058.bedwars.commands.bedwars.MainCommand.createTC("§6 ▪ §7/"+ MainCommand.getInstance().getName()+" "+getSubCommandName()+" §8 - §e强制开始竞技场",
+                "/"+getParent().getName()+" "+getSubCommandName(), "§f强制开始竞技场。\n§f权限：§c"+Permissions.PERMISSION_FORCESTART));
     }
 
     @Override

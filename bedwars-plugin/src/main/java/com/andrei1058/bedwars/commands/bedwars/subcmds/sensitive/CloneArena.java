@@ -49,7 +49,7 @@ public class CloneArena extends SubCommand {
         setPriority(7);
         showInList(true);
         setPermission(Permissions.PERMISSION_CLONE);
-        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + " §6<worldName> <newName>", "§fClone an existing arena.",
+        setDisplayInfo(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + " §6<世界名> <新名称>", "§f克隆现有竞技场。",
                 "/" + getParent().getName() + " " + getSubCommandName(), ClickEvent.Action.SUGGEST_COMMAND));
     }
 
@@ -59,28 +59,28 @@ public class CloneArena extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 2) {
-            p.sendMessage("§c▪ §7Usage: §o/" + getParent().getName() + " " + getSubCommandName() + " <mapName> <newArena>");
+            p.sendMessage("§c▪ §7用法：§o/" + getParent().getName() + " " + getSubCommandName() + " <地图名> <新竞技场名>");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {
-            p.sendMessage("§c▪ §7" + args[0] + " doesn't exist!");
+            p.sendMessage("§c▪ §7" + args[0] + " 不存在！");
             return true;
         }
         File yml1 = new File(plugin.getDataFolder(), "/Arenas/" + args[0] + ".yml"), yml2 = new File(plugin.getDataFolder(), "/Arenas/" + args[1] + ".yml");
         if (!yml1.exists()) {
-            p.sendMessage("§c▪ §7" + args[0] + " doesn't exist!");
+            p.sendMessage("§c▪ §7" + args[0] + " 不存在！");
             return true;
         }
         if (BedWars.getAPI().getRestoreAdapter().isWorld(args[1]) && yml2.exists()) {
-            p.sendMessage("§c▪ §7" + args[1] + " already exist!");
+            p.sendMessage("§c▪ §7" + args[1] + " 已存在！");
             return true;
         }
         if (args[1].contains("+")) {
-            p.sendMessage("§c▪ §7" + args[1] + " mustn't contain this symbol: " + ChatColor.RED + "+");
+            p.sendMessage("§c▪ §7" + args[1] + " 不能包含符号：" + ChatColor.RED + "+");
             return true;
         }
         if (Arena.getArenaByName(args[0]) != null) {
-            p.sendMessage("§c▪ §7Please disable " + args[0] + " first!");
+            p.sendMessage("§c▪ §7请先禁用 " + args[0] + "！");
             return true;
         }
         BedWars.getAPI().getRestoreAdapter().cloneArena(args[0], args[1]);
@@ -89,10 +89,10 @@ public class CloneArena extends SubCommand {
                 FileUtils.copyFile(yml1, yml2, true);
             } catch (IOException e) {
                 e.printStackTrace();
-                p.sendMessage("§c▪ §7An error occurred while copying the map's config. Check the console.");
+                p.sendMessage("§c▪ §7复制地图配置时发生错误，请查看控制台。");
             }
         }
-        p.sendMessage("§6 ▪ §7Done :D.");
+        p.sendMessage("§6 ▪ §7克隆完成。");
         return true;
     }
 

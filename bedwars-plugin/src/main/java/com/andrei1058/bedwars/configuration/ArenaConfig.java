@@ -35,7 +35,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 1;
+    private static final int CONFIG_VERSION = 2;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -44,7 +44,7 @@ public class ArenaConfig extends ConfigManager {
         super(plugin, name, dir);
 
         YamlConfiguration yml = getYml();
-        yml.options().header(plugin.getName() + " arena configuration file for Paper 1.21.11 servers.");
+        yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 服务器。");
         yml.addDefault("group", "Default");
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
         yml.addDefault("minPlayers", 2);
@@ -74,6 +74,14 @@ public class ArenaConfig extends ConfigManager {
         rules.add("doMobSpawning:false");
         yml.addDefault(ConfigPath.ARENA_GAME_RULES, rules);
         yml.options().copyDefaults(true);
+        setComments("group", "竞技场分组，用于菜单分类和匹配。");
+        setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
+        setComments("minPlayers", "开始倒计时所需的最少玩家数。");
+        setComments("maxInTeam", "每支队伍的最大玩家数。");
+        setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
+        setComments("worldBorder", "世界边界半径，单位为方块。");
+        setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
+        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "默认禁止昼夜变化、天气变化和生物自然生成。");
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 
         cachedGameOverridables = getGameOverridables();
