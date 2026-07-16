@@ -37,6 +37,7 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.UUID;
 
 public class Level extends SubCommand {
 
@@ -84,10 +85,13 @@ public class Level extends SubCommand {
                     LevelsConfig.levels.getYml().getString("levels.others.name") : LevelsConfig.levels.getYml().getString("levels." + level + ".name");
 
 
+            UUID playerId = pl.getUniqueId();
             BedWars.plugin.getServer().getScheduler().runTaskAsynchronously(BedWars.plugin, () -> {
-                BedWars.getRemoteDatabase().setLevelData(pl.getUniqueId(), level, 0, levelName, nextLevelCost);
+                BedWars.getRemoteDatabase().setLevelData(playerId, level, 0, levelName, nextLevelCost);
+                Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
                 s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + pl.getName() + " level was set to: " + args[2]);
                 s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "The player may need to rejoin to see it updated.");
+                });
             });
         } else if (args[0].equalsIgnoreCase("givexp")) {
             if (args.length != 3) {
@@ -111,11 +115,14 @@ public class Level extends SubCommand {
 
             BedWars.getAPI().getLevelsUtil().addXp(pl, amount, PlayerXpGainEvent.XpSource.OTHER);
 
+            UUID playerId = pl.getUniqueId();
             BedWars.plugin.getServer().getScheduler().runTaskAsynchronously(BedWars.plugin, () -> {
-                Object[] data = BedWars.getRemoteDatabase().getLevelData(pl.getUniqueId());
-                BedWars.getRemoteDatabase().setLevelData(pl.getUniqueId(), (Integer) data[0], ((Integer)data[1]) + amount, (String) data[2], (Integer)data[3]);
+                Object[] data = BedWars.getRemoteDatabase().getLevelData(playerId);
+                BedWars.getRemoteDatabase().setLevelData(playerId, (Integer) data[0], ((Integer)data[1]) + amount, (String) data[2], (Integer)data[3]);
+                Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
                 s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + args[2] + " xp was given to: " + pl.getName());
                 s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "The player may need to rejoin to see it updated.");
+                });
             });
         } else {
             sendSubCommands(s, BedWars.getAPI());

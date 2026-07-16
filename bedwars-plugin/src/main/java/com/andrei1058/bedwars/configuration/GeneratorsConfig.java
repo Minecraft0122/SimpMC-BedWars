@@ -64,6 +64,6 @@ public class GeneratorsConfig extends ConfigManager {
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_SPAWN_LIMIT, 8);
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_START, 1440);
         yml.options().copyDefaults(true);
-        save();
+        updateToLatestVersion(1);
     }
 }

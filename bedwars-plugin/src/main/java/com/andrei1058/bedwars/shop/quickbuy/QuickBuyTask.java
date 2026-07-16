@@ -45,54 +45,65 @@ public class QuickBuyTask extends BukkitRunnable {
 
     @Override
     public void run() {
-        if (Bukkit.getPlayer(uuid) == null){
-            cancel();
+        PlayerQuickBuyCache cache = PlayerQuickBuyCache.getQuickBuyCache(uuid);
+        if (cache == null) {
             return;
         }
-        if (Bukkit.getPlayer(uuid).isOnline()){
-            PlayerQuickBuyCache cache = PlayerQuickBuyCache.getQuickBuyCache(uuid);
-            if (cache == null){
-                cancel();
+
+        boolean hasQuickBuy = BedWars.getRemoteDatabase().hasQuickBuy(uuid);
+        HashMap<Integer, String> items = hasQuickBuy
+                ? BedWars.getRemoteDatabase().getQuickBuySlots(uuid, PlayerQuickBuyCache.quickSlots)
+                : new HashMap<>();
+
+        Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+            if (PlayerQuickBuyCache.getQuickBuyCache(uuid) != cache) {
                 return;
             }
-
-            if (!BedWars.getRemoteDatabase().hasQuickBuy(uuid)){
-                if (BedWars.shop.getYml().get(ConfigPath.SHOP_QUICK_DEFAULTS_PATH) != null){
-                    for (String s : BedWars.shop.getYml().getConfigurationSection(ConfigPath.SHOP_QUICK_DEFAULTS_PATH).getKeys(false)) {
-                        if (BedWars.shop.getYml().get(ConfigPath.SHOP_QUICK_DEFAULTS_PATH + "." + s + ".path") != null) {
-                            if (BedWars.shop.getYml().get(ConfigPath.SHOP_QUICK_DEFAULTS_PATH + "." + s + ".slot") == null){
-                                continue;
-                            }
-
-                            try {
-                                Integer.valueOf(BedWars.shop.getYml().getString(ConfigPath.SHOP_QUICK_DEFAULTS_PATH + "." + s + ".slot"));
-                            } catch (Exception ex){
-                                BedWars.debug(BedWars.shop.getYml().getString(ConfigPath.SHOP_QUICK_DEFAULTS_PATH + "." + s + ".slot") + " must be an integer!");
-                                continue;
-                            }
-
-                            for (ShopCategory sc : ShopManager.getShop().getCategoryList()) {
-                                for (CategoryContent cc : sc.getCategoryContentList()) {
-                                    if (cc.getIdentifier().equals(BedWars.shop.getYml().getString(ConfigPath.SHOP_QUICK_DEFAULTS_PATH + "." + s + ".path"))) {
-                                        cache.setElement(Integer.parseInt(BedWars.shop.getYml().getString(ConfigPath.SHOP_QUICK_DEFAULTS_PATH + "." + s + ".slot")), cc);
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-                }
+            if (hasQuickBuy) {
+                applyStoredItems(cache, items);
             } else {
-                // slot, identifier
-                HashMap<Integer, String> items = BedWars.getRemoteDatabase().getQuickBuySlots(uuid, PlayerQuickBuyCache.quickSlots);
-                if (items == null) return;
-                if (items.isEmpty()) return;
-                for (Map.Entry<Integer, String> entry : items.entrySet()) {
-                    if (entry.getValue().isEmpty()) continue;
-                    if (entry.getValue().equals(" ")) continue;
-                    QuickBuyElement e = new QuickBuyElement(entry.getValue(), entry.getKey());
-                    if (e.isLoaded()) {
-                        cache.addQuickElement(e);
+                applyDefaults(cache);
+            }
+        });
+    }
+
+    private void applyStoredItems(PlayerQuickBuyCache cache, HashMap<Integer, String> items) {
+        for (Map.Entry<Integer, String> entry : items.entrySet()) {
+            if (entry.getValue() == null || entry.getValue().trim().isEmpty()) {
+                continue;
+            }
+            QuickBuyElement element = new QuickBuyElement(entry.getValue(), entry.getKey());
+            if (element.isLoaded()) {
+                cache.addQuickElement(element);
+            }
+        }
+    }
+
+    private void applyDefaults(PlayerQuickBuyCache cache) {
+        if (BedWars.shop.getYml().getConfigurationSection(ConfigPath.SHOP_QUICK_DEFAULTS_PATH) == null) {
+            return;
+        }
+
+        for (String key : BedWars.shop.getYml().getConfigurationSection(ConfigPath.SHOP_QUICK_DEFAULTS_PATH).getKeys(false)) {
+            String basePath = ConfigPath.SHOP_QUICK_DEFAULTS_PATH + "." + key;
+            String identifier = BedWars.shop.getYml().getString(basePath + ".path");
+            String configuredSlot = BedWars.shop.getYml().getString(basePath + ".slot");
+            if (identifier == null || configuredSlot == null) {
+                continue;
+            }
+
+            final int slot;
+            try {
+                slot = Integer.parseInt(configuredSlot);
+            } catch (NumberFormatException exception) {
+                BedWars.debug(configuredSlot + " must be an integer!");
+                continue;
+            }
+
+            for (ShopCategory category : ShopManager.getShop().getCategoryList()) {
+                for (CategoryContent content : category.getCategoryContentList()) {
+                    if (content.getIdentifier().equals(identifier)) {
+                        cache.setElement(slot, content);
                     }
                 }
             }

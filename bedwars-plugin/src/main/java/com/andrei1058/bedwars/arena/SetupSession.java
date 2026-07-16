@@ -49,6 +49,7 @@ import java.util.*;
 import static com.andrei1058.bedwars.BedWars.config;
 import static com.andrei1058.bedwars.BedWars.plugin;
 import static com.andrei1058.bedwars.commands.Misc.createArmorStand;
+import static com.andrei1058.bedwars.commands.Misc.removeArmorStand;
 
 public class SetupSession implements ISetupSession {
 
@@ -197,6 +198,11 @@ public class SetupSession implements ISetupSession {
         return null;
     }
 
+    public static boolean isSetupWorld(String worldName) {
+        return worldName != null && getSetupSessions().stream()
+                .anyMatch(session -> worldName.equals(session.getWorldName()));
+    }
+
     public void setStarted(boolean started) {
         this.started = started;
     }
@@ -210,8 +216,13 @@ public class SetupSession implements ISetupSession {
 
     @Override
     public void teleportPlayer() {
+        World w = Bukkit.getWorld(getWorldName());
+        if (w == null) {
+            player.sendMessage(getPrefix() + ChatColor.RED + "Could not load the arena world.");
+            return;
+        }
         player.getInventory().clear();
-        TeleportManager.teleport(player, Bukkit.getWorld(getWorldName()).getSpawnLocation());
+        TeleportManager.teleport(player, w.getSpawnLocation());
         player.setGameMode(GameMode.CREATIVE);
         Bukkit.getScheduler().runTaskLater(plugin, ()->{
             player.setAllowFlight(true);
@@ -235,12 +246,13 @@ public class SetupSession implements ISetupSession {
             Bukkit.dispatchCommand(player, BedWars.mainCmd + " cmds");
         }
 
-        World w = Bukkit.getWorld(getWorldName());
         Bukkit.getScheduler().runTaskLater(plugin, () -> w.getEntities().stream()
                 .filter(e -> e.getType() != EntityType.PLAYER).filter(e -> e.getType() != EntityType.PAINTING)
                 .filter(e -> e.getType() != EntityType.ITEM_FRAME).forEach(Entity::remove), 30L);
         w.setAutoSave(false);
         GameRules.setBoolean(w, "doMobSpawning", false);
+        GameRules.setBoolean(w, "doDaylightCycle", false);
+        w.setTime(6000L);
         Bukkit.getPluginManager().callEvent(new SetupSessionStartEvent(this));
         setStarted(true);
 
@@ -248,16 +260,16 @@ public class SetupSession implements ISetupSession {
             for (String team : getTeams()) {
                 for (String gen : new String[]{"Iron", "Gold", "Emerald"}) {
                     if (getConfig().getYml().get("Team." + team + "." + gen) != null) {
-                        for (String loc : getConfig().getList("Team." + team + ".Iron")) {
+                        for (String loc : getConfig().getList("Team." + team + "." + gen)) {
                             createArmorStand(ChatColor.GOLD + gen + " generator added for team: " + getTeamColor(team) + team, getConfig().convertStringToArenaLocation(loc), loc);
                         }
                     }
-                    if (getConfig().getYml().get("Team." + team + ".Spawn") != null) {
-                        createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "SPAWN SET", getConfig().getArenaLoc("Team." + team + ".Spawn"), getConfig().getString("Team." + team + ".Spawn"));
-                    }
-                    if (getConfig().getYml().get("Team." + team + ".Bed") != null) {
-                        createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "BED SET", getConfig().getArenaLoc("Team." + team + ".Bed"), getConfig().getString("Team." + team + ".Bed"));
-                    }
+                }
+                if (getConfig().getYml().get("Team." + team + ".Spawn") != null) {
+                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "SPAWN SET", getConfig().getArenaLoc("Team." + team + ".Spawn"), getConfig().getString("Team." + team + ".Spawn"));
+                }
+                if (getConfig().getYml().get("Team." + team + ".Bed") != null) {
+                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "BED SET", getConfig().getArenaLoc("Team." + team + ".Bed"), getConfig().getString("Team." + team + ".Bed"));
                 }
                 if (getConfig().getYml().get("Team." + team + ".Shop") != null) {
                     createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "SHOP SET", getConfig().getArenaLoc("Team." + team + ".Shop"), null);
@@ -365,5 +377,70 @@ public class SetupSession implements ISetupSession {
     public List<String> getTeams() {
         if (getConfig().getYml().get("Team") == null) return new ArrayList<>();
         return new ArrayList<>(getConfig().getYml().getConfigurationSection("Team").getKeys(false));
+    }
+
+    /**
+     * Detect and store the bed nearest to a team's configured spawn.
+     */
+    public Location autoDetectBed(String team, boolean replaceExisting) {
+        String bedPath = "Team." + team + ".Bed";
+        if (!replaceExisting && getConfig().getYml().isString(bedPath)) {
+            Location configured = getConfig().getArenaLoc(bedPath);
+            if (configured != null && BedWars.nms.isBed(configured.getBlock().getType())) {
+                return configured;
+            }
+        }
+
+        String spawnPath = "Team." + team + ".Spawn";
+        if (!getConfig().getYml().isString(spawnPath)) {
+            return null;
+        }
+        Location found = BedLocator.findNearestBed(getConfig().getArenaLoc(spawnPath),
+                Math.max(1, getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS)));
+        if (found == null) {
+            return null;
+        }
+
+        if (getConfig().getYml().isString(bedPath)) {
+            removeArmorStand("bed", getConfig().getArenaLoc(bedPath), null);
+        }
+        getConfig().getYml().set(bedPath, getConfig().stringLocationArenaFormat(found));
+        getConfig().save();
+        createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "BED AUTO-DETECTED", found, null);
+        return found;
+    }
+
+    /**
+     * Ensure every configured team has a valid bed before setup is saved.
+     *
+     * @return team names whose bed could not be found.
+     */
+    public List<String> autoDetectAllBeds() {
+        List<String> missing = new ArrayList<>();
+        boolean changed = false;
+        for (String team : getTeams()) {
+            String bedPath = "Team." + team + ".Bed";
+            if (getConfig().getYml().isString(bedPath)) {
+                Location configured = getConfig().getArenaLoc(bedPath);
+                if (configured != null && BedWars.nms.isBed(configured.getBlock().getType())) {
+                    continue;
+                }
+            }
+
+            String spawnPath = "Team." + team + ".Spawn";
+            Location spawn = getConfig().getYml().isString(spawnPath) ? getConfig().getArenaLoc(spawnPath) : null;
+            Location found = BedLocator.findNearestBed(spawn,
+                    Math.max(1, getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS)));
+            if (found == null) {
+                missing.add(team);
+                continue;
+            }
+            getConfig().getYml().set(bedPath, getConfig().stringLocationArenaFormat(found));
+            changed = true;
+        }
+        if (changed) {
+            getConfig().save();
+        }
+        return missing;
     }
 }

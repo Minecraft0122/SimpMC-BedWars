@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.configuration.GameMainOverridable;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,6 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
+
+    private static final int CONFIG_VERSION = 1;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -68,32 +71,87 @@ public class ArenaConfig extends ConfigManager {
         rules.add("doImmediateRespawn:true");
         rules.add("doWeatherCycle:false");
         rules.add("doFireTick:false");
+        rules.add("doMobSpawning:false");
         yml.addDefault(ConfigPath.ARENA_GAME_RULES, rules);
         yml.options().copyDefaults(true);
-        save();
-
-        //convert old configuration
-        if (yml.get("spawnProtection") != null) {
-            set(ConfigPath.ARENA_SPAWN_PROTECTION, yml.getInt("spawnProtection"));
-            set("spawnProtection", null);
-        }
-        if (yml.get("shopProtection") != null) {
-            set(ConfigPath.ARENA_SHOP_PROTECTION, yml.getInt("shopProtection"));
-            set("shopProtection", null);
-        }
-        if (yml.get("upgradesProtection") != null) {
-            set(ConfigPath.ARENA_UPGRADES_PROTECTION, yml.getInt("upgradesProtection"));
-            set("upgradesProtection", null);
-        }
-        if (yml.get("islandRadius") != null) {
-            set(ConfigPath.ARENA_ISLAND_RADIUS, yml.getInt("islandRadius"));
-        }
-        if (yml.get("voidKill") != null) {
-            set("voidKill", null);
-        }
-        set(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, null);
+        updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 
         cachedGameOverridables = getGameOverridables();
+    }
+
+    private static void migrateLegacyConfig(Plugin plugin, YamlConfiguration config) {
+        moveIfAbsent(config, "spawnProtection", ConfigPath.ARENA_SPAWN_PROTECTION);
+        moveIfAbsent(config, "shopProtection", ConfigPath.ARENA_SHOP_PROTECTION);
+        moveIfAbsent(config, "upgradesProtection", ConfigPath.ARENA_UPGRADES_PROTECTION);
+        moveIfAbsent(config, "islandRadius", ConfigPath.ARENA_ISLAND_RADIUS);
+        config.set("voidKill", null);
+        config.set(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, null);
+
+        List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
+        addRuleIfMissing(gameRules, "doDaylightCycle", false);
+        addRuleIfMissing(gameRules, "doMobSpawning", false);
+        config.set(ConfigPath.ARENA_GAME_RULES, gameRules);
+
+        for (String path : List.of("waiting.Loc", ConfigPath.ARENA_WAITING_POS1,
+                ConfigPath.ARENA_WAITING_POS2, ConfigPath.ARENA_SPEC_LOC)) {
+            normalizeLocation(plugin, config, path);
+        }
+        normalizeLocationList(plugin, config, "generator.Diamond");
+        normalizeLocationList(plugin, config, "generator.Emerald");
+
+        ConfigurationSection teams = config.getConfigurationSection("Team");
+        if (teams == null) {
+            return;
+        }
+        for (String team : teams.getKeys(false)) {
+            String root = "Team." + team + '.';
+            for (String path : List.of("Spawn", "Bed", "Shop", "Upgrade", ConfigPath.ARENA_TEAM_KILL_DROPS_LOC)) {
+                normalizeLocation(plugin, config, root + path);
+            }
+            for (String generator : List.of("Iron", "Gold", "Emerald")) {
+                normalizeLocationList(plugin, config, root + generator);
+            }
+        }
+    }
+
+    private static void moveIfAbsent(YamlConfiguration config, String oldPath, String newPath) {
+        if (config.isSet(oldPath) && !config.isSet(newPath)) {
+            config.set(newPath, config.get(oldPath));
+        }
+        config.set(oldPath, null);
+    }
+
+    private static void addRuleIfMissing(List<String> rules, String ruleName, boolean value) {
+        if (rules.stream().noneMatch(rule -> rule.regionMatches(true, 0, ruleName + ':', 0, ruleName.length() + 1))) {
+            rules.add(ruleName + ':' + value);
+        }
+    }
+
+    private static void normalizeLocation(Plugin plugin, YamlConfiguration config, String path) {
+        if (!config.isString(path)) {
+            return;
+        }
+        try {
+            config.set(path, ConfigManager.normalizeArenaLocationString(config.getString(path)));
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().warning("Could not migrate invalid arena location at " + path + ": " + exception.getMessage());
+        }
+    }
+
+    private static void normalizeLocationList(Plugin plugin, YamlConfiguration config, String path) {
+        if (!config.isList(path)) {
+            return;
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String value : config.getStringList(path)) {
+            try {
+                normalized.add(ConfigManager.normalizeArenaLocationString(value));
+            } catch (IllegalArgumentException exception) {
+                plugin.getLogger().warning("Could not migrate invalid arena location at " + path + ": " + exception.getMessage());
+                normalized.add(value);
+            }
+        }
+        config.set(path, normalized);
     }
 
     @SuppressWarnings({"SpellCheckingInspection"})

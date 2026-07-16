@@ -379,7 +379,7 @@ public class ShopManager extends ConfigManager {
         }
 
         getYml().options().copyDefaults(true);
-        save();
+        updateToLatestVersion(1);
     }
 
     private void loadShop() {

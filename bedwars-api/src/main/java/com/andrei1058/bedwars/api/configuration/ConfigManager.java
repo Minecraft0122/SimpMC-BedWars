@@ -27,16 +27,21 @@ import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class ConfigManager {
 
+    public static final String CONFIG_VERSION_PATH = "config-version";
+
     private YamlConfiguration yml;
     private File config;
     private String name;
+    private final Plugin plugin;
     private boolean firstTime = false;
 
     /**
@@ -46,6 +51,7 @@ public class ConfigManager {
      * @param name   config name. Do not include .yml in it.
      */
     public ConfigManager(Plugin plugin, String name, String dir) {
+        this.plugin = plugin;
         File d = new File(dir);
 
         if (!d.exists()) {
@@ -85,7 +91,107 @@ public class ConfigManager {
      * Convert a location to an arena location syntax
      */
     public String stringLocationArenaFormat(Location loc) {
-        return loc.getX() + "," + loc.getY() + "," + loc.getZ() + "," + (double) loc.getYaw() + "," + (double) loc.getPitch();
+        return serializeArenaLocation(loc);
+    }
+
+    /**
+     * Normalize an arena marker to the center of its block. Arena markers do
+     * not have a meaningful facing direction, so yaw and pitch are reset.
+     */
+    public static Location toArenaBlockCenter(Location loc) {
+        if (loc == null) {
+            throw new IllegalArgumentException("Arena location cannot be null");
+        }
+        return new Location(loc.getWorld(), loc.getBlockX() + 0.5, loc.getBlockY(), loc.getBlockZ() + 0.5, 0.0F, 0.0F);
+    }
+
+    /**
+     * Serialize a centered arena marker without redundant yaw and pitch data.
+     */
+    public static String serializeArenaLocation(Location loc) {
+        Location centered = toArenaBlockCenter(loc);
+        return centered.getX() + "," + centered.getY() + "," + centered.getZ();
+    }
+
+    /**
+     * Upgrade an arena location stored by an older plugin version. This also
+     * removes the obsolete yaw and pitch components.
+     */
+    public static String normalizeArenaLocationString(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("Arena location cannot be null");
+        }
+        String[] data = value.replace("[", "").replace("]", "").split(",");
+        if (data.length < 3) {
+            throw new IllegalArgumentException("Invalid arena location: expected at least x,y,z");
+        }
+        double x = Math.floor(Double.parseDouble(data[0].trim())) + 0.5;
+        double y = Math.floor(Double.parseDouble(data[1].trim()));
+        double z = Math.floor(Double.parseDouble(data[2].trim())) + 0.5;
+        return x + "," + y + "," + z;
+    }
+
+    /**
+     * Apply a migration only when the stored configuration schema is older.
+     * The operation is idempotent and never downgrades a newer configuration.
+     */
+    public static boolean applyVersionedMigration(YamlConfiguration configuration, int latestVersion,
+                                                   Consumer<YamlConfiguration> migration) {
+        if (latestVersion < 1) {
+            throw new IllegalArgumentException("Latest configuration version must be positive");
+        }
+        int currentVersion = configuration.getInt(CONFIG_VERSION_PATH, 0);
+        if (currentVersion >= latestVersion) {
+            return false;
+        }
+        migration.accept(configuration);
+        configuration.options().copyDefaults(true);
+        configuration.set(CONFIG_VERSION_PATH, latestVersion);
+        return true;
+    }
+
+    /**
+     * Back up and upgrade this file to the latest schema, then persist all new
+     * defaults and removals in one disk write.
+     */
+    public boolean updateToLatestVersion(int latestVersion, Consumer<YamlConfiguration> migration) {
+        int currentVersion = yml.getInt(CONFIG_VERSION_PATH, 0);
+        if (currentVersion > latestVersion) {
+            plugin.getLogger().warning("Skipping downgrade of " + config.getName() + " from configuration version "
+                    + currentVersion + " to " + latestVersion + '.');
+            return false;
+        }
+        if (currentVersion == latestVersion) {
+            return false;
+        }
+
+        backupBeforeMigration(currentVersion);
+        if (!applyVersionedMigration(yml, latestVersion, migration)) {
+            return false;
+        }
+        save();
+        plugin.getLogger().info("Updated " + config.getName() + " configuration from version "
+                + currentVersion + " to " + latestVersion + '.');
+        return true;
+    }
+
+    public boolean updateToLatestVersion(int latestVersion) {
+        return updateToLatestVersion(latestVersion, ignored -> { });
+    }
+
+    private void backupBeforeMigration(int currentVersion) {
+        if (firstTime || !config.isFile() || config.length() == 0) {
+            return;
+        }
+        File backup = new File(config.getParentFile(), config.getName() + ".v" + currentVersion + ".bak");
+        if (backup.exists()) {
+            return;
+        }
+        try {
+            Files.copy(config.toPath(), backup.toPath());
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.WARNING, "Could not back up " + config.getPath() + " before migration", e);
+        }
     }
 
     /**
@@ -110,8 +216,7 @@ public class ConfigManager {
      * Save a location for arena use
      */
     public void saveArenaLoc(String path, Location loc) {
-        String data = loc.getX() + "," + loc.getY() + "," + loc.getZ() + "," + (double) loc.getYaw() + "," + (double) loc.getPitch();
-        yml.set(path, data);
+        yml.set(path, serializeArenaLocation(loc));
         save();
     }
 
@@ -134,7 +239,7 @@ public class ConfigManager {
         String d = yml.getString(path);
         if (d == null) return null;
         String[] data = d.replace("[", "").replace("]", "").split(",");
-        return new Location(Bukkit.getWorld(name), Double.parseDouble(data[0]), Double.parseDouble(data[1]), Double.parseDouble(data[2]), Float.parseFloat(data[3]), Float.parseFloat(data[4]));
+        return parseArenaLocation(data);
     }
 
     /**
@@ -142,8 +247,27 @@ public class ConfigManager {
      */
     public Location convertStringToArenaLocation(String string) {
         String[] data = string.split(",");
-        return new Location(Bukkit.getWorld(name), Double.parseDouble(data[0]), Double.parseDouble(data[1]), Double.parseDouble(data[2]), Float.parseFloat(data[3]), Float.parseFloat(data[4]));
+        return parseArenaLocation(data);
 
+    }
+
+    private Location parseArenaLocation(String[] data) {
+        if (data.length < 3) {
+            throw new IllegalArgumentException("Invalid arena location: expected at least x,y,z");
+        }
+
+        // Keep old five-component configurations readable while new markers
+        // intentionally omit their meaningless direction.
+        float yaw = data.length >= 5 ? Float.parseFloat(data[3]) : 0.0F;
+        float pitch = data.length >= 5 ? Float.parseFloat(data[4]) : 0.0F;
+        return new Location(
+                Bukkit.getWorld(name),
+                Double.parseDouble(data[0]),
+                Double.parseDouble(data[1]),
+                Double.parseDouble(data[2]),
+                yaw,
+                pitch
+        );
     }
 
     /**

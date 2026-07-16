@@ -62,15 +62,15 @@ public class QuitAndTeleportListener implements Listener {
         //Save preferred language
         if (Language.getLangByPlayer().containsKey(p.getUniqueId())) {
             final UUID u = p.getUniqueId();
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                String iso = Language.getLangByPlayer().get(p.getUniqueId()).getIso();
-                if (Language.isLanguageExist(iso)) {
-                    if (BedWars.config.getYml().getStringList(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES).contains(iso))
-                        iso = Language.getDefaultLanguage().getIso();
-                    BedWars.getRemoteDatabase().setLanguage(u, iso);
+            String iso = Language.getLangByPlayer().remove(u).getIso();
+            if (Language.isLanguageExist(iso)) {
+                if (BedWars.config.getYml().getStringList(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES).contains(iso)) {
+                    iso = Language.getDefaultLanguage().getIso();
                 }
-                Language.getLangByPlayer().remove(p.getUniqueId());
-            });
+                String languageToSave = iso;
+                Bukkit.getScheduler().runTaskAsynchronously(plugin,
+                        () -> BedWars.getRemoteDatabase().setLanguage(u, languageToSave));
+            }
         }
 
         if (getServerType() != ServerType.SHARED) {

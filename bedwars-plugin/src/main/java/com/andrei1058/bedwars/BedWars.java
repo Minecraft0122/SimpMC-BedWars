@@ -262,7 +262,7 @@ public class BedWars extends JavaPlugin {
                 ArenaSocket.lobbies.addAll(config.getList(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS));
                 new SendTask();
                 registerEvents(new AutoscaleListener(), new PrePartyListener(), new JoinListenerBungee());
-                Bukkit.getScheduler().runTaskTimerAsynchronously(this, new LoadedUsersCleaner(), 60L, 60L);
+                Bukkit.getScheduler().runTaskTimer(this, new LoadedUsersCleaner(), 60L, 60L);
             } else {
                 registerEvents(new ServerPingListener(), new JoinListenerBungeeLegacy());
             }
@@ -515,6 +515,10 @@ public class BedWars extends JavaPlugin {
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
+        }
+
+        if (remoteDatabase != null) {
+            remoteDatabase.close();
         }
 
     }

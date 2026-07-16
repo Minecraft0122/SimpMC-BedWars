@@ -20,19 +20,14 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
-import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
-import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
-import com.andrei1058.bedwars.support.paper.TeleportManager;
 import net.md_5.bungee.api.chat.ClickEvent;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -87,19 +82,11 @@ public class SetSpawn extends SubCommand {
                 String teamm = ss.getTeamColor(args[0]) + args[0];
                 p.sendMessage(ChatColor.GOLD + " " + '▪' + " " + "Spawn set for: " + teamm);
                 com.andrei1058.bedwars.commands.Misc.createArmorStand(teamm + " " + ChatColor.GOLD + "SPAWN SET", p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
-                int radius = ss.getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS);
-                Location l = p.getLocation();
-                for (int x = -radius; x < radius; x++) {
-                    for (int y = -radius; y < radius; y++) {
-                        for (int z = -radius; z < radius; z++) {
-                            Block b = l.clone().add(x, y, z).getBlock();
-                            if (BedWars.nms.isBed(b.getType())) {
-                                TeleportManager.teleport(p, b.getLocation());
-                                Bukkit.dispatchCommand(p, getParent().getName() + " setBed " + args[0]);
-                                return true;
-                            }
-                        }
-                    }
+                Location bed = ss.autoDetectBed(args[0], true);
+                if (bed != null) {
+                    p.sendMessage(ss.getPrefix() + ChatColor.GREEN + "Bed automatically detected for: " + teamm);
+                } else {
+                    p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "No bed found within the team island radius.");
                 }
                 if (ss.getConfig().getYml().get("Team") != null) {
                     StringBuilder remainging = new StringBuilder();

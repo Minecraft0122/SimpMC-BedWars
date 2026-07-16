@@ -23,7 +23,7 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn -B -U -DskipTests package -s ci_settings.xml
+        run: mvn -B -U verify -s ci_settings.xml
 
       - name: Upload plugin jar
         uses: actions/upload-artifact@v4

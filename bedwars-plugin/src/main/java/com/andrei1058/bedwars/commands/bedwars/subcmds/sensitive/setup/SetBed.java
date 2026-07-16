@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
+import com.andrei1058.bedwars.arena.BedLocator;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -32,6 +33,7 @@ import com.andrei1058.bedwars.configuration.Sounds;
 import net.md_5.bungee.api.chat.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -76,8 +78,8 @@ public class SetBed extends SubCommand {
                 Bukkit.dispatchCommand(s, getParent().getName() + " " + getSubCommandName() + " " + foundTeam);
             }
         } else {
-            if (!(BedWars.nms.isBed(p.getLocation().clone().add(0, -0.5, 0).getBlock().getType()) || BedWars.nms.isBed(p.getLocation().clone().add(0, 0.5, 0).getBlock().getType())
-                    || BedWars.nms.isBed(p.getLocation().clone().getBlock().getType()))) {
+            Location bedLocation = BedLocator.findNearestBed(p.getLocation(), 2);
+            if (bedLocation == null) {
                 p.sendMessage(ss.getPrefix() + ChatColor.RED + "You must stay on a bed while using this command!");
                 com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "You must stay on a bed.", 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
@@ -96,8 +98,8 @@ public class SetBed extends SubCommand {
                 if (ss.getConfig().getYml().get("Team." + args[0] + ".Bed") != null) {
                     removeArmorStand("bed", ss.getConfig().getArenaLoc("Team." + args[0] + ".Bed"), null);
                 }
-                createArmorStand(team + " " + ChatColor.GOLD + "BED SET", p.getLocation().add(0.5, 0, 0.5), null);
-                ss.getConfig().saveArenaLoc("Team." + args[0] + ".Bed", p.getLocation());
+                createArmorStand(team + " " + ChatColor.GOLD + "BED SET", bedLocation, null);
+                ss.getConfig().saveArenaLoc("Team." + args[0] + ".Bed", bedLocation);
                 p.sendMessage(ss.getPrefix() + "Bed set for: " + team);
 
                 com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "Bed set for: " + team, 5, 40, 5);

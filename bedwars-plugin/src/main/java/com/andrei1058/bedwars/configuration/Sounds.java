@@ -90,12 +90,12 @@ public class Sounds {
         addDefSound("pop-up-tower-build", "ENTITY_CHICKEN_EGG");
         yml.options().copyDefaults(true);
 
-        // remove old paths
-        yml.set("bought", null);
-        yml.set("insufficient-money", null);
-        yml.set("player-kill", null);
-        yml.set("countdown", null);
-        sounds.save();
+        sounds.updateToLatestVersion(1, config -> {
+            config.set("bought", null);
+            config.set("insufficient-money", null);
+            config.set("player-kill", null);
+            config.set("countdown", null);
+        });
     }
 
     private static Sound getSound(String path) {

@@ -5,120 +5,137 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.andrei1058.bedwars.BedWars.config;
 import static com.andrei1058.bedwars.BedWars.plugin;
 
 public class HealPoolTask extends BukkitRunnable {
 
-    private ITeam bwt;
-    private int maxX, minX, maxY, minY, maxZ, minZ;
-    private IArena arena;
-    private Random r = new Random();
-    private Location l;
+    /**
+     * A fixed sample budget keeps the effect cost independent from island volume.
+     * The old implementation scanned every block in a (2r + 1)^3 cube.
+     */
+    private static final int PARTICLE_SAMPLES_PER_RUN = 24;
+    private static final Map<ITeam, HealPoolTask> TASKS = new IdentityHashMap<>();
 
-    private static List<HealPoolTask> healPoolTasks = new ArrayList<>();
+    private final ITeam team;
+    private final IArena arena;
+    private final int maxX;
+    private final int minX;
+    private final int maxY;
+    private final int minY;
+    private final int maxZ;
+    private final int minZ;
 
-    public HealPoolTask(ITeam bwt){
-        this.bwt = bwt;
-        if (bwt == null || bwt.getSpawn() == null){
-            removeForTeam(this.bwt);
-            cancel();
-            return;
+    public HealPoolTask(ITeam team) {
+        if (team == null || team.getSpawn() == null || team.getArena() == null || team.getArena().getWorld() == null) {
+            throw new IllegalArgumentException("Heal pool requires a team with an arena and spawn");
         }
-        int radius = bwt.getArena().getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS);
-        Location teamspawn = bwt.getSpawn();
-        this.maxX = (teamspawn.getBlockX() + radius);
-        this.minX = (teamspawn.getBlockX() - radius);
-        this.maxY = (teamspawn.getBlockY() + radius);
-        this.minY = (teamspawn.getBlockY() - radius);
-        this.maxZ = (teamspawn.getBlockZ() + radius);
-        this.minZ = (teamspawn.getBlockZ() - radius);
-        this.arena = bwt.getArena();
-        this.runTaskTimerAsynchronously(plugin, 0, 80L);
-        healPoolTasks.add(this);
+
+        this.team = team;
+        this.arena = team.getArena();
+
+        int radius = arena.getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS);
+        Location teamSpawn = team.getSpawn();
+        this.maxX = teamSpawn.getBlockX() + radius;
+        this.minX = teamSpawn.getBlockX() - radius;
+        this.maxY = Math.min(arena.getWorld().getMaxHeight() - 1, teamSpawn.getBlockY() + radius);
+        this.minY = Math.max(arena.getWorld().getMinHeight(), teamSpawn.getBlockY() - radius);
+        this.maxZ = teamSpawn.getBlockZ() + radius;
+        this.minZ = teamSpawn.getBlockZ() - radius;
+
+        this.runTaskTimer(plugin, 0L, 80L);
+        TASKS.put(team, this);
     }
 
     @Override
-    public void run(){
-        //null checks
-        if ((bwt == null) || (bwt.getSpawn() == null) || (arena == null)){
-            healPoolTasks.remove(this);
+    public void run() {
+        if (team.getSpawn() == null || team.getArena() != arena || arena.getWorld() == null) {
+            stop();
             return;
         }
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int y = minY; y <= maxY; y++) {
-                for (int z = minZ; z <= maxZ; z++) {
-                    l = new Location(arena.getWorld(), x + .5, y + .5, z +.5);
-                    if (l.getBlock().getType() != Material.AIR) continue;
-                    int chance = r.nextInt(9);
-                    if (chance == 0) {
-                        if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_SEEN_TEAM_ONLY)) {
-                            for (Player p : bwt.getMembers()) {
-                                BedWars.nms.playVillagerEffect(p, l);
-                            }
-                        }
-                        else
-                        {
-                            for (Player p : arena.getPlayers()) {
-                                BedWars.nms.playVillagerEffect(p, l);
-                            }
-                        }
-                    }
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        List<Player> viewers = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_SEEN_TEAM_ONLY)
+                ? new ArrayList<>(team.getMembers())
+                : new ArrayList<>(arena.getPlayers());
+
+        if (viewers.isEmpty()) {
+            return;
+        }
+
+        for (int sample = 0; sample < PARTICLE_SAMPLES_PER_RUN; sample++) {
+            Location location = new Location(
+                    arena.getWorld(),
+                    random.nextInt(minX, maxX + 1) + 0.5,
+                    random.nextInt(minY, maxY + 1) + 0.5,
+                    random.nextInt(minZ, maxZ + 1) + 0.5
+            );
+
+            if (!location.getBlock().isEmpty()) {
+                continue;
+            }
+
+            for (Player viewer : viewers) {
+                if (viewer.isOnline()) {
+                    BedWars.nms.playVillagerEffect(viewer, location);
                 }
             }
         }
     }
 
-    public static boolean exists(IArena arena, ITeam bwt){
-        if (healPoolTasks.isEmpty()) return false;
-        for (HealPoolTask hpt : healPoolTasks) {
-            if (hpt.getArena() == arena && hpt.getBwt() == bwt) return true;
-        }
-        return false;
+    public static boolean exists(IArena arena, ITeam team) {
+        HealPoolTask task = TASKS.get(team);
+        return task != null && task.arena == arena;
     }
-    public static void removeForArena(IArena a){
-        if (healPoolTasks.isEmpty() || a == null) return;
-        for (HealPoolTask hpt: healPoolTasks) {
-            if (hpt == null) continue;
-            if (hpt.getArena().equals(a)){
-                hpt.cancel();
-                healPoolTasks.remove(hpt);
+
+    public static void removeForArena(IArena arena) {
+        if (arena == null) {
+            return;
+        }
+        stopMatching(task -> task.arena == arena);
+    }
+
+    public static void removeForArena(String worldName) {
+        if (worldName == null) {
+            return;
+        }
+        stopMatching(task -> worldName.equals(task.arena.getWorldName()));
+    }
+
+    public static void removeForTeam(ITeam team) {
+        HealPoolTask task = TASKS.get(team);
+        if (task != null) {
+            task.stop();
+        }
+    }
+
+    private static void stopMatching(java.util.function.Predicate<HealPoolTask> predicate) {
+        for (HealPoolTask task : new ArrayList<>(TASKS.values())) {
+            if (predicate.test(task)) {
+                task.stop();
             }
         }
     }
 
-    public  static void removeForArena(String a){
-        if (healPoolTasks == null || healPoolTasks.isEmpty()  || (a == null)) return;
-        for (HealPoolTask hpt: healPoolTasks) {
-            if (hpt == null) continue;
-            if (hpt.getArena().getWorldName().equals(a)){
-                hpt.cancel();
-                healPoolTasks.remove(hpt);
-            }
-        }
+    private void stop() {
+        TASKS.remove(team, this);
+        cancel();
     }
 
-    public  static void removeForTeam(ITeam team){
-        if (healPoolTasks == null || healPoolTasks.isEmpty()  || (team == null)) return;
-        for (HealPoolTask hpt:healPoolTasks) {
-            if (hpt == null) continue;
-            if (hpt.getBwt().equals(team)){
-                hpt.cancel();
-                healPoolTasks.remove(hpt);
-            }
-        }
+    public ITeam getBwt() {
+        return team;
     }
 
-    public ITeam getBwt() {return bwt;}
-
-    public IArena getArena() {return arena;}
+    public IArena getArena() {
+        return arena;
+    }
 }

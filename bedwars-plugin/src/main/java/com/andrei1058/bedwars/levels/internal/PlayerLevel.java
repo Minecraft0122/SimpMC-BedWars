@@ -256,7 +256,12 @@ public class PlayerLevel {
 
     public void updateDatabase() {
         if (modified) {
-            Bukkit.getScheduler().runTaskAsynchronously(BedWars.plugin, () -> BedWars.getRemoteDatabase().setLevelData(uuid, level, currentXp, LevelsConfig.getLevelName(level), nextLevelCost));
+            int levelSnapshot = level;
+            int xpSnapshot = currentXp;
+            int nextLevelCostSnapshot = nextLevelCost;
+            String levelNameSnapshot = LevelsConfig.getLevelName(levelSnapshot);
+            Bukkit.getScheduler().runTaskAsynchronously(BedWars.plugin, () -> BedWars.getRemoteDatabase()
+                    .setLevelData(uuid, levelSnapshot, xpSnapshot, levelNameSnapshot, nextLevelCostSnapshot));
             modified = false;
         }
     }

@@ -38,6 +38,8 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
+    private static final int CONFIG_VERSION = 1;
+
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
 
@@ -209,137 +211,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_GAME_END_SB_TOP_STATISTIC, DefaultStatistics.KILLS.toString());
         yml.addDefault(ConfigPath.GENERAL_GAME_END_SB_TOP_HIDE_MISSING, true);
         yml.options().copyDefaults(true);
-        save();
-
-        //remove old config
-        //Convert old configuration
-
-        yml.set("formatChat", null);
-        yml.set("globalChat", null);
-
-        if (yml.get("bungee-settings.lobby-servers") != null) {
-            List<String> sockets = new ArrayList<>(yml.getStringList("bungee-settings.lobby-servers"));
-            yml.set(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, sockets);
-            yml.set("bungee-settings.lobby-servers", null);
-        }
-
-        if (yml.get("arenaGui.settings.showPlaying") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SHOW_PLAYING, yml.getBoolean("arenaGui.settings.showPlaying"));
-        }
-        if (yml.get("arenaGui.settings.size") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, yml.getInt("arenaGui.settings.size"));
-        }
-        if (yml.get("arenaGui.settings.useSlots") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS, yml.getString("arenaGui.settings.useSlots"));
-        }
-        if (getYml().get("arenaGui") != null) {
-            for (String path : getYml().getConfigurationSection("arenaGui").getKeys(false)) {
-                if (path.equalsIgnoreCase("settings")) continue;
-                String new_path = path;
-                if ("skippedSlot".equals(path)) {
-                    new_path = "skipped-slot";
-                }
-                if (getYml().get("arenaGui." + path + ".itemStack") != null) {
-                    set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_MATERIAL.replace("%path%", new_path), getYml().getString("arenaGui." + path + ".itemStack"));
-                }
-                if (getYml().get("arenaGui." + path + ".data") != null) {
-                    set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_DATA.replace("%path%", new_path), getYml().getInt("arenaGui." + path + ".data"));
-                }
-                if (getYml().get("arenaGui." + path + ".enchanted") != null) {
-                    set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_ENCHANTED.replace("%path%", new_path), getYml().getBoolean("arenaGui." + path + ".enchanted"));
-                }
-            }
-        }
-
-        if (getYml().get("fireball.damage-multiplier") != null) {
-            set("fireball.damage-multiplier", null);
-        }
-
-        set("arenaGui", null);
-
-        if (getYml().get("npcLoc") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE, getYml().getString("npcLoc"));
-        }
-        if (getYml().get("statsGUI.invSize") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_STATS_GUI_SIZE, getInt("statsGUI.invSize"));
-        }
-        if (getYml().get("disableCrafting") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, getString("disableCrafting"));
-        }
-        if (getYml().get("statsGUI") != null) {
-            for (String stats_path : getYml().getConfigurationSection("statsGUI").getKeys(false)) {
-                String new_path = stats_path;
-                switch (stats_path) {
-                    case "gamesPlayed":
-                        new_path = "games-played";
-                        break;
-                    case "lastPlay":
-                        new_path = "last-play";
-                        break;
-                    case "firstPlay":
-                        new_path = "first-play";
-                        break;
-                    case "bedsDestroyed":
-                        new_path = "beds-destroyed";
-                        break;
-                    case "finalDeaths":
-                        new_path = "final-deaths";
-                        break;
-                    case "finalKills":
-                        new_path = "final-kills";
-                        break;
-                }
-                if (getYml().get("statsGUI." + stats_path + ".itemStack") != null) {
-                    set(ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_MATERIAL.replace("%path%", new_path), getYml().getString("statsGUI." + stats_path + ".itemStack"));
-                }
-                if (getYml().get("statsGUI." + stats_path + ".data") != null) {
-                    set(ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_DATA.replace("%path%", new_path), getYml().getInt("statsGUI." + stats_path + ".data"));
-                }
-                if (getYml().get("statsGUI." + stats_path + ".slot") != null) {
-                    set(ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_SLOT.replace("%path%", new_path), getYml().getInt("statsGUI." + stats_path + ".slot"));
-                }
-            }
-        }
-
-        if (yml.get("server-name") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, yml.get("server-name"));
-        }
-        if (yml.get("lobby-scoreboard") != null) {
-            set(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, yml.getBoolean("lobby-scoreboard"));
-            set("lobby-scoreboard", null);
-        }
-        if (yml.get("game-scoreboard") != null) {
-            set(ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR, yml.getBoolean("game-scoreboard"));
-            set("game-scoreboard", null);
-        }
-        if (yml.get("enable-party-cmd") != null) {
-            set(ConfigPath.GENERAL_ENABLE_PARTY_CMD, yml.getBoolean("enable-party-cmd"));
-            set("enable-party-cmd", null);
-        }
-        if (yml.get("allow-parties") != null) {
-            set(ConfigPath.GENERAL_CONFIGURATION_ALLOW_PARTIES, yml.getBoolean("allow-parties"));
-            set("allow-parties", null);
-        }
-        set("server-name", null);
-        set("statsGUI", null);
-        set("startItems", null);
-        set("generators", null);
-        set("bedsDestroyCountdown", null);
-        set("dragonSpawnCountdown", null);
-        set("gameEndCountdown", null);
-        set("npcLoc", null);
-        set("blockedCmds", null);
-        set("lobbyScoreboard", null);
-        set("arenaGui.settings.startSlot", null);
-        set("arenaGui.settings.endSlot", null);
-        set("items", null);
-        set("start-items-per-arena", null);
-        set("safeMode", null);
-        set("disableCrafting", null);
-        set("performance-settings.disable-armor-packets", null);
-        set("performance-settings.disable-respawn-packets", null);
-
-        //Finished old configuration conversion
+        updateToLatestVersion(CONFIG_VERSION, MainConfig::migrateLegacyConfig);
 
         //set default server language
         String whatLang = "en";
@@ -387,6 +259,76 @@ public class MainConfig extends ConfigManager {
         }
 
         BedWars.setLobbyWorld(getLobbyWorldName());
+    }
+
+    private static void migrateLegacyConfig(YamlConfiguration yml) {
+        moveIfAbsent(yml, "formatChat", ConfigPath.GENERAL_CHAT_FORMATTING);
+        moveIfAbsent(yml, "globalChat", ConfigPath.GENERAL_CHAT_GLOBAL);
+        moveIfAbsent(yml, "bungee-settings.lobby-servers", ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS);
+        moveIfAbsent(yml, "arenaGui.settings.showPlaying", ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SHOW_PLAYING);
+        moveIfAbsent(yml, "arenaGui.settings.size", ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE);
+        moveIfAbsent(yml, "arenaGui.settings.useSlots", ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS);
+
+        if (yml.isConfigurationSection("arenaGui")) {
+            for (String path : Objects.requireNonNull(yml.getConfigurationSection("arenaGui")).getKeys(false)) {
+                if (path.equalsIgnoreCase("settings")) continue;
+                String newPath = "skippedSlot".equals(path) ? "skipped-slot" : path;
+                moveIfAbsent(yml, "arenaGui." + path + ".itemStack",
+                        ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_MATERIAL.replace("%path%", newPath));
+                moveIfAbsent(yml, "arenaGui." + path + ".data",
+                        ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_DATA.replace("%path%", newPath));
+                moveIfAbsent(yml, "arenaGui." + path + ".enchanted",
+                        ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_ENCHANTED.replace("%path%", newPath));
+            }
+        }
+
+        moveIfAbsent(yml, "npcLoc", ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE);
+        moveIfAbsent(yml, "statsGUI.invSize", ConfigPath.GENERAL_CONFIGURATION_STATS_GUI_SIZE);
+        moveIfAbsent(yml, "disableCrafting", ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING);
+        migrateLegacyStatsItems(yml);
+        moveIfAbsent(yml, "server-name", ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID);
+        moveIfAbsent(yml, "lobby-scoreboard", ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR);
+        moveIfAbsent(yml, "game-scoreboard", ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR);
+        moveIfAbsent(yml, "enable-party-cmd", ConfigPath.GENERAL_ENABLE_PARTY_CMD);
+        moveIfAbsent(yml, "allow-parties", ConfigPath.GENERAL_CONFIGURATION_ALLOW_PARTIES);
+
+        for (String obsoletePath : List.of("arenaGui", "statsGUI", "startItems", "generators",
+                "bedsDestroyCountdown", "dragonSpawnCountdown", "gameEndCountdown", "npcLoc", "blockedCmds",
+                "lobbyScoreboard", "items", "start-items-per-arena", "safeMode", "disableCrafting",
+                "fireball.damage-multiplier", "performance-settings.disable-armor-packets",
+                "performance-settings.disable-respawn-packets")) {
+            yml.set(obsoletePath, null);
+        }
+    }
+
+    private static void migrateLegacyStatsItems(YamlConfiguration yml) {
+        if (!yml.isConfigurationSection("statsGUI")) {
+            return;
+        }
+        Map<String, String> names = Map.of(
+                "gamesPlayed", "games-played",
+                "lastPlay", "last-play",
+                "firstPlay", "first-play",
+                "bedsDestroyed", "beds-destroyed",
+                "finalDeaths", "final-deaths",
+                "finalKills", "final-kills"
+        );
+        for (String oldPath : Objects.requireNonNull(yml.getConfigurationSection("statsGUI")).getKeys(false)) {
+            String newPath = names.getOrDefault(oldPath, oldPath);
+            moveIfAbsent(yml, "statsGUI." + oldPath + ".itemStack",
+                    ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_MATERIAL.replace("%path%", newPath));
+            moveIfAbsent(yml, "statsGUI." + oldPath + ".data",
+                    ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_DATA.replace("%path%", newPath));
+            moveIfAbsent(yml, "statsGUI." + oldPath + ".slot",
+                    ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_SLOT.replace("%path%", newPath));
+        }
+    }
+
+    private static void moveIfAbsent(YamlConfiguration yml, String oldPath, String newPath) {
+        if (yml.isSet(oldPath) && !yml.isSet(newPath)) {
+            yml.set(newPath, yml.get(oldPath));
+        }
+        yml.set(oldPath, null);
     }
 
     public String getLobbyWorldName() {

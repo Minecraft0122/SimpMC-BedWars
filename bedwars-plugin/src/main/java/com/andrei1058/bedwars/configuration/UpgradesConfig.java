@@ -146,7 +146,7 @@ public class UpgradesConfig extends ConfigManager {
             addDefaultDisplayItem("separator-back", "ARROW", 0, 1, false);
         }
         yml.options().copyDefaults(true);
-        save();
+        updateToLatestVersion(1);
     }
 
     private void addDefaultDisplayItem(String path, String material, int data, int amount, boolean enchanted) {

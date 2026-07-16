@@ -92,12 +92,13 @@ public class PlayerQuickBuyCache {
     }
 
     public void destroy() {
-        elements.clear();
         if (task != null) {
             task.cancel();
         }
         quickBuyCaches.remove(player);
         this.pushChangesToDB();
+        elements.clear();
+        updateSlots.clear();
     }
 
     public void setElement(int slot, CategoryContent cc) {
@@ -158,7 +159,9 @@ public class PlayerQuickBuyCache {
     }
 
     public void pushChangesToDB() {
+        HashMap<Integer, String> slotSnapshot = new HashMap<>(updateSlots);
+        List<QuickBuyElement> elementSnapshot = new ArrayList<>(elements);
         Bukkit.getScheduler().runTaskAsynchronously(BedWars.plugin,
-                () -> BedWars.getRemoteDatabase().pushQuickBuyChanges(updateSlots, this.player, elements));
+                () -> BedWars.getRemoteDatabase().pushQuickBuyChanges(slotSnapshot, this.player, elementSnapshot));
     }
 }

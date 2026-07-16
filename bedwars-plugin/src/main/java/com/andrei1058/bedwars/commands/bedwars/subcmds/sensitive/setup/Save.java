@@ -37,6 +37,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.StringJoiner;
 
 public class Save extends SubCommand {
 
@@ -54,6 +55,16 @@ public class Save extends SubCommand {
         if (ss == null) {
             //s.sendMessage("§c ▪ §7You're not in a setup session!");
             return false;
+        }
+
+        List<String> missingBeds = ss.autoDetectAllBeds();
+        if (!missingBeds.isEmpty()) {
+            StringJoiner teams = new StringJoiner(", ");
+            missingBeds.forEach(teams::add);
+            p.sendMessage(ss.getPrefix() + ChatColor.RED + "Could not find a bed near these team spawns: " + teams);
+            p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "Set the team spawns closer to their beds, or use /"
+                    + getParent().getName() + " setBed <team> manually.");
+            return true;
         }
 
         //Clear setup armor-stands

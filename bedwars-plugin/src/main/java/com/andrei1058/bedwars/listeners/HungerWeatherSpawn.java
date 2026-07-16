@@ -25,9 +25,11 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.SetupSession;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Monster;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -97,6 +99,10 @@ public class HungerWeatherSpawn implements Listener {
     @EventHandler
     //Used to prevent creature spawn
     public void onCreatureSpawn(CreatureSpawnEvent e) {
+        if (e.getEntity() instanceof Monster && SetupSession.isSetupWorld(e.getEntity().getWorld().getName())) {
+            e.setCancelled(true);
+            return;
+        }
         if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
             if (getServerType() != ServerType.BUNGEE) {
                 if (Arena.getArenaByIdentifier(e.getEntity().getWorld().getName()) != null) {

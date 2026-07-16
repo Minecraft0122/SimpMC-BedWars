@@ -36,12 +36,15 @@ public class SendTask {
      */
     public SendTask() {
         Bukkit.getScheduler().runTaskTimer(BedWars.plugin, () -> {
-            List<IArena> arenas = new ArrayList<>(Arena.getArenas());
+            List<String> messages = new ArrayList<>();
+            for (IArena arena : Arena.getArenas()) {
+                messages.add(ArenaSocket.formatUpdateMessage(arena));
+            }
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    for (IArena a : arenas){
-                        ArenaSocket.sendMessage(ArenaSocket.formatUpdateMessage(a));
+                    for (String message : messages) {
+                        ArenaSocket.sendMessage(message);
                     }
                 }
             }.runTaskAsynchronously(BedWars.plugin);

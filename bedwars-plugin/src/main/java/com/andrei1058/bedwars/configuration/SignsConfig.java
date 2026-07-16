@@ -26,6 +26,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class SignsConfig extends ConfigManager {
@@ -39,9 +41,13 @@ public class SignsConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SIGNS_STATUS_BLOCK_PLAYING_MATERIAL, "RED_CONCRETE");
         yml.addDefault(ConfigPath.SIGNS_STATUS_BLOCK_RESTARTING_MATERIAL, "RED_CONCRETE");
         yml.options().copyDefaults(true);
-        save();
-        if (yml.getStringList("format").size() < 4) {
-            set("format", yml.getStringList("format").subList(0, 3));
-        }
+        updateToLatestVersion(1, config -> {
+            List<String> format = new ArrayList<>(config.getStringList("format"));
+            List<String> defaults = Arrays.asList("&a[arena]", "", "&2[on]&9/&2[max] &7([type])", "[status]");
+            while (format.size() < defaults.size()) {
+                format.add(defaults.get(format.size()));
+            }
+            config.set("format", format);
+        });
     }
 }

@@ -97,6 +97,12 @@ public class Language extends ConfigManager {
             getYml().set("scoreboard", null);
         }
 
+        // Languages without a built-in subclass do not have a later defaults
+        // phase, so finish their migration here. Built-in languages finish it
+        // after registering their defaults.
+        if (getClass() == Language.class) {
+            updateToLatestVersion(1);
+        }
         languages.add(this);
     }
 

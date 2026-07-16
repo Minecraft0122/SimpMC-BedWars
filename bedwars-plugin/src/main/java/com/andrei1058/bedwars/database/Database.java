@@ -25,9 +25,15 @@ import com.andrei1058.bedwars.stats.PlayerStats;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
-public interface Database {
+public interface Database extends AutoCloseable {
+
+    Set<String> STATS_COLUMNS = Set.of(
+            "wins", "kills", "final_kills", "looses", "deaths",
+            "final_deaths", "beds_destroyed", "games_played"
+    );
 
     /**
      * Initialize database.
@@ -75,6 +81,13 @@ public interface Database {
     @SuppressWarnings("unused")
     int getColumn(UUID player, String column);
 
+    static String requireStatsColumn(String column) {
+        if (!STATS_COLUMNS.contains(column)) {
+            throw new IllegalArgumentException("Unsupported statistics column: " + column);
+        }
+        return column;
+    }
+
     /**
      * Get a player level and xp.
      * <p>
@@ -104,4 +117,7 @@ public interface Database {
      * @param updateSlots key is slot id and value is the element.
      */
     void pushQuickBuyChanges(HashMap<Integer, String> updateSlots, UUID uuid, List<QuickBuyElement> elementList);
+
+    @Override
+    void close();
 }

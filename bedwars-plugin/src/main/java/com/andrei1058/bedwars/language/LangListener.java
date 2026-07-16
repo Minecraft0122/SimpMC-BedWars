@@ -29,6 +29,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
+import java.util.UUID;
+
 public class LangListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -36,12 +38,15 @@ public class LangListener implements Listener {
         if (e == null) return;
         if (e.isCancelled()) return;
         if (BedWars.config.getLobbyWorldName().equalsIgnoreCase(e.getPlayer().getWorld().getName())) {
+            UUID playerId = e.getPlayer().getUniqueId();
+            String newLanguage = e.getNewLang();
             Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                 Arena.sendLobbyCommandItems(e.getPlayer());
                 SidebarService.getInstance().giveSidebar(e.getPlayer(), Arena.getArenaByPlayer(e.getPlayer()), false);
 
                 // save to db
-                Bukkit.getScheduler().runTaskAsynchronously(BedWars.plugin, ()-> BedWars.getRemoteDatabase().setLanguage(e.getPlayer().getUniqueId(), e.getNewLang()));
+                Bukkit.getScheduler().runTaskAsynchronously(BedWars.plugin,
+                        () -> BedWars.getRemoteDatabase().setLanguage(playerId, newLanguage));
             }, 10L);
         }
     }

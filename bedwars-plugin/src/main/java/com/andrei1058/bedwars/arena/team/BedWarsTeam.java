@@ -757,23 +757,17 @@ public class BedWarsTeam implements ITeam {
 
     @Deprecated
     public IGenerator getIronGenerator() {
-        IGenerator[] gens = (IGenerator[]) generators.stream().filter(f -> f.getType() == GeneratorType.IRON).toArray();
-        if (gens.length == 0) return null;
-        return gens[0];
+        return generators.stream().filter(generator -> generator.getType() == GeneratorType.IRON).findFirst().orElse(null);
     }
 
     @Deprecated
     public IGenerator getGoldGenerator() {
-        IGenerator[] gens = (IGenerator[]) generators.stream().filter(f -> f.getType() == GeneratorType.GOLD).toArray();
-        if (gens.length == 0) return null;
-        return gens[0];
+        return generators.stream().filter(generator -> generator.getType() == GeneratorType.GOLD).findFirst().orElse(null);
     }
 
     @Deprecated
     public IGenerator getEmeraldGenerator() {
-        IGenerator[] gens = (IGenerator[]) generators.stream().filter(f -> f.getType() == GeneratorType.EMERALD).toArray();
-        if (gens.length == 0) return null;
-        return gens[0];
+        return generators.stream().filter(generator -> generator.getType() == GeneratorType.EMERALD).findFirst().orElse(null);
     }
 
     @Deprecated
@@ -878,14 +872,13 @@ public class BedWarsTeam implements ITeam {
 
     @Override
     public boolean isBed(@NotNull Location location) {
-        for (int x = location.getBlockX() - 1; x < location.getBlockX() + 1; x++) {
-            for (int z = location.getBlockZ() - 1; z < location.getBlockZ() + 1; z++) {
-                if (getBed().getBlockX() == x && getBed().getBlockY() == location.getBlockY() && getBed().getBlockZ() == z) {
-                    return true;
-                }
-            }
+        if (getBed() == null || location.getWorld() == null || getBed().getWorld() == null
+                || !getBed().getWorld().equals(location.getWorld()) || getBed().getBlockY() != location.getBlockY()) {
+            return false;
         }
-        return false;
+        int xDistance = Math.abs(getBed().getBlockX() - location.getBlockX());
+        int zDistance = Math.abs(getBed().getBlockZ() - location.getBlockZ());
+        return xDistance + zDistance <= 1;
     }
 
     public void setKillDropsLocation(Location loc) {

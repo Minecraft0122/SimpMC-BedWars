@@ -70,7 +70,7 @@ public class LevelsConfig extends ConfigManager {
         levels.getYml().addDefault("progress-bar.locked-color", "&7");
         levels.getYml().addDefault("progress-bar.format", "&8 [{progress}&8]");
 
-        levels.save();
+        levels.updateToLatestVersion(1);
     }
 
     @NotNull

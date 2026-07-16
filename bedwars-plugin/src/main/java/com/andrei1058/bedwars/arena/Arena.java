@@ -661,6 +661,7 @@ public class Arena implements IArena {
             }
 
             p.setGameMode(GameMode.ADVENTURE);
+            applySpectatorInvisibility(p);
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (leaving.contains(p)) return;
@@ -703,8 +704,6 @@ public class Arena implements IArena {
 
                 /* Spectator items */
                 sendSpectatorCommandItems(p);
-                // make invisible because it is annoying whene there are many spectators around the map
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 1, false));
 
                 p.getInventory().setArmorContents(null);
             });
@@ -1686,7 +1685,7 @@ public class Arena implements IArena {
         if (!BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
         p.getInventory().clear();
 
-        Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
             for (String item : config.getYml().getConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH).getKeys(false)) {
 
@@ -2504,6 +2503,7 @@ public class Arena implements IArena {
             }
             player.getInventory().clear();
             if (seconds > 1) {
+                applySpectatorInvisibility(player);
                 // hide to others
                 for (Player playing : arena.getPlayers()) {
                     if (playing.equals(player)) continue;
@@ -2534,6 +2534,22 @@ public class Arena implements IArena {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Death spectators and players waiting to respawn must not be rendered in
+     * the arena. Hide particles and the status icon as well to avoid visual
+     * noise for the affected player.
+     */
+    private static void applySpectatorInvisibility(Player player) {
+        player.addPotionEffect(new PotionEffect(
+                PotionEffectType.INVISIBILITY,
+                Integer.MAX_VALUE,
+                0,
+                false,
+                false,
+                false
+        ), true);
     }
 
     @Override
