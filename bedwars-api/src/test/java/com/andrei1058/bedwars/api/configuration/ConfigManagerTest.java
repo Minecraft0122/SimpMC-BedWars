@@ -62,4 +62,16 @@ class ConfigManagerTest {
                 yml -> yml.set("must-not-run", true)));
         assertFalse(configuration.contains("must-not-run"));
     }
+
+    @Test
+    void generalLocationMigrationAddsMissingWorld() {
+        assertEquals("12.25,64.0,-3.75,90.0,15.0,world",
+                ConfigManager.normalizeConfigLocationString("12.25,64.0,-3.75,90.0,15.0", "world"));
+    }
+
+    @Test
+    void generalLocationMigrationSupportsWorldWithoutPitch() {
+        assertEquals("12.25,64.0,-3.75,90.0,0.0,lobby",
+                ConfigManager.normalizeConfigLocationString("12.25,64.0,-3.75,90.0,lobby", "world"));
+    }
 }

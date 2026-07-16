@@ -188,8 +188,6 @@ public class ArenaGUI {
     public static class ArenaSelectorHolder implements InventoryHolder {
 
         private String group;
-        //private Inventory inv;
-
         public ArenaSelectorHolder(String group) {
             this.group = group;
         }
@@ -203,9 +201,6 @@ public class ArenaGUI {
             return null;
         }
 
-        /*public void setInv(Inventory inv) {
-            this.inv = inv;
-        }*/
     }
 
     @NotNull

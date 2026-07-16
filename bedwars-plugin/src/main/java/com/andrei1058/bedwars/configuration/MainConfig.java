@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Misc;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -38,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 1;
+    private static final int CONFIG_VERSION = 2;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -299,6 +300,19 @@ public class MainConfig extends ConfigManager {
                 "performance-settings.disable-respawn-packets")) {
             yml.set(obsoletePath, null);
         }
+        migrateLobbyLocation(yml);
+    }
+
+    private static void migrateLobbyLocation(YamlConfiguration yml) {
+        if (!yml.isString("lobbyLoc")) {
+            return;
+        }
+        String fallbackWorld = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().getFirst().getName();
+        try {
+            yml.set("lobbyLoc", ConfigManager.normalizeConfigLocationString(yml.getString("lobbyLoc"), fallbackWorld));
+        } catch (IllegalArgumentException exception) {
+            BedWars.plugin.getLogger().warning("Could not migrate lobbyLoc: " + exception.getMessage());
+        }
     }
 
     private static void migrateLegacyStatsItems(YamlConfiguration yml) {
@@ -332,10 +346,8 @@ public class MainConfig extends ConfigManager {
     }
 
     public String getLobbyWorldName() {
-        if (getYml().get("lobbyLoc") == null) return "";
-        String d = getYml().getString("lobbyLoc");
-        String[] data = d.replace("[", "").replace("]", "").split(",");
-        return data[data.length - 1];
+        Location lobby = getConfigLoc("lobbyLoc");
+        return lobby == null || lobby.getWorld() == null ? "" : lobby.getWorld().getName();
     }
 
     /**

@@ -203,6 +203,64 @@ public class ConfigManager {
     }
 
     /**
+     * Upgrade a general location to x,y,z,yaw,pitch,world. Older releases
+     * sometimes stored lobby locations without pitch or without a world.
+     */
+    public static String normalizeConfigLocationString(String value, String fallbackWorld) {
+        if (value == null) {
+            throw new IllegalArgumentException("Configuration location cannot be null");
+        }
+        String[] raw = value.replace("[", "").replace("]", "").split(",");
+        if (raw.length < 3) {
+            throw new IllegalArgumentException("Invalid configuration location: expected at least x,y,z");
+        }
+
+        String x = raw[0].trim();
+        String y = raw[1].trim();
+        String z = raw[2].trim();
+        Double.parseDouble(x);
+        Double.parseDouble(y);
+        Double.parseDouble(z);
+
+        String yaw = "0.0";
+        String pitch = "0.0";
+        String world = null;
+        if (raw.length >= 4) {
+            if (isNumber(raw[3])) {
+                yaw = raw[3].trim();
+            } else {
+                world = raw[3].trim();
+            }
+        }
+        if (raw.length >= 5) {
+            if (isNumber(raw[4])) {
+                pitch = raw[4].trim();
+            } else {
+                world = raw[4].trim();
+            }
+        }
+        if (raw.length >= 6 && !raw[5].isBlank()) {
+            world = raw[5].trim();
+        }
+        if (world == null || world.isBlank()) {
+            world = fallbackWorld;
+        }
+        if (world == null || world.isBlank()) {
+            throw new IllegalArgumentException("Invalid configuration location: world is missing");
+        }
+        return x + ',' + y + ',' + z + ',' + yaw + ',' + pitch + ',' + world;
+    }
+
+    private static boolean isNumber(String value) {
+        try {
+            Double.parseDouble(value.trim());
+            return true;
+        } catch (NumberFormatException exception) {
+            return false;
+        }
+    }
+
+    /**
      * Save a general location to the config.
      * Use {@link #saveArenaLoc(String, Location)} for arena locations
      */
@@ -227,8 +285,21 @@ public class ConfigManager {
     public Location getConfigLoc(String path) {
         String d = yml.getString(path);
         if (d == null) return null;
-        String[] data = d.replace("[", "").replace("]", "").split(",");
-        return new Location(Bukkit.getWorld(data[5]), Double.parseDouble(data[0]), Double.parseDouble(data[1]), Double.parseDouble(data[2]), Float.parseFloat(data[3]), Float.parseFloat(data[4]));
+        String fallbackWorld = null;
+        if (Bukkit.getWorld(name) != null) {
+            fallbackWorld = name;
+        } else if (!Bukkit.getWorlds().isEmpty()) {
+            fallbackWorld = Bukkit.getWorlds().getFirst().getName();
+        }
+        try {
+            String[] data = normalizeConfigLocationString(d, fallbackWorld).split(",", 6);
+            return new Location(Bukkit.getWorld(data[5]), Double.parseDouble(data[0]), Double.parseDouble(data[1]),
+                    Double.parseDouble(data[2]), Float.parseFloat(data[3]), Float.parseFloat(data[4]));
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().warning("Ignoring invalid location at " + path + " in " + config.getName()
+                    + ": " + exception.getMessage());
+            return null;
+        }
     }
 
     /**
