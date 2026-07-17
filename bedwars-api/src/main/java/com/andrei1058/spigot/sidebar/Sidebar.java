@@ -200,7 +200,16 @@ public class Sidebar {
     public PlayerTab playerTabCreate(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
                                      @NotNull SidebarLine suffix, @NotNull PlayerTab.PushingRule pushingRule,
                                      @NotNull ConcurrentLinkedQueue<PlaceholderProvider> placeholders) {
+        return playerTabCreate(identifier, player, prefix, suffix, pushingRule, placeholders, ChatColor.WHITE);
+    }
+
+    @NotNull
+    public PlayerTab playerTabCreate(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
+                                     @NotNull SidebarLine suffix, @NotNull PlayerTab.PushingRule pushingRule,
+                                     @NotNull ConcurrentLinkedQueue<PlaceholderProvider> placeholders,
+                                     @NotNull ChatColor color) {
         PlayerTab tab = new PlayerTab(identifier, player, prefix, suffix, pushingRule, placeholders);
+        tab.setColor(color);
         tab.setUpdateCallback(this::applyTabToAll);
         tabs.put(identifier, tab);
         applyTabToAll(tab);
@@ -309,6 +318,7 @@ public class Sidebar {
 
         team.prefix(component(renderText(tab.getPrefix(), tab.getPlaceholders())));
         team.suffix(component(renderText(tab.getSuffix(), tab.getPlaceholders())));
+        team.setColor(tab.getColor());
         team.setOption(
                 Team.Option.NAME_TAG_VISIBILITY,
                 tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER

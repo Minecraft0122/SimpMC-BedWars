@@ -87,18 +87,6 @@ class ConfigManagerTest {
         assertFalse(ConfigManager.isSameWorldWithin(lobby, arena, 4));
     }
 
-    @Test
-    void detectsWhenSpawnAndRespawnAreBothNearBed() {
-        World world = world("arena");
-        Location bed = new Location(world, 0.5, 64, 0.5);
-        Location spawn = new Location(world, 2.5, 64, 0.5);
-        Location nearRespawn = new Location(world, 0.5, 64, 3.5);
-        Location farRespawn = new Location(world, 6.5, 64, 0.5);
-
-        assertTrue(ConfigManager.areBothLocationsNearBed(spawn, nearRespawn, bed));
-        assertFalse(ConfigManager.areBothLocationsNearBed(spawn, farRespawn, bed));
-    }
-
     private static World world(String name) {
         return (World) Proxy.newProxyInstance(World.class.getClassLoader(), new Class<?>[]{World.class},
                 (proxy, method, args) -> switch (method.getName()) {

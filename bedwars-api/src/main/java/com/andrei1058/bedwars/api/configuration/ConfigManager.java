@@ -117,10 +117,6 @@ public class ConfigManager {
         return first.distanceSquared(second) < radius * radius;
     }
 
-    public static boolean areBothLocationsNearBed(Location spawn, Location respawn, Location bed) {
-        return isSameWorldWithin(spawn, bed, 4) && isSameWorldWithin(respawn, bed, 4);
-    }
-
     /**
      * Serialize a centered arena marker without redundant yaw and pitch data.
      */

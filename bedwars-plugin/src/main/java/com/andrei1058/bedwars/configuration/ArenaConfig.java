@@ -35,7 +35,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 3;
+    private static final int CONFIG_VERSION = 4;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -82,13 +82,6 @@ public class ArenaConfig extends ConfigManager {
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
         setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "默认禁止昼夜变化、天气变化和生物自然生成。");
-        ConfigurationSection configuredTeams = yml.getConfigurationSection("Team");
-        if (configuredTeams != null) {
-            for (String team : configuredTeams.getKeys(false)) {
-                yml.setComments("Team." + team + '.' + ConfigPath.ARENA_TEAM_RESPAWN,
-                        List.of("队伍成员死亡倒计时结束后的复活位置；与首次出生点分开配置。"));
-            }
-        }
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 
         cachedGameOverridables = getGameOverridables();
@@ -120,7 +113,8 @@ public class ArenaConfig extends ConfigManager {
         }
         for (String team : teams.getKeys(false)) {
             String root = "Team." + team + '.';
-            for (String path : List.of("Spawn", ConfigPath.ARENA_TEAM_RESPAWN, "Bed", "Shop", "Upgrade", ConfigPath.ARENA_TEAM_KILL_DROPS_LOC)) {
+            config.set(root + "Respawn", null);
+            for (String path : List.of("Spawn", "Bed", "Shop", "Upgrade", ConfigPath.ARENA_TEAM_KILL_DROPS_LOC)) {
                 normalizeLocation(plugin, config, root + path);
             }
             for (String generator : List.of("Iron", "Gold", "Emerald")) {

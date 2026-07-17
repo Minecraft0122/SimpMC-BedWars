@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 4;
+    private static final int CONFIG_VERSION = 5;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -72,6 +72,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_RESTARTING, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH, 1200);
+        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, "GREEN");
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_ENABLE, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_REFRESH, 300);
@@ -269,6 +270,7 @@ public class MainConfig extends ConfigManager {
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
+        setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, "TAB 玩家列表中队友名字使用的特殊颜色。", "填写 Bukkit ChatColor 名称，例如 GREEN、AQUA 或 YELLOW。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
         setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");

@@ -244,14 +244,6 @@ public interface ITeam {
     Location getSpawn();
 
     /**
-     * Location used after a team member's death. Implementations that do not
-     * configure a separate respawn point remain compatible with the team spawn.
-     */
-    default Location getRespawn() {
-        return getSpawn();
-    }
-
-    /**
      * Get shop keeper location.
      *
      * @return shop point.

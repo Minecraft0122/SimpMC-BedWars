@@ -150,6 +150,7 @@ public class ConfigPath {
     public static final String SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING = "scoreboard-settings.player-list.format-playing-list";
     public static final String SB_CONFIG_SIDEBAR_LIST_FORMAT_RESTARTING = "scoreboard-settings.player-list.format-restarting-list";
     public static final String SB_CONFIG_SIDEBAR_LIST_REFRESH = "scoreboard-settings.player-list.names-refresh-interval";
+    public static final String SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR = "scoreboard-settings.player-list.teammate-color";
     public static final String SB_CONFIG_SIDEBAR_HEALTH_ENABLE = "scoreboard-settings.health.enable";
     public static final String SB_CONFIG_SIDEBAR_HEALTH_IN_TAB = "scoreboard-settings.health.display-in-tab";
     public static final String SB_CONFIG_SIDEBAR_HEALTH_REFRESH = "scoreboard-settings.health.animation-refresh-interval";
@@ -198,7 +199,6 @@ public class ConfigPath {
     public static final String ARENA_GAME_RULES = "game-rules";
     public static final String ARENA_SPEC_LOC = "spectator-loc";
     public static final String ARENA_TEAM_KILL_DROPS_LOC = "kill-drops-loc";
-    public static final String ARENA_TEAM_RESPAWN = "Respawn";
     public static final String ARENA_Y_LEVEL_KILL = "y-kill-height";
 
     public static final String SOUNDS_COUNTDOWN_TICK = "game-countdown-others";

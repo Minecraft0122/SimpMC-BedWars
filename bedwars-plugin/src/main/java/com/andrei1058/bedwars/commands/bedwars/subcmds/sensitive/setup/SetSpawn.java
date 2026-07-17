@@ -22,8 +22,6 @@ package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
-import com.andrei1058.bedwars.api.configuration.ConfigManager;
-import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -86,15 +84,6 @@ public class SetSpawn extends SubCommand {
                 Location bed = ss.autoDetectBed(args[0], true);
                 if (bed != null) {
                     p.sendMessage(ss.getPrefix() + ChatColor.GREEN + "已自动识别床位：" + teamm);
-                    String respawnPath = "Team." + args[0] + '.' + ConfigPath.ARENA_TEAM_RESPAWN;
-                    Location respawn = ss.getConfig().getArenaLoc(respawnPath);
-                    if (ConfigManager.areBothLocationsNearBed(ss.getConfig().getArenaLoc("Team." + args[0] + ".Spawn"), respawn, bed)) {
-                        removeArmorStand("复活点", respawn, ss.getConfig().getString(respawnPath));
-                        ss.getConfig().getYml().set(respawnPath, null);
-                        ss.getConfig().save();
-                        p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "原复活点也靠近床，已清除；请使用 /"
-                                + mainCmd + " setRespawn " + args[0] + " 重新设置。");
-                    }
                 } else {
                     p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "在队伍岛屿半径内没有找到床。");
                 }

@@ -35,15 +35,14 @@ import com.andrei1058.bedwars.api.region.Cuboid;
 import com.andrei1058.bedwars.api.upgrades.EnemyBaseEnterTrap;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.OreGenerator;
+import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
-import com.andrei1058.bedwars.support.paper.TeleportManager;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -64,7 +63,7 @@ public class BedWarsTeam implements ITeam {
 
     private List<Player> members = new ArrayList<>();
     private TeamColor color;
-    private Location spawn, respawn, bed, shop, teamUpgrades;
+    private Location spawn, bed, shop, teamUpgrades;
     //private IGenerator ironGenerator = null, goldGenerator = null, emeraldGenerator = null;
     private String name;
     private Arena arena;
@@ -100,24 +99,16 @@ public class BedWarsTeam implements ITeam {
     private UUID identity;
 
     public BedWarsTeam(String name, TeamColor color, Location spawn, Location bed, Location shop, Location teamUpgrades, Arena arena) {
-        this(name, color, spawn, spawn, bed, shop, teamUpgrades, arena);
-    }
-
-    public BedWarsTeam(String name, TeamColor color, Location spawn, Location respawn, Location bed, Location shop, Location teamUpgrades, Arena arena) {
         if (arena == null) return;
         this.name = name;
         this.color = color;
         this.spawn = spawn;
-        this.respawn = respawn == null ? spawn : respawn;
         this.bed = bed;
         this.arena = arena;
         this.shop = shop;
         this.teamUpgrades = teamUpgrades;
         Language.saveIfNotExists(ConfigPath.TEAM_NAME_PATH.replace("{arena}", getArena().getArenaName()).replace("{team}", getName()), name);
         arena.getRegionsList().add(new Cuboid(spawn, arena.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION), true));
-        if (!spawn.getBlock().equals(this.respawn.getBlock())) {
-            arena.getRegionsList().add(new Cuboid(this.respawn, arena.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION), true));
-        }
 
         Location drops = getArena().getConfig().getArenaLoc("Team." + getName() + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC);
         if (drops != null) {
@@ -152,7 +143,7 @@ public class BedWarsTeam implements ITeam {
      */
     public void firstSpawn(Player p) {
         if (p == null) return;
-        TeleportManager.teleportC(p, spawn, PlayerTeleportEvent.TeleportCause.PLUGIN);
+        SafeSpawnResolver.teleport(p, spawn);
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
         nms.setCollide(p, getArena(), true);
@@ -350,7 +341,7 @@ public class BedWarsTeam implements ITeam {
         } else {
             reSpawnInvulnerability.put(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         }
-        TeleportManager.teleportC(p, getRespawn(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+        SafeSpawnResolver.teleport(p, getSpawn());
         p.setVelocity(new Vector(0, 0, 0));
         p.removePotionEffect(PotionEffectType.INVISIBILITY);
         nms.setCollide(p, arena, true);
@@ -701,11 +692,6 @@ public class BedWarsTeam implements ITeam {
 
     public Location getSpawn() {
         return spawn;
-    }
-
-    @Override
-    public Location getRespawn() {
-        return respawn;
     }
 
     public Location getShop() {

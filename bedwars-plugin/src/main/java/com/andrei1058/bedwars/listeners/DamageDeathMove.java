@@ -37,6 +37,7 @@ import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
+import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.configuration.Sounds;
@@ -568,7 +569,9 @@ public class DamageDeathMove implements Listener {
                     a.startReSpawnSession(e.getPlayer(), respawnTime);
                 } else {
                     // instant respawn configuration
-                    e.setRespawnLocation(t.getRespawn());
+                    SafeSpawnResolver.Result safeSpawn = SafeSpawnResolver.resolve(t.getSpawn());
+                    e.setRespawnLocation(safeSpawn.location());
+                    SafeSpawnResolver.applyPose(e.getPlayer(), safeSpawn.crawling());
                     t.respawnMember(e.getPlayer());
                 }
             }
@@ -664,7 +667,7 @@ public class DamageDeathMove implements Listener {
                     if (e.getPlayer().getLocation().getBlockY() <= 0) {
                         ITeam bwt = a.getTeam(e.getPlayer());
                         if (bwt != null) {
-                            TeleportManager.teleport(e.getPlayer(), bwt.getSpawn());
+                            SafeSpawnResolver.teleport(e.getPlayer(), bwt.getSpawn());
                         } else {
                             TeleportManager.teleport(e.getPlayer(), a.getSpectatorLocation());
                         }

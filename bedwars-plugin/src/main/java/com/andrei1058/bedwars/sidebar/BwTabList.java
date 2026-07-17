@@ -33,6 +33,7 @@ import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
 import com.andrei1058.spigot.sidebar.SidebarLineAnimated;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
@@ -346,7 +347,7 @@ public class BwTabList {
         PlayerTab teamTab = handle.playerTabCreate(
                 getPlayerTabIdentifierAliveInTeam(team, playerTabId),
                 player, prefix, suffix, PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
-                this.sidebar.getPlaceholders(player)
+                this.sidebar.getPlaceholders(player), getPlayerListColor(player, team)
         );
         deployedPerPlayerTabList.put(player.getUniqueId(), teamTab);
         if (player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
@@ -498,6 +499,25 @@ public class BwTabList {
         replacements.put("{teamColor}", null == team ? "" : team.getColor().chat().toString());
 
         return replacements;
+    }
+
+    private ChatColor getPlayerListColor(@NotNull Player target, @Nullable ITeam targetTeam) {
+        if (targetTeam == null) return ChatColor.WHITE;
+        ITeam viewerTeam = sidebar.getArena() == null ? null : sidebar.getArena().getTeam(sidebar.getPlayer());
+        if (viewerTeam != null && viewerTeam.equals(targetTeam)
+                && !target.getUniqueId().equals(sidebar.getPlayer().getUniqueId())) {
+            String configured = config.getString(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR);
+            if (configured != null) {
+                try {
+                    ChatColor color = ChatColor.valueOf(configured.toUpperCase(Locale.ROOT));
+                    if (color.isColor()) return color;
+                } catch (IllegalArgumentException ignored) {
+                    // Use the safe default below.
+                }
+            }
+            return ChatColor.GREEN;
+        }
+        return targetTeam.getColor().chat();
     }
 
     /**

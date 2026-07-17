@@ -1,5 +1,6 @@
 package com.andrei1058.spigot.sidebar;
 
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,6 +27,7 @@ public class PlayerTab {
     private final PushingRule pushingRule;
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
     private NameTagVisibility nameTagVisibility = NameTagVisibility.ALWAYS;
+    private ChatColor color = ChatColor.WHITE;
     private Consumer<PlayerTab> updateCallback = tab -> {
     };
 
@@ -62,6 +64,17 @@ public class PlayerTab {
     @NotNull
     public NameTagVisibility getNameTagVisibility() {
         return nameTagVisibility;
+    }
+
+    public void setColor(@NotNull ChatColor color) {
+        if (this.color == color) return;
+        this.color = color;
+        updateCallback.accept(this);
+    }
+
+    @NotNull
+    public ChatColor getColor() {
+        return color;
     }
 
     @NotNull

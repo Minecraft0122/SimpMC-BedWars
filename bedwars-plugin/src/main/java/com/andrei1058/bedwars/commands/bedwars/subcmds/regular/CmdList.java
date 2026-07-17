@@ -67,7 +67,6 @@ public class CmdList extends SubCommand {
                     pos2 = ss.getConfig().getYml().get("waiting.Pos2") != null,
                     pos = pos1 && pos2;
             StringBuilder spawnNotSetNames = new StringBuilder();
-            StringBuilder respawnNotSet = new StringBuilder();
             StringBuilder bedNotSet = new StringBuilder();
             StringBuilder shopNotSet = new StringBuilder();
             StringBuilder killDropsNotSet = new StringBuilder();
@@ -83,9 +82,6 @@ public class CmdList extends SubCommand {
                     if (ss.getConfig().getYml().get("Team." + team + ".Spawn") == null) {
                         spawnNotSet.append(color).append("▋");
                         spawnNotSetNames.append(color).append(team).append(" ");
-                    }
-                    if (ss.getConfig().getYml().get("Team." + team + '.' + ConfigPath.ARENA_TEAM_RESPAWN) == null) {
-                        respawnNotSet.append(color).append("▋");
                     }
                     if (ss.getConfig().getYml().get("Team." + team + ".Bed") == null) {
                         bedNotSet.append(color).append("▋");
@@ -136,7 +132,6 @@ public class CmdList extends SubCommand {
             String setWaitingSpawn = ss.dot() + (waitingSpawn ? ChatColor.STRIKETHROUGH : "") + "setWaitingSpawn" + ChatColor.RESET + " " + (waitingSpawn ? ChatColor.GREEN + "（已设置）" : ChatColor.RED + "（未设置）");
             String waitingPos = ss.dot() + (pos ? ChatColor.STRIKETHROUGH : "") + "waitingPos 1/2" + ChatColor.RESET + " " + posMsg;
             String setSpawn = ss.dot() + ((spawnNotSet.length() == 0) ? ChatColor.STRIKETHROUGH : "") + "setSpawn <teamName>" + ChatColor.RESET + " " + ((spawnNotSet.length() == 0) ? ChatColor.GREEN + "（全部已设置）" : ChatColor.RED + "（剩余：" + spawnNotSet + ChatColor.RED + "）");
-            String setRespawn = ss.dot() + ((respawnNotSet.length() == 0) ? ChatColor.STRIKETHROUGH : "") + "setRespawn <teamName>" + ChatColor.RESET + " " + ((respawnNotSet.length() == 0) ? ChatColor.GREEN + "（全部已设置）" : ChatColor.RED + "（剩余：" + respawnNotSet + ChatColor.RED + "）");
             String setBed = ss.dot() + ((bedNotSet.toString().length() == 0) ? ChatColor.STRIKETHROUGH : "") + "setBed" + ChatColor.RESET + " " + ((bedNotSet.length() == 0) ? ChatColor.GREEN + "（全部已设置）" : ChatColor.RED + "（剩余：" + bedNotSet + ChatColor.RED + "）");
             String setShop = ss.dot() + ((shopNotSet.toString().length() == 0) ? ChatColor.STRIKETHROUGH : "") + "setShop" + ChatColor.RESET + " " + ((shopNotSet.length() == 0) ? ChatColor.GREEN + "（全部已设置）" : ChatColor.RED + "（剩余：" + shopNotSet + ChatColor.RED + "）");
             String setKillDrops = ss.dot() + ((killDropsNotSet.toString().length() == 0) ? ChatColor.STRIKETHROUGH : "") + "setKillDrops" + ChatColor.RESET + " " + ((killDropsNotSet.length() == 0) ? ChatColor.GREEN + "（全部已设置）" : ChatColor.RED + "（剩余：" + killDropsNotSet + ChatColor.RED + "）");
@@ -153,11 +148,11 @@ public class CmdList extends SubCommand {
             }
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "autoCreateTeams " + ChatColor.YELLOW + "（自动检测）", ChatColor.WHITE + "根据岛屿颜色自动创建队伍。", "/" + getParent().getName() + " autoCreateTeams", ClickEvent.Action.SUGGEST_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "createTeam <name> <color> " + ChatColor.YELLOW + "（已创建 " + teams + " 个）", ChatColor.WHITE + "创建一个队伍。", "/" + getParent().getName() + " createTeam ", ClickEvent.Action.SUGGEST_COMMAND));
+            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "listTeams", ChatColor.WHITE + "列出当前地图的所有队伍。", "/" + mainCmd + " listTeams", ClickEvent.Action.RUN_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "removeTeam <name>", ChatColor.WHITE + "按名称删除队伍。", "/" + mainCmd + " removeTeam ", ClickEvent.Action.SUGGEST_COMMAND));
 
 
             p.spigot().sendMessage(Misc.msgHoverClick(setSpawn, ChatColor.WHITE + "设置队伍出生点。\n" + ChatColor.WHITE + "尚未设置出生点的队伍：\n" + spawnNotSetNames.toString(), "/" + getParent().getName() + " setSpawn ", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(setRespawn, ChatColor.WHITE + "设置死亡倒计时结束后的独立复活点。\n" + ChatColor.WHITE + "如果出生点靠近床，复活点必须距离床至少 4 格。", "/" + getParent().getName() + " setRespawn ", ClickEvent.Action.SUGGEST_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(setBed, ChatColor.WHITE + "设置队伍床的位置。\n" + ChatColor.WHITE + "无需指定队伍名称。", "/" + getParent().getName() + " setBed", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(setShop, ChatColor.WHITE + "设置队伍商店 NPC。\n" + ChatColor.WHITE + "无需指定队伍名称。\n" + ChatColor.WHITE + "NPC 只会在游戏开始时生成。", "/" + getParent().getName() + " setShop", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(setUpgrade, ChatColor.WHITE + "设置队伍升级 NPC。\n" + ChatColor.WHITE + "无需指定队伍名称。\n" + ChatColor.WHITE + "NPC 只会在游戏开始时生成。", "/" + getParent().getName() + " setUpgrade", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));

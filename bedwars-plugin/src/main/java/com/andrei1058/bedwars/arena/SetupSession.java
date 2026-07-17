@@ -268,11 +268,6 @@ public class SetupSession implements ISetupSession {
                 if (getConfig().getYml().get("Team." + team + ".Spawn") != null) {
                     createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "出生点已设置", getConfig().getArenaLoc("Team." + team + ".Spawn"), getConfig().getString("Team." + team + ".Spawn"));
                 }
-                if (getConfig().getYml().get("Team." + team + '.' + ConfigPath.ARENA_TEAM_RESPAWN) != null) {
-                    String path = "Team." + team + '.' + ConfigPath.ARENA_TEAM_RESPAWN;
-                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "复活点已设置",
-                            getConfig().getArenaLoc(path), getConfig().getString(path));
-                }
                 if (getConfig().getYml().get("Team." + team + ".Bed") != null) {
                     createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "床位已设置", getConfig().getArenaLoc("Team." + team + ".Bed"), getConfig().getString("Team." + team + ".Bed"));
                 }
@@ -344,11 +339,14 @@ public class SetupSession implements ISetupSession {
      * Show available teams.
      */
     public void displayAvailableTeams() {
-        if (getConfig().getYml().get("Team") != null) {
-            getPlayer().sendMessage(getPrefix() + "可用队伍：");
-            for (String team : Objects.requireNonNull(getConfig().getYml().getConfigurationSection("Team")).getKeys(false)) {
-                getPlayer().sendMessage(getPrefix() + TeamColor.getChatColor(Objects.requireNonNull(getConfig().getYml().getString("Team." + team + ".Color"))) + team);
-            }
+        List<String> teams = getTeams();
+        if (teams.isEmpty()) {
+            getPlayer().sendMessage(getPrefix() + ChatColor.YELLOW + "当前地图还没有队伍。");
+            return;
+        }
+        getPlayer().sendMessage(getPrefix() + "当前队伍（共 " + teams.size() + " 支）：");
+        for (String team : teams) {
+            getPlayer().sendMessage(getPrefix() + TeamColor.getChatColor(Objects.requireNonNull(getConfig().getYml().getString("Team." + team + ".Color"))) + team);
         }
     }
 
