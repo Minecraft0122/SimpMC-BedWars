@@ -23,15 +23,18 @@ package com.andrei1058.bedwars.commands;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.jetbrains.annotations.NotNull;
 
@@ -41,35 +44,41 @@ import java.util.Locale;
 public class Misc {
 
     /**
-     * This is used to spawn armorStands during the setup
+     * This is used to spawn text markers during the setup
      * so the player knows what he set
      *
      * @since api v6
      */
     public static void createArmorStand(String name, @NotNull Location location, String configLoc) {
-        ArmorStand a = (ArmorStand) location.getWorld().spawnEntity(location.getBlock().getLocation().add(0.5, 2, 0.5), EntityType.ARMOR_STAND);
-        a.setVisible(false);
-        a.setMarker(true);
-        a.setGravity(false);
-        a.setCustomNameVisible(true);
-        a.setCustomName(name);
-        a.setMetadata("bw1058-setup", new FixedMetadataValue(BedWars.plugin, "hologram"));
+        TextDisplay display = location.getWorld().spawn(
+                location.getBlock().getLocation().add(0.5, 2, 0.5), TextDisplay.class
+        );
+        display.text(LegacyComponentSerializer.legacySection().deserialize(name));
+        display.setCustomName(name);
+        display.setCustomNameVisible(false);
+        display.setBillboard(Display.Billboard.CENTER);
+        display.setDefaultBackground(false);
+        display.setSeeThrough(true);
+        display.setShadowed(true);
+        display.setPersistent(false);
+        display.setMetadata("bw1058-setup", new FixedMetadataValue(BedWars.plugin, "hologram"));
         if (configLoc != null) {
-            a.setMetadata("bw1058-loc", new FixedMetadataValue(BedWars.plugin, configLoc));
+            display.setMetadata("bw1058-loc", new FixedMetadataValue(BedWars.plugin, configLoc));
         }
     }
 
     /**
-     * Remove an armor stand
+     * Remove a setup text marker or a legacy armor stand
      */
     public static void removeArmorStand(String contains, @NotNull Location location, String configLoc) {
         for (Entity e : location.getWorld().getNearbyEntities(location, 1, 3, 1)) {
             if (e.hasMetadata("bw1058-setup")) {
                 if (e.hasMetadata("bw1058-loc")) {
-                    if (e.getMetadata("bw1058-loc").get(0).asString().equalsIgnoreCase(configLoc)) {
+                    if (configLoc == null || e.getMetadata("bw1058-loc").get(0).asString().equalsIgnoreCase(configLoc)) {
                         if (contains != null){
                             if (!contains.isEmpty()){
-                                if (ChatColor.stripColor(e.getCustomName()).toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))){
+                                String customName = e.getCustomName();
+                                if (customName != null && ChatColor.stripColor(customName).toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))){
                                     e.remove();
                                     return;
                                 }
@@ -84,7 +93,8 @@ public class Misc {
             }
             if (e.getType() == EntityType.ARMOR_STAND) {
                 if (!((ArmorStand) e).isVisible()) {
-                    if (contains != null && e.getCustomName().toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))) {
+                    if (contains != null && e.getCustomName() != null
+                            && e.getCustomName().toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))) {
                         e.remove();
                     }
                 }

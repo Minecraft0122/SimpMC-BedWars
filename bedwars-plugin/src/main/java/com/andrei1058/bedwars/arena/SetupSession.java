@@ -166,15 +166,25 @@ public class SetupSession implements ISetupSession {
     public void done() {
         BedWars.getAPI().getRestoreAdapter().onSetupSessionClose(this);
         getSetupSessions().remove(this);
+        Player setupPlayer = getPlayer();
+        setupPlayer.setGameMode(GameMode.ADVENTURE);
+        setupPlayer.setFlying(false);
+        setupPlayer.setAllowFlight(false);
+        setupPlayer.removePotionEffect(PotionEffectType.SPEED);
+
         if (BedWars.getServerType() != ServerType.BUNGEE) {
-            try {
-                TeleportManager.teleportC(getPlayer(), config.getConfigLoc("lobbyLoc"), PlayerTeleportEvent.TeleportCause.PLUGIN);
-            } catch (Exception ex) {
-                TeleportManager.teleportC(getPlayer(), Bukkit.getWorlds().get(0).getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+            Location lobby = config.getConfigLoc("lobbyLoc");
+            if (lobby == null || lobby.getWorld() == null) {
+                lobby = Bukkit.getWorlds().getFirst().getSpawnLocation();
             }
+            TeleportManager.teleportC(setupPlayer, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN)
+                    .whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (error != null || !Boolean.TRUE.equals(success) || !setupPlayer.isOnline()) return;
+                        if (BedWars.getServerType() == ServerType.MULTIARENA) {
+                            Arena.sendLobbyCommandItems(setupPlayer);
+                        }
+                    }));
         }
-        getPlayer().removePotionEffect(PotionEffectType.SPEED);
-        if (BedWars.getServerType() == ServerType.MULTIARENA) Arena.sendLobbyCommandItems(getPlayer());
         Bukkit.getPluginManager().callEvent(new SetupSessionCloseEvent(this));
     }
 

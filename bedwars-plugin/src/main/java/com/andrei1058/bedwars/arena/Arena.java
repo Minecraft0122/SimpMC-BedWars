@@ -1680,11 +1680,10 @@ public class Arena implements IArena {
      */
     public static void sendLobbyCommandItems(Player p) {
         if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH) == null) return;
-        if (!BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
-        p.getInventory().clear();
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
+            p.getInventory().clear();
             for (String item : config.getYml().getConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH).getKeys(false)) {
 
                 if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_MATERIAL.replace("%path%", item)) == null) {
@@ -2510,15 +2509,11 @@ public class Arena implements IArena {
                     if (playing.equals(player)) continue;
                     BedWars.nms.spigotHidePlayer(player, playing);
                 }
-                TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                player.setAllowFlight(true);
-                player.setFlying(true);
-
                 respawnSessions.put(player, seconds);
-                Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
-                    player.setAllowFlight(true);
-                    player.setFlying(true);
-
+                Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+                    if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
+                    player.setSpectatorTarget(null);
+                    player.setGameMode(GameMode.SPECTATOR);
                     nms.setCollide(player, this, false);
                     // #274
                     for (Player invisible : getShowTime().keySet()) {
@@ -2526,8 +2521,7 @@ public class Arena implements IArena {
                     }
 
                     updateSpectatorCollideRule(player, false);
-                    TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                }, 10L);
+                });
             } else {
                 ITeam team = getTeam(player);
                 team.respawnMember(player);

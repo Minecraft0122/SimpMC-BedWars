@@ -25,7 +25,7 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.language.Language;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -39,11 +39,11 @@ public class ShopHolo {
     private static BedWars api = null;
 
     private String iso;
-    private ArmorStand a1, a2;
+    private Entity a1, a2;
     private Location l;
     private IArena a;
 
-    public ShopHolo(String iso, ArmorStand a1, ArmorStand a2, Location l, IArena a) {
+    public ShopHolo(String iso, Entity a1, Entity a2, Location l, IArena a) {
         this.l = l;
         for (ShopHolo sh : getShopHolo()) {
             if (sh.l == l && sh.iso.equalsIgnoreCase(iso)) {
@@ -56,8 +56,6 @@ public class ShopHolo {
         this.a2 = a2;
         this.iso = iso;
         this.a = a;
-        if (a1 != null) a1.setMarker(true);
-        if (a2 != null) a2.setMarker(true);
         shopHolo.add(this);
         if (api == null) api = Bukkit.getServer().getServicesManager().getRegistration(BedWars.class).getProvider();
     }
@@ -90,6 +88,8 @@ public class ShopHolo {
     public static void clearForArena(IArena a) {
         for (ShopHolo sh : new ArrayList<>(getShopHolo())) {
             if (sh.a == a) {
+                if (sh.a1 != null) sh.a1.remove();
+                if (sh.a2 != null) sh.a2.remove();
                 shopHolo.remove(sh);
             }
         }

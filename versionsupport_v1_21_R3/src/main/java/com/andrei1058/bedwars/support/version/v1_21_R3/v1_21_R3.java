@@ -10,6 +10,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.VersionSupport;
 import com.andrei1058.bedwars.support.version.common.VersionCommon;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
@@ -30,7 +31,7 @@ import org.bukkit.block.data.type.Bed;
 import org.bukkit.block.data.type.Ladder;
 import org.bukkit.block.data.type.WallSign;
 import org.bukkit.command.Command;
-import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -41,6 +42,7 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Silverfish;
 import org.bukkit.entity.TNTPrimed;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.inventory.InventoryEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -196,15 +198,17 @@ public class v1_21_R3 extends VersionSupport {
         villager.setCollidable(false);
         villager.setInvulnerable(true);
         villager.setSilent(true);
+        villager.setCustomName(null);
+        villager.setCustomNameVisible(false);
 
         for (Player player : players) {
             String[] name = Language.getMsg(player, name1).split(",");
             if (name.length == 1) {
-                ArmorStand armorStand = createArmorStand(name[0], location.clone().add(0, 1.85, 0));
-                new ShopHolo(Language.getPlayerLanguage(player).getIso(), armorStand, null, location, arena);
+                TextDisplay text = createTextDisplay(name[0], location.clone().add(0, 1.85, 0));
+                new ShopHolo(Language.getPlayerLanguage(player).getIso(), text, null, location, arena);
             } else {
-                ArmorStand first = createArmorStand(name[0], location.clone().add(0, 2.1, 0));
-                ArmorStand second = createArmorStand(name[1], location.clone().add(0, 1.85, 0));
+                TextDisplay first = createTextDisplay(name[0], location.clone().add(0, 2.1, 0));
+                TextDisplay second = createTextDisplay(name[1], location.clone().add(0, 1.85, 0));
                 new ShopHolo(Language.getPlayerLanguage(player).getIso(), first, second, location, arena);
             }
         }
@@ -517,15 +521,12 @@ public class v1_21_R3 extends VersionSupport {
 
     @Override
     public ItemStack getPlayerHead(Player player, ItemStack copyTagFrom) {
-        ItemStack head = new ItemStack(materialPlayerHead());
+        ItemStack head = copyTagFrom == null ? new ItemStack(materialPlayerHead()) : copyTagFrom.clone();
+        head.setType(materialPlayerHead());
         ItemMeta meta = head.getItemMeta();
 
         if (meta instanceof SkullMeta skullMeta) {
             skullMeta.setOwningPlayer(player);
-        }
-
-        if (copyTagFrom != null && copyTagFrom.getItemMeta() != null && meta != null) {
-            copyTagFrom.getItemMeta().getPersistentDataContainer().copyTo(meta.getPersistentDataContainer(), true);
         }
 
         if (meta != null) {
@@ -663,14 +664,16 @@ public class v1_21_R3 extends VersionSupport {
         player.spawnParticle(Particle.HAPPY_VILLAGER, location, 1);
     }
 
-    private static ArmorStand createArmorStand(String name, Location loc) {
+    private static TextDisplay createTextDisplay(String name, Location loc) {
         if (loc == null || loc.getWorld() == null) return null;
-        ArmorStand armorStand = loc.getWorld().spawn(loc, ArmorStand.class);
-        armorStand.setGravity(false);
-        armorStand.setVisible(false);
-        armorStand.setCustomNameVisible(true);
-        armorStand.setCustomName(name);
-        return armorStand;
+        TextDisplay display = loc.getWorld().spawn(loc, TextDisplay.class);
+        display.text(LegacyComponentSerializer.legacySection().deserialize(name));
+        display.setBillboard(Display.Billboard.CENTER);
+        display.setDefaultBackground(false);
+        display.setSeeThrough(true);
+        display.setShadowed(true);
+        display.setPersistent(false);
+        return display;
     }
 
     private void configureDespawnable(LivingEntity entity, double speed, double health, double damage) {

@@ -38,11 +38,12 @@ import com.andrei1058.bedwars.arena.OreGenerator;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -341,6 +342,10 @@ public class BedWarsTeam implements ITeam {
         } else {
             reSpawnInvulnerability.put(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         }
+        if (p.getGameMode() == GameMode.SPECTATOR) {
+            p.setSpectatorTarget(null);
+        }
+        p.setGameMode(GameMode.SURVIVAL);
         SafeSpawnResolver.teleport(p, getSpawn());
         p.setVelocity(new Vector(0, 0, 0));
         p.removePotionEffect(PotionEffectType.INVISIBILITY);
@@ -491,7 +496,7 @@ public class BedWarsTeam implements ITeam {
      */
     @SuppressWarnings("WeakerAccess")
     public class BedHolo {
-        private ArmorStand a;
+        private TextDisplay a;
         private UUID p;
         private Arena arena;
         private boolean hidden = false, bedDestroyed = false;
@@ -505,23 +510,22 @@ public class BedWarsTeam implements ITeam {
 
         public void spawn() {
             if (!arena.getConfig().getBoolean(ConfigPath.ARENA_USE_BED_HOLO)) return;
-            a = (ArmorStand) bed.getWorld().spawnEntity(bed.getBlock().getLocation().add(+0.5, 1, +0.5), EntityType.ARMOR_STAND);
-            a.setGravity(false);
+            a = bed.getWorld().spawn(bed.getBlock().getLocation().add(0.5, 1.5, 0.5), TextDisplay.class);
+            String text = null;
             if (name != null) {
                 if (isBedDestroyed()) {
-                    a.setCustomName(getMsg(Bukkit.getPlayer(p), Messages.BED_HOLOGRAM_DESTROYED));
+                    text = getMsg(Bukkit.getPlayer(p), Messages.BED_HOLOGRAM_DESTROYED);
                     bedDestroyed = true;
                 } else {
-                    a.setCustomName(getMsg(Bukkit.getPlayer(p), Messages.BED_HOLOGRAM_DEFEND));
+                    text = getMsg(Bukkit.getPlayer(p), Messages.BED_HOLOGRAM_DEFEND);
                 }
-                a.setCustomNameVisible(true);
             }
-            a.setRemoveWhenFarAway(false);
-            a.setCanPickupItems(false);
-            a.setArms(false);
-            a.setBasePlate(false);
-            a.setMarker(true);
-            a.setVisible(false);
+            a.text(LegacyComponentSerializer.legacySection().deserialize(text == null ? "" : text));
+            a.setBillboard(Display.Billboard.CENTER);
+            a.setDefaultBackground(false);
+            a.setSeeThrough(true);
+            a.setShadowed(true);
+            a.setPersistent(false);
             for (Player p2 : arena.getWorld().getPlayers()) {
                 if (p != p2.getUniqueId()) {
                     nms.hideEntity(a, p2);

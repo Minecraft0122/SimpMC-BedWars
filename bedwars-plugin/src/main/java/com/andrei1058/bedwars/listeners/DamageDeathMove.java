@@ -61,7 +61,9 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -69,6 +71,7 @@ import static com.andrei1058.bedwars.arena.LastHit.getLastHit;
 
 public class DamageDeathMove implements Listener {
 
+    private final Map<UUID, Location> deathLocations = new HashMap<>();
     private final double tntJumpBarycenterAlterationInY;
     private final double tntJumpStrengthReductionConstant;
     private final double tntJumpYAxisReductionConstant;
@@ -363,6 +366,8 @@ public class DamageDeathMove implements Listener {
                 return;
             }
 
+            deathLocations.put(victim.getUniqueId(), victim.getLocation().clone());
+
             BedWars.nms.clearArrowsFromPlayerBody(victim);
             String message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_UNKNOWN_REASON_FINAL_KILL : Messages.PLAYER_DIE_UNKNOWN_REASON_REGULAR;
             PlayerKillEvent.PlayerKillCause cause = victimsTeam.isBedDestroyed() ? PlayerKillEvent.PlayerKillCause.UNKNOWN_FINAL_KILL : PlayerKillEvent.PlayerKillCause.UNKNOWN;
@@ -514,6 +519,7 @@ public class DamageDeathMove implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent e) {
+        Location deathLocation = deathLocations.remove(e.getPlayer().getUniqueId());
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
         if (a == null) {
             SetupSession ss = SetupSession.getSession(e.getPlayer().getUniqueId());
@@ -565,7 +571,7 @@ public class DamageDeathMove implements Listener {
                 //respawn session
                 int respawnTime = config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN);
                 if (respawnTime > 1) {
-                    e.setRespawnLocation(a.getReSpawnLocation());
+                    e.setRespawnLocation(deathLocation == null ? e.getPlayer().getLocation() : deathLocation);
                     a.startReSpawnSession(e.getPlayer(), respawnTime);
                 } else {
                     // instant respawn configuration
@@ -627,13 +633,16 @@ public class DamageDeathMove implements Listener {
                 }
             }
 
-            if (a.isSpectator(e.getPlayer()) || a.isReSpawning(e.getPlayer())) {
+            if (a.isSpectator(e.getPlayer())) {
                 if (e.getTo().getY() < 0) {
-                    TeleportManager.teleportC(e.getPlayer(), a.isSpectator(e.getPlayer()) ? a.getSpectatorLocation() : a.getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                    TeleportManager.teleportC(e.getPlayer(), a.getSpectatorLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                     e.getPlayer().setAllowFlight(true);
                     e.getPlayer().setFlying(true);
                     // how to remove fall velocity?
                 }
+            } else if (a.isReSpawning(e.getPlayer())) {
+                // A respawning player is in spectator mode at the death point;
+                // spectator mode is safe below the map and must not be moved.
             } else {
                 if (a.getStatus() == GameState.playing) {
                     if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()) {

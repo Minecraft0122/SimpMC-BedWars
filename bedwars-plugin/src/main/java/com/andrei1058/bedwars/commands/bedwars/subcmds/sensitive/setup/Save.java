@@ -26,9 +26,7 @@ import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
-import com.andrei1058.bedwars.support.paper.TeleportManager;
 import net.md_5.bungee.api.chat.ClickEvent;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -68,16 +66,11 @@ public class Save extends SubCommand {
 
         //Clear setup armor-stands
         for (Entity e : p.getWorld().getEntities()) {
-            if (e.getType() == EntityType.ARMOR_STAND) {
+            if (e.hasMetadata("bw1058-setup") || e.getType() == EntityType.ARMOR_STAND) {
                 e.remove();
             }
         }
 
-        if (Bukkit.getWorld(BedWars.getLobbyWorld()) != null) {
-            TeleportManager.teleport(p, Bukkit.getWorld(BedWars.getLobbyWorld()).getSpawnLocation());
-        } else {
-            TeleportManager.teleport(p, Bukkit.getWorlds().get(0).getSpawnLocation());
-        }
         ss.done();
         p.sendMessage(ss.getPrefix() + "竞技场修改已保存！");
         p.sendMessage(ss.getPrefix() + "现在可以使用以下命令启用：");

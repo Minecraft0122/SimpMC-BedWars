@@ -38,11 +38,11 @@ public class ChunkLoad implements Listener {
         if (e.getChunk().getEntities() == null) return;
         Bukkit.getScheduler().runTask(BedWars.plugin, ()-> {
             for (Entity entity : e.getChunk().getEntities()){
+                if (entity.hasMetadata("bw1058-setup")) {
+                    entity.remove();
+                    continue;
+                }
                 if (entity instanceof ArmorStand){
-                    if (entity.hasMetadata("bw1058-setup")){
-                        entity.remove();
-                        continue;
-                    }
                     if (!((ArmorStand)entity).isVisible()){
                         if (((ArmorStand)entity).isMarker()){
                             //if (!entity.hasGravity()){
