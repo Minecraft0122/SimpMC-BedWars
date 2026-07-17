@@ -170,11 +170,11 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.GENERATOR_HOLOGRAM_TYPE_EMERALD, "&a&l绿宝石");
         yml.addDefault(Messages.GENERATOR_HOLOGRAM_TIMER, "&c{seconds}&e 秒后生成");
         yml.addDefault(Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT, "{prefix}{generatorType}资源点&e升级到&c{tier}级。");
-        yml.addDefault(Messages.FORMATTING_CHAT_LOBBY, "{level}{vPrefix}&7{player}{vSuffix}：{message}");
-        yml.addDefault(Messages.FORMATTING_CHAT_WAITING, "{level}{vPrefix}&7{player}{vSuffix}：{message}");
-        yml.addDefault(Messages.FORMATTING_CHAT_SHOUT, "{level}{vPrefix}&6[公屏] {team} &7{player}&f{vSuffix}：{message}");
-        yml.addDefault(Messages.FORMATTING_CHAT_TEAM, "{level}{vPrefix}&f{team}&7 {player}{vSuffix} {message}");
-        yml.addDefault(Messages.FORMATTING_CHAT_SPECTATOR, "{level}{vPrefix}&7[旁观者] {player}{vSuffix}：{message}");
+        yml.addDefault(Messages.FORMATTING_CHAT_LOBBY, "{level}{vPrefix}&7{player}{vSuffix} &f>> &f{message}");
+        yml.addDefault(Messages.FORMATTING_CHAT_WAITING, "{level}{vPrefix}&7{player}{vSuffix} &f>> &f{message}");
+        yml.addDefault(Messages.FORMATTING_CHAT_SHOUT, "{level}{vPrefix}&6[公屏] {team} &7{player}&f{vSuffix} &f>> &f{message}");
+        yml.addDefault(Messages.FORMATTING_CHAT_TEAM, "{level}{vPrefix}&f{team}&7 {player}{vSuffix} &f>> &f{message}");
+        yml.addDefault(Messages.FORMATTING_CHAT_SPECTATOR, "{level}{vPrefix}&7[旁观者] {player}{vSuffix} &f>> &f{message}");
         yml.addDefault(Messages.FORMATTING_SCOREBOARD_HEALTH, Arrays.asList("&c❤", "&a生命值"));
 
         yml.addDefault(Messages.FORMATTING_SCOREBOARD_DATE, "yy/MM/dd");
@@ -218,8 +218,8 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.INTERACT_BED_DESTROY_CHAT_ANNOUNCEMENT_TO_VICTIM, "&f&l床被破坏 > &7你的床被{PlayerColor}{PlayerName}&7破坏了！\n");
         yml.addDefault(Messages.INTERACT_CHEST_CANT_OPEN_TEAM_ELIMINATED, "&c此队伍还未被团灭，因此你不能打开该团队箱子！");
         yml.addDefault(Messages.INTERACT_INVISIBILITY_REMOVED_DAMGE_TAKEN, "&c你因受到伤害而被迫退出隐身！");
-        yml.addDefault(Messages.PLAYER_DIE_VOID_FALL_REGULAR_KILL, "{PlayerColor}{PlayerName}&7掉进了虚空。");
-        yml.addDefault(Messages.PLAYER_DIE_VOID_FALL_FINAL_KILL, "{PlayerColor}{PlayerName}&7掉进了虚空。 &b&l最终击杀！");
+        yml.addDefault(Messages.PLAYER_DIE_VOID_FALL_REGULAR_KILL, "{PlayerColor}{PlayerName} &7自走虚空。");
+        yml.addDefault(Messages.PLAYER_DIE_VOID_FALL_FINAL_KILL, "{PlayerColor}{PlayerName} &7自走虚空。 &b&l最终击杀！");
         yml.addDefault(Messages.PLAYER_DIE_KNOCKED_IN_VOID_REGULAR_KILL, "{PlayerColor}{PlayerName}&7被{KillerColor}{KillerName}&7丢进了虚空。");
         yml.addDefault(Messages.PLAYER_DIE_KNOCKED_IN_VOID_FINAL_KILL, "{PlayerColor}{PlayerName}&7被{KillerColor}{KillerName}&7丢进了虚空。 &b&l最终击杀！");
         yml.addDefault(Messages.PLAYER_DIE_PVP_LOG_OUT_REGULAR, "{PlayerColor}{PlayerName}&7在与{KillerColor}{KillerName}&7战斗时断开连接。");
@@ -1101,7 +1101,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(2, SimplifiedChinese::migrateLegacyMessages);
+        updateToLatestVersion(3, SimplifiedChinese::migrateLegacyMessages);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
@@ -1109,11 +1109,36 @@ public class SimplifiedChinese extends Language {
     private static void migrateLegacyMessages(YamlConfiguration yml) {
         renameStatsItem(yml, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_NAME.replace("%path%", "stats"));
         renameStatsItem(yml, Messages.GENERAL_CONFIGURATION_WAITING_ITEMS_NAME.replace("%path%", "stats"));
+        replaceIfEqual(yml, Messages.PLAYER_DIE_VOID_FALL_REGULAR_KILL,
+                "{PlayerColor}{PlayerName}&7掉进了虚空。", "{PlayerColor}{PlayerName} &7自走虚空。");
+        replaceIfEqual(yml, Messages.PLAYER_DIE_VOID_FALL_FINAL_KILL,
+                "{PlayerColor}{PlayerName}&7掉进了虚空。 &b&l最终击杀！",
+                "{PlayerColor}{PlayerName} &7自走虚空。 &b&l最终击杀！");
+        for (String path : List.of(Messages.FORMATTING_CHAT_LOBBY, Messages.FORMATTING_CHAT_WAITING,
+                Messages.FORMATTING_CHAT_SHOUT, Messages.FORMATTING_CHAT_TEAM,
+                Messages.FORMATTING_CHAT_SPECTATOR)) {
+            migrateChatSeparator(yml, path);
+        }
     }
 
     private static void renameStatsItem(YamlConfiguration yml, String path) {
         if ("&e战绩".equals(yml.getString(path))) {
             yml.set(path, "&e历史战绩");
         }
+    }
+
+    private static void replaceIfEqual(YamlConfiguration yml, String path, String oldValue, String newValue) {
+        if (oldValue.equals(yml.getString(path))) yml.set(path, newValue);
+    }
+
+    private static void migrateChatSeparator(YamlConfiguration yml, String path) {
+        String format = yml.getString(path);
+        if (format == null || !format.contains("{message}") || format.contains(">>")) return;
+        int messageIndex = format.indexOf("{message}");
+        String before = format.substring(0, messageIndex).stripTrailing();
+        while (before.endsWith(":") || before.endsWith("：")) {
+            before = before.substring(0, before.length() - 1).stripTrailing();
+        }
+        yml.set(path, before + " &f>> &f{message}" + format.substring(messageIndex + "{message}".length()));
     }
 }

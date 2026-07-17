@@ -166,6 +166,7 @@ public class BedWarsTeam implements ITeam {
             return;
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (arena.isDestroyed()) return;
             nms.colorBed(this);
             nms.spawnShop(getTeamUpgrades(), (getArena().getMaxInTeam() > 1 ? Messages.NPC_NAME_TEAM_UPGRADES : Messages.NPC_NAME_SOLO_UPGRADES), getArena().getPlayers(), getArena());
             nms.spawnShop(getShop(), (getArena().getMaxInTeam() > 1 ? Messages.NPC_NAME_TEAM_SHOP : Messages.NPC_NAME_SOLO_SHOP), getArena().getPlayers(), getArena());
@@ -343,6 +344,7 @@ public class BedWarsTeam implements ITeam {
      * Respawn a member
      */
     public void respawnMember(@NotNull Player p) {
+        getArena().getRespawnSessions().remove(p);
         if (reSpawnInvulnerability.containsKey(p.getUniqueId())) {
             reSpawnInvulnerability.replace(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         } else {
@@ -360,19 +362,6 @@ public class BedWarsTeam implements ITeam {
         p.setAllowFlight(false);
         p.setFlying(false);
         p.setHealth(20);
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            getArena().getRespawnSessions().remove(p); //Fixes https://github.com/andrei1058/BedWars1058/issues/669
-
-            for (Player inGame : arena.getPlayers()) {
-                if (inGame.equals(p)) continue;
-                BedWars.nms.spigotShowPlayer(p, inGame);
-                BedWars.nms.spigotShowPlayer(inGame, p);
-            }
-            for (Player spectator : arena.getSpectators()) {
-                BedWars.nms.spigotShowPlayer(p, spectator);
-            }
-        }, 8L);
 
         nms.sendTitle(p, getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE), "", 0, 20, 10);
 
@@ -433,38 +422,9 @@ public class BedWarsTeam implements ITeam {
         }
         Bukkit.getPluginManager().callEvent(new PlayerReSpawnEvent(p, getArena(), this));
         nms.sendPlayerSpawnPackets(p, getArena());
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (getArena() != null) {
-                nms.sendPlayerSpawnPackets(p, getArena());
-
-                // #274
-                for (Player on : getArena().getShowTime().keySet()) {
-                    BedWars.nms.hideArmor(on, p);
-                }
-            }
-            //
-        }, 10L);
-
-        /*if (!config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_DISABLE_RESPAWN_PACKETS)) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> nms.invisibilityFix(p, getArena()), 12L);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> nms.invisibilityFix(p, getArena()), 30L);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> arena.getPlayers().forEach(pl -> nms.showPlayer(pl, p)), 25L);
-        }*/
-
-        // un-vanish from respawn
-        /*Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            arena.getPlayers().forEach(pl -> {
-                nms.showPlayer(p, pl);
-                nms.showArmor(p, pl);
-                nms.showPlayer(pl, p);
-                nms.showArmor(pl, p);
-            });
-            arena.getSpectators().forEach(pl -> {
-                nms.showPlayer(p, pl);
-                nms.showArmor(p, pl);
-            });
-        }, 20L);*/
+        for (Player invisible : getArena().getShowTime().keySet()) {
+            BedWars.nms.hideArmor(invisible, p);
+        }
 
         Sounds.playSound("player-re-spawn", p);
     }
@@ -833,22 +793,23 @@ public class BedWarsTeam implements ITeam {
     }
 
     public void destroyData() {
-        members = null;
-        spawn = null;
-        bed = null;
-        shop = null;
-        teamUpgrades = null;
         for (IGenerator ig : new ArrayList<>(generators)) {
             ig.destroyData();
         }
-        arena = null;
-        teamEffects = null;
-        base = null;
-        bowsEnchantments = null;
-        swordsEnchantemnts = null;
-        armorsEnchantemnts = null;
+        generators.clear();
+        for (BedHolo holo : new ArrayList<>(beds.values())) {
+            if (holo != null) holo.destroy();
+        }
+        beds.clear();
+        members.clear();
+        membersCache.clear();
+        teamEffects.clear();
+        base.clear();
+        bowsEnchantments.clear();
+        swordsEnchantemnts.clear();
+        armorsEnchantemnts.clear();
+        teamUpgradeList.clear();
         enemyBaseEnterTraps.clear();
-        membersCache = null;
     }
 
     @Override

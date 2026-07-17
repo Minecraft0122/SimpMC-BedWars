@@ -131,6 +131,7 @@ public class Arena implements IArena {
     private List<String> nextEvents = new ArrayList<>();
     private List<Region> regionsList = new ArrayList<>();
     private int renderDistance;
+    private boolean destroyed;
 
     private final List<Player> leaving = new ArrayList<>();
 
@@ -2366,9 +2367,20 @@ public class Arena implements IArena {
     }
 
     public void destroyData() {
+        if (destroyed) return;
+        destroyed = true;
+
+        if (startingTask != null) startingTask.cancel();
+        if (playingTask != null) playingTask.cancel();
+        if (restartingTask != null) restartingTask.cancel();
+        if (perMinuteTask != null) perMinuteTask.cancel();
+        if (moneyperMinuteTask != null) moneyperMinuteTask.cancel();
+
         destroyReJoins();
         if (worldName != null) arenaByIdentifier.remove(worldName);
         arenas.remove(this);
+        enableQueue.remove(this);
+        if (SidebarService.getInstance() != null) SidebarService.getInstance().removeArena(this);
         for (ReJoinTask rjt : ReJoinTask.getReJoinTasks()) {
             if (rjt.getArena() == this) {
                 rjt.destroy();
@@ -2381,34 +2393,37 @@ public class Arena implements IArena {
         }
         arenaByName.remove(arenaName);
         arenaByPlayer.entrySet().removeIf(entry -> entry.getValue() == this);
-        players = null;
-        spectators = null;
-        signs = null;
-        yml = null;
-        cm = null;
-        world = null;
-        for (IGenerator og : oreGenerators) {
+        for (IGenerator og : new ArrayList<>(oreGenerators)) {
             og.destroyData();
         }
         isOnABase.entrySet().removeIf(entry -> entry.getValue().getArena().equals(this));
-        for (ITeam bwt : teams) {
+        for (ITeam bwt : new ArrayList<>(teams)) {
             bwt.destroyData();
         }
-        playerLocation.entrySet().removeIf(e -> Objects.requireNonNull(e.getValue().getWorld()).getName().equalsIgnoreCase(worldName));
-        teams = null;
-        placed = null;
-        nextEvents = null;
-        regionsList = null;
-        respawnSessions = null;
-        showTime = null;
+        playerLocation.entrySet().removeIf(entry -> entry.getValue().getWorld() != null
+                && entry.getValue().getWorld().getName().equalsIgnoreCase(worldName));
+
+        players.clear();
+        spectators.clear();
+        signs.clear();
+        teams.clear();
+        placed.clear();
+        nextEvents.clear();
+        regionsList.clear();
+        respawnSessions.clear();
+        showTime.clear();
+        oreGenerators.clear();
         startingTask = null;
         playingTask = null;
         restartingTask = null;
-        oreGenerators = null;
         perMinuteTask = null;
         moneyperMinuteTask = null;
         leaving.clear();
         fireballCooldowns.clear();
+    }
+
+    public boolean isDestroyed() {
+        return destroyed;
     }
 
     /**
@@ -2485,15 +2500,22 @@ public class Arena implements IArena {
             if (seconds > 1) {
                 player.setCanPickupItems(false);
                 applySpectatorInvisibility(player);
-                // hide to others
-                for (Player playing : arena.getPlayers()) {
-                    if (playing.equals(player)) continue;
-                    BedWars.nms.spigotHidePlayer(player, playing);
-                }
                 respawnSessions.put(player, seconds);
-                enforceRespawnSpectator(player, 1L, false);
-                enforceRespawnSpectator(player, 4L, false);
-                enforceRespawnSpectator(player, 10L, true);
+                Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+                    if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
+                    player.setGameMode(GameMode.SPECTATOR);
+                    if (player.getGameMode() != GameMode.SPECTATOR) {
+                        plugin.getLogger().warning("无法将 " + player.getName()
+                                + " 切换为死亡旁观模式；请检查是否有其他插件取消了游戏模式变更。");
+                        return;
+                    }
+                    player.setSpectatorTarget(null);
+                    nms.setCollide(player, this, false);
+                    for (Player invisible : getShowTime().keySet()) {
+                        BedWars.nms.hideArmor(invisible, player);
+                    }
+                    updateSpectatorCollideRule(player, false);
+                });
             } else {
                 ITeam team = getTeam(player);
                 team.respawnMember(player);
@@ -2501,42 +2523,6 @@ public class Arena implements IArena {
             return true;
         }
         return false;
-    }
-
-    private void enforceRespawnSpectator(Player player, long delay, boolean useFallback) {
-        Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
-            if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
-            try {
-                // Paper requires spectator mode before a spectator target can be changed.
-                player.setGameMode(GameMode.SPECTATOR);
-                if (player.getGameMode() == GameMode.SPECTATOR) {
-                    player.setSpectatorTarget(null);
-                    nms.setCollide(player, this, false);
-                    for (Player invisible : getShowTime().keySet()) {
-                        BedWars.nms.hideArmor(invisible, player);
-                    }
-                    updateSpectatorCollideRule(player, false);
-                    return;
-                }
-            } catch (RuntimeException exception) {
-                if (useFallback) {
-                    plugin.getLogger().log(Level.WARNING,
-                            "无法将 " + player.getName() + " 切换到死亡旁观模式，将使用冻结复活点作为回退。",
-                            exception);
-                }
-            }
-
-            if (!useFallback) return;
-            ITeam team = getTeam(player);
-            if (team == null) return;
-            player.setGameMode(GameMode.SURVIVAL);
-            player.setAllowFlight(false);
-            player.setFlying(false);
-            player.setVelocity(new Vector(0, 0, 0));
-            player.setCanPickupItems(false);
-            nms.setCollide(player, this, false);
-            SafeSpawnResolver.teleport(player, team.getSpawn());
-        }, delay);
     }
 
     /**

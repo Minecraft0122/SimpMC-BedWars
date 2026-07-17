@@ -53,6 +53,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.potion.PotionEffectType;
@@ -62,7 +63,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.andrei1058.bedwars.BedWars.*;
@@ -72,6 +75,7 @@ import static com.andrei1058.bedwars.arena.LastHit.getLastHit;
 public class DamageDeathMove implements Listener {
 
     private final Map<UUID, Location> deathLocations = new HashMap<>();
+    private final Set<UUID> voidRespawns = new HashSet<>();
     private final double tntJumpBarycenterAlterationInY;
     private final double tntJumpStrengthReductionConstant;
     private final double tntJumpYAxisReductionConstant;
@@ -345,23 +349,42 @@ public class DamageDeathMove implements Listener {
             EntityDamageEvent damageEvent = e.getEntity().getLastDamageCause();
 
             ITeam victimsTeam = a.getTeam(victim);
-            if (a.getStatus() != GameState.playing) {
-                e.getDrops().clear();
-                victim.spigot().respawn();
-                return;
-            }
             if (victimsTeam == null) {
                 e.getDrops().clear();
                 victim.spigot().respawn();
                 return;
             }
 
-            deathLocations.put(victim.getUniqueId(), victim.getLocation().clone());
+            boolean voidDeath = isVoidDeath(victim, damageEvent, a);
+            if (voidDeath) {
+                voidRespawns.add(victim.getUniqueId());
+                deathLocations.remove(victim.getUniqueId());
+            } else {
+                voidRespawns.remove(victim.getUniqueId());
+                deathLocations.put(victim.getUniqueId(), victim.getLocation().clone());
+            }
 
             BedWars.nms.clearArrowsFromPlayerBody(victim);
             String message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_UNKNOWN_REASON_FINAL_KILL : Messages.PLAYER_DIE_UNKNOWN_REASON_REGULAR;
             PlayerKillEvent.PlayerKillCause cause = victimsTeam.isBedDestroyed() ? PlayerKillEvent.PlayerKillCause.UNKNOWN_FINAL_KILL : PlayerKillEvent.PlayerKillCause.UNKNOWN;
-            if (damageEvent != null) {
+            if (voidDeath) {
+                killer = null;
+                LastHit lh = getLastHit(victim);
+                if (lh != null && lh.getTime() >= System.currentTimeMillis() - 15000
+                        && lh.getDamager() instanceof Player lastDamager
+                        && !lastDamager.getUniqueId().equals(victim.getUniqueId())) {
+                    killer = lastDamager;
+                }
+                if (killer == null) {
+                    message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_VOID_FALL_FINAL_KILL
+                            : Messages.PLAYER_DIE_VOID_FALL_REGULAR_KILL;
+                } else {
+                    message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_KNOCKED_IN_VOID_FINAL_KILL
+                            : Messages.PLAYER_DIE_KNOCKED_IN_VOID_REGULAR_KILL;
+                }
+                cause = victimsTeam.isBedDestroyed() ? PlayerKillEvent.PlayerKillCause.VOID_FINAL_KILL
+                        : PlayerKillEvent.PlayerKillCause.VOID;
+            } else if (damageEvent != null) {
                 if (damageEvent.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
                     LastHit lh = getLastHit(victim);
                     if (lh != null) {
@@ -381,24 +404,6 @@ public class DamageDeathMove implements Listener {
                     }
                     cause = victimsTeam.isBedDestroyed() ? PlayerKillEvent.PlayerKillCause.EXPLOSION_FINAL_KILL : PlayerKillEvent.PlayerKillCause.EXPLOSION;
 
-                } else if (damageEvent.getCause() == EntityDamageEvent.DamageCause.VOID) {
-                    LastHit lh = getLastHit(victim);
-                    if (lh != null) {
-                        if (lh.getTime() >= System.currentTimeMillis() - 15000) {
-                            if (lh.getDamager() instanceof Player) killer = (Player) lh.getDamager();
-                            if (killer != null && killer.getUniqueId().equals(victim.getUniqueId())) killer = null;
-                        }
-                    }
-                    if (killer == null) {
-                        message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_VOID_FALL_FINAL_KILL : Messages.PLAYER_DIE_VOID_FALL_REGULAR_KILL;
-                    } else {
-                        if (killer != victim) {
-                            message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_KNOCKED_IN_VOID_FINAL_KILL : Messages.PLAYER_DIE_KNOCKED_IN_VOID_REGULAR_KILL;
-                        } else {
-                            message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_VOID_FALL_FINAL_KILL : Messages.PLAYER_DIE_VOID_FALL_REGULAR_KILL;
-                        }
-                    }
-                    cause = victimsTeam.isBedDestroyed() ? PlayerKillEvent.PlayerKillCause.VOID_FINAL_KILL : PlayerKillEvent.PlayerKillCause.VOID;
                 } else if (damageEvent.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
                     if (killer == null) {
                         LastHit lh = getLastHit(victim);
@@ -510,6 +515,7 @@ public class DamageDeathMove implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent e) {
         Location deathLocation = deathLocations.remove(e.getPlayer().getUniqueId());
+        boolean voidDeath = voidRespawns.remove(e.getPlayer().getUniqueId());
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
         if (a == null) {
             SetupSession ss = SetupSession.getSession(e.getPlayer().getUniqueId());
@@ -561,7 +567,11 @@ public class DamageDeathMove implements Listener {
                 //respawn session
                 int respawnTime = config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN);
                 if (respawnTime > 1) {
-                    e.setRespawnLocation(deathLocation == null ? e.getPlayer().getLocation() : deathLocation);
+                    if (voidDeath) {
+                        e.setRespawnLocation(SafeSpawnResolver.resolve(t.getSpawn()).location());
+                    } else {
+                        e.setRespawnLocation(deathLocation == null ? e.getPlayer().getLocation() : deathLocation);
+                    }
                     a.startReSpawnSession(e.getPlayer(), respawnTime);
                 } else {
                     // instant respawn configuration
@@ -572,6 +582,13 @@ public class DamageDeathMove implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        deathLocations.remove(playerId);
+        voidRespawns.remove(playerId);
     }
 
     @EventHandler
@@ -631,19 +648,13 @@ public class DamageDeathMove implements Listener {
                     // how to remove fall velocity?
                 }
             } else if (a.isReSpawning(e.getPlayer())) {
-                // The survival fallback is frozen at the safe team spawn. Keep
-                // look direction responsive while rejecting position changes.
-                if (e.getPlayer().getGameMode() != org.bukkit.GameMode.SPECTATOR
-                        && positionChanged(e.getFrom(), e.getTo())) {
-                    Location locked = e.getFrom().clone();
-                    locked.setYaw(e.getTo().getYaw());
-                    locked.setPitch(e.getTo().getPitch());
-                    e.setTo(locked);
-                }
+                // Waiting to respawn in spectator mode.
             } else {
                 if (a.getStatus() == GameState.playing) {
                     if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()) {
+                        voidRespawns.add(e.getPlayer().getUniqueId());
                         nms.voidKill(e.getPlayer());
+                        return;
                     }
                     Location playerLocation = e.getTo();
                     for (ITeam t : a.getTeams()) {
@@ -689,17 +700,16 @@ public class DamageDeathMove implements Listener {
         }
     }
 
-    private static boolean positionChanged(Location from, Location to) {
-        return from.getWorld() != to.getWorld()
-                || from.getX() != to.getX()
-                || from.getY() != to.getY()
-                || from.getZ() != to.getZ();
-    }
-
     private static boolean isMultiArenaLobby(org.bukkit.World world) {
         return BedWars.getServerType() == ServerType.MULTIARENA
                 && world != null
                 && world.getName().equalsIgnoreCase(BedWars.config.getLobbyWorldName());
+    }
+
+    private boolean isVoidDeath(Player player, EntityDamageEvent damageEvent, IArena arena) {
+        return voidRespawns.contains(player.getUniqueId())
+                || (damageEvent != null && damageEvent.getCause() == EntityDamageEvent.DamageCause.VOID)
+                || player.getLocation().getBlockY() <= arena.getYKillHeight();
     }
 
     @EventHandler

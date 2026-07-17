@@ -11,6 +11,7 @@ import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.sidebar.ISidebar;
 import com.andrei1058.bedwars.api.sidebar.ISidebarService;
+import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.metrics.MetricsManager;
 import com.andrei1058.bedwars.sidebar.thread.*;
 import com.andrei1058.spigot.sidebar.SidebarManager;
@@ -248,6 +249,14 @@ public class SidebarService implements ISidebarService {
         }
     }
 
+    /** Remove scoreboards that still reference an arena being destroyed. */
+    public void removeArena(@NotNull IArena arena) {
+        List<BwSidebar> stale = sidebars.values().stream()
+                .filter(sidebar -> sidebar.getArena() == arena)
+                .toList();
+        stale.forEach(this::remove);
+    }
+
     public static SidebarService getInstance() {
         return instance;
     }
@@ -293,7 +302,7 @@ public class SidebarService implements ISidebarService {
     public void refreshHealth() {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
-            if (null != v.getArena()) {
+            if (null != v.getArena() && Arena.getArenas().contains(v.getArena())) {
                 v.getHandle().playerHealthRefreshAnimation();
                 for (Player player : v.getArena().getPlayers()) {
                     v.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));

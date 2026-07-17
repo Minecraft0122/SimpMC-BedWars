@@ -43,6 +43,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -519,11 +520,12 @@ public class OreGenerator implements IGenerator {
 
     public void destroyData() {
         rotation.remove(this);
-        location = null;
-        arena = null;
-        ore = null;
-        bwt = null;
-        armorStands = null;
-        item = null;
+        if (armorStands != null) {
+            for (IGenHolo hologram : new ArrayList<>(armorStands.values())) {
+                if (hologram != null) hologram.destroy();
+            }
+            armorStands.clear();
+        }
+        if (item != null && !item.isDead()) item.remove();
     }
 }

@@ -127,7 +127,7 @@ public class ChatFormatting implements Listener {
     }
 
     private static String parsePHolders(String content, Player player, @Nullable ITeam team) {
-        content = content
+        content = withMessageSeparator(content)
                 .replace("{vPrefix}", getChatSupport().getPrefix(player))
                 .replace("{vSuffix}", getChatSupport().getSuffix(player))
                 .replace("{playername}", player.getName())
@@ -140,6 +140,24 @@ public class ChatFormatting implements Listener {
             content = content.replace("{team}", teamFormat);
         }
         return SupportPAPI.getSupportPAPI().replace(player, content).replace("{message}", "%2$s");
+    }
+
+    static String withMessageSeparator(String content) {
+        int messageIndex = content.indexOf("{message}");
+        if (messageIndex < 0) return content;
+
+        String before = content.substring(0, messageIndex).stripTrailing();
+        String separatorCheck = before;
+        while (separatorCheck.length() >= 2
+                && separatorCheck.charAt(separatorCheck.length() - 2) == ChatColor.COLOR_CHAR) {
+            separatorCheck = separatorCheck.substring(0, separatorCheck.length() - 2).stripTrailing();
+        }
+        if (separatorCheck.endsWith(">>")) return content;
+        while (before.endsWith(":") || before.endsWith("：")) {
+            before = before.substring(0, before.length() - 1).stripTrailing();
+        }
+        return before + ' ' + ChatColor.WHITE + ">> " + ChatColor.WHITE + "{message}"
+                + content.substring(messageIndex + "{message}".length());
     }
 
     private static boolean isShouting(String msg, Language lang) {
