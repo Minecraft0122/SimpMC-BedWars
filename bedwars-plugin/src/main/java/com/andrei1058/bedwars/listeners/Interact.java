@@ -116,11 +116,16 @@ public class Interact implements Listener {
         if (BedWars.getAPI().getAFKUtil().isPlayerAFK(e.getPlayer())) {
             BedWars.getAPI().getAFKUtil().setPlayerAFK(e.getPlayer(), false);
         }
+        IArena playerArena = Arena.getArenaByPlayer(p);
+        if (playerArena != null && playerArena.isReSpawning(p)) {
+            e.setCancelled(true);
+            return;
+        }
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
             Block b = e.getClickedBlock();
             if (b == null) return;
             if (b.getType() == Material.AIR) return;
-            IArena a = Arena.getArenaByPlayer(p);
+            IArena a = playerArena;
             if (a != null) {
                 if (a.getRespawnSessions().containsKey(e.getPlayer())) {
                     e.setCancelled(true);
@@ -258,6 +263,10 @@ public class Interact implements Listener {
         if (e == null) return;
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
         if (a == null) return;
+        if (a.isReSpawning(e.getPlayer())) {
+            e.setCancelled(true);
+            return;
+        }
         Location l = e.getRightClicked().getLocation();
         for (ITeam t : a.getTeams()) {
             Location l2 = t.getShop(), l3 = t.getTeamUpgrades();

@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.arena.Misc;
+import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
@@ -90,6 +91,8 @@ public class SetUpgrade extends SubCommand {
                     removeArmorStand("升级", ss.getConfig().getArenaLoc("Team." + args[0] + ".Upgrade"), null);
                 }
                 createArmorStand(teamm + " " + ChatColor.GOLD + "升级商人已设置", p.getLocation(), null);
+                ss.getConfig().getYml().set("Team." + args[0] + "." + ConfigPath.ARENA_TEAM_UPGRADE_FACING,
+                        NpcFacing.normalize(p.getLocation().getYaw()));
                 ss.getConfig().saveArenaLoc("Team." + args[0] + ".Upgrade", p.getLocation());
                 p.sendMessage(ss.getPrefix() + "已设置升级商人：" + teamm);
 

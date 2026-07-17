@@ -24,6 +24,7 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.configuration.GameMainOverridable;
+import com.andrei1058.bedwars.arena.NpcFacing;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
@@ -35,7 +36,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 4;
+    private static final int CONFIG_VERSION = 5;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -114,13 +115,50 @@ public class ArenaConfig extends ConfigManager {
         for (String team : teams.getKeys(false)) {
             String root = "Team." + team + '.';
             config.set(root + "Respawn", null);
+            migrateNpcFacing(plugin, config, root + "Shop", root + ConfigPath.ARENA_TEAM_SHOP_FACING,
+                    root + "Spawn");
+            migrateNpcFacing(plugin, config, root + "Upgrade", root + ConfigPath.ARENA_TEAM_UPGRADE_FACING,
+                    root + "Spawn");
             for (String path : List.of("Spawn", "Bed", "Shop", "Upgrade", ConfigPath.ARENA_TEAM_KILL_DROPS_LOC)) {
                 normalizeLocation(plugin, config, root + path);
             }
+            config.setComments(root + ConfigPath.ARENA_TEAM_SHOP_FACING,
+                    List.of("商店村民的水平朝向（yaw），坐标本身仍固定在方块中心。"));
+            config.setComments(root + ConfigPath.ARENA_TEAM_UPGRADE_FACING,
+                    List.of("升级村民的水平朝向（yaw），坐标本身仍固定在方块中心。"));
             for (String generator : List.of("Iron", "Gold", "Emerald")) {
                 normalizeLocationList(plugin, config, root + generator);
             }
         }
+    }
+
+    private static void migrateNpcFacing(Plugin plugin, YamlConfiguration config, String locationPath,
+                                         String facingPath, String fallbackTargetPath) {
+        if (config.isSet(facingPath) || !config.isString(locationPath)) return;
+
+        try {
+            String[] npc = locationParts(config.getString(locationPath));
+            if (npc.length >= 4) {
+                config.set(facingPath, NpcFacing.normalize(Float.parseFloat(npc[3].trim())));
+                return;
+            }
+            if (!config.isString(fallbackTargetPath)) return;
+            String[] target = locationParts(config.getString(fallbackTargetPath));
+            config.set(facingPath, NpcFacing.toward(
+                    Double.parseDouble(npc[0].trim()), Double.parseDouble(npc[2].trim()),
+                    Double.parseDouble(target[0].trim()), Double.parseDouble(target[2].trim())
+            ));
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().warning("Could not migrate NPC facing at " + locationPath + ": "
+                    + exception.getMessage());
+        }
+    }
+
+    private static String[] locationParts(String value) {
+        if (value == null) throw new IllegalArgumentException("location is missing");
+        String[] parts = value.replace("[", "").replace("]", "").split(",");
+        if (parts.length < 3) throw new IllegalArgumentException("expected at least x,y,z");
+        return parts;
     }
 
     private static void moveIfAbsent(YamlConfiguration config, String oldPath, String newPath) {

@@ -34,6 +34,7 @@ import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Cuboid;
 import com.andrei1058.bedwars.api.upgrades.EnemyBaseEnterTrap;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.OreGenerator;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.configuration.Sounds;
@@ -106,8 +107,13 @@ public class BedWarsTeam implements ITeam {
         this.spawn = spawn;
         this.bed = bed;
         this.arena = arena;
-        this.shop = shop;
-        this.teamUpgrades = teamUpgrades;
+        String teamRoot = "Team." + name + ".";
+        Number shopFacing = arena.getConfig().getYml().isSet(teamRoot + ConfigPath.ARENA_TEAM_SHOP_FACING)
+                ? arena.getConfig().getYml().getDouble(teamRoot + ConfigPath.ARENA_TEAM_SHOP_FACING) : null;
+        Number upgradeFacing = arena.getConfig().getYml().isSet(teamRoot + ConfigPath.ARENA_TEAM_UPGRADE_FACING)
+                ? arena.getConfig().getYml().getDouble(teamRoot + ConfigPath.ARENA_TEAM_UPGRADE_FACING) : null;
+        this.shop = NpcFacing.apply(shop, shopFacing, spawn);
+        this.teamUpgrades = NpcFacing.apply(teamUpgrades, upgradeFacing, spawn);
         Language.saveIfNotExists(ConfigPath.TEAM_NAME_PATH.replace("{arena}", getArena().getArenaName()).replace("{team}", getName()), name);
         arena.getRegionsList().add(new Cuboid(spawn, arena.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION), true));
 
@@ -161,8 +167,8 @@ public class BedWarsTeam implements ITeam {
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             nms.colorBed(this);
-            nms.spawnShop(getArena().getConfig().getArenaLoc("Team." + getName() + ".Upgrade"), (getArena().getMaxInTeam() > 1 ? Messages.NPC_NAME_TEAM_UPGRADES : Messages.NPC_NAME_SOLO_UPGRADES), getArena().getPlayers(), getArena());
-            nms.spawnShop(getArena().getConfig().getArenaLoc("Team." + getName() + ".Shop"), (getArena().getMaxInTeam() > 1 ? Messages.NPC_NAME_TEAM_SHOP : Messages.NPC_NAME_SOLO_SHOP), getArena().getPlayers(), getArena());
+            nms.spawnShop(getTeamUpgrades(), (getArena().getMaxInTeam() > 1 ? Messages.NPC_NAME_TEAM_UPGRADES : Messages.NPC_NAME_SOLO_UPGRADES), getArena().getPlayers(), getArena());
+            nms.spawnShop(getShop(), (getArena().getMaxInTeam() > 1 ? Messages.NPC_NAME_TEAM_SHOP : Messages.NPC_NAME_SOLO_SHOP), getArena().getPlayers(), getArena());
         }, 20L);
 
         Cuboid c1 = new Cuboid(getArena().getConfig().getArenaLoc("Team." + getName() + ".Upgrade"), getArena().getConfig().getInt(ConfigPath.ARENA_UPGRADES_PROTECTION), true);
@@ -346,6 +352,7 @@ public class BedWarsTeam implements ITeam {
             p.setSpectatorTarget(null);
         }
         p.setGameMode(GameMode.SURVIVAL);
+        p.setCanPickupItems(true);
         SafeSpawnResolver.teleport(p, getSpawn());
         p.setVelocity(new Vector(0, 0, 0));
         p.removePotionEffect(PotionEffectType.INVISIBILITY);

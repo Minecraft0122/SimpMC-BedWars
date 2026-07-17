@@ -901,15 +901,8 @@ public class Arena implements IArena {
 
         /* restore player inventory */
         PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
-        if (pg == null) {
-            // if there is no previous backup of the inventory send lobby items if multi arena
-            if (BedWars.getServerType() == ServerType.MULTIARENA) {
-                // Send items
-                Arena.sendLobbyCommandItems(p);
-            }
-        } else {
-            pg.restore();
-        }
+        if (pg != null) pg.restore();
+        if (BedWars.getServerType() == ServerType.MULTIARENA) Arena.sendLobbyCommandItems(p);
         playerLocation.remove(p);
         for (PotionEffect pf : p.getActivePotionEffects()) {
             p.removePotionEffect(pf.getType());
@@ -1041,15 +1034,8 @@ public class Arena implements IArena {
 
         /* restore player inventory */
         PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
-        if (pg == null) {
-            // if there is no previous backup of the inventory send lobby items if multi arena
-            if (BedWars.getServerType() == ServerType.MULTIARENA) {
-                // Send items
-                Arena.sendLobbyCommandItems(p);
-            }
-        } else {
-            pg.restore();
-        }
+        if (pg != null) pg.restore();
+        if (BedWars.getServerType() == ServerType.MULTIARENA) Arena.sendLobbyCommandItems(p);
         if (getServerType() == ServerType.BUNGEE) {
             Misc.moveToLobbyOrKick(p, this, true);
             return;
@@ -1669,10 +1655,14 @@ public class Arena implements IArena {
      * This will clear the inventory first.
      */
     public static void sendLobbyCommandItems(Player p) {
-        if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH) == null) return;
+        if (!config.getYml().isConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH)) return;
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
+            if (!p.isOnline() || !BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
+            p.setGameMode(GameMode.SURVIVAL);
+            p.setFlying(false);
+            p.setAllowFlight(false);
+            p.setCanPickupItems(true);
             p.getInventory().clear();
             for (String item : config.getYml().getConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH).getKeys(false)) {
 
@@ -2493,6 +2483,7 @@ public class Arena implements IArena {
             }
             player.getInventory().clear();
             if (seconds > 1) {
+                player.setCanPickupItems(false);
                 applySpectatorInvisibility(player);
                 // hide to others
                 for (Player playing : arena.getPlayers()) {
@@ -2500,18 +2491,9 @@ public class Arena implements IArena {
                     BedWars.nms.spigotHidePlayer(player, playing);
                 }
                 respawnSessions.put(player, seconds);
-                Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
-                    if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
-                    player.setSpectatorTarget(null);
-                    player.setGameMode(GameMode.SPECTATOR);
-                    nms.setCollide(player, this, false);
-                    // #274
-                    for (Player invisible : getShowTime().keySet()) {
-                        BedWars.nms.hideArmor(invisible, player);
-                    }
-
-                    updateSpectatorCollideRule(player, false);
-                });
+                enforceRespawnSpectator(player, 1L, false);
+                enforceRespawnSpectator(player, 4L, false);
+                enforceRespawnSpectator(player, 10L, true);
             } else {
                 ITeam team = getTeam(player);
                 team.respawnMember(player);
@@ -2519,6 +2501,42 @@ public class Arena implements IArena {
             return true;
         }
         return false;
+    }
+
+    private void enforceRespawnSpectator(Player player, long delay, boolean useFallback) {
+        Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
+            if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
+            try {
+                // Paper requires spectator mode before a spectator target can be changed.
+                player.setGameMode(GameMode.SPECTATOR);
+                if (player.getGameMode() == GameMode.SPECTATOR) {
+                    player.setSpectatorTarget(null);
+                    nms.setCollide(player, this, false);
+                    for (Player invisible : getShowTime().keySet()) {
+                        BedWars.nms.hideArmor(invisible, player);
+                    }
+                    updateSpectatorCollideRule(player, false);
+                    return;
+                }
+            } catch (RuntimeException exception) {
+                if (useFallback) {
+                    plugin.getLogger().log(Level.WARNING,
+                            "无法将 " + player.getName() + " 切换到死亡旁观模式，将使用冻结复活点作为回退。",
+                            exception);
+                }
+            }
+
+            if (!useFallback) return;
+            ITeam team = getTeam(player);
+            if (team == null) return;
+            player.setGameMode(GameMode.SURVIVAL);
+            player.setAllowFlight(false);
+            player.setFlying(false);
+            player.setVelocity(new Vector(0, 0, 0));
+            player.setCanPickupItems(false);
+            nms.setCollide(player, this, false);
+            SafeSpawnResolver.teleport(player, team.getSpawn());
+        }, delay);
     }
 
     /**

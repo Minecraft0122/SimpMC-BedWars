@@ -90,6 +90,10 @@ public class DamageDeathMove implements Listener {
 
     @EventHandler
     public void onDamage(EntityDamageEvent e) {
+        if (isMultiArenaLobby(e.getEntity().getWorld())) {
+            e.setCancelled(true);
+            return;
+        }
         if (e.getEntity() instanceof Player) {
             Player p = (Player) e.getEntity();
             IArena a = Arena.getArenaByPlayer(p);
@@ -120,11 +124,6 @@ public class DamageDeathMove implements Listener {
                 }
                 //}
 
-            }
-        }
-        if (BedWars.getServerType() == ServerType.MULTIARENA) {
-            if (e.getEntity().getLocation().getWorld().getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
-                e.setCancelled(true);
             }
         }
     }
@@ -158,6 +157,10 @@ public class DamageDeathMove implements Listener {
 
     @EventHandler
     public void onDamageByEntity(EntityDamageByEntityEvent e) {
+        if (isMultiArenaLobby(e.getEntity().getWorld())) {
+            e.setCancelled(true);
+            return;
+        }
         if (e.getEntity() instanceof Player) {
             Player p = (Player) e.getEntity();
             IArena a = Arena.getArenaByPlayer(p);
@@ -172,7 +175,6 @@ public class DamageDeathMove implements Listener {
                 }
 
                 Player damager = null;
-                boolean projectile = false;
                 if (e.getDamager() instanceof Player) {
                     damager = (Player) e.getDamager();
                 } else if (e.getDamager() instanceof Projectile) {
@@ -180,13 +182,6 @@ public class DamageDeathMove implements Listener {
                     if (shooter instanceof Player) {
                         damager = (Player) shooter;
                     } else return;
-                    projectile = true;
-                } else if (e.getDamager() instanceof Player) {
-                    damager = (Player) e.getDamager();
-                    if (a.isReSpawning(damager)) {
-                        e.setCancelled(true);
-                        return;
-                    }
                 } else if (e.getDamager() instanceof TNTPrimed) {
                     TNTPrimed tnt = (TNTPrimed) e.getDamager();
                     if (tnt.getSource() != null) {
@@ -322,11 +317,6 @@ public class DamageDeathMove implements Listener {
                 }
             }
         }*/
-        if (BedWars.getServerType() == ServerType.MULTIARENA) {
-            if (e.getEntity().getLocation().getWorld().getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
-                e.setCancelled(true);
-            }
-        }
     }
 
     @EventHandler
@@ -641,8 +631,15 @@ public class DamageDeathMove implements Listener {
                     // how to remove fall velocity?
                 }
             } else if (a.isReSpawning(e.getPlayer())) {
-                // A respawning player is in spectator mode at the death point;
-                // spectator mode is safe below the map and must not be moved.
+                // The survival fallback is frozen at the safe team spawn. Keep
+                // look direction responsive while rejecting position changes.
+                if (e.getPlayer().getGameMode() != org.bukkit.GameMode.SPECTATOR
+                        && positionChanged(e.getFrom(), e.getTo())) {
+                    Location locked = e.getFrom().clone();
+                    locked.setYaw(e.getTo().getYaw());
+                    locked.setPitch(e.getTo().getPitch());
+                    e.setTo(locked);
+                }
             } else {
                 if (a.getStatus() == GameState.playing) {
                     if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()) {
@@ -690,6 +687,19 @@ public class DamageDeathMove implements Listener {
                 }
             }
         }
+    }
+
+    private static boolean positionChanged(Location from, Location to) {
+        return from.getWorld() != to.getWorld()
+                || from.getX() != to.getX()
+                || from.getY() != to.getY()
+                || from.getZ() != to.getZ();
+    }
+
+    private static boolean isMultiArenaLobby(org.bukkit.World world) {
+        return BedWars.getServerType() == ServerType.MULTIARENA
+                && world != null
+                && world.getName().equalsIgnoreCase(BedWars.config.getLobbyWorldName());
     }
 
     @EventHandler

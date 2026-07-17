@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.arena.Misc;
+import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
@@ -89,6 +90,8 @@ public class SetShop extends SubCommand {
                     removeArmorStand("商店", ss.getConfig().getArenaLoc("Team." + args[0] + ".Shop"), ss.getConfig().getString("Team." + args[0] + ".Shop"));
                 }
                 createArmorStand(teamm + " " + ChatColor.GOLD + "商店已设置", p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
+                ss.getConfig().getYml().set("Team." + args[0] + "." + ConfigPath.ARENA_TEAM_SHOP_FACING,
+                        NpcFacing.normalize(p.getLocation().getYaw()));
                 ss.getConfig().saveArenaLoc("Team." + args[0] + ".Shop", p.getLocation());
                 p.sendMessage(ss.getPrefix() + "已设置商店：" + teamm);
                 if (ss.getSetupType() == SetupType.ASSISTED) {

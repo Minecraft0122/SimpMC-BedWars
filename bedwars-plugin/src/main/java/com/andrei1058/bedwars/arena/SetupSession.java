@@ -167,7 +167,7 @@ public class SetupSession implements ISetupSession {
         BedWars.getAPI().getRestoreAdapter().onSetupSessionClose(this);
         getSetupSessions().remove(this);
         Player setupPlayer = getPlayer();
-        setupPlayer.setGameMode(GameMode.ADVENTURE);
+        setupPlayer.setGameMode(GameMode.SURVIVAL);
         setupPlayer.setFlying(false);
         setupPlayer.setAllowFlight(false);
         setupPlayer.removePotionEffect(PotionEffectType.SPEED);

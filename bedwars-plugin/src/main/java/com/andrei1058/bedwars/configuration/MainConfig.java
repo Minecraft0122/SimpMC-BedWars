@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 6;
+    private static final int CONFIG_VERSION = 7;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -277,6 +277,8 @@ public class MainConfig extends ConfigManager {
         setComments("database.enable", "是否使用 MySQL；关闭时使用本地 SQLite。", "启用前请正确填写下面的连接信息。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
+                "多竞技场大厅固定物品。stats、arena-selector 和 leave 会在旧配置迁移时自动补齐。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置，大小必须是 9 的倍数。");
         setComments(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅掉入虚空时是否传送回大厅出生点。");
     }
@@ -316,6 +318,10 @@ public class MainConfig extends ConfigManager {
         moveIfAbsent(yml, "allow-parties", ConfigPath.GENERAL_CONFIGURATION_ALLOW_PARTIES);
         yml.set("use-experimental-team-assigner", null);
 
+        ensureLobbyItem(yml, "stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
+        ensureLobbyItem(yml, "arena-selector", "bw gui", true, "CHEST", 5, 4);
+        ensureLobbyItem(yml, "leave", "bw leave", false, "RED_BED", 0, 8);
+
         for (String obsoletePath : List.of("arenaGui", "statsGUI", "startItems", "generators",
                 "bedsDestroyCountdown", "dragonSpawnCountdown", "gameEndCountdown", "npcLoc", "blockedCmds",
                 "lobbyScoreboard", "items", "start-items-per-arena", "safeMode", "disableCrafting",
@@ -324,6 +330,19 @@ public class MainConfig extends ConfigManager {
             yml.set(obsoletePath, null);
         }
         migrateLobbyLocation(yml);
+    }
+
+    private static void ensureLobbyItem(YamlConfiguration yml, String name, String command, boolean enchanted,
+                                        String material, int data, int slot) {
+        setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_COMMAND.replace("%path%", name), command);
+        setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_MATERIAL.replace("%path%", name), material);
+        setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_DATA.replace("%path%", name), data);
+        setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_ENCHANTED.replace("%path%", name), enchanted);
+        setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_SLOT.replace("%path%", name), slot);
+    }
+
+    private static void setIfMissing(YamlConfiguration yml, String path, Object value) {
+        if (!yml.isSet(path)) yml.set(path, value);
     }
 
     private static void migrateLobbyLocation(YamlConfiguration yml) {

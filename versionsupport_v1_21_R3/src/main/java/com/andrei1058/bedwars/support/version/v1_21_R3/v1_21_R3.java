@@ -193,6 +193,7 @@ public class v1_21_R3 extends VersionSupport {
         if (world == null) return;
 
         Villager villager = (Villager) world.spawnEntity(location, EntityType.VILLAGER);
+        villager.setRotation(location.getYaw(), 0.0F);
         villager.setAI(false);
         villager.setRemoveWhenFarAway(false);
         villager.setCollidable(false);
