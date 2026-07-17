@@ -26,6 +26,7 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.shop.ShopHolo;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.entity.Despawnable;
 import com.andrei1058.bedwars.api.events.player.PlayerInvisibilityPotionEvent;
@@ -567,7 +568,7 @@ public class DamageDeathMove implements Listener {
                     a.startReSpawnSession(e.getPlayer(), respawnTime);
                 } else {
                     // instant respawn configuration
-                    e.setRespawnLocation(t.getSpawn());
+                    e.setRespawnLocation(t.getRespawn());
                     t.respawnMember(e.getPlayer());
                 }
             }
@@ -635,8 +636,11 @@ public class DamageDeathMove implements Listener {
                     if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()) {
                         nms.voidKill(e.getPlayer());
                     }
+                    Location playerLocation = e.getTo();
                     for (ITeam t : a.getTeams()) {
-                        if (e.getPlayer().getLocation().distance(t.getBed()) < 4) {
+                        Location bedLocation = t.getBed();
+                        boolean isNearBed = ConfigManager.isSameWorldWithin(playerLocation, bedLocation, 4);
+                        if (isNearBed) {
                             if (t.isMember(e.getPlayer()) && t instanceof BedWarsTeam) {
                                 if (((BedWarsTeam) t).getBedHolo(e.getPlayer()) == null) continue;
                                 if (!((BedWarsTeam) t).getBedHolo(e.getPlayer()).isHidden()) {

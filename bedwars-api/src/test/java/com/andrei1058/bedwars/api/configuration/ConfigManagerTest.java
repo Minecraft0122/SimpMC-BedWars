@@ -1,8 +1,11 @@
 package com.andrei1058.bedwars.api.configuration;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Proxy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -74,5 +77,35 @@ class ConfigManagerTest {
     void generalLocationMigrationSupportsWorldWithoutPitch() {
         assertEquals("12.25,64.0,-3.75,90.0,0.0,lobby",
                 ConfigManager.normalizeConfigLocationString("12.25,64.0,-3.75,90.0,lobby", "world"));
+    }
+
+    @Test
+    void radiusCheckRejectsDifferentWorldsWithoutThrowing() {
+        Location lobby = new Location(world("lobby"), 0, 64, 0);
+        Location arena = new Location(world("arena"), 0, 64, 0);
+
+        assertFalse(ConfigManager.isSameWorldWithin(lobby, arena, 4));
+    }
+
+    @Test
+    void detectsWhenSpawnAndRespawnAreBothNearBed() {
+        World world = world("arena");
+        Location bed = new Location(world, 0.5, 64, 0.5);
+        Location spawn = new Location(world, 2.5, 64, 0.5);
+        Location nearRespawn = new Location(world, 0.5, 64, 3.5);
+        Location farRespawn = new Location(world, 6.5, 64, 0.5);
+
+        assertTrue(ConfigManager.areBothLocationsNearBed(spawn, nearRespawn, bed));
+        assertFalse(ConfigManager.areBothLocationsNearBed(spawn, farRespawn, bed));
+    }
+
+    private static World world(String name) {
+        return (World) Proxy.newProxyInstance(World.class.getClassLoader(), new Class<?>[]{World.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getName", "toString" -> name;
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
     }
 }

@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 3;
+    private static final int CONFIG_VERSION = 4;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -78,7 +78,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE, true);
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL, 20);
 
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 60 * 5);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY, 4000);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_MODE_GAMES_BEFORE_RESTART, 30);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_RESTART_CMD, "restart");
@@ -269,7 +269,7 @@ public class MainConfig extends ConfigManager {
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
-        setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "游戏计时设置，单位请参考对应配置项名称。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
         setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");
         setComments(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, "火球爆炸、击退、冷却与伤害设置。");
@@ -281,6 +281,9 @@ public class MainConfig extends ConfigManager {
     }
 
     private static void migrateLegacyConfig(YamlConfiguration yml) {
+        if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300) == 300) {
+            yml.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
+        }
         moveIfAbsent(yml, "formatChat", ConfigPath.GENERAL_CHAT_FORMATTING);
         moveIfAbsent(yml, "globalChat", ConfigPath.GENERAL_CHAT_GLOBAL);
         moveIfAbsent(yml, "bungee-settings.lobby-servers", ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS);

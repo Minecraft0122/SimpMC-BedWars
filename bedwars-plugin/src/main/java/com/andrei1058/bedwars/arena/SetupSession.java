@@ -261,24 +261,29 @@ public class SetupSession implements ISetupSession {
                 for (String gen : new String[]{"Iron", "Gold", "Emerald"}) {
                     if (getConfig().getYml().get("Team." + team + "." + gen) != null) {
                         for (String loc : getConfig().getList("Team." + team + "." + gen)) {
-                            createArmorStand(ChatColor.GOLD + gen + " generator added for team: " + getTeamColor(team) + team, getConfig().convertStringToArenaLocation(loc), loc);
+                            createArmorStand(ChatColor.GOLD + "已添加 " + gen + " 资源点，队伍：" + getTeamColor(team) + team, getConfig().convertStringToArenaLocation(loc), loc);
                         }
                     }
                 }
                 if (getConfig().getYml().get("Team." + team + ".Spawn") != null) {
-                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "SPAWN SET", getConfig().getArenaLoc("Team." + team + ".Spawn"), getConfig().getString("Team." + team + ".Spawn"));
+                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "出生点已设置", getConfig().getArenaLoc("Team." + team + ".Spawn"), getConfig().getString("Team." + team + ".Spawn"));
+                }
+                if (getConfig().getYml().get("Team." + team + '.' + ConfigPath.ARENA_TEAM_RESPAWN) != null) {
+                    String path = "Team." + team + '.' + ConfigPath.ARENA_TEAM_RESPAWN;
+                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "复活点已设置",
+                            getConfig().getArenaLoc(path), getConfig().getString(path));
                 }
                 if (getConfig().getYml().get("Team." + team + ".Bed") != null) {
-                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "BED SET", getConfig().getArenaLoc("Team." + team + ".Bed"), getConfig().getString("Team." + team + ".Bed"));
+                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "床位已设置", getConfig().getArenaLoc("Team." + team + ".Bed"), getConfig().getString("Team." + team + ".Bed"));
                 }
                 if (getConfig().getYml().get("Team." + team + ".Shop") != null) {
-                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "SHOP SET", getConfig().getArenaLoc("Team." + team + ".Shop"), null);
+                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "商店已设置", getConfig().getArenaLoc("Team." + team + ".Shop"), null);
                 }
                 if (getConfig().getYml().get("Team." + team + ".Upgrade") != null) {
-                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "UPGRADE SET", getConfig().getArenaLoc("Team." + team + ".Upgrade"), null);
+                    createArmorStand(getTeamColor(team) + team + " " + ChatColor.GOLD + "升级商人已设置", getConfig().getArenaLoc("Team." + team + ".Upgrade"), null);
                 }
                 if (getConfig().getYml().get("Team." + team + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC) != null) {
-                    createArmorStand(ChatColor.GOLD + "Kill drops " + team, getConfig().getArenaLoc("Team." + team + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC), null);
+                    createArmorStand(ChatColor.GOLD + "死亡掉落点 " + team, getConfig().getArenaLoc("Team." + team + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC), null);
                 }
             }
 

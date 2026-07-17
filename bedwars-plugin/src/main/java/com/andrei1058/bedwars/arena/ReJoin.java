@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
+import com.andrei1058.bedwars.api.events.team.TeamEliminatedEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.tasks.ReJoinTask;
@@ -61,7 +62,7 @@ public class ReJoin {
     public ReJoin(Player player, IArena arena, ITeam bwt, List<ShopCache.CachedItem> cachedArmor) {
         ReJoin rj = getPlayer(player);
         if (rj != null) {
-            rj.destroy(true);
+            rj.destroy(false);
         }
         if (bwt == null) return;
         if (bwt.isBedDestroyed()) return;
@@ -70,7 +71,7 @@ public class ReJoin {
         this.arena = arena;
         reJoinList.add(this);
         BedWars.debug("Created ReJoin for " + player.getName() + " " + player.getUniqueId() + " at " + arena.getArenaName());
-        if (bwt.getMembers().isEmpty()) task = new ReJoinTask(arena, bwt);
+        task = new ReJoinTask(this, arena, bwt);
         this.permanentsAndNonDowngradables.addAll(cachedArmor);
 
         if (BedWars.autoscale) {
@@ -163,25 +164,68 @@ public class ReJoin {
     public void destroy(boolean destroyTeam) {
         BedWars.debug("ReJoin destroy for " + player.toString());
         reJoinList.remove(this);
+        if (task != null) {
+            task.destroy();
+            task = null;
+        }
         JsonObject json = new JsonObject();
         json.addProperty("type", "RD");
         json.addProperty("uuid", player.toString());
         json.addProperty("server", BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
         ArenaSocket.sendMessage(json.toString());
-        if (bwt != null && destroyTeam && bwt.getMembers().isEmpty()) {
+        if (bwt != null && destroyTeam && bwt.getMembers().isEmpty() && !bwt.isBedDestroyed()) {
             bwt.setBedDestroyed(true);
-            if (bwt != null) {
-                for (Player p2 : arena.getPlayers()) {
-                    p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
-                            .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
-                }
-                for (Player p2 : arena.getSpectators()) {
-                    p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
-                            .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
-                }
+            Bukkit.getPluginManager().callEvent(new TeamEliminatedEvent(arena, bwt));
+            for (Player p2 : arena.getPlayers()) {
+                p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
+                        .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
+            }
+            for (Player p2 : arena.getSpectators()) {
+                p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
+                        .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
             }
             arena.checkWinner();
         }
+    }
+
+    /**
+     * Expire this player's reconnect window and remove them from game statistics.
+     */
+    public void expire() {
+        if (!reJoinList.contains(this)) return;
+        if (bwt != null) {
+            bwt.getMembersCache().removeIf(cached -> cached.getUniqueId().equals(player));
+        }
+        boolean hasOtherPendingTeammate = false;
+        if (bwt != null) {
+            for (ReJoin pending : reJoinList) {
+                if (pending != this && pending.bwt == bwt) {
+                    hasOtherPendingTeammate = true;
+                    break;
+                }
+            }
+        }
+        boolean eliminateTeam = bwt != null && bwt.getMembers().isEmpty() && !hasOtherPendingTeammate;
+        destroy(eliminateTeam);
+        if (arena != null && arena.getStatus() == GameState.playing
+                && arena.getPlayers().isEmpty() && !hasPendingForArena(arena)) {
+            arena.changeStatus(GameState.restarting);
+        }
+    }
+
+    public static boolean hasPendingForTeam(ITeam team) {
+        if (team == null || team.isBedDestroyed()) return false;
+        for (ReJoin reJoin : reJoinList) {
+            if (reJoin.bwt == team) return true;
+        }
+        return false;
+    }
+
+    public static boolean hasPendingForArena(IArena arena) {
+        for (ReJoin reJoin : reJoinList) {
+            if (reJoin.arena == arena && reJoin.bwt != null && !reJoin.bwt.isBedDestroyed()) return true;
+        }
+        return false;
     }
 
     /**

@@ -107,6 +107,21 @@ public class ConfigManager {
     }
 
     /**
+     * Check a radius without asking Bukkit to compare locations from different worlds.
+     */
+    public static boolean isSameWorldWithin(Location first, Location second, double radius) {
+        if (first == null || second == null || radius < 0 || first.getWorld() == null
+                || !first.getWorld().equals(second.getWorld())) {
+            return false;
+        }
+        return first.distanceSquared(second) < radius * radius;
+    }
+
+    public static boolean areBothLocationsNearBed(Location spawn, Location respawn, Location bed) {
+        return isSameWorldWithin(spawn, bed, 4) && isSameWorldWithin(respawn, bed, 4);
+    }
+
+    /**
      * Serialize a centered arena marker without redundant yaw and pitch data.
      */
     public static String serializeArenaLocation(Location loc) {

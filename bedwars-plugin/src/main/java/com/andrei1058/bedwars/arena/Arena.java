@@ -31,6 +31,7 @@ import com.andrei1058.bedwars.api.arena.stats.*;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.ITeamAssigner;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.entity.Despawnable;
 import com.andrei1058.bedwars.api.events.gameplay.GameEndEvent;
@@ -290,6 +291,61 @@ public class Arena implements IArena {
         Language.saveIfNotExists(Messages.ARENA_DISPLAY_GROUP_PATH + getGroup().toLowerCase(), String.valueOf(getGroup().charAt(0)).toUpperCase() + group.substring(1).toLowerCase());
     }
 
+    private Location resolveTeamRespawn(Location spawn, Location configuredRespawn, Location bed) {
+        if (spawn == null || bed == null || spawn.getWorld() == null || !spawn.getWorld().equals(bed.getWorld())) {
+            return configuredRespawn == null ? spawn : configuredRespawn;
+        }
+        if (configuredRespawn != null && !ConfigManager.areBothLocationsNearBed(spawn, configuredRespawn, bed)) {
+            return configuredRespawn;
+        }
+        if (!isNearBed(spawn, bed)) {
+            return spawn;
+        }
+
+        Location safe = findSafeRespawnAwayFromBed(spawn, bed);
+        if (safe == null) {
+            plugin.getLogger().warning("Could not automatically find a respawn point away from the bed in arena "
+                    + getArenaName() + "; using the configured team spawn.");
+            return spawn;
+        }
+        return safe;
+    }
+
+    private static boolean isNearBed(Location location, Location bed) {
+        return ConfigManager.isSameWorldWithin(location, bed, 4);
+    }
+
+    private static Location findSafeRespawnAwayFromBed(Location spawn, Location bed) {
+        World world = spawn.getWorld();
+        if (world == null) return null;
+
+        double preferredAngle = Math.atan2(spawn.getZ() - bed.getZ(), spawn.getX() - bed.getX());
+        int[] verticalOffsets = {0, 1, -1, 2, -2};
+        for (int radius = 4; radius <= 10; radius++) {
+            for (int index = 0; index < 16; index++) {
+                int step = (index + 1) / 2;
+                double angleOffset = Math.PI * step / 8.0 * (index % 2 == 0 ? 1 : -1);
+                double angle = preferredAngle + angleOffset;
+                int x = (int) Math.floor(bed.getX() + Math.cos(angle) * radius);
+                int z = (int) Math.floor(bed.getZ() + Math.sin(angle) * radius);
+                for (int verticalOffset : verticalOffsets) {
+                    int y = spawn.getBlockY() + verticalOffset;
+                    Block feet = world.getBlockAt(x, y, z);
+                    Block head = world.getBlockAt(x, y + 1, z);
+                    Block floor = world.getBlockAt(x, y - 1, z);
+                    if (feet.isPassable() && !feet.isLiquid() && head.isPassable() && !head.isLiquid()
+                            && floor.getType().isSolid()) {
+                        Location candidate = new Location(world, x + 0.5, y, z + 0.5);
+                        if (!isNearBed(candidate, bed)) {
+                            return candidate;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      * Use this method when the world was loaded successfully.
      */
@@ -320,15 +376,28 @@ public class Arena implements IArena {
         }
 
         //Create teams
+        boolean respawnLocationsUpdated = false;
         for (String team : yml.getConfigurationSection("Team").getKeys(false)) {
             if (getTeam(team) != null) {
                 BedWars.plugin.getLogger().severe("A team with name: " + team + " was already loaded for arena: " + getArenaName());
                 continue;
             }
-            BedWarsTeam bwt = new BedWarsTeam(team, TeamColor.valueOf(yml.getString("Team." + team + ".Color").toUpperCase()), cm.getArenaLoc("Team." + team + ".Spawn"),
-                    cm.getArenaLoc("Team." + team + ".Bed"), cm.getArenaLoc("Team." + team + ".Shop"), cm.getArenaLoc("Team." + team + ".Upgrade"), this);
+            String teamRoot = "Team." + team + '.';
+            Location teamSpawn = cm.getArenaLoc(teamRoot + "Spawn");
+            Location teamBed = cm.getArenaLoc(teamRoot + "Bed");
+            Location configuredRespawn = cm.getArenaLoc(teamRoot + ConfigPath.ARENA_TEAM_RESPAWN);
+            Location teamRespawn = resolveTeamRespawn(teamSpawn, configuredRespawn, teamBed);
+            if (configuredRespawn == null || !configuredRespawn.equals(teamRespawn)) {
+                yml.set(teamRoot + ConfigPath.ARENA_TEAM_RESPAWN, ConfigManager.serializeArenaLocation(teamRespawn));
+                respawnLocationsUpdated = true;
+            }
+            BedWarsTeam bwt = new BedWarsTeam(team, TeamColor.valueOf(yml.getString(teamRoot + "Color").toUpperCase()), teamSpawn,
+                    teamRespawn, teamBed, cm.getArenaLoc(teamRoot + "Shop"), cm.getArenaLoc(teamRoot + "Upgrade"), this);
             teams.add(bwt);
             bwt.spawnGenerators();
+        }
+        if (respawnLocationsUpdated) {
+            cm.save();
         }
 
         //Load diamond/ emerald generators
@@ -776,6 +845,10 @@ public class Arena implements IArena {
             cacheList = ShopCache.getShopCache(p.getUniqueId()).getCachedPermanents();
         }
 
+        if (status == GameState.playing && disconnect && !BedWars.isShuttingDown()) {
+            new ReJoin(p, this, team, cacheList);
+        }
+
         LastHit lastHit = LastHit.getLastHit(p);
         Player lastDamager = (lastHit == null) ? null :
                 (lastHit.getDamager() instanceof Player) ? (Player) lastHit.getDamager() : null;
@@ -812,13 +885,12 @@ public class Arena implements IArena {
             int alive_teams = 0;
             for (ITeam t : getTeams()) {
                 if (t == null) continue;
-                if (!t.getMembers().isEmpty()) {
+                if (!t.getMembers().isEmpty() || ReJoin.hasPendingForTeam(t)) {
                     alive_teams++;
                 }
             }
             if (alive_teams == 1 && !BedWars.isShuttingDown()) {
                 checkWinner();
-                Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> changeStatus(GameState.restarting), 10L);
                 if (team != null) {
                     if (!team.isBedDestroyed()) {
                         for (Player p2 : this.getPlayers()) {
@@ -833,9 +905,6 @@ public class Arena implements IArena {
                 }
             } else if (alive_teams == 0 && !BedWars.isShuttingDown()) {
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> changeStatus(GameState.restarting), 10L);
-            } else if (!BedWars.isShuttingDown()) {
-                //ReJoin feature
-                new ReJoin(p, this, team, cacheList);
             }
 
             // pvp log out
@@ -1129,10 +1198,6 @@ public class Arena implements IArena {
         if (reJoin.getArena() != this) return false;
         if (!reJoin.canReJoin()) return false;
 
-        if (reJoin.getTask() != null) {
-            reJoin.getTask().destroy();
-        }
-
         PlayerReJoinEvent ev = new PlayerReJoinEvent(p, this, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN));
         Bukkit.getPluginManager().callEvent(ev);
         if (ev.isCancelled()) return false;
@@ -1173,6 +1238,8 @@ public class Arena implements IArena {
 
         reJoin.getBwt().reJoin(p, ev.getRespawnTime());
         reJoin.destroy(false);
+
+        checkWinner();
 
         SidebarService.getInstance().giveSidebar(p, this, true);
         return true;
@@ -1861,13 +1928,16 @@ public class Arena implements IArena {
         if (status != GameState.restarting) {
             int max = getTeams().size(), eliminated = 0;
             for (ITeam t : getTeams()) {
-                if (t.getMembers().isEmpty()) {
+                if (t.getMembers().isEmpty() && !ReJoin.hasPendingForTeam(t)) {
                     eliminated++;
                 } else {
                     winner = t;
                 }
             }
             if (max - eliminated == 1) {
+                if (winner == null || winner.getMembers().isEmpty()) {
+                    return;
+                }
                 if (winner != null) {
                     if (!winner.getMembers().isEmpty()) {
                         for (Player p : winner.getMembers()) {

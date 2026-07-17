@@ -31,12 +31,12 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.defaults.BukkitCommand;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ShoutCommand extends BukkitCommand {
 
-    private static HashMap<UUID, Long> shoutCooldown = new HashMap<>();
+    private static final ConcurrentHashMap<UUID, Long> shoutCooldown = new ConcurrentHashMap<>();
 
     public ShoutCommand(String name) {
         super(name);
@@ -56,26 +56,29 @@ public class ShoutCommand extends BukkitCommand {
             sb.append(ar).append(" ");
         }
 
-        p.chat("!" + sb.toString());
-        return false;
+        p.chat("!" + sb);
+        return true;
     }
 
     public static void updateShout(Player player) {
         if (player.hasPermission("bw.shout.bypass")) return;
-        if (shoutCooldown.containsKey(player.getUniqueId()))
-            shoutCooldown.replace(player.getUniqueId(), System.currentTimeMillis() + (BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN) * 1000L));
-        else
-            shoutCooldown.put(player.getUniqueId(), System.currentTimeMillis() + (BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN) * 1000L));
+        shoutCooldown.put(player.getUniqueId(), System.currentTimeMillis()
+                + (BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN) * 1000L));
     }
 
     public static boolean isShoutCooldown(Player player) {
         if (player.hasPermission("bw.shout.bypass")) return false;
-        if (!shoutCooldown.containsKey(player.getUniqueId())) return false;
-        return shoutCooldown.get(player.getUniqueId()) > System.currentTimeMillis();
+        Long expiresAt = shoutCooldown.get(player.getUniqueId());
+        if (expiresAt == null) return false;
+        if (expiresAt <= System.currentTimeMillis()) {
+            shoutCooldown.remove(player.getUniqueId(), expiresAt);
+            return false;
+        }
+        return true;
     }
 
     public static double getShoutCooldown(Player p) {
-        return (shoutCooldown.get(p.getUniqueId()) - System.currentTimeMillis()) / 1000f;
+        return Math.max(0, (shoutCooldown.getOrDefault(p.getUniqueId(), 0L) - System.currentTimeMillis()) / 1000f);
     }
 
     public static boolean isShout(Player p) {
