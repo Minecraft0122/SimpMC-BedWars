@@ -2,6 +2,11 @@
 
 SimpMC-BedWars is a Paper 1.21.11 BedWars mini-game plugin maintained for modern Paper servers.
 
+项目维护文档：
+
+- [更新记录](CHANGELOG.md)
+- [BUG 记录与报告模板](BUGS.md)
+
 # Description
 BedWars is a mini-game where you have to defend your bed and destroy the others.  
 Once your bed is destroyed, you cannot respawn.
