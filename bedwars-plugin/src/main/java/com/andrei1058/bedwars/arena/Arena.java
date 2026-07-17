@@ -519,23 +519,9 @@ public class Arena implements IArena {
 
             /* check if you can start the arena */
             boolean isStatusChange = false;
-            if (status == GameState.waiting) {
-                int teams = 0, teammates = 0;
-                for (Player on : getPlayers()) {
-                    if (getParty().isOwner(on)) {
-                        teams++;
-                    }
-                    if (getParty().hasParty(on)) {
-                        teammates++;
-                    }
-                }
-                if (minPlayers <= players.size() && teams > 0 && players.size() != teammates / teams) {
-                    changeStatus(GameState.starting);
-                    isStatusChange = true;
-                } else if (players.size() >= minPlayers && teams == 0) {
-                    changeStatus(GameState.starting);
-                    isStatusChange = true;
-                }
+            if (status == GameState.waiting && players.size() >= minPlayers) {
+                changeStatus(GameState.starting);
+                isStatusChange = true;
             }
 
             //half full arena time shorten
@@ -560,6 +546,10 @@ public class Arena implements IArena {
                 SidebarService.getInstance().giveSidebar(p, this, false);
             }
             sendPreGameCommandItems(p);
+            if (getMaxInTeam() > 1) {
+                p.sendMessage(ChatColor.GOLD + "[组队] " + ChatColor.YELLOW
+                        + "使用 /" + mainCmd + " team 查看可邀请的队友；未组队玩家将按单人队随机分配。");
+            }
             for (PotionEffect pf : p.getActivePotionEffects()) {
                 p.removePotionEffect(pf.getType());
             }

@@ -20,7 +20,6 @@
 
 package com.andrei1058.bedwars.arena.team;
 
-import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.ITeamAssigner;
@@ -29,68 +28,38 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TeamAssigner implements ITeamAssigner {
 
-    private final LinkedList<Player> skip = new LinkedList<>();
-
+    @Override
     public void assignTeams(IArena arena) {
+        PreGameSquadManager squads = PreGameSquadManager.getInstance();
+        try {
+            List<List<Player>> groups = squads.getAssignmentGroups(arena);
+            List<ITeam> arenaTeams = new ArrayList<>(arena.getTeams());
+            Collections.shuffle(arenaTeams);
+            List<List<Player>> allocation = TeamAllocationPlanner.allocate(
+                    groups,
+                    arenaTeams.size(),
+                    arena.getMaxInTeam(),
+                    ThreadLocalRandom.current()
+            );
 
-        // team up parties first
-        if (arena.getPlayers().size() > arena.getMaxInTeam() && arena.getMaxInTeam() > 1) {
-            LinkedList<List<Player>> teams = new LinkedList<>();
-
-            List<Player> members;
-            for (Player player : arena.getPlayers()) {
-                members = BedWars.getParty().getMembers(player);
-                if (members == null) continue;
-                members = new ArrayList<>(members);
-                if (members.isEmpty()) continue;
-                members.removeIf(member -> !arena.isPlayer(member));
-                if (members.isEmpty()) continue;
-                teams.add(members);
-            }
-            // prioritize bigger teams
-
-            if (!teams.isEmpty()) {
-                for (ITeam team : arena.getTeams()) {
-                    // sort
-                    teams.sort(Comparator.comparingInt(List::size));
-                    if (teams.get(0).isEmpty()) break;
-                    for (int i = 0; i < arena.getMaxInTeam() && team.getMembers().size() < arena.getMaxInTeam(); i++) {
-                        if (teams.get(0).size() > i) {
-                            Player toAdd = teams.get(0).remove(0);
-                            TeamAssignEvent e = new TeamAssignEvent(toAdd, team, arena);
-                            Bukkit.getPluginManager().callEvent(e);
-                            if (!e.isCancelled()) {
-                                toAdd.closeInventory();
-                                team.addPlayers(toAdd);
-                                skip.add(toAdd);
-                            }
-                        } else {
-                            break;
-                        }
-                    }
+            for (int teamIndex = 0; teamIndex < arenaTeams.size(); teamIndex++) {
+                ITeam team = arenaTeams.get(teamIndex);
+                for (Player player : allocation.get(teamIndex)) {
+                    TeamAssignEvent event = new TeamAssignEvent(player, team, arena);
+                    Bukkit.getPluginManager().callEvent(event);
+                    if (event.isCancelled()) continue;
+                    player.closeInventory();
+                    team.addPlayers(player);
                 }
             }
-        }
-
-        for (Player remaining : arena.getPlayers()) {
-            if (skip.contains(remaining)) continue;
-            for (ITeam team : arena.getTeams()) {
-                if (team.getMembers().size() < arena.getMaxInTeam()) {
-                    TeamAssignEvent e = new TeamAssignEvent(remaining, team, arena);
-                    Bukkit.getPluginManager().callEvent(e);
-                    if (!e.isCancelled()) {
-                        remaining.closeInventory();
-                        team.addPlayers(remaining);
-                    }
-                    break;
-                }
-            }
+        } finally {
+            squads.clearArena(arena);
         }
     }
 }
