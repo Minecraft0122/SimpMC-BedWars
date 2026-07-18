@@ -9,13 +9,20 @@ class ChatFormattingTest {
 
     @Test
     void replacesColonWithWhiteSeparator() {
-        assertEquals("name " + ChatColor.WHITE + ">> " + ChatColor.WHITE + "{message}",
+        assertEquals("name " + ChatColor.WHITE + "> " + ChatColor.GRAY + "{message}",
                 ChatFormatting.withMessageSeparator("name：{message}"));
     }
 
     @Test
-    void doesNotDuplicateExistingSeparator() {
-        String format = "name " + ChatColor.WHITE + ">> " + ChatColor.WHITE + "{message}";
+    void keepsCanonicalSeparatorIdempotent() {
+        String format = "name " + ChatColor.WHITE + "> " + ChatColor.GRAY + "{message}";
         assertEquals(format, ChatFormatting.withMessageSeparator(format));
+    }
+
+    @Test
+    void migratesLegacyDoubleSeparatorAtRuntime() {
+        String legacy = "name " + ChatColor.WHITE + ">> " + ChatColor.WHITE + "{message}";
+        assertEquals("name " + ChatColor.WHITE + "> " + ChatColor.GRAY + "{message}",
+                ChatFormatting.withMessageSeparator(legacy));
     }
 }

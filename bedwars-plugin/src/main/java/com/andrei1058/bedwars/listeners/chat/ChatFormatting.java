@@ -147,16 +147,20 @@ public class ChatFormatting implements Listener {
         if (messageIndex < 0) return content;
 
         String before = content.substring(0, messageIndex).stripTrailing();
-        String separatorCheck = before;
-        while (separatorCheck.length() >= 2
-                && separatorCheck.charAt(separatorCheck.length() - 2) == ChatColor.COLOR_CHAR) {
-            separatorCheck = separatorCheck.substring(0, separatorCheck.length() - 2).stripTrailing();
+        boolean trimming = true;
+        while (trimming) {
+            before = before.stripTrailing();
+            if (before.length() >= 2 && before.charAt(before.length() - 2) == ChatColor.COLOR_CHAR) {
+                before = before.substring(0, before.length() - 2);
+            } else if (before.endsWith(">>")) {
+                before = before.substring(0, before.length() - 2);
+            } else if (before.endsWith(">") || before.endsWith(":") || before.endsWith("：")) {
+                before = before.substring(0, before.length() - 1);
+            } else {
+                trimming = false;
+            }
         }
-        if (separatorCheck.endsWith(">>")) return content;
-        while (before.endsWith(":") || before.endsWith("：")) {
-            before = before.substring(0, before.length() - 1).stripTrailing();
-        }
-        return before + ' ' + ChatColor.WHITE + ">> " + ChatColor.WHITE + "{message}"
+        return before.stripTrailing() + ' ' + ChatColor.WHITE + "> " + ChatColor.GRAY + "{message}"
                 + content.substring(messageIndex + "{message}".length());
     }
 
