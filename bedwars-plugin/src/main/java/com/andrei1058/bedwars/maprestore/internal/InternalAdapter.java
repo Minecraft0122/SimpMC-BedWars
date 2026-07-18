@@ -195,11 +195,16 @@ public class InternalAdapter extends RestoreAdapter {
 
     @Override
     public boolean isWorld(String name) {
+        if (!WorldNameValidator.isSafe(name)) return false;
         return new File(Bukkit.getWorldContainer(), name + "/region").exists();
     }
 
     @Override
     public void deleteWorld(String name) {
+        if (!WorldNameValidator.isSafe(name)) {
+            getOwner().getLogger().warning("Refused to delete unsafe world path: " + name);
+            return;
+        }
         Bukkit.getScheduler().runTaskAsynchronously(getOwner(), () -> {
             try {
                 FileUtils.deleteDirectory(new File(Bukkit.getWorldContainer(), name));
@@ -211,6 +216,10 @@ public class InternalAdapter extends RestoreAdapter {
 
     @Override
     public void cloneArena(String name1, String name2) {
+        if (!WorldNameValidator.isSafe(name1) || !WorldNameValidator.isSafe(name2)) {
+            getOwner().getLogger().warning("Refused to clone an unsafe world path.");
+            return;
+        }
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 FileUtils.copyDirectory(new File(Bukkit.getWorldContainer(), name1), new File(Bukkit.getWorldContainer(), name2));
@@ -229,7 +238,7 @@ public class InternalAdapter extends RestoreAdapter {
             File[] fls = dir.listFiles();
             for (File fl : Objects.requireNonNull(fls)) {
                 if (fl.isDirectory()) {
-                    File dat = new File(fl.getName() + "/region");
+                    File dat = new File(fl, "region");
                     if (dat.exists() && !fl.getName().startsWith("bw_temp")) {
                         worlds.add(fl.getName());
                     }

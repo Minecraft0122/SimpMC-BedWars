@@ -31,19 +31,25 @@ import com.google.gson.JsonSyntaxException;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 public class ArenaSocket {
 
+    static final int MAX_INCOMING_MESSAGE_LENGTH = 65_536;
     public static List<String> lobbies = new ArrayList<>();
     private static final ConcurrentHashMap<String, RemoteLobby> sockets = new ConcurrentHashMap<>();
     private static final Set<String> connecting = ConcurrentHashMap.newKeySet();
@@ -68,8 +74,9 @@ public class ArenaSocket {
             if (l.length != 2) continue;
             if (!Misc.isNumber(l[1])) continue;
 
-            if (sockets.containsKey(lobby)) {
-                sockets.get(lobby).sendMessage(message);
+            RemoteLobby connected = sockets.get(lobby);
+            if (connected != null) {
+                connected.sendMessage(message);
             } else if (connecting.add(lobby)) {
                 try {
                     Socket socket = new Socket();
@@ -112,22 +119,23 @@ public class ArenaSocket {
     private static class RemoteLobby {
         private Socket socket;
         private PrintWriter out;
-        private Scanner in;
+        private BufferedReader in;
         private String lobby;
         private volatile boolean compute = true;
+        private int invalidMessages;
 
         private RemoteLobby(Socket socket, String lobby) {
             this.socket = socket;
             this.lobby = lobby;
             try {
-                out = new PrintWriter(socket.getOutputStream(), true);
+                out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
             } catch (IOException ignored) {
                 out = null;
                 return;
             }
 
             try {
-                in = new Scanner(socket.getInputStream());
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             } catch (IOException ignored) {
                 return;
             }
@@ -135,15 +143,19 @@ public class ArenaSocket {
             BedWars.debug("RemoteLobby created: " + lobby + " " + socket.toString());
             Bukkit.getScheduler().runTaskAsynchronously(BedWars.plugin, () -> {
                 while (compute) {
-                    if (in.hasNext()) {
-                        String msg = in.next();
+                    try {
+                        String msg = readLimitedMessage(in, MAX_INCOMING_MESSAGE_LENGTH);
+                        if (msg == null) {
+                            disable();
+                            break;
+                        }
                         BedWars.debug(msg);
                         if (msg.isEmpty()) continue;
                         final JsonObject json;
                         try {
                             json = new JsonParser().parse(msg).getAsJsonObject();
                         } catch (JsonSyntaxException e) {
-                            BedWars.plugin.getLogger().log(Level.WARNING, "Received bad data from: " + socket.getInetAddress().toString());
+                            warnInvalidMessage("malformed JSON");
                             continue;
                         }
                         if (json == null) continue;
@@ -152,7 +164,17 @@ public class ArenaSocket {
                             //pre load data
                             //pld,worldIdentifier,uuidUser,languageIso,uuidPartyOwner
                             case "PLD":
+                                if (!hasStringFields(json, "uuid", "arena_identifier", "lang_iso", "target")) {
+                                    warnInvalidMessage("PLD message is missing fields");
+                                    continue;
+                                }
                                 String uuid = json.get("uuid").getAsString();
+                                try {
+                                    UUID.fromString(uuid);
+                                } catch (IllegalArgumentException exception) {
+                                    warnInvalidMessage("PLD message contains an invalid UUID");
+                                    continue;
+                                }
                                 String arenaIdentifier = json.get("arena_identifier").getAsString();
                                 String language = json.get("lang_iso").getAsString();
                                 String target = json.get("target").getAsString();
@@ -160,14 +182,22 @@ public class ArenaSocket {
                                         () -> new LoadedUser(uuid, arenaIdentifier, language, target));
                                 break;
                             case "Q":
+                                if (!hasStringFields(json, "name", "requester")) {
+                                    warnInvalidMessage("Q message is missing fields");
+                                    continue;
+                                }
                                 String playerName = json.get("name").getAsString();
                                 String requester = json.get("requester").getAsString();
                                 Bukkit.getScheduler().runTask(BedWars.plugin,
                                         () -> handlePlayerQuery(playerName, requester));
                                 break;
                         }
-                    } else {
+                    } catch (IOException exception) {
+                        if (compute) warnInvalidMessage(exception.getMessage());
                         disable();
+                        break;
+                    } catch (RuntimeException exception) {
+                        warnInvalidMessage("Malformed JSON payload");
                     }
                 }
             });
@@ -210,13 +240,21 @@ public class ArenaSocket {
 
         private synchronized void disable() {
             compute = false;
-            BedWars.debug("Disabling socket: " + socket.toString());
+            BedWars.debug("Disabling socket: " + socket);
             sockets.remove(lobby);
             try {
-                socket.close();
+                if (socket != null) socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+
+        private void warnInvalidMessage(String reason) {
+            invalidMessages++;
+            BedWars.plugin.getLogger().log(Level.WARNING,
+                    "Rejected lobby socket data from " + socket.getRemoteSocketAddress() + ": " + reason
+                            + " (" + invalidMessages + "/3)");
+            if (invalidMessages >= 3) disable();
         }
 
         private void handlePlayerQuery(String playerName, String requester) {
@@ -238,6 +276,28 @@ public class ArenaSocket {
             response.addProperty("arena_id", arena.getWorldName());
             sendMessage(response.toString());
         }
+    }
+
+    static String readLimitedMessage(Reader reader, int maximumLength) throws IOException {
+        StringBuilder message = new StringBuilder(Math.min(maximumLength, 1024));
+        int character;
+        while ((character = reader.read()) != -1) {
+            if (character == '\n') break;
+            if (character == '\r') continue;
+            if (message.length() >= maximumLength) {
+                throw new IOException("incoming message exceeds " + maximumLength + " characters");
+            }
+            message.append((char) character);
+        }
+        if (character == -1 && message.isEmpty()) return null;
+        return message.toString();
+    }
+
+    private static boolean hasStringFields(JsonObject json, String... fields) {
+        for (String field : fields) {
+            if (!json.has(field) || json.get(field).isJsonNull() || !json.get(field).isJsonPrimitive()) return false;
+        }
+        return true;
     }
 
     /**

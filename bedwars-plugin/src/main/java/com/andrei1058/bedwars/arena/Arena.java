@@ -66,6 +66,7 @@ import com.andrei1058.bedwars.levels.internal.PerMinuteTask;
 import com.andrei1058.bedwars.listeners.blockstatus.BlockStatusListener;
 import com.andrei1058.bedwars.listeners.dropshandler.PlayerDrops;
 import com.andrei1058.bedwars.money.internal.MoneyPerMinuteTask;
+import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import com.andrei1058.bedwars.shop.ShopCache;
 import com.andrei1058.bedwars.sidebar.BwSidebar;
 import com.andrei1058.bedwars.sidebar.SidebarService;
@@ -128,7 +129,7 @@ public class Arena implements IArena {
     private World world;
     private String group = "Default", arenaName, worldName;
     private List<ITeam> teams = new ArrayList<>();
-    private LinkedList<org.bukkit.util.Vector> placed = new LinkedList<>();
+    private final PlacedBlockTracker placedBlocks = new PlacedBlockTracker();
     private List<String> nextEvents = new ArrayList<>();
     private List<Region> regionsList = new ArrayList<>();
     private int renderDistance;
@@ -191,6 +192,10 @@ public class Arena implements IArena {
      * @param p    - This will send messages to the player if something went wrong while loading the arena. Can be NULL.
      */
     public Arena(String name, Player p) {
+        if (!WorldNameValidator.isSafe(name)) {
+            plugin.getLogger().severe("Refused to load arena with unsafe world name: " + name);
+            return;
+        }
         if (!autoscale) {
             for (IArena mm : enableQueue) {
                 if (mm.getArenaName().equalsIgnoreCase(name)) {
@@ -1341,23 +1346,24 @@ public class Arena implements IArena {
 
     @Override
     public void addPlacedBlock(Block block) {
-        if (block == null) return;
-        placed.add(new org.bukkit.util.Vector(block.getX(), block.getY(), block.getZ()));
+        if (!isArenaWorld(block)) return;
+        placedBlocks.add(block.getX(), block.getY(), block.getZ());
     }
 
     @Override
     public void removePlacedBlock(Block block) {
-        if (block == null) return;
-        if (!isBlockPlaced(block)) return;
-        placed.remove(new org.bukkit.util.Vector(block.getX(), block.getY(), block.getZ()));
+        if (!isArenaWorld(block)) return;
+        placedBlocks.remove(block.getX(), block.getY(), block.getZ());
     }
 
     @Override
     public boolean isBlockPlaced(Block block) {
-        for (org.bukkit.util.Vector v : getPlaced()) {
-            if (v.getX() == block.getX() && v.getY() == block.getY() && v.getZ() == block.getZ()) return true;
-        }
-        return false;
+        return isArenaWorld(block) && placedBlocks.contains(block.getX(), block.getY(), block.getZ());
+    }
+
+    private boolean isArenaWorld(Block block) {
+        return block != null && worldName != null
+                && block.getWorld().getName().equalsIgnoreCase(worldName);
     }
 
     /**
@@ -2365,7 +2371,12 @@ public class Arena implements IArena {
     }
 
     public LinkedList<Vector> getPlaced() {
-        return placed;
+        return placedBlocks.snapshot();
+    }
+
+    @Override
+    public Set<Vector> getPlacedBlocksSnapshot() {
+        return placedBlocks.immutableSnapshot();
     }
 
     public static LinkedList<IArena> getEnableQueue() {
@@ -2419,7 +2430,7 @@ public class Arena implements IArena {
         spectators.clear();
         signs.clear();
         teams.clear();
-        placed.clear();
+        placedBlocks.clear();
         nextEvents.clear();
         regionsList.clear();
         respawnSessions.clear();

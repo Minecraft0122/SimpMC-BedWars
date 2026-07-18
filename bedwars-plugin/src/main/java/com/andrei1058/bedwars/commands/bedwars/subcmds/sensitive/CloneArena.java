@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
+import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import net.md_5.bungee.api.chat.ClickEvent;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.ChatColor;
@@ -60,6 +61,10 @@ public class CloneArena extends SubCommand {
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 2) {
             p.sendMessage("§c▪ §7用法：§o/" + getParent().getName() + " " + getSubCommandName() + " <地图名> <新竞技场名>");
+            return true;
+        }
+        if (!WorldNameValidator.isSafe(args[0]) || !WorldNameValidator.isSafe(args[1])) {
+            p.sendMessage(ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {

@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
+import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import net.md_5.bungee.api.chat.ClickEvent;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.command.CommandSender;
@@ -63,6 +64,10 @@ public class DelArena extends SubCommand {
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 1) {
             p.sendMessage("§c▪ §7用法：§o/" + MainCommand.getInstance().getName() + " delArena <地图名>");
+            return true;
+        }
+        if (!WorldNameValidator.isSafe(args[0])) {
+            p.sendMessage("§c▪ §7竞技场世界名称包含不安全字符。");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {

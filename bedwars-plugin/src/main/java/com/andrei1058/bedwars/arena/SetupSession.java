@@ -30,6 +30,7 @@ import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.ArenaConfig;
+import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
 import net.md_5.bungee.api.chat.ClickEvent;
 import org.bukkit.*;
@@ -65,6 +66,9 @@ public class SetupSession implements ISetupSession {
     private List<Location> skipAutoCreateGen = new ArrayList<>();
 
     public SetupSession(Player player, String worldName) {
+        if (!WorldNameValidator.isSafe(worldName)) {
+            throw new IllegalArgumentException("Unsafe setup world name: " + worldName);
+        }
         this.player = player;
         this.worldName = worldName;
         getSetupSessions().add(this);

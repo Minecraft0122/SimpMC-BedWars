@@ -48,6 +48,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
@@ -71,6 +72,7 @@ import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class BreakPlace implements Listener {
 
+    private static final String PLAYER_PLACED_FALLING_BLOCK = "bw-player-placed-falling-block";
     private static final List<Player> buildSession = new ArrayList<>();
     private final boolean allowFireBreak;
     private final BlastProtectionUtil blastProtection;
@@ -118,10 +120,16 @@ public class BreakPlace implements Listener {
     public void onBlockPlace(BlockPlaceEvent e) {
         if (e.isCancelled()) return;
 
+        Player p = e.getPlayer();
         //Prevent player from placing during the removal from the arena
         IArena arena = Arena.getArenaByIdentifier(e.getBlock().getWorld().getName());
+        IArena playerArena = Arena.getArenaByPlayer(p);
+        if (playerArena != null && playerArena != arena) {
+            e.setCancelled(true);
+            return;
+        }
         if (arena != null) {
-            if (arena.getStatus() != GameState.playing) {
+            if (arena.getStatus() != GameState.playing || playerArena != arena) {
                 e.setCancelled(true);
                 return;
             }
@@ -129,8 +137,7 @@ public class BreakPlace implements Listener {
                 e.setCancelled(true);
             }
         }
-        Player p = e.getPlayer();
-        IArena a = Arena.getArenaByPlayer(p);
+        IArena a = playerArena;
         if (a != null) {
             if (a.isSpectator(p)) {
                 e.setCancelled(true);
@@ -164,7 +171,6 @@ public class BreakPlace implements Listener {
                 }
             }
 
-            a.addPlacedBlock(e.getBlock());
             if (e.getBlock().getType() == Material.TNT) {
                 if (config.getBoolean(ConfigPath.GENERAL_TNT_AUTO_IGNITE)) {
                     e.getBlockPlaced().setType(Material.AIR);
@@ -206,6 +212,23 @@ public class BreakPlace implements Listener {
                 }
             }
         }
+    }
+
+    /**
+     * Record only placements that survived every cancellation handler. This also
+     * covers multi-block placements and avoids leaving a marker for auto-ignited
+     * TNT or the cancelled pop-up tower item.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockPlaceMonitor(BlockPlaceEvent event) {
+        IArena arena = Arena.getArenaByPlayer(event.getPlayer());
+        if (arena == null || arena.getStatus() != GameState.playing) return;
+
+        if (event instanceof BlockMultiPlaceEvent multiPlaceEvent) {
+            multiPlaceEvent.getReplacedBlockStates().forEach(state -> trackCurrentBlock(arena, state.getBlock()));
+            return;
+        }
+        trackCurrentBlock(arena, event.getBlockPlaced());
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -252,6 +275,12 @@ public class BreakPlace implements Listener {
     public void onBlockBreak(BlockBreakEvent e) {
         if (e.isCancelled()) return;
         Player p = e.getPlayer();
+        IArena worldArena = Arena.getArenaByIdentifier(e.getBlock().getWorld().getName());
+        IArena a = Arena.getArenaByPlayer(p);
+        if (worldArena != a && (worldArena != null || a != null)) {
+            e.setCancelled(true);
+            return;
+        }
         if (BedWars.getServerType() == ServerType.MULTIARENA) {
             if (Objects.requireNonNull(e.getBlock().getLocation().getWorld()).getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
                 if (!isBuildSession(p)) {
@@ -260,7 +289,6 @@ public class BreakPlace implements Listener {
                 }
             }
         }
-        IArena a = Arena.getArenaByPlayer(p);
         if (a != null) {
             if (!a.isPlayer(p)) {
                 e.setCancelled(true);
@@ -435,6 +463,12 @@ public class BreakPlace implements Listener {
     @EventHandler
     public void onBucketFill(PlayerBucketFillEvent e) {
         if (e.isCancelled()) return;
+        IArena worldArena = Arena.getArenaByIdentifier(e.getBlockClicked().getWorld().getName());
+        IArena playerArena = Arena.getArenaByPlayer(e.getPlayer());
+        if (worldArena != playerArena && (worldArena != null || playerArena != null)) {
+            e.setCancelled(true);
+            return;
+        }
         if (BedWars.getServerType() == ServerType.MULTIARENA) {
             if (Objects.requireNonNull(e.getPlayer().getLocation().getWorld()).getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
                 if (!isBuildSession(e.getPlayer())) {
@@ -442,7 +476,7 @@ public class BreakPlace implements Listener {
                 }
             }
         }
-        IArena a = Arena.getArenaByPlayer(e.getPlayer());
+        IArena a = playerArena;
         if (a != null) {
             if (a.isSpectator(e.getPlayer()) || a.getStatus() != GameState.playing || a.getRespawnSessions().containsKey(e.getPlayer()))
                 e.setCancelled(true);
@@ -471,6 +505,10 @@ public class BreakPlace implements Listener {
 
         Player p = e.getPlayer();
         IArena a = Arena.getArenaByPlayer(p);
+        if (arena != a && (arena != null || a != null)) {
+            e.setCancelled(true);
+            return;
+        }
         if (a != null) {
             // Restriction checks (spectator, respawning, not playing)
             if (isPlayerRestrictedInArena(a, p)) {
@@ -525,6 +563,51 @@ public class BreakPlace implements Listener {
                 e.blockList().removeIf((b) -> blastProtection.isProtected(a, e.getBlock().getLocation(), b, 0.3));
             }
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntityExplodeMonitor(@NotNull EntityExplodeEvent event) {
+        IArena arena = Arena.getArenaByIdentifier(event.getLocation().getWorld().getName());
+        if (arena == null) return;
+        event.blockList().forEach(arena::removePlacedBlock);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockExplodeMonitor(@NotNull BlockExplodeEvent event) {
+        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
+        if (arena == null) return;
+        event.blockList().forEach(arena::removePlacedBlock);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockBurnMonitor(@NotNull BlockBurnEvent event) {
+        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
+        if (arena != null) arena.removePlacedBlock(event.getBlock());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockFadeMonitor(@NotNull BlockFadeEvent event) {
+        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
+        if (arena != null) arena.removePlacedBlock(event.getBlock());
+    }
+
+    /**
+     * Pistons can move an original map block into a coordinate previously marked
+     * as player-placed. Keep protected maps static instead of allowing that bypass.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        protectPiston(event);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        protectPiston(event);
+    }
+
+    private void protectPiston(BlockPistonEvent event) {
+        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
+        if (arena != null && !arena.isAllowMapBreak()) event.setCancelled(true);
     }
 
     @EventHandler
@@ -588,10 +671,37 @@ public class BreakPlace implements Listener {
         }
     }
 
+    /**
+     * Preserve ownership when a player-placed gravity block falls, while leaving
+     * naturally falling map blocks untracked.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void trackFallingBlocks(EntityChangeBlockEvent event) {
+        if (!(event.getEntity() instanceof FallingBlock fallingBlock)) return;
+        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
+        if (arena == null) return;
+
+        if (event.getTo() == Material.AIR) {
+            if (arena.isBlockPlaced(event.getBlock())) {
+                arena.removePlacedBlock(event.getBlock());
+                fallingBlock.setMetadata(PLAYER_PLACED_FALLING_BLOCK, new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+            }
+            return;
+        }
+        if (fallingBlock.hasMetadata(PLAYER_PLACED_FALLING_BLOCK)) {
+            arena.addPlacedBlock(event.getBlock());
+            fallingBlock.removeMetadata(PLAYER_PLACED_FALLING_BLOCK, plugin);
+        }
+    }
+
     private boolean isPlayerRestrictedInArena(@NotNull IArena a, @NotNull Player p) {
         if (a.isSpectator(p)) return true;
         if (a.getRespawnSessions().containsKey(p)) return true;
         return a.getStatus() != GameState.playing;
+    }
+
+    private void trackCurrentBlock(@NotNull IArena arena, @NotNull Block block) {
+        if (block.getType() != Material.AIR) arena.addPlacedBlock(block);
     }
 
     private boolean isAboveMaxBuildY(@NotNull IArena a, @NotNull Location location) {

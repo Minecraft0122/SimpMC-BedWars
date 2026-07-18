@@ -100,6 +100,11 @@ public class DamageDeathMove implements Listener {
         }
         if (e.getEntity() instanceof Player) {
             Player p = (Player) e.getEntity();
+            IArena worldArena = Arena.getArenaByIdentifier(p.getWorld().getName());
+            if (worldArena != null && Arena.getArenaByPlayer(p) != worldArena) {
+                e.setCancelled(true);
+                return;
+            }
             IArena a = Arena.getArenaByPlayer(p);
             if (a != null) {
                 if (a.isSpectator(p)) {
@@ -165,9 +170,20 @@ public class DamageDeathMove implements Listener {
             e.setCancelled(true);
             return;
         }
+        IArena worldArena = Arena.getArenaByIdentifier(e.getEntity().getWorld().getName());
+        Player responsiblePlayer = getResponsiblePlayer(e.getDamager());
+        if (worldArena != null && responsiblePlayer != null
+                && Arena.getArenaByPlayer(responsiblePlayer) != worldArena) {
+            e.setCancelled(true);
+            return;
+        }
         if (e.getEntity() instanceof Player) {
             Player p = (Player) e.getEntity();
             IArena a = Arena.getArenaByPlayer(p);
+            if (worldArena != null && a != worldArena) {
+                e.setCancelled(true);
+                return;
+            }
             if (a != null) {
                 if (a.getStatus() != GameState.playing) {
                     e.setCancelled(true);
@@ -707,6 +723,13 @@ public class DamageDeathMove implements Listener {
         return BedWars.getServerType() == ServerType.MULTIARENA
                 && world != null
                 && world.getName().equalsIgnoreCase(BedWars.config.getLobbyWorldName());
+    }
+
+    private static Player getResponsiblePlayer(Entity damager) {
+        if (damager instanceof Player player) return player;
+        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) return player;
+        if (damager instanceof TNTPrimed tnt && tnt.getSource() instanceof Player player) return player;
+        return null;
     }
 
     private boolean isVoidDeath(Player player, EntityDamageEvent damageEvent, IArena arena) {

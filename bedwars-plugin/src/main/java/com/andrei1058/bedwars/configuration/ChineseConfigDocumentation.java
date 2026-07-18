@@ -28,6 +28,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板、TAB 玩家列表、队友颜色、血量显示及刷新周期设置。", "刷新周期单位为 tick，20 tick 约等于 1 秒。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "掉线玩家允许重连的时间，单位为秒；超时后直接视为离开。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_MODE_GAMES_BEFORE_RESTART, "BUNGEE/自动扩容相关设置：重启场次、重启命令、节点 ID、超时及大厅地址。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, "大厅套接字地址列表，格式为 主机:端口。", "协议没有身份认证和加密，只能填写受信任的内网地址，并使用防火墙禁止公网访问。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, "游戏各阶段倒计时，单位为秒。");
         comment(config, ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "内置占位符显示的服务器地址和品牌文本。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_HUNGER_WAITING, "是否允许等待阶段和游戏阶段消耗饥饿值。");
@@ -38,6 +39,8 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_TNT_AUTO_IGNITE, "TNT 放置后是否自动点燃，以及引信持续 tick 数。");
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, "火球爆炸范围、飞行速度、火焰、击退、冷却与伤害设置。");
         comment(config, "database.enable", "数据存储设置：关闭时使用 SQLite，开启时连接 MySQL。", "修改连接信息后必须完整重启，切勿公开数据库密码。");
+        comment(config, "database.pass", "MySQL 专用账户密码；不要沿用示例值，也不要提交到公开仓库。");
+        comment(config, "database.ssl", "MySQL 连接是否启用 TLS；远程数据库建议开启并限制允许连接的来源地址。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能设置；Paper 优化通常建议保持开启。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内合成台、附魔台、熔炉、酿造台和铁砧的禁用设置。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH, "MULTIARENA 大厅物品：命令、材质、数量数据、附魔外观和背包槽位。");

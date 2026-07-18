@@ -85,6 +85,8 @@ public class ItemDropPickListener {
             }
         }
         IArena a = api.getArenaUtil().getArenaByPlayer((Player) player);
+        IArena worldArena = api.getArenaUtil().getArenaByIdentifier(player.getWorld().getName());
+        if (worldArena != null && a != worldArena) return true;
         if (a == null) return false;
         if (!a.isPlayer((Player) player)) {
             return true;
@@ -138,6 +140,8 @@ public class ItemDropPickListener {
             }
         }
         IArena a = api.getArenaUtil().getArenaByPlayer((Player) player);
+        IArena worldArena = api.getArenaUtil().getArenaByIdentifier(player.getWorld().getName());
+        if (worldArena != null && a != worldArena) return true;
         if (a == null) return false;
 
         if (!a.isPlayer((Player) player)) {

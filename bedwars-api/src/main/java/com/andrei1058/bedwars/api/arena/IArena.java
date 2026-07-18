@@ -420,9 +420,21 @@ public interface IArena {
     void sendEmeraldsUpgradeMessages();
 
     /**
-     * List of placed blocks.
+     * Legacy snapshot of placed blocks.
+     *
+     * @deprecated The returned list must not be used to mutate arena state. Use
+     * {@link #addPlacedBlock(Block)}, {@link #removePlacedBlock(Block)} and
+     * {@link #getPlacedBlocksSnapshot()} instead.
      */
+    @Deprecated
     LinkedList<Vector> getPlaced();
+
+    /**
+     * Immutable snapshot of blocks created during the current game.
+     */
+    default Set<Vector> getPlacedBlocksSnapshot() {
+        return Set.copyOf(getPlaced());
+    }
 
     /**
      * This is used to destroy arena data when it restarts.

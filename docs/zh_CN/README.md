@@ -10,7 +10,8 @@
 4. [命令与权限](commands-permissions.md)
 5. [API 与附属插件开发](api-development.md)
 6. [代码质量审计与 API 设计说明](code-quality.md)
-7. [常见问题与排错](troubleshooting.md)
+7. [安全审计与部署加固](security-audit.md)
+8. [常见问题与排错](troubleshooting.md)
 
 ## 最短开服流程
 

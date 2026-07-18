@@ -30,6 +30,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.ArenaConfig;
 import com.andrei1058.bedwars.configuration.Permissions;
+import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import net.md_5.bungee.api.chat.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -110,6 +111,10 @@ public class ArenaGroup extends SubCommand {
         } else if (args[0].equalsIgnoreCase("set")) {
             if (args.length < 3) {
                 sendArenaGroupCmdList(p);
+                return true;
+            }
+            if (!WorldNameValidator.isSafe(args[1])) {
+                p.sendMessage(ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
                 return true;
             }
             if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS) != null) {

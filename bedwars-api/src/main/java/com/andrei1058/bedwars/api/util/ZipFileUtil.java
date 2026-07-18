@@ -1,17 +1,28 @@
 package com.andrei1058.bedwars.api.util;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public final class ZipFileUtil {
+
+    private ZipFileUtil() {
+    }
+
     public static void zipDirectory(File dir, File zipFile) throws IOException {
-        FileOutputStream fout = new FileOutputStream(zipFile);
-        ZipOutputStream zout = new ZipOutputStream(fout);
-        zipSubDirectory("", dir, zout);
-        zout.close();
+        try (FileOutputStream fout = new FileOutputStream(zipFile);
+             ZipOutputStream zout = new ZipOutputStream(fout)) {
+            zipSubDirectory("", dir, zout);
+        }
     }
 
     private static void zipSubDirectory(String basePath, File dir, ZipOutputStream zout) throws IOException {
@@ -25,60 +36,55 @@ public final class ZipFileUtil {
                 zipSubDirectory(path, file, zout);
                 zout.closeEntry();
             } else {
-                FileInputStream fin = new FileInputStream(file);
-                zout.putNextEntry(new ZipEntry(basePath + file.getName()));
-                int length;
-                while ((length = fin.read(buffer)) > 0) {
-                    zout.write(buffer, 0, length);
+                try (FileInputStream fin = new FileInputStream(file)) {
+                    zout.putNextEntry(new ZipEntry(basePath + file.getName()));
+                    int length;
+                    while ((length = fin.read(buffer)) > 0) {
+                        zout.write(buffer, 0, length);
+                    }
+                    zout.closeEntry();
                 }
-                zout.closeEntry();
-                fin.close();
             }
         }
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void unzipFileIntoDirectory(File file, File jiniHomeParentDir) throws IOException {
         if (!file.exists()) return;
-        @SuppressWarnings("resource")
-        ZipFile zipFile = new ZipFile(file);
-        Enumeration<?> files = zipFile.entries();
-        File f;
-        FileOutputStream fos = null;
 
-        while (files.hasMoreElements()) {
-            try {
-                ZipEntry entry = (ZipEntry) files.nextElement();
-                InputStream eis = zipFile.getInputStream(entry);
-                byte[] buffer = new byte[1024];
-                int bytesRead;
+        Path destination = jiniHomeParentDir.toPath().toAbsolutePath().normalize();
+        Files.createDirectories(destination);
 
-                f = new File(jiniHomeParentDir.getAbsolutePath(), entry.getName());
+        try (ZipFile zipFile = new ZipFile(file)) {
+            // Validate the entire archive before writing anything. This prevents a
+            // later malicious entry from leaving a partially extracted world.
+            Enumeration<? extends ZipEntry> validationEntries = zipFile.entries();
+            while (validationEntries.hasMoreElements()) {
+                resolveEntry(destination, validationEntries.nextElement());
+            }
 
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                Path output = resolveEntry(destination, entry);
                 if (entry.isDirectory()) {
-                    f.mkdirs();
+                    Files.createDirectories(output);
                     continue;
-                } else {
-                    f.getParentFile().mkdirs();
-                    f.createNewFile();
                 }
 
-                fos = new FileOutputStream(f);
-
-                while ((bytesRead = eis.read(buffer)) != -1) {
-                    fos.write(buffer, 0, bytesRead);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                if (fos != null) {
-                    try {
-                        fos.close();
-                    } catch (IOException ignored) {
-                        // ignore
-                    }
+                Path parent = output.getParent();
+                if (parent != null) Files.createDirectories(parent);
+                try (InputStream input = zipFile.getInputStream(entry)) {
+                    Files.copy(input, output, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
         }
+    }
+
+    private static Path resolveEntry(Path destination, ZipEntry entry) throws IOException {
+        Path output = destination.resolve(entry.getName()).normalize();
+        if (!output.startsWith(destination)) {
+            throw new IOException("ZIP entry escapes destination directory: " + entry.getName());
+        }
+        return output;
     }
 }

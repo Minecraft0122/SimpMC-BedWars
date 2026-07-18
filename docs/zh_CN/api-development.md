@@ -113,6 +113,16 @@ public void onState(GameStateChangeEvent event) {
 - 分配前调用 `TeamAssignEvent` 并尊重取消结果。
 - 只在主线程修改 Bukkit 玩家和队伍。
 
+## 玩家放置方块 API
+
+附属插件通过代码生成可破坏方块时，必须调用 `arena.addPlacedBlock(block)`；方块被插件移除时调用 `arena.removePlacedBlock(block)`。读取状态可使用：
+
+```java
+Set<Vector> placedBlocks = arena.getPlacedBlocksSnapshot();
+```
+
+返回值是与竞技场内部索引分离的只读快照。旧方法 `getPlaced()` 已弃用，修改其返回列表不会再改变竞技场状态；这样可以避免附属插件误把地图原生方块标记成玩家方块。所有 Bukkit 方块操作和所有权更新都应在主线程完成。
+
 ## API 兼容原则
 
 - 只依赖 `simpmc-bedwars-api`，不要导入 `bedwars-plugin` 内部类。
