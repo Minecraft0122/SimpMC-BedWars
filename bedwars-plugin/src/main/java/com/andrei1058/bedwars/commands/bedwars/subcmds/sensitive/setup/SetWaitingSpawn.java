@@ -23,6 +23,7 @@ package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
+import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -51,7 +52,7 @@ public class SetWaitingSpawn extends SubCommand {
             return true;
         }
         p.sendMessage("§6 ▪ §7已为 §e"+ss.getWorldName()+"§7 设置等待大厅出生点！");
-        ss.getConfig().saveArenaLoc("waiting.Loc", p.getLocation());
+        ss.getConfig().savePlayerArenaLocation("waiting.Loc", ConfigPath.ARENA_WAITING_FACING, p.getLocation());
         if (ss.getSetupType() == SetupType.ASSISTED){
             Bukkit.dispatchCommand(s, BedWars.mainCmd+" autocreateteams");
         } else {

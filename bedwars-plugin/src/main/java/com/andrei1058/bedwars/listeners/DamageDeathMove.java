@@ -694,7 +694,10 @@ public class DamageDeathMove implements Listener {
         } else {
             if (config.getBoolean(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED) && e.getPlayer().getWorld().getName().equalsIgnoreCase(config.getLobbyWorldName()) && BedWars.getServerType() == ServerType.MULTIARENA) {
                 if (e.getTo().getY() < config.getInt(ConfigPath.LOBBY_VOID_TELEPORT_HEIGHT)) {
-                    TeleportManager.teleportC(e.getPlayer(), config.getConfigLoc("lobbyLoc"), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                    TeleportManager.teleportC(e.getPlayer(), config.getConfigLoc("lobbyLoc"), PlayerTeleportEvent.TeleportCause.PLUGIN)
+                            .whenComplete((success, error) -> Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+                                if (error == null && Boolean.TRUE.equals(success)) Arena.enterLobby(e.getPlayer());
+                            }));
                 }
             }
         }

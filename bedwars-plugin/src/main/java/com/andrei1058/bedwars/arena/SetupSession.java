@@ -167,7 +167,8 @@ public class SetupSession implements ISetupSession {
         BedWars.getAPI().getRestoreAdapter().onSetupSessionClose(this);
         getSetupSessions().remove(this);
         Player setupPlayer = getPlayer();
-        setupPlayer.setGameMode(GameMode.SURVIVAL);
+        setupPlayer.setGameMode(BedWars.getServerType() == ServerType.MULTIARENA
+                ? GameMode.ADVENTURE : GameMode.SURVIVAL);
         setupPlayer.setFlying(false);
         setupPlayer.setAllowFlight(false);
         setupPlayer.removePotionEffect(PotionEffectType.SPEED);
@@ -181,7 +182,7 @@ public class SetupSession implements ISetupSession {
                     .whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
                         if (error != null || !Boolean.TRUE.equals(success) || !setupPlayer.isOnline()) return;
                         if (BedWars.getServerType() == ServerType.MULTIARENA) {
-                            Arena.sendLobbyCommandItems(setupPlayer);
+                            Arena.enterLobby(setupPlayer);
                         }
                     }));
         }

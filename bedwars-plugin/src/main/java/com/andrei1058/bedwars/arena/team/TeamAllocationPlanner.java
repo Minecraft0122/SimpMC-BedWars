@@ -73,7 +73,28 @@ final class TeamAllocationPlanner {
                 teams.get(randomLeastFilled(teams, available, random)).add(player);
             }
         }
+        ensureAtLeastTwoActiveTeams(teams, players, random);
         return teams;
+    }
+
+    /**
+     * A party may fill one team exactly, but a BedWars round must still have
+     * an opponent. Split one player only when keeping the party intact would
+     * otherwise create a one-team game.
+     */
+    private static <T> void ensureAtLeastTwoActiveTeams(List<List<T>> teams, int playerCount, Random random) {
+        if (playerCount < 2 || teams.size() < 2
+                || teams.stream().filter(team -> !team.isEmpty()).count() >= 2) {
+            return;
+        }
+
+        List<Integer> emptyTeams = new ArrayList<>();
+        for (int index = 0; index < teams.size(); index++) {
+            if (teams.get(index).isEmpty()) emptyTeams.add(index);
+        }
+        List<T> source = teams.stream().filter(team -> team.size() > 1).findFirst().orElseThrow();
+        T player = source.remove(random.nextInt(source.size()));
+        teams.get(emptyTeams.get(random.nextInt(emptyTeams.size()))).add(player);
     }
 
     private static <T> List<Integer> fittingTeams(List<List<T>> teams, int capacity, int required) {

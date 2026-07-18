@@ -95,6 +95,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
@@ -230,7 +231,7 @@ public class Arena implements IArena {
         }
         maxInTeam = yml.getInt("maxInTeam");
         maxPlayers = yml.getConfigurationSection("Team").getKeys(false).size() * maxInTeam;
-        minPlayers = yml.getInt("minPlayers");
+        minPlayers = Math.max(2, yml.getInt("minPlayers"));
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
         allowMapBreak = yml.getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK);
@@ -326,7 +327,10 @@ public class Arena implements IArena {
                 BedWars.plugin.getLogger().severe("A team with name: " + team + " was already loaded for arena: " + getArenaName());
                 continue;
             }
-            BedWarsTeam bwt = new BedWarsTeam(team, TeamColor.valueOf(yml.getString("Team." + team + ".Color").toUpperCase()), cm.getArenaLoc("Team." + team + ".Spawn"),
+            String teamRoot = "Team." + team + ".";
+            Location teamSpawn = configuredPlayerLocation(teamRoot + "Spawn",
+                    teamRoot + ConfigPath.ARENA_TEAM_SPAWN_FACING);
+            BedWarsTeam bwt = new BedWarsTeam(team, TeamColor.valueOf(yml.getString(teamRoot + "Color").toUpperCase()), teamSpawn,
                     cm.getArenaLoc("Team." + team + ".Bed"), cm.getArenaLoc("Team." + team + ".Shop"), cm.getArenaLoc("Team." + team + ".Upgrade"), this);
             teams.add(bwt);
             bwt.spawnGenerators();
@@ -368,9 +372,9 @@ public class Arena implements IArena {
         Bukkit.getPluginManager().callEvent(new ArenaEnableEvent(this));
 
         // Re Spawn Session Location
-        respawnLocation = cm.getArenaLoc(ConfigPath.ARENA_SPEC_LOC);
+        respawnLocation = configuredPlayerLocation(ConfigPath.ARENA_SPEC_LOC, ConfigPath.ARENA_SPEC_FACING);
         if (respawnLocation == null) {
-            respawnLocation = cm.getArenaLoc("waiting.Loc");
+            respawnLocation = configuredPlayerLocation("waiting.Loc", ConfigPath.ARENA_WAITING_FACING);
         }
         if (respawnLocation == null) {
             respawnLocation = world.getSpawnLocation();
@@ -378,9 +382,9 @@ public class Arena implements IArena {
         //
 
         // Spectator location
-        spectatorLocation = cm.getArenaLoc(ConfigPath.ARENA_SPEC_LOC);
+        spectatorLocation = configuredPlayerLocation(ConfigPath.ARENA_SPEC_LOC, ConfigPath.ARENA_SPEC_FACING);
         if (spectatorLocation == null) {
-            spectatorLocation = cm.getArenaLoc("waiting.Loc");
+            spectatorLocation = configuredPlayerLocation("waiting.Loc", ConfigPath.ARENA_WAITING_FACING);
         }
         if (spectatorLocation == null) {
             spectatorLocation = world.getSpawnLocation();
@@ -388,7 +392,7 @@ public class Arena implements IArena {
         //
 
         // Waiting location
-        waitingLocation = cm.getArenaLoc("waiting.Loc");
+        waitingLocation = configuredPlayerLocation("waiting.Loc", ConfigPath.ARENA_WAITING_FACING);
         if (waitingLocation == null) {
             waitingLocation = world.getSpawnLocation();
         }
@@ -903,7 +907,6 @@ public class Arena implements IArena {
         /* restore player inventory */
         PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
         if (pg != null) pg.restore();
-        if (BedWars.getServerType() == ServerType.MULTIARENA) Arena.sendLobbyCommandItems(p);
         playerLocation.remove(p);
         for (PotionEffect pf : p.getActivePotionEffects()) {
             p.removePotionEffect(pf.getType());
@@ -1036,7 +1039,6 @@ public class Arena implements IArena {
         /* restore player inventory */
         PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
         if (pg != null) pg.restore();
-        if (BedWars.getServerType() == ServerType.MULTIARENA) Arena.sendLobbyCommandItems(p);
         if (getServerType() == ServerType.BUNGEE) {
             Misc.moveToLobbyOrKick(p, this, true);
             return;
@@ -1651,6 +1653,20 @@ public class Arena implements IArena {
     }
 
     /**
+     * Apply the mandatory state for a player who has just entered the main lobby.
+     * Operators can still change their game mode afterwards; this is intentionally
+     * not a periodic enforcement task.
+     */
+    public static void enterLobby(Player p) {
+        if (!p.isOnline()) return;
+        p.setGameMode(GameMode.ADVENTURE);
+        p.setFlying(false);
+        p.setAllowFlight(false);
+        p.setCanPickupItems(true);
+        sendLobbyCommandItems(p);
+    }
+
+    /**
      * This will give the lobby items to the player.
      * Not used in serverType BUNGEE.
      * This will clear the inventory first.
@@ -1660,10 +1676,6 @@ public class Arena implements IArena {
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!p.isOnline() || !BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
-            p.setGameMode(GameMode.SURVIVAL);
-            p.setFlying(false);
-            p.setAllowFlight(false);
-            p.setCanPickupItems(true);
             p.getInventory().clear();
             for (String item : config.getYml().getConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH).getKeys(false)) {
 
@@ -2694,17 +2706,25 @@ public class Arena implements IArena {
                 TeleportManager.teleportC(player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
             }
         } else if (BedWars.getServerType() == ServerType.MULTIARENA) {
-            if (BedWars.getLobbyWorld().isEmpty()) {
-                TeleportManager.teleportC(player, Bukkit.getWorlds().get(0).getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+            Location lobby = config.getConfigLoc("lobbyLoc");
+            if (lobby == null || lobby.getWorld() == null) {
+                lobby = Bukkit.getWorlds().getFirst().getSpawnLocation();
                 plugin.getLogger().log(Level.SEVERE, player.getName() + " was teleported to the main world because lobby location is not set!");
-            } else {
-                TeleportManager.teleportC(player, config.getConfigLoc("lobbyLoc"), PlayerTeleportEvent.TeleportCause.PLUGIN);
             }
+            CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
+                    player, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN);
+            teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
+            }));
         }
     }
 
     public boolean isAllowMapBreak() {
         return allowMapBreak;
+    }
+
+    private Location configuredPlayerLocation(String locationPath, String facingPath) {
+        return PlayerFacing.apply(cm.getArenaLoc(locationPath), yml.getString(facingPath));
     }
 
     public void setAllowMapBreak(boolean allowMapBreak) {

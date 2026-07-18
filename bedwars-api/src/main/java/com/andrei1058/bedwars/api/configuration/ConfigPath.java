@@ -190,6 +190,7 @@ public class ConfigPath {
     public static final String ARENA_DISABLE_GENERATOR_FOR_EMPTY_TEAMS = "disable-generator-for-empty-teams";
     public static final String ARENA_DISABLE_NPCS_FOR_EMPTY_TEAMS = "disable-npcs-for-empty-teams";
     public static final String ARENA_ISLAND_RADIUS = "island-radius";
+    public static final String ARENA_WAITING_FACING = "waiting.Facing";
     public static final String ARENA_WAITING_POS1 = "waiting.Pos1";
     public static final String ARENA_WAITING_POS2 = "waiting.Pos2";
     public static final String ARENA_NORMAL_DEATH_DROPS = "vanilla-death-drops";
@@ -197,7 +198,9 @@ public class ConfigPath {
     public static final String ARENA_ALLOW_MAP_BREAK = "allow-map-break";
     public static final String ARENA_GAME_RULES = "game-rules";
     public static final String ARENA_SPEC_LOC = "spectator-loc";
+    public static final String ARENA_SPEC_FACING = "spectator-facing";
     public static final String ARENA_TEAM_KILL_DROPS_LOC = "kill-drops-loc";
+    public static final String ARENA_TEAM_SPAWN_FACING = "Spawn-Facing";
     public static final String ARENA_TEAM_SHOP_FACING = "Shop-Facing";
     public static final String ARENA_TEAM_UPGRADE_FACING = "Upgrade-Facing";
     public static final String ARENA_Y_LEVEL_KILL = "y-kill-height";

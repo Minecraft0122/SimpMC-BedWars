@@ -60,6 +60,19 @@ class TeamAllocationPlannerTest {
     }
 
     @Test
+    void splitsAFullPartyRatherThanStartingWithOneTeam() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocate(
+                List.of(List.of("A", "B")),
+                4,
+                2,
+                new Random(5)
+        );
+
+        assertEquals(2, allocation.stream().filter(team -> !team.isEmpty()).count());
+        assertEquals(Set.of("A", "B"), flatten(allocation));
+    }
+
+    @Test
     void rejectsPlayersBeyondArenaCapacity() {
         assertThrows(IllegalArgumentException.class, () -> TeamAllocationPlanner.allocate(
                 List.of(List.of("A", "B", "C")),

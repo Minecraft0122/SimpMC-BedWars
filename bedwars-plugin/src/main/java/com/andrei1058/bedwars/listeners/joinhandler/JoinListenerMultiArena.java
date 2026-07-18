@@ -81,12 +81,13 @@ public class JoinListenerMultiArena implements Listener {
 
         // Teleport to lobby location
         Location lobbyLocation = config.getConfigLoc("lobbyLoc");
-        if (lobbyLocation != null && lobbyLocation.getWorld() != null) {
-            TeleportManager.teleport(p, lobbyLocation);
+        if (lobbyLocation == null || lobbyLocation.getWorld() == null) {
+            lobbyLocation = Bukkit.getWorlds().getFirst().getSpawnLocation();
         }
-
-        // Send items
-        Arena.sendLobbyCommandItems(p);
+        TeleportManager.teleport(p, lobbyLocation)
+                .whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (error == null && Boolean.TRUE.equals(success)) Arena.enterLobby(p);
+                }));
 
         SidebarService.getInstance().giveSidebar(p, null, true);
 

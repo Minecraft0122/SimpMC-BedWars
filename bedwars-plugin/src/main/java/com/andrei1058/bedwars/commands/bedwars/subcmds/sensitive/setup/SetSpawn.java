@@ -22,6 +22,7 @@ package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
+import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -77,7 +78,9 @@ public class SetSpawn extends SubCommand {
                 if (ss.getConfig().getYml().get("Team." + args[0] + ".Spawn") != null) {
                     removeArmorStand("出生点", ss.getConfig().getArenaLoc("Team." + args[0] + ".Spawn"), ss.getConfig().getString("Team." + args[0] + ".Spawn"));
                 }
-                ss.getConfig().saveArenaLoc("Team." + args[0] + ".Spawn", p.getLocation());
+                String teamRoot = "Team." + args[0] + ".";
+                ss.getConfig().savePlayerArenaLocation(teamRoot + "Spawn",
+                        teamRoot + ConfigPath.ARENA_TEAM_SPAWN_FACING, p.getLocation());
                 String teamm = ss.getTeamColor(args[0]) + args[0];
                 p.sendMessage(ChatColor.GOLD + " " + '▪' + " " + "已设置出生点：" + teamm);
                 com.andrei1058.bedwars.commands.Misc.createArmorStand(teamm + " " + ChatColor.GOLD + "出生点已设置", p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));

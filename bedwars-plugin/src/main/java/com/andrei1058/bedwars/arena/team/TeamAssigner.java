@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.arena.team;
 
+import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.ITeamAssigner;
@@ -47,6 +48,8 @@ public class TeamAssigner implements ITeamAssigner {
                     arena.getMaxInTeam(),
                     ThreadLocalRandom.current()
             );
+            List<List<Player>> approvedAllocation = new ArrayList<>(arenaTeams.size());
+            for (int index = 0; index < arenaTeams.size(); index++) approvedAllocation.add(new ArrayList<>());
 
             for (int teamIndex = 0; teamIndex < arenaTeams.size(); teamIndex++) {
                 ITeam team = arenaTeams.get(teamIndex);
@@ -54,6 +57,19 @@ public class TeamAssigner implements ITeamAssigner {
                     TeamAssignEvent event = new TeamAssignEvent(player, team, arena);
                     Bukkit.getPluginManager().callEvent(event);
                     if (event.isCancelled()) continue;
+                    approvedAllocation.get(teamIndex).add(player);
+                }
+            }
+
+            if (approvedAllocation.stream().filter(team -> !team.isEmpty()).count() < 2) {
+                BedWars.plugin.getLogger().warning("Cancelled team assignments would leave arena "
+                        + arena.getArenaName() + " with fewer than two active teams; game start was stopped.");
+                return;
+            }
+
+            for (int teamIndex = 0; teamIndex < arenaTeams.size(); teamIndex++) {
+                ITeam team = arenaTeams.get(teamIndex);
+                for (Player player : approvedAllocation.get(teamIndex)) {
                     player.closeInventory();
                     team.addPlayers(player);
                 }

@@ -72,7 +72,10 @@ public class Misc {
                 Location loc = config.getConfigLoc("lobbyLoc");
                 if (loc != null){ // Can happen when location is not set in config
                     try{
-                        p.teleport(loc);
+                        boolean teleported = p.teleport(loc);
+                        if (teleported && arena == null && getServerType() == ServerType.MULTIARENA) {
+                            Arena.enterLobby(p);
+                        }
                     } catch (Exception ignored){
                         Bukkit.getLogger().severe("Could not teleport player to lobby! Try setting the lobby again with /bw setLobby");
                     }

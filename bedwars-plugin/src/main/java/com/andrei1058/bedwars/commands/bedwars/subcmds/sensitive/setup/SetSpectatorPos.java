@@ -54,7 +54,8 @@ public class SetSpectatorPos extends SubCommand {
         if (args.length != 0) {
             p.sendMessage(ss.getPrefix() + ChatColor.RED + "用法：/" + mainCmd + " " + getSubCommandName());
         } else {
-            ss.getConfig().saveArenaLoc(ConfigPath.ARENA_SPEC_LOC, p.getLocation());
+            ss.getConfig().savePlayerArenaLocation(ConfigPath.ARENA_SPEC_LOC,
+                    ConfigPath.ARENA_SPEC_FACING, p.getLocation());
             p.sendMessage(ss.getPrefix() + "已设置观战出生点！");
         }
         return true;

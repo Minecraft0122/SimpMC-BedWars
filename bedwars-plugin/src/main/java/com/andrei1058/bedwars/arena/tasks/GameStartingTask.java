@@ -92,6 +92,16 @@ public class GameStartingTask implements Runnable, StartingTask {
     public void run() {
         if (countdown == 0) {
             getArena().getTeamAssigner().assignTeams(getArena());
+            long activeTeams = getArena().getTeams().stream()
+                    .filter(team -> !team.getMembers().isEmpty())
+                    .count();
+            if (activeTeams < 2) {
+                BedWars.plugin.getLogger().warning("Stopped arena " + getArena().getArenaName()
+                        + " from starting because fewer than two teams have players.");
+                task.cancel();
+                getArena().changeStatus(GameState.waiting);
+                return;
+            }
 
             //Color bed block if possible
             //Destroy bed if team is empty
