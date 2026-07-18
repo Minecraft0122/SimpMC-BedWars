@@ -22,6 +22,7 @@ package com.andrei1058.bedwars;
 
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.shop.IContentTier;
+import com.andrei1058.bedwars.api.arena.team.PreGameSquad;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.events.player.PlayerAfkEvent;
@@ -34,7 +35,11 @@ import com.andrei1058.bedwars.api.server.VersionSupport;
 import com.andrei1058.bedwars.api.sidebar.ISidebarService;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
+import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
+import com.andrei1058.bedwars.configuration.LevelsConfig;
+import com.andrei1058.bedwars.configuration.MoneyConfig;
+import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.main.CategoryContent;
 import com.andrei1058.bedwars.sidebar.SidebarService;
 import com.andrei1058.bedwars.stats.StatsAPI;
@@ -194,6 +199,11 @@ public class API implements com.andrei1058.bedwars.api.BedWars {
         public void sendLobbyCommandItems(Player p) {
             Arena.sendLobbyCommandItems(p);
         }
+
+        @Override
+        public void applyLobbyState(Player player) {
+            Arena.enterLobby(player);
+        }
     };
 
     private final Configs configs = new Configs() {
@@ -220,6 +230,21 @@ public class API implements com.andrei1058.bedwars.api.BedWars {
         @Override
         public ConfigManager getUpgradesConfig() {
             return UpgradesManager.getConfiguration();
+        }
+
+        @Override
+        public ConfigManager getLevelsConfig() {
+            return LevelsConfig.levels;
+        }
+
+        @Override
+        public ConfigManager getRewardsConfig() {
+            return MoneyConfig.money;
+        }
+
+        @Override
+        public ConfigManager getSoundsConfig() {
+            return Sounds.getSounds();
         }
     };
 
@@ -315,6 +340,11 @@ public class API implements com.andrei1058.bedwars.api.BedWars {
     @Override
     public Party getPartyUtil() {
         return BedWars.getParty();
+    }
+
+    @Override
+    public PreGameSquad getPreGameSquadUtil() {
+        return PreGameSquadManager.getInstance();
     }
 
     @Override

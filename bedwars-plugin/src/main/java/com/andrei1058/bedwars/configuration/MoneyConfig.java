@@ -16,6 +16,7 @@ public class MoneyConfig extends ConfigManager {
      */
     public static void init() {
         money = new MoneyConfig ();
+        money.getYml().options().header("SimpMC-BedWars Vault 经济奖励配置。\n仅在安装并启用 Vault 经济插件时生效。");
         money.getYml ().options ().copyDefaults ( true );
         money.getYml ().addDefault ( "money-rewards.per-minute", 5 );
         money.getYml ().addDefault ( "money-rewards.per-teammate", 30 );
@@ -24,6 +25,7 @@ public class MoneyConfig extends ConfigManager {
         money.getYml ().addDefault ( "money-rewards.final-kill", 40 );
         money.getYml ().addDefault ( "money-rewards.regular-kill", 10 );
         money.setComments("money-rewards", "使用 Vault 经济系统时，各类游戏行为奖励的金币数量。");
-        money.updateToLatestVersion(2);
+        ChineseConfigDocumentation.rewards(money);
+        money.updateToLatestVersion(3);
     }
 }

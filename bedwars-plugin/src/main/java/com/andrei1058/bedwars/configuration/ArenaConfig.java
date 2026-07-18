@@ -38,7 +38,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 6;
+    private static final int CONFIG_VERSION = 7;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -85,9 +85,16 @@ public class ArenaConfig extends ConfigManager {
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
         setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "默认禁止昼夜变化、天气变化和生物自然生成。");
+        ChineseConfigDocumentation.arena(this);
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 
         cachedGameOverridables = getGameOverridables();
+    }
+
+    @Override
+    public void save() {
+        ChineseConfigDocumentation.arena(this);
+        super.save();
     }
 
     private static void migrateLegacyConfig(Plugin plugin, YamlConfiguration config) {

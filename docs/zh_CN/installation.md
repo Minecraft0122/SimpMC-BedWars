@@ -1,0 +1,68 @@
+# 安装、更新与服务器模式
+
+## 系统要求
+
+- Paper 1.21.11，不能使用 Spigot 或 Folia。
+- Java 21 或更新的兼容版本。
+- 地图较多时建议使用 SSD；内部地图恢复会压缩和解压完整世界。
+- 建议至少保留一份服务端离线备份。
+
+## 首次安装
+
+1. 从项目构建产物中取得 `SimpMC-BedWars-版本.jar`。
+2. 放入服务端 `plugins` 目录。
+3. 启动服务器，看到插件成功启用后执行 `stop`。
+4. 编辑 `plugins/SimpMC-BedWars/config.yml`。
+5. 再次启动服务器。
+
+最常修改的首次配置：
+
+```yaml
+serverType: MULTIARENA
+language: zh_cn
+debug: false
+```
+
+## 服务器模式
+
+### MULTIARENA
+
+一个 Paper 实例承载主大厅和多个竞技场。支持选择菜单、告示牌、Citizens NPC 和命令加入。插件会保护大厅，玩家每次进入大厅都被设置为冒险模式。
+
+适合：单服小游戏、测试服、中小型网络的独立 BedWars 子服。
+
+### SHARED
+
+与其他玩法共享同一实例，玩家离开竞技场后恢复进入前的位置和物品。通常通过命令加入，不应把整个服务器当作 BedWars 专用大厅。
+
+### BUNGEE
+
+面向代理网络和自动扩容。竞技场节点、服务器 ID、大厅地址及重启策略在 `bungee-settings` 中配置，并需要匹配的代理端接入方案。
+
+## 可选依赖
+
+- PlaceholderAPI：在消息、计分板等位置解析扩展占位符。
+- Vault + 经济插件：启用 `rewards.yml` 金币奖励及 Vault 货币购买。
+- Citizens：创建加入竞技场的 NPC。
+- Parties / PartyAndFriends：接入外部组队系统。
+
+## 更新插件
+
+1. 完整停止服务器。
+2. 备份 `plugins/SimpMC-BedWars` 和竞技场世界。
+3. 替换旧 JAR，不要同时保留两个版本。
+4. 启动服务器并查看配置迁移日志。
+5. 插件会为需要升级的 YAML 创建类似 `.v7.bak` 的备份，再写入新字段和中文注释。
+6. 检查控制台后完整测试大厅、加入、开局、死亡、复活和结束恢复。
+
+不要删除刚生成的备份，确认新版本稳定后再按自己的备份策略归档。
+
+## 自行构建
+
+```bash
+git clone https://github.com/Minecraft0122/SimpMC-BedWars.git
+cd SimpMC-BedWars
+mvn clean package
+```
+
+最终插件位于 `bedwars-plugin/target/SimpMC-BedWars-版本.jar`。

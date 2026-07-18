@@ -34,6 +34,7 @@ public class UpgradesConfig extends ConfigManager {
     public UpgradesConfig(String name, String dir) {
         super(plugin, name, dir);
         YamlConfiguration yml = getYml();
+        yml.options().header("SimpMC-BedWars 队伍升级与陷阱配置。\n动作格式和完整示例请参阅 docs/zh_CN/configuration.md。");
         List<String> elements = Arrays.asList("upgrade-swords,10", "upgrade-armor,11", "upgrade-miner,12", "upgrade-forge,13",
                 "upgrade-heal-pool,14", "upgrade-dragon,15", "category-traps,16", "separator-glass,18,19,20,21,22,23,24,25,26",
                 "trap-slot-first,30", "trap-slot-second,31", "trap-slot-third,32");
@@ -146,7 +147,8 @@ public class UpgradesConfig extends ConfigManager {
         setComments("default-upgrades-settings", "队伍升级菜单布局、陷阱价格和队列上限。");
         setComments("upgrade-swords", "升级项由价格、货币、显示物品和 receive 动作组成。");
         setComments("category-traps", "陷阱分类菜单内容及槽位。");
-        updateToLatestVersion(2);
+        ChineseConfigDocumentation.upgrades(this);
+        updateToLatestVersion(3);
     }
 
     private void addDefaultDisplayItem(String path, String material, int data, int amount, boolean enchanted) {

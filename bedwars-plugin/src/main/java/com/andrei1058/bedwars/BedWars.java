@@ -180,6 +180,13 @@ public class BedWars extends JavaPlugin {
         new SimplifiedChinese();
         new Turkish();
 
+        // Persist the shared Chinese documentation after built-in languages
+        // have registered their defaults and optional translator headers.
+        for (Language language : Language.getLanguages()) {
+            language.addChineseDocumentation();
+            language.save();
+        }
+
         config = new MainConfig(this, "config");
 
         generators = new GeneratorsConfig(this, "generators", this.getDataFolder().getPath());

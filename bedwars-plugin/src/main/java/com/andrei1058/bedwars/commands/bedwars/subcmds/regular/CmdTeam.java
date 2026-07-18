@@ -21,6 +21,7 @@ package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.team.PreGameSquad;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.arena.Arena;
@@ -85,8 +86,8 @@ public class CmdTeam extends SubCommand {
             return;
         }
 
-        PreGameSquadManager.Result result = squads.invite(player, target);
-        if (result != PreGameSquadManager.Result.SUCCESS) {
+        PreGameSquad.Result result = squads.invite(player, target);
+        if (result != PreGameSquad.Result.SUCCESS) {
             sendFailure(player, result);
             return;
         }
@@ -113,12 +114,12 @@ public class CmdTeam extends SubCommand {
             player.sendMessage(PREFIX + ChatColor.RED + "邀请者已离线或离开竞技场。");
             return;
         }
-        PreGameSquadManager.Result result = squads.accept(player, inviter);
-        if (result != PreGameSquadManager.Result.SUCCESS) {
+        PreGameSquad.Result result = squads.accept(player, inviter);
+        if (result != PreGameSquad.Result.SUCCESS) {
             sendFailure(player, result);
             return;
         }
-        for (Player member : squads.getSquadMembers(player)) {
+        for (Player member : squads.getMembers(player)) {
             member.sendMessage(PREFIX + ChatColor.GREEN + player.getName() + " 已加入开局队伍。");
         }
     }
@@ -133,8 +134,8 @@ public class CmdTeam extends SubCommand {
             player.sendMessage(PREFIX + ChatColor.RED + "邀请者已离线或离开竞技场。");
             return;
         }
-        PreGameSquadManager.Result result = squads.decline(player, inviter);
-        if (result != PreGameSquadManager.Result.SUCCESS) {
+        PreGameSquad.Result result = squads.decline(player, inviter);
+        if (result != PreGameSquad.Result.SUCCESS) {
             sendFailure(player, result);
             return;
         }
@@ -143,9 +144,9 @@ public class CmdTeam extends SubCommand {
     }
 
     private void leave(Player player) {
-        List<Player> previousMembers = squads.getSquadMembers(player);
-        PreGameSquadManager.Result result = squads.leave(player);
-        if (result != PreGameSquadManager.Result.SUCCESS) {
+        List<Player> previousMembers = squads.getMembers(player);
+        PreGameSquad.Result result = squads.leave(player);
+        if (result != PreGameSquad.Result.SUCCESS) {
             sendFailure(player, result);
             return;
         }
@@ -155,7 +156,7 @@ public class CmdTeam extends SubCommand {
     }
 
     private void showSquad(Player player, IArena arena) {
-        List<Player> members = squads.getSquadMembers(player);
+        List<Player> members = squads.getMembers(player);
         Player leader = squads.getLeader(player);
         player.sendMessage(PREFIX + ChatColor.YELLOW + "当前开局队伍（" + members.size() + "/"
                 + arena.getMaxInTeam() + "）：");
@@ -188,7 +189,7 @@ public class CmdTeam extends SubCommand {
         player.sendMessage(ChatColor.GRAY + "/bw team leave " + ChatColor.WHITE + "退出队伍");
     }
 
-    private void sendFailure(Player player, PreGameSquadManager.Result result) {
+    private void sendFailure(Player player, PreGameSquad.Result result) {
         String message = switch (result) {
             case NOT_IN_PRE_GAME -> "只能在开局前组队。";
             case DIFFERENT_ARENA -> "双方必须在同一个等待中的竞技场。";

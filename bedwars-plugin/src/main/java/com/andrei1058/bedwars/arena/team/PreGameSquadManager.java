@@ -21,6 +21,7 @@ package com.andrei1058.bedwars.arena.team;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.team.PreGameSquad;
 import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerLeaveArenaEvent;
 import com.andrei1058.bedwars.api.events.server.ArenaDisableEvent;
@@ -43,21 +44,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /** Arena-local squads used only for the next team assignment. */
-public final class PreGameSquadManager implements Listener {
-
-    public enum Result {
-        SUCCESS,
-        NOT_IN_PRE_GAME,
-        DIFFERENT_ARENA,
-        CANNOT_INVITE_SELF,
-        NOT_LEADER,
-        TARGET_ALREADY_GROUPED,
-        SQUAD_FULL,
-        ALREADY_INVITED,
-        NO_INVITE,
-        INVITE_EXPIRED,
-        NOT_IN_SQUAD
-    }
+public final class PreGameSquadManager implements Listener, PreGameSquad {
 
     private static final long INVITE_TTL_MILLIS = 30_000L;
     private static final PreGameSquadManager INSTANCE = new PreGameSquadManager();
@@ -72,6 +59,7 @@ public final class PreGameSquadManager implements Listener {
         return INSTANCE;
     }
 
+    @Override
     public Result invite(@NotNull Player inviter, @NotNull Player target) {
         purgeExpiredInvites();
         IArena arena = preGameArena(inviter);
@@ -90,6 +78,7 @@ public final class PreGameSquadManager implements Listener {
         return Result.SUCCESS;
     }
 
+    @Override
     public Result accept(@NotNull Player target, @NotNull Player inviter) {
         IArena arena = preGameArena(target);
         if (arena == null) return Result.NOT_IN_PRE_GAME;
@@ -115,6 +104,7 @@ public final class PreGameSquadManager implements Listener {
         return Result.SUCCESS;
     }
 
+    @Override
     public Result decline(@NotNull Player target, @NotNull Player inviter) {
         IArena arena = preGameArena(target);
         if (arena == null) return Result.NOT_IN_PRE_GAME;
@@ -125,32 +115,38 @@ public final class PreGameSquadManager implements Listener {
         return invite.expiresAt < System.currentTimeMillis() ? Result.INVITE_EXPIRED : Result.SUCCESS;
     }
 
+    @Override
     public Result leave(@NotNull Player player) {
         if (!squadsByMember.containsKey(player.getUniqueId())) return Result.NOT_IN_SQUAD;
         removePlayer(player.getUniqueId());
         return Result.SUCCESS;
     }
 
+    @Override
     public boolean isLeader(@NotNull Player player) {
         Squad squad = squadsByMember.get(player.getUniqueId());
         return squad == null || squad.leader.equals(player.getUniqueId());
     }
 
+    @Override
     public boolean isGrouped(@NotNull Player player) {
         return squadsByMember.containsKey(player.getUniqueId());
     }
 
-    public List<Player> getSquadMembers(@NotNull Player player) {
+    @Override
+    public List<Player> getMembers(@NotNull Player player) {
         Squad squad = squadsByMember.get(player.getUniqueId());
         if (squad == null) return List.of(player);
-        return onlineArenaMembers(squad);
+        return List.copyOf(onlineArenaMembers(squad));
     }
 
+    @Override
     public Player getLeader(@NotNull Player player) {
         Squad squad = squadsByMember.get(player.getUniqueId());
         return squad == null ? player : Bukkit.getPlayer(squad.leader);
     }
 
+    @Override
     public List<Player> getAvailableTargets(@NotNull Player player) {
         IArena arena = preGameArena(player);
         if (arena == null || !isLeader(player)) return List.of();

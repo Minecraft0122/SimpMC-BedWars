@@ -49,6 +49,7 @@ public class Sounds {
 
     public static void init() {
         YamlConfiguration yml = sounds.getYml();
+        yml.options().header("SimpMC-BedWars 声音配置。\nsound 使用 Bukkit Sound 名称，volume 和 pitch 支持小数。");
 
         addDefSound("game-end", "ITEM_TRIDENT_THUNDER");
         addDefSound("rejoin-denied", "ENTITY_VILLAGER_NO");
@@ -90,8 +91,9 @@ public class Sounds {
         addDefSound("pop-up-tower-build", "ENTITY_CHICKEN_EGG");
         yml.options().copyDefaults(true);
         sounds.setComments("game-end", "声音配置：sound 为 Bukkit 声音名称，volume 为音量，pitch 为音调。", "如需关闭某个提示音，可将调用该声音的配置设为 none。");
+        ChineseConfigDocumentation.sounds(sounds);
 
-        sounds.updateToLatestVersion(2, config -> {
+        sounds.updateToLatestVersion(3, config -> {
             config.set("bought", null);
             config.set("insufficient-money", null);
             config.set("player-kill", null);

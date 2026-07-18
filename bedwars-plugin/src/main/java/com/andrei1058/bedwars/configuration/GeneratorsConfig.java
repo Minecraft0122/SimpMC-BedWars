@@ -66,6 +66,7 @@ public class GeneratorsConfig extends ConfigManager {
         yml.options().copyDefaults(true);
         setComments("Default", "默认资源生成器参数；delay 和 start 的单位为秒。", "amount 为每次生成数量，spawn-limit 为地面物品上限。");
         setComments(ConfigPath.GENERATOR_STACK_ITEMS, "是否将生成的资源物品堆叠，开启可降低实体数量。");
-        updateToLatestVersion(2);
+        ChineseConfigDocumentation.generators(this);
+        updateToLatestVersion(3);
     }
 }

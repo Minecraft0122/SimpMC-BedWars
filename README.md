@@ -4,6 +4,7 @@ SimpMC-BedWars is a Paper 1.21.11 BedWars mini-game plugin maintained for modern
 
 项目维护文档：
 
+- [完整中文教程](docs/zh_CN/README.md)
 - [更新记录](CHANGELOG.md)
 - [BUG 记录与报告模板](BUGS.md)
 

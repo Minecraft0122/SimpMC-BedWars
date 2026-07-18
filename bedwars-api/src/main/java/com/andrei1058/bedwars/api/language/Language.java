@@ -104,10 +104,37 @@ public class Language extends ConfigManager {
         // Languages without a built-in subclass do not have a later defaults
         // phase, so finish their migration here. Built-in languages finish it
         // after registering their defaults.
+        addChineseDocumentation();
         if (getClass() == Language.class) {
             updateToLatestVersion(1);
+            save();
         }
         languages.add(this);
+    }
+
+    /**
+     * Add Chinese documentation shared by built-in and custom language files.
+     */
+    public void addChineseDocumentation() {
+        String documentation = "SimpMC-BedWars 语言文件。\n"
+                + "本文件只控制玩家可见文本；颜色使用 & 代码，占位符（例如 {player}）不得删除。";
+        String currentHeader = getYml().options().header();
+        if (currentHeader == null || currentHeader.isBlank()) {
+            getYml().options().header(documentation);
+        } else if (!currentHeader.contains("SimpMC-BedWars 语言文件")) {
+            getYml().options().header(documentation + "\n" + currentHeader);
+        }
+        setComments("name", "语言在 /bw lang 菜单中的显示名称。");
+        setComments(Messages.PREFIX, "插件消息前缀；留空表示不添加统一前缀。");
+        setComments(Messages.COMMAND_MAIN, "玩家执行 /bw 时看到的命令帮助文本。");
+        setComments(Messages.FORMATTING_CHAT_LOBBY, "大厅聊天格式；必须保留 {player} 和 {message}。", "运行时会统一使用 &f> &7 分隔名字和消息。");
+        setComments(Messages.FORMATTING_CHAT_WAITING, "竞技场等待阶段聊天格式。");
+        setComments(Messages.FORMATTING_CHAT_SHOUT, "游戏内全体喊话格式。");
+        setComments(Messages.FORMATTING_CHAT_TEAM, "游戏内队伍聊天格式。");
+        setComments(Messages.FORMATTING_CHAT_SPECTATOR, "观战者聊天格式。");
+        setComments(Messages.SCOREBOARD_LOBBY, "主大厅计分板文本列表。");
+        setComments(Messages.SCOREBOARD_DEFAULT_WAITING, "默认分组等待阶段计分板文本列表。");
+        setComments(Messages.SCOREBOARD_DEFAULT_PLAYING, "默认分组游戏阶段计分板文本列表。");
     }
 
     /**

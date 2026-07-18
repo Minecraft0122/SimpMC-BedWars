@@ -34,8 +34,8 @@ Enhancement suggestions are tracked as GitHub issues. Please provide the followi
 ### Your First Code Contribution
 Unsure where to begin contributing to SimpMC-BedWars?
 You can start by looking through these `beginner` and `help-wanted` issues:
-- [Beginner issues](beginner) - issues which should only require a few lines of code, and a test or two.
-- [Help wanted issues](help-wanted) - issues which should be a bit more involved than beginner issues.
+- [Beginner issues](https://github.com/Minecraft0122/SimpMC-BedWars/issues?q=is%3Aissue%20is%3Aopen%20label%3Abeginner) - issues which should only require a few lines of code, and a test or two.
+- [Help wanted issues](https://github.com/Minecraft0122/SimpMC-BedWars/issues?q=is%3Aissue%20is%3Aopen%20label%3Ahelp-wanted) - issues which should be a bit more involved than beginner issues.
   
   
 #### Local development

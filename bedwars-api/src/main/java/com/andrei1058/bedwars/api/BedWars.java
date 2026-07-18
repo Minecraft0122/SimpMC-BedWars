@@ -22,6 +22,7 @@ package com.andrei1058.bedwars.api;
 
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.shop.IContentTier;
+import com.andrei1058.bedwars.api.arena.team.PreGameSquad;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.language.Language;
@@ -39,6 +40,8 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.sql.Timestamp;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @SuppressWarnings("unused")
@@ -205,6 +208,13 @@ public interface BedWars {
         IArena getArenaByPlayer(Player player);
 
         /**
+         * Null-safe alternative to {@link #getArenaByPlayer(Player)}.
+         */
+        default Optional<IArena> findArenaByPlayer(Player player) {
+            return Optional.ofNullable(getArenaByPlayer(player));
+        }
+
+        /**
          * Set an arena by player if the player is in this arena.
          */
         void setArenaByPlayer(Player p, IArena arena);
@@ -222,7 +232,15 @@ public interface BedWars {
          */
         IArena getArenaByName(String worldName);
 
+        default Optional<IArena> findArenaByName(String arenaName) {
+            return Optional.ofNullable(getArenaByName(arenaName));
+        }
+
         IArena getArenaByIdentifier(String worldName);
+
+        default Optional<IArena> findArenaByIdentifier(String worldName) {
+            return Optional.ofNullable(getArenaByIdentifier(worldName));
+        }
 
         void setArenaByName(IArena arena);
 
@@ -233,6 +251,13 @@ public interface BedWars {
         void removeArenaByName(String worldName);
 
         LinkedList<IArena> getArenas();
+
+        /**
+         * Immutable snapshot that cannot mutate the plugin's arena registry.
+         */
+        default List<IArena> getArenasSnapshot() {
+            return List.copyOf(getArenas());
+        }
 
         /**
          * Check if a player has vip join.
@@ -272,6 +297,12 @@ public interface BedWars {
          * This will clear the inventory first.
          */
         void sendLobbyCommandItems(Player p);
+
+        /**
+         * Apply the complete lobby state, including adventure mode and lobby items.
+         * The player should already be in the configured lobby world.
+         */
+        void applyLobbyState(Player player);
     }
 
     Configs getConfigs();
@@ -304,6 +335,18 @@ public interface BedWars {
          */
         @SuppressWarnings("unused")
         ConfigManager getUpgradesConfig();
+
+        /**
+         * Available after SimpMC-BedWars has completed plugin enable.
+         */
+        ConfigManager getLevelsConfig();
+
+        /**
+         * Vault economy rewards configuration.
+         */
+        ConfigManager getRewardsConfig();
+
+        ConfigManager getSoundsConfig();
     }
 
     /**
@@ -385,6 +428,11 @@ public interface BedWars {
      * Get party util.
      */
     Party getPartyUtil();
+
+    /**
+     * Get the arena-local pre-game invitation service.
+     */
+    PreGameSquad getPreGameSquadUtil();
 
     /**
      * Get active setup session.

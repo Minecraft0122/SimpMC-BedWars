@@ -24,6 +24,7 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.configuration.ChineseConfigDocumentation;
 import com.andrei1058.bedwars.shop.listeners.*;
 import com.andrei1058.bedwars.shop.main.QuickBuyButton;
 import com.andrei1058.bedwars.shop.main.ShopCategory;
@@ -383,7 +384,8 @@ public class ShopManager extends ConfigManager {
         setComments(ConfigPath.SHOP_SPECIAL_SILVERFISH_ENABLE, "特殊物品设置：蠹虫、铁傀儡和防御塔。");
         setComments(ConfigPath.SHOP_QUICK_DEFAULTS_PATH, "新玩家默认快捷购买栏的物品路径与槽位。");
         setComments(ConfigPath.SHOP_PATH_CATEGORY_BLOCKS, "商店分类及商品；可自定义价格、货币、数量和购买效果。");
-        updateToLatestVersion(2);
+        ChineseConfigDocumentation.shop(this);
+        updateToLatestVersion(3);
     }
 
     private void loadShop() {
