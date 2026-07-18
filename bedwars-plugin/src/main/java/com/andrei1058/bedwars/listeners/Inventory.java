@@ -26,7 +26,6 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
-import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
@@ -180,12 +179,6 @@ public class Inventory implements Listener {
 
         if (!i.hasItemMeta()) return;
         if (!i.getItemMeta().hasDisplayName()) return;
-        if (BedWars.getServerType() == ServerType.MULTIARENA) {
-            if (e.getWhoClicked().getLocation().getWorld().getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
-                e.setCancelled(true);
-            }
-        }
-
         /* Check setup gui items */
         if (SetupSession.isInSetupSession(p.getUniqueId()) && nms.getInventoryName(e).equalsIgnoreCase(SetupSession.getInvName())) {
             SetupSession ss = SetupSession.getSession(p.getUniqueId());

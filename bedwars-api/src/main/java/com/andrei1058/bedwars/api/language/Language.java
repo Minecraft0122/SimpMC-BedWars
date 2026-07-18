@@ -32,8 +32,12 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Language extends ConfigManager {
+
+    private static final Pattern LANGUAGE_FILE = Pattern.compile("^messages_([A-Za-z0-9_-]+)\\.yml$");
 
     private final String iso;
     private String prefix = "";
@@ -104,6 +108,16 @@ public class Language extends ConfigManager {
             updateToLatestVersion(1);
         }
         languages.add(this);
+    }
+
+    /**
+     * Return the ISO portion of an actual language file. Migration backups
+     * such as messages_zh_cn.yml.v1.bak are intentionally rejected.
+     */
+    public static Optional<String> isoFromFileName(String fileName) {
+        if (fileName == null) return Optional.empty();
+        Matcher matcher = LANGUAGE_FILE.matcher(fileName);
+        return matcher.matches() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
 
     /**

@@ -103,6 +103,10 @@ public class GameStartingTask implements Runnable, StartingTask {
                 return;
             }
 
+            // The ender chest is game-local. PlayerGoods keeps the lobby copy
+            // separately and restores it when the player leaves the arena.
+            getArena().getPlayers().forEach(player -> player.getEnderChest().clear());
+
             //Color bed block if possible
             //Destroy bed if team is empty
             //Spawn shops and upgrades

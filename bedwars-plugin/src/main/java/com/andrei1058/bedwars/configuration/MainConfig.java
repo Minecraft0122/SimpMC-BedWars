@@ -220,15 +220,14 @@ public class MainConfig extends ConfigManager {
         File[] langs = new File(plugin.getDataFolder(), "/Languages").listFiles();
         if (langs != null) {
             for (File f : langs) {
-                if (f.isFile()) {
-                    if (f.getName().contains("messages_") && f.getName().contains(".yml")) {
-                        String lang = f.getName().replace("messages_", "").replace(".yml", "");
-                        if (lang.equalsIgnoreCase(yml.getString("language"))) {
-                            whatLang = f.getName().replace("messages_", "").replace(".yml", "");
-                        }
-                        if (Language.getLang(lang) == null) new Language(BedWars.plugin, lang);
-                    }
+                if (!f.isFile()) continue;
+                Optional<String> detectedIso = Language.isoFromFileName(f.getName());
+                if (detectedIso.isEmpty()) continue;
+                String lang = detectedIso.get();
+                if (lang.equalsIgnoreCase(yml.getString("language"))) {
+                    whatLang = lang;
                 }
+                if (Language.getLang(lang) == null) new Language(BedWars.plugin, lang);
             }
         }
         Language def = Language.getLang(whatLang);
