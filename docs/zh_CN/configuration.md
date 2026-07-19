@@ -44,7 +44,7 @@
 
 ## generators.yml
 
-控制铁、金、钻石、绿宝石的：
+文件位置：`plugins/SimpMC-BedWars/generators.yml`。它控制铁、金、钻石、绿宝石的：
 
 - `delay`：生成间隔秒数。
 - `amount`：每次生成数量。
@@ -52,32 +52,58 @@
 - `start`：II/III 级启用时间。
 - `stack-items`：合并掉落物以减少实体。
 
-复制 `Default` 并改为竞技场 `group` 名称，可为不同模式设置独立速度。
+2.10.7 的默认队伍资源配置为：
+
+```yaml
+Default:
+  iron:
+    delay: 1
+    amount: 2
+    spawn-limit: 32
+  gold:
+    delay: 4
+    amount: 2
+    spawn-limit: 7
+```
+
+`delay` 就是真实刷新间隔秒数，越小刷新越快；0 或负数会被安全限制为 1 秒。`amount` 越大，每次产出越多。修改后需要完整重启服务器。提高产量后建议把根节点的 `stack-items` 设为 `true`，减少地面物品实体合并前的压力。
+
+复制 `Default` 并改为竞技场 `group` 名称，可为不同模式设置独立速度。如果已经存在与竞技场 `group` 同名的配置节，游戏会优先读取该节，而不是 `Default`。
+
+旧版仍使用内置默认值时会自动把铁间隔从 2 秒迁移为 1 秒、金间隔从 6 秒迁移为 4 秒；自定义值及自定义分组不会被覆盖。
 
 ## shop.yml
 
-商店由分类、商品、tier 和实际发放物品组成：
+文件位置：`plugins/SimpMC-BedWars/shop.yml`。商品价格路径为：
 
-```yaml
-example-category:
-  category-slot: 1
-  category-item:
-    material: EMERALD
-    amount: 1
-  category-content:
-    example-item:
-      content-slot: 19
-      is-permanent: false
-      tiers:
-        tier1:
-          item:
-            material: TNT
-            amount: 1
-          cost: 4
-          currency: gold
+```text
+<分类>.category-content.<商品>.content-tiers.<等级>.tier-settings.cost
 ```
 
+同级的 `currency` 决定货币。以下示例把 16 个羊毛设为 4 铁：
+
+```yaml
+blocks-category:
+  category-content:
+    wool:
+      content-settings:
+        content-slot: 19
+        is-permanent: false
+      content-tiers:
+        tier1:
+          tier-item:
+            material: WHITE_WOOL
+            amount: 16
+          tier-settings:
+            cost: 4
+            currency: iron
+```
+
+例如 TNT 默认路径是 `utility-category.category-content.tnt.content-tiers.tier1.tier-settings.cost`。修改 `cost` 后完整重启服务器。
+
 货币支持 `iron`、`gold`、`diamond`、`emerald`；同时安装 Vault 和实际经济服务提供者后，可按现有格式使用经济货币。只安装 Vault 不会创建余额。Material、附魔和药水名称必须适用于 Paper 1.21.11。
+
+团队升级价格不在 `shop.yml`，而在 `plugins/SimpMC-BedWars/upgrades2.yml` 的 `<升级>.tier-<等级>.cost`，例如 `upgrade-forge.tier-1.cost`。
 
 ## upgrades2.yml
 

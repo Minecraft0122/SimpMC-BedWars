@@ -27,15 +27,18 @@ import org.bukkit.plugin.Plugin;
 
 public class GeneratorsConfig extends ConfigManager {
 
+    static final int DEFAULT_IRON_DELAY = 1;
+    static final int DEFAULT_GOLD_DELAY = 4;
+
     public GeneratorsConfig(Plugin plugin, String name, String dir) {
         super(plugin, name, dir);
 
         YamlConfiguration yml = getYml();
         yml.options().header(plugin.getDescription().getName() + "，由 SimpMC 维护。" +
                 "\ngenerators.yml 资源生成器配置，适用于 Paper 1.21.11 服务器。\n");
-        yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_DELAY, 2);
+        yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_DELAY, DEFAULT_IRON_DELAY);
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_AMOUNT, 2);
-        yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_DELAY, 6);
+        yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_DELAY, DEFAULT_GOLD_DELAY);
         yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_AMOUNT, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_SPAWN_LIMIT, 32);
         yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_SPAWN_LIMIT, 7);
@@ -67,6 +70,18 @@ public class GeneratorsConfig extends ConfigManager {
         setComments("Default", "默认资源生成器参数；delay 和 start 的单位为秒。", "amount 为每次生成数量，spawn-limit 为地面物品上限。");
         setComments(ConfigPath.GENERATOR_STACK_ITEMS, "是否将生成的资源物品堆叠，开启可降低实体数量。");
         ChineseConfigDocumentation.generators(this);
-        updateToLatestVersion(3);
+        updateToLatestVersion(4, GeneratorsConfig::migrateLegacyDefaults);
+    }
+
+    static void migrateLegacyDefaults(YamlConfiguration yml) {
+        replaceLegacyNumber(yml, "Default." + ConfigPath.GENERATOR_IRON_DELAY, 2, DEFAULT_IRON_DELAY);
+        replaceLegacyNumber(yml, "Default." + ConfigPath.GENERATOR_GOLD_DELAY, 6, DEFAULT_GOLD_DELAY);
+    }
+
+    private static void replaceLegacyNumber(YamlConfiguration yml, String path, int oldValue, int newValue) {
+        Object value = yml.get(path);
+        if (value instanceof Number number && Double.compare(number.doubleValue(), oldValue) == 0) {
+            yml.set(path, newValue);
+        }
     }
 }

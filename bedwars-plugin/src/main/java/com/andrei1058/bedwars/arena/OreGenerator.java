@@ -140,6 +140,7 @@ public class OreGenerator implements IGenerator {
                 }
                 break;
         }
+        setDelay(delay);
         Bukkit.getPluginManager().callEvent(new GeneratorUpgradeEvent(this));
     }
 
@@ -149,7 +150,7 @@ public class OreGenerator implements IGenerator {
             return;
         }
 
-        if (lastSpawn == 0) {
+        if (isSpawnDue(lastSpawn)) {
             lastSpawn = delay;
 
             if (spawnLimit != 0) {
@@ -360,7 +361,8 @@ public class OreGenerator implements IGenerator {
 
     @Override
     public void setDelay(int delay) {
-        this.delay = delay;
+        this.delay = normalizeDelay(delay);
+        lastSpawn = Math.min(Math.max(1, lastSpawn), this.delay);
     }
 
     @Override
@@ -460,12 +462,21 @@ public class OreGenerator implements IGenerator {
                 ore = new ItemStack(Material.EMERALD);
                 break;
         }
+        delay = normalizeDelay(delay);
         lastSpawn = delay;
     }
 
     @Override
     public ITeam getBwt() {
         return bwt;
+    }
+
+    static int normalizeDelay(int configuredDelay) {
+        return Math.max(1, configuredDelay);
+    }
+
+    static boolean isSpawnDue(int secondsRemaining) {
+        return secondsRemaining <= 1;
     }
 
     @Override

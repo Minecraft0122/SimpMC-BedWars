@@ -116,10 +116,10 @@ public final class ChineseConfigDocumentation {
         comment(config, "Default", "默认分组的生成器参数；可以复制本节并将 Default 改为竞技场分组名。", "delay/start 单位为秒，amount 是每次生成数量，spawn-limit 是地面物品上限。");
         comment(config, ConfigPath.GENERATOR_STACK_ITEMS, "是否把同类生成资源合并堆叠，可减少物品实体数量。");
         String root = "Default.";
-        comment(config, root + ConfigPath.GENERATOR_IRON_DELAY, "铁资源生成间隔，单位为秒。");
+        comment(config, root + ConfigPath.GENERATOR_IRON_DELAY, "铁资源生成间隔，单位为秒；2.10.7 默认值为 1 秒。");
         comment(config, root + ConfigPath.GENERATOR_IRON_AMOUNT, "每次生成的铁数量。");
         comment(config, root + ConfigPath.GENERATOR_IRON_SPAWN_LIMIT, "单个生成点允许存在的铁物品上限。");
-        comment(config, root + ConfigPath.GENERATOR_GOLD_DELAY, "金资源生成间隔，单位为秒。");
+        comment(config, root + ConfigPath.GENERATOR_GOLD_DELAY, "金资源生成间隔，单位为秒；2.10.7 默认值为 4 秒。");
         comment(config, root + ConfigPath.GENERATOR_GOLD_AMOUNT, "每次生成的金数量。");
         comment(config, root + ConfigPath.GENERATOR_GOLD_SPAWN_LIMIT, "单个生成点允许存在的金物品上限。");
         commentTier(config, root, "diamond", "钻石");

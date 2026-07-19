@@ -118,7 +118,7 @@ MULTIARENA 首次使用时，在希望玩家出现的位置面向目标方向执
 /bw removeGenerator <Iron|Gold|Diamond|Emerald> [队伍]
 ```
 
-铁、金和岛屿绿宝石通常属于队伍；钻石和中央绿宝石通常是全局生成器。具体速度在 `generators.yml` 调整。
+铁、金和岛屿绿宝石通常属于队伍；钻石和中央绿宝石通常是全局生成器。具体速度在 `plugins/SimpMC-BedWars/generators.yml` 调整：`delay` 越小刷新越快，`amount` 是每次产出数量。竞技场存在同名分组配置时会优先使用分组值。
 
 ## 8. 其他参数
 
