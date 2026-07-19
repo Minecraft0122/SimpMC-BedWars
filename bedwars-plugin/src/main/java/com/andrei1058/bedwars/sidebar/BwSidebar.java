@@ -545,13 +545,23 @@ public class BwSidebar implements ISidebar {
             }
         }
 
+        List<String> headerLines = language.l(headerPath);
+        if (hasNoArena()) {
+            headerLines = selectLobbyHeader(config.getYml().getStringList(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER),
+                    headerLines);
+        }
+
         this.headerFooter = new TabHeaderFooter(
-                this.normalizeLines(language.l(headerPath)),
+                this.normalizeLines(headerLines),
                 this.normalizeLines(language.l(footerPath)),
                 withPersistentPlaceholders(getPlaceholders(this.getPlayer()))
         );
 
         SidebarManager.getInstance().sendHeaderFooter(player, headerFooter);
+    }
+
+    static List<String> selectLobbyHeader(List<String> configuredHeader, List<String> languageHeader) {
+        return configuredHeader == null || configuredHeader.isEmpty() ? languageHeader : configuredHeader;
     }
 
     @Override

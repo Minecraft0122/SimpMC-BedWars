@@ -36,6 +36,7 @@ public class JoinListenerShared implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e){
+        e.setJoinMessage(null);
         final Player p = e.getPlayer();
 
         JoinHandlerCommon.displayCustomerDetails(p);
@@ -58,6 +59,7 @@ public class JoinListenerShared implements Listener {
 
         // Give scoreboard
         if (e.getPlayer().getWorld().getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
+            Arena.enterLobby(e.getPlayer());
             SidebarService.getInstance().giveSidebar(e.getPlayer(), null, true);
         }
     }

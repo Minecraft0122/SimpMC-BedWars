@@ -66,7 +66,7 @@ public class SpoilPlayerTNTFeature {
         @Override
         public void run() {
             for (Player player : instance.playersWithTnt) {
-                if (player.hasPotionEffect(PotionEffectType.INVISIBILITY)) return;
+                if (player.hasPotionEffect(PotionEffectType.INVISIBILITY)) continue;
                 BedWars.nms.playRedStoneDot(player);
             }
         }

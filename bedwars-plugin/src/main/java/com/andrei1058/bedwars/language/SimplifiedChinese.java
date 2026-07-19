@@ -59,7 +59,7 @@ public class SimplifiedChinese extends Language {
             yml.set("player-die-knocked-final", null);
         }
 
-        yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<游戏/模式>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " start &3（赞助者）"));
+        yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<游戏/模式>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " invite &o<大厅玩家>", "&2▪ &7/" + mainCmd + " start &3（赞助者）"));
         yml.addDefault(Messages.COMMAND_LANG_LIST_HEADER, "{prefix} &2可用的语言：");
         yml.addDefault(Messages.COMMAND_LANG_LIST_FORMAT, "&a▪  &7{iso} - &f{name}");
         yml.addDefault(Messages.COMMAND_LANG_USAGE, "{prefix}&用法：/lang &f&o<iso>");
@@ -73,7 +73,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.COMMAND_JOIN_DENIED_IS_FULL_OF_VIPS, "{prefix}&c很抱歉，虽然我们已知道你已赞助，但该游戏已满。\n&c此游戏中全是赞助者或管理员。");
         yml.addDefault(Messages.COMMAND_JOIN_DENIED_PARTY_TOO_BIG, "{prefix}&c你的队伍人数太多了，不能作为一个队伍加入该游戏:(");
         yml.addDefault(Messages.COMMAND_JOIN_DENIED_NOT_PARTY_LEADER, "{prefix}&c只有队长才能选择游戏。");
-        yml.addDefault(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG, "{prefix}&7{player}&e加入了游戏(&b{on}&e/&b{max}&e)！");
+        yml.addDefault(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG, "&e[BW] &f玩家 &b{playername} &f加入了竞技场 &a{arena}");
         yml.addDefault(Messages.COMMAND_JOIN_SPECTATOR_MSG, "{prefix}&6你正在观战&9{arena}&6。\n{prefix}&e输入 &c/leave &e离开。");
         yml.addDefault(Messages.COMMAND_JOIN_SPECTATOR_DENIED_MSG, "&c该游戏不允许旁观！");
         yml.addDefault(Messages.COMMAND_TP_PLAYER_NOT_FOUND, "{prefix}&c无法找到这位玩家！");
@@ -807,7 +807,7 @@ public class SimplifiedChinese extends Language {
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER, List.of(
                 "",
-                "&f你正在为 {teamColor}{teamName}队 &f而战",
+                "&f你属于 {teamColor}{teamName}队",
                 "&a{serverIp}",
                 "&f由 {poweredBy} 提供支持",
                 ""
@@ -1107,12 +1107,12 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(5, SimplifiedChinese::migrateLegacyMessages);
+        updateToLatestVersion(6, SimplifiedChinese::migrateLegacyMessages);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
 
-    private static void migrateLegacyMessages(YamlConfiguration yml) {
+    static void migrateLegacyMessages(YamlConfiguration yml) {
         renameStatsItem(yml, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_NAME.replace("%path%", "stats"));
         renameStatsItem(yml, Messages.GENERAL_CONFIGURATION_WAITING_ITEMS_NAME.replace("%path%", "stats"));
         replaceIfEqual(yml, Messages.PLAYER_DIE_VOID_FALL_REGULAR_KILL,
@@ -1126,6 +1126,23 @@ public class SimplifiedChinese extends Language {
             migrateChatSeparator(yml, path);
         }
         migrateOriginalTabMessages(yml);
+        migrateCurrentMessageDefaults(yml);
+        migrateCommandHelp(yml, mainCmd);
+    }
+
+    static void migrateCommandHelp(YamlConfiguration yml, String commandName) {
+        replaceListIfEqual(yml, Messages.COMMAND_MAIN,
+                List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " start &3（赞助者）"),
+                List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " invite &o<大厅玩家>", "&2▪ &7/" + commandName + " start &3（赞助者）"));
+    }
+
+    static void migrateCurrentMessageDefaults(YamlConfiguration yml) {
+        replaceIfEqual(yml, Messages.COMMAND_JOIN_PLAYER_JOIN_MSG,
+                "{prefix}&7{player}&e加入了游戏(&b{on}&e/&b{max}&e)！",
+                "&e[BW] &f玩家 &b{playername} &f加入了竞技场 &a{arena}");
+        replaceListIfEqual(yml, Messages.FORMATTING_SB_TAB_PLAYING_FOOTER,
+                List.of("", "&f你正在为 {teamColor}{teamName}队 &f而战", "&a{serverIp}", "&f由 {poweredBy} 提供支持", ""),
+                List.of("", "&f你属于 {teamColor}{teamName}队", "&a{serverIp}", "&f由 {poweredBy} 提供支持", ""));
     }
 
     static void migrateOriginalTabMessages(YamlConfiguration yml) {
@@ -1260,6 +1277,10 @@ public class SimplifiedChinese extends Language {
 
     private static void replaceIfEqual(YamlConfiguration yml, String path, String oldValue, String newValue) {
         if (oldValue.equals(yml.getString(path))) yml.set(path, newValue);
+    }
+
+    private static void replaceListIfEqual(YamlConfiguration yml, String path, List<String> oldValue, List<String> newValue) {
+        if (oldValue.equals(yml.getStringList(path))) yml.set(path, newValue);
     }
 
     private static void migrateChatSeparator(YamlConfiguration yml, String path) {

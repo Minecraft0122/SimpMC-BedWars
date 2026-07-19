@@ -24,11 +24,11 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
-import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
+import com.andrei1058.bedwars.arena.matchmaking.ArenaInviteManager;
 import com.andrei1058.bedwars.commands.bedwars.subcmds.regular.CmdStats;
 import com.andrei1058.bedwars.sidebar.SidebarService;
 import org.bukkit.Bukkit;
@@ -49,6 +49,8 @@ public class QuitAndTeleportListener implements Listener {
     @EventHandler
     public void onLeave(@NotNull PlayerQuitEvent e) {
         Player p = e.getPlayer();
+        boolean wasInLobby = LobbyAnnouncements.isLobbyPlayer(p);
+        e.setQuitMessage(null);
         // Remove from arena
         IArena a = Arena.getArenaByPlayer(p);
         if (a != null) {
@@ -73,9 +75,7 @@ public class QuitAndTeleportListener implements Listener {
             }
         }
 
-        if (getServerType() != ServerType.SHARED) {
-            e.setQuitMessage(null);
-        }
+        LobbyAnnouncements.playerQuit(p, wasInLobby);
         // Manage internal parties
         if (getParty().isInternal()) {
             if (getParty().hasParty(p)) {
@@ -98,6 +98,7 @@ public class QuitAndTeleportListener implements Listener {
         }
 
         CmdStats.getStatsCoolDown().remove(e.getPlayer().getUniqueId());
+        ArenaInviteManager.getInstance().clearPlayer(e.getPlayer().getUniqueId());
     }
 
     /**

@@ -618,16 +618,15 @@ public class v1_21_R3 extends VersionSupport {
     @Override
     public void playRedStoneDot(Player player) {
         Location location = player.getLocation().add(0, 2.6, 0);
-        player.getWorld().spawnParticle(
-                Particle.DUST,
-                location,
-                1,
-                0D,
-                0D,
-                0D,
-                0D,
-                new Particle.DustOptions(Color.RED, 1F)
-        );
+        Particle.DustOptions dust = new Particle.DustOptions(Color.RED, 1F);
+        List<Player> receivers = player.getWorld().getPlayers().stream()
+                .filter(viewer -> !viewer.equals(player))
+                .filter(viewer -> viewer.getLocation().distanceSquared(location) <= 1024D)
+                .toList();
+        if (receivers.isEmpty()) return;
+        player.getWorld().spawnParticle(Particle.DUST, receivers, player,
+                location.getX(), location.getY(), location.getZ(), 1,
+                0D, 0D, 0D, 0D, dust);
     }
 
     @Override

@@ -63,6 +63,7 @@ import com.andrei1058.bedwars.configuration.ArenaConfig;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.levels.internal.InternalLevel;
 import com.andrei1058.bedwars.levels.internal.PerMinuteTask;
+import com.andrei1058.bedwars.listeners.LobbyAnnouncements;
 import com.andrei1058.bedwars.listeners.blockstatus.BlockStatusListener;
 import com.andrei1058.bedwars.listeners.dropshandler.PlayerDrops;
 import com.andrei1058.bedwars.money.internal.MoneyPerMinuteTask;
@@ -511,20 +512,11 @@ public class Arena implements IArena {
 
             p.closeInventory();
             players.add(p);
+            LobbyAnnouncements.playerEnteredArena(p);
             p.setFlying(false);
             p.setAllowFlight(false);
             p.setHealth(20);
-            for (Player on : players) {
-                on.sendMessage(
-                        getMsg(on, Messages.COMMAND_JOIN_PLAYER_JOIN_MSG)
-                                .replace("{vPrefix}", getChatSupport().getPrefix(p))
-                                .replace("{vSuffix}", getChatSupport().getSuffix(p))
-                                .replace("{playername}", p.getName())
-                                .replace("{player}", p.getDisplayName())
-                                .replace("{on}", String.valueOf(getPlayers().size()))
-                                .replace("{max}", String.valueOf(getMaxPlayers()))
-                );
-            }
+            broadcastArenaJoin(p);
             setArenaByPlayer(p, this);
 
             /* check if you can start the arena */
@@ -648,6 +640,8 @@ public class Arena implements IArena {
                     playerLocation.put(p, p.getLocation());
                 }
                 setArenaByPlayer(p, this);
+                LobbyAnnouncements.playerEnteredArena(p);
+                broadcastArenaJoin(p);
             }
 
             SidebarService.getInstance().giveSidebar(p, this, false);
@@ -1650,6 +1644,24 @@ public class Arena implements IArena {
         p.setAllowFlight(false);
         p.setCanPickupItems(true);
         sendLobbyCommandItems(p);
+        LobbyAnnouncements.playerEntered(p);
+    }
+
+    private void broadcastArenaJoin(Player joined) {
+        Set<Player> audience = new LinkedHashSet<>(players);
+        audience.addAll(spectators);
+        for (Player viewer : audience) {
+            viewer.sendMessage(
+                    getMsg(viewer, Messages.COMMAND_JOIN_PLAYER_JOIN_MSG)
+                            .replace("{vPrefix}", getChatSupport().getPrefix(joined))
+                            .replace("{vSuffix}", getChatSupport().getSuffix(joined))
+                            .replace("{playername}", joined.getName())
+                            .replace("{player}", joined.getDisplayName())
+                            .replace("{arena}", getDisplayName())
+                            .replace("{on}", String.valueOf(getPlayers().size()))
+                            .replace("{max}", String.valueOf(getMaxPlayers()))
+            );
+        }
     }
 
     /**

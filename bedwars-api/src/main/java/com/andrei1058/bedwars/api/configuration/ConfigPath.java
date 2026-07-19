@@ -158,6 +158,7 @@ public class ConfigPath {
 
     public static final String SB_CONFIG_TAB_HEADER_FOOTER_ENABLE = "scoreboard-settings.tab-header-footer.enable";
     public static final String SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL = "scoreboard-settings.tab-header-footer.refresh-interval";
+    public static final String SB_CONFIG_TAB_LOBBY_HEADER = "scoreboard-settings.tab-header-footer.lobby-header";
     /** @deprecated TAB text is stored in the original state-specific language paths. */
     @Deprecated
     public static final String SB_CONFIG_TAB_HEADER = "scoreboard-settings.tab-header-footer.header";

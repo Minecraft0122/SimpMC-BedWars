@@ -136,7 +136,7 @@ public class ChatFormatting implements Listener {
         if (team != null) {
             String teamFormat = getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_TEAM)
                     .replace("{TeamColor}", team.getColor().chat() + "")
-                    .replace("{TeamName}", team.getDisplayName(Language.getPlayerLanguage(player)).toUpperCase());
+                    .replace("{TeamName}", team.getDisplayName(Language.getPlayerLanguage(player)));
             content = content.replace("{team}", teamFormat);
         }
         return SupportPAPI.getSupportPAPI().replace(player, content).replace("{message}", "%2$s");

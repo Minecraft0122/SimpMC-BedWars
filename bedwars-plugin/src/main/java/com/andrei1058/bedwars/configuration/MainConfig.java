@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 13;
+    private static final int CONFIG_VERSION = 14;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -77,6 +77,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_REFRESH, 300);
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE, true);
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL, 20);
+        yml.addDefault(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER, Collections.emptyList());
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY, 4000);
@@ -272,6 +273,9 @@ public class MainConfig extends ConfigManager {
                 "是否在大厅 TAB 中显示玩家前后缀；默认开启，且不依赖右侧大厅计分板。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB,
                 "是否在 TAB 玩家列表中额外显示生命值数字。默认关闭，只保留原版网络延迟图标，避免被误认为两个 ping。");
+        setComments(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER,
+                "仅覆盖大厅 TAB 顶部文字；支持 & 颜色代码及 {serverIp}、{on} 等占位符。",
+                "空列表表示继续使用 Languages/messages_<语言>.yml 中的原仓库大厅页首，页尾不受此项影响。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_RESTART,
                 "游戏结束后竞技场重置倒计时，单位为秒；默认 60 秒。",
                 "聊天栏只在 60、30、15、10、5、4、3、2、1、0 秒时广播，避免刷屏。");

@@ -54,9 +54,12 @@ public interface ITeam {
     String getName();
 
     /**
-     * Get team display name.
+     * Get the configured team name for display.
      *
-     * @param language get the display name in target language.
+     * <p>Team names are map identifiers and are intentionally not localized.
+     * The language parameter remains for API compatibility.</p>
+     *
+     * @param language ignored compatibility parameter.
      */
     String getDisplayName(Language language);
 

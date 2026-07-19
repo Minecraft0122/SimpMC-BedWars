@@ -26,6 +26,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON, "玩家主动离开进行中的游戏时，是否记为中途退出。");
         comment(config, ConfigPath.GENERAL_ENABLE_PARTY_CMD, "组队系统设置：是否启用命令、是否允许组队以及外部 Parties 的最低等级。");
         comment(config, ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板、TAB 玩家列表、血量显示及刷新周期设置。", "TAB 页首和页尾按游戏状态读取玩家语言文件。", "刷新周期单位为 tick，20 tick 约等于 1 秒。");
+        comment(config, ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER, "仅自定义大厅 TAB 顶部文字；空列表沿用语言文件中的原仓库样式。", "支持 & 颜色代码及 {serverIp}、{on} 等占位符，不会改变大厅页尾或其他游戏状态。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "掉线玩家允许重连的时间，单位为秒；超时后直接视为离开。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_MODE_GAMES_BEFORE_RESTART, "BUNGEE/自动扩容相关设置：重启场次、重启命令、节点 ID、超时及大厅地址。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, "大厅套接字地址列表，格式为 主机:端口。", "协议没有身份认证和加密，只能填写受信任的内网地址，并使用防火墙禁止公网访问。");

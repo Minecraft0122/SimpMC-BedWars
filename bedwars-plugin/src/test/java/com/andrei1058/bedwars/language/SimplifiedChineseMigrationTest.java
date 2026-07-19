@@ -79,4 +79,44 @@ class SimplifiedChineseMigrationTest {
         assertNotEquals(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX,
                 Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC);
     }
+
+    @Test
+    void migratesOnlyBuiltInArenaJoinAndPlayingTeamMessages() {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG,
+                "{prefix}&7{player}&e加入了游戏(&b{on}&e/&b{max}&e)！");
+        language.set(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER,
+                List.of("", "&f你正在为 {teamColor}{teamName}队 &f而战", "&a{serverIp}", "&f由 {poweredBy} 提供支持", ""));
+
+        SimplifiedChinese.migrateCurrentMessageDefaults(language);
+
+        assertEquals("&e[BW] &f玩家 &b{playername} &f加入了竞技场 &a{arena}",
+                language.getString(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG));
+        assertEquals("&f你属于 {teamColor}{teamName}队",
+                language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER).get(1));
+    }
+
+    @Test
+    void preservesCustomArenaJoinAndPlayingTeamMessages() {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG, "custom join");
+        language.set(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER, List.of("custom footer"));
+
+        SimplifiedChinese.migrateCurrentMessageDefaults(language);
+
+        assertEquals("custom join", language.getString(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG));
+        assertEquals(List.of("custom footer"),
+                language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER));
+    }
+
+    @Test
+    void addsArenaInviteToTheUnchangedBuiltInCommandHelp() {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(Messages.COMMAND_MAIN, List.of("", "&2▪ &7/bw stats", "&2▪ &7/bw join &o<游戏/模式>",
+                "&2▪ &7/bw leave", "&2▪ &7/bw lang", "&2▪ &7/bw gui", "&2▪ &7/bw start &3（赞助者）"));
+
+        SimplifiedChinese.migrateCommandHelp(language, "bw");
+
+        assertTrue(language.getStringList(Messages.COMMAND_MAIN).contains("&2▪ &7/bw invite &o<大厅玩家>"));
+    }
 }

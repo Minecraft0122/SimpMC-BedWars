@@ -16,6 +16,10 @@
 | `/bw team accept <玩家>` | 接受邀请 |
 | `/bw team decline <玩家>` | 拒绝邀请 |
 | `/bw team leave` | 退出开局队伍 |
+| `/bw invite <玩家>` | 从等待中的竞技场邀请大厅玩家加入匹配，邀请有效期 30 秒 |
+| `/bw invite list` | 查看收到的有效竞技场邀请 |
+| `/bw invite accept <邀请者>` | 接受竞技场邀请 |
+| `/bw invite decline <邀请者>` | 拒绝竞技场邀请 |
 | `/shout <消息>` | 游戏内全体喊话 |
 | `/rejoin` | 在有效窗口内重连 |
 

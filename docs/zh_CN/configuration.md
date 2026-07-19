@@ -28,6 +28,7 @@
 TAB 相关常用项：
 
 - `scoreboard-settings.tab-header-footer.enable`：显示 TAB 顶部和底部内容，默认开启，且不依赖右侧大厅计分板。
+- `scoreboard-settings.tab-header-footer.lobby-header`：仅配置大厅 TAB 顶部文字。空列表沿用语言文件中的原仓库 104 空格宽度模板；非空时逐行填写，支持 `&` 颜色代码和 `{serverIp}`、`{on}` 等占位符。大厅页尾及竞技场各状态不会被覆盖。
 - `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，2.10.10 起默认开启。
 - 游戏进行时，玩家列表和玩家头顶名字统一使用其所属队伍颜色；旧 `teammate-color` 配置会自动删除。
 - `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制。
@@ -50,6 +51,8 @@ TAB 相关常用项：
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。
 
 `Team.<队伍>.Color` 的青色填写 `CYAN`。2.10.11 起旧值 `AQUA` 会自动迁移为 `CYAN`，对应床、羊毛、玻璃和陶瓦均使用原版 `CYAN_*` 材质。
+
+队伍名称直接取 `Team.<队伍>` 的节点名并保持原大小写，不经过语言翻译。旧语言文件中可能存在的 `team-name-<竞技场>-<队伍>` 不再参与显示。
 
 坐标由插件生成，建议使用设置命令，不要手写。方向字段与坐标分开，避免破坏方块中心格式。
 

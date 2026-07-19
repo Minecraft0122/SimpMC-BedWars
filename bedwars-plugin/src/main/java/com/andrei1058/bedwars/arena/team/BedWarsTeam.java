@@ -114,7 +114,6 @@ public class BedWarsTeam implements ITeam {
                 ? arena.getConfig().getYml().getDouble(teamRoot + ConfigPath.ARENA_TEAM_UPGRADE_FACING) : null;
         this.shop = NpcFacing.apply(shop, shopFacing, spawn);
         this.teamUpgrades = NpcFacing.apply(teamUpgrades, upgradeFacing, spawn);
-        Language.saveIfNotExists(ConfigPath.TEAM_NAME_PATH.replace("{arena}", getArena().getArenaName()).replace("{team}", getName()), name);
         arena.getRegionsList().add(new Cuboid(spawn, arena.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION), true));
 
         Location drops = getArena().getConfig().getArenaLoc("Team." + getName() + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC);
@@ -693,8 +692,7 @@ public class BedWarsTeam implements ITeam {
 
     @Override
     public String getDisplayName(Language language) {
-        String m = language.m(ConfigPath.TEAM_NAME_PATH.replace("{arena}", getArena().getArenaName()).replace("{team}", getName()));
-        return m == null ? getName() : m;
+        return getName();
     }
 
     public TeamColor getColor() {
