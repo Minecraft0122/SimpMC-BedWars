@@ -38,7 +38,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 7;
+    private static final int CONFIG_VERSION = 8;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -50,7 +50,6 @@ public class ArenaConfig extends ConfigManager {
         yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 服务器。");
         yml.addDefault("group", "Default");
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
-        yml.addDefault("minPlayers", 2);
         yml.addDefault("maxInTeam", 1);
         yml.addDefault("allowSpectate", true);
         yml.addDefault(ConfigPath.ARENA_SPAWN_PROTECTION, 5);
@@ -79,7 +78,6 @@ public class ArenaConfig extends ConfigManager {
         yml.options().copyDefaults(true);
         setComments("group", "竞技场分组，用于菜单分类和匹配。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
-        setComments("minPlayers", "开始倒计时所需的最少玩家数；为防止单队游戏，实际值不得小于 2。");
         setComments("maxInTeam", "每支队伍的最大玩家数。");
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
@@ -104,9 +102,7 @@ public class ArenaConfig extends ConfigManager {
         moveIfAbsent(config, "islandRadius", ConfigPath.ARENA_ISLAND_RADIUS);
         config.set("voidKill", null);
         config.set(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, null);
-        if (config.getInt("minPlayers", 2) < 2) {
-            config.set("minPlayers", 2);
-        }
+        config.set("minPlayers", null);
 
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
         addRuleIfMissing(gameRules, "doDaylightCycle", false);

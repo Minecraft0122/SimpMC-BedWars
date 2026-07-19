@@ -123,7 +123,7 @@ public class Arena implements IArena {
     private GameState status = GameState.restarting;
     private YamlConfiguration yml;
     private ArenaConfig cm;
-    private int minPlayers = 2, maxPlayers = 10, maxInTeam = 1, islandRadius = 10;
+    private int maxPlayers = 10, maxInTeam = 1, islandRadius = 10;
     public int upgradeDiamondsCount = 0, upgradeEmeraldsCount = 0;
     public boolean allowSpectate = true;
     private World world;
@@ -236,7 +236,6 @@ public class Arena implements IArena {
         }
         maxInTeam = yml.getInt("maxInTeam");
         maxPlayers = yml.getConfigurationSection("Team").getKeys(false).size() * maxInTeam;
-        minPlayers = Math.max(2, yml.getInt("minPlayers"));
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
         allowMapBreak = yml.getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK);
@@ -529,13 +528,14 @@ public class Arena implements IArena {
 
             /* check if you can start the arena */
             boolean isStatusChange = false;
-            if (status == GameState.waiting && players.size() >= minPlayers) {
+            if (status == GameState.waiting && ArenaStartPolicy.hasEnoughPlayers(players.size())) {
                 changeStatus(GameState.starting);
                 isStatusChange = true;
             }
 
             //half full arena time shorten
-            if (players.size() >= getMaxPlayers() / 2 && players.size() > minPlayers) {
+            if (players.size() >= getMaxPlayers() / 2
+                    && players.size() > ArenaStartPolicy.MINIMUM_PLAYERS) {
                 if (startingTask != null) {
                     if (Bukkit.getScheduler().isCurrentlyRunning(startingTask.getTask())) {
                         if (startingTask.getCountdown() > getConfig().getInt(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_HALF)) {
@@ -800,13 +800,7 @@ public class Arena implements IArena {
 
         if (p.getPassenger() != null && p.getPassenger().getType() == EntityType.ARMOR_STAND) p.getPassenger().remove();
 
-        boolean teamuri = false;
-        for (Player on : getPlayers()) {
-            if (getParty().hasParty(on)) {
-                teamuri = true;
-            }
-        }
-        if (status == GameState.starting && (maxInTeam > players.size() && teamuri || players.size() < minPlayers && !teamuri)) {
+        if (status == GameState.starting && !ArenaStartPolicy.hasEnoughPlayers(players.size())) {
             changeStatus(GameState.waiting);
             for (Player on : players) {
                 on.sendMessage(getMsg(on, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
@@ -944,19 +938,6 @@ public class Arena implements IArena {
                     }
                     getParty().disband(p);
 
-                    // prevent arena from staring with a single player
-                    teamuri = false;
-                    for (Player on : getPlayers()) {
-                        if (getParty().hasParty(on)) {
-                            teamuri = true;
-                        }
-                    }
-                    if (status == GameState.starting && (maxInTeam > players.size() && teamuri || players.size() < minPlayers && !teamuri)) {
-                        changeStatus(GameState.waiting);
-                        for (Player on : players) {
-                            on.sendMessage(getMsg(on, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
-                        }
-                    }
                 }
             }
         }

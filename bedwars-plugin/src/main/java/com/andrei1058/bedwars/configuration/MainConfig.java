@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 9;
+    private static final int CONFIG_VERSION = 10;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -126,14 +126,14 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_TNT_FUSE_TICKS, 45);
 
         // fireball category
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.5);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 10);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, false);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.25);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.8);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_COOLDOWN, 0.5);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, 2.0);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 4.0);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES, 0.0);
         //
         yml.addDefault("database.enable", false);
@@ -273,7 +273,8 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
         setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");
-        setComments(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, "火球爆炸、击退、冷却与伤害设置。");
+        setComments(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
+                "火球爆炸、击退、冷却与伤害设置。2.10.5 默认增强爆炸范围、水平/垂直击退和敌方伤害。");
         setComments("database.enable", "是否使用 MySQL；关闭时使用本地 SQLite。", "启用前请正确填写下面的连接信息。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
@@ -284,6 +285,10 @@ public class MainConfig extends ConfigManager {
     }
 
     private static void migrateLegacyConfig(YamlConfiguration yml) {
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0, 3.5);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0, 1.25);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65, 0.8);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0, 4.0);
         if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300) == 300) {
             yml.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
         }
@@ -330,6 +335,12 @@ public class MainConfig extends ConfigManager {
             yml.set(obsoletePath, null);
         }
         migrateLobbyLocation(yml);
+    }
+
+    static void upgradeLegacyNumber(YamlConfiguration yml, String path, double oldValue, double newValue) {
+        if (Double.compare(yml.getDouble(path), oldValue) == 0) {
+            yml.set(path, newValue);
+        }
     }
 
     private static void ensureLobbyItem(YamlConfiguration yml, String name, String command, boolean enchanted,

@@ -112,6 +112,7 @@ public class Messages {
     public static String ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT = "arena-countdown-stopped";
     //public static String ARENA_PLAYER_QUIT = "player.quit";
     public static String ARENA_RESTART_PLAYER_KICK = "arena-restart-kick";
+    public static String ARENA_RESTART_COUNTDOWN = "arena-restart-countdown";
     public static String ARENA_JOIN_DENIED_SELECTOR = "arena-join-denied-selector";
     public static String ARENA_JOIN_DENIED_NO_PROXY = "arena-join-denied-no-bwp";
     public static String ARENA_SPECTATE_DENIED_SELECTOR = "arena-spectate-denied-selector";
@@ -214,8 +215,8 @@ public class Messages {
     // TAB STARTING FOR SPECTATORS
     public static String FORMATTING_SB_TAB_STARTING_HEADER_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.header";
     public static String FORMATTING_SB_TAB_STARTING_FOOTER_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.footer";
-    public static String FORMATTING_SB_TAB_STARTING_PREFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.player.prefix";
-    public static String FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.player.suffix";
+    public static String FORMATTING_SB_TAB_STARTING_PREFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.prefix";
+    public static String FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.suffix";
 
     // TAB PLAYING
     public static String FORMATTING_SB_TAB_PLAYING_HEADER = FORMATTING_SB_TAB_BASE+".playing.alive.header";

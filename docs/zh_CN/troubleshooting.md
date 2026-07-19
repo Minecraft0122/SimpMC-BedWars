@@ -34,7 +34,7 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 - 至少两支队伍。
 - 每队已设置 Color、Spawn、Bed、Shop、Upgrade。
 - 等待点和观战点所在世界正确。
-- `maxInTeam` 大于 0，`minPlayers` 不超过竞技场总容量。
+- `maxInTeam` 大于 0；开局至少需要两名玩家，且地图至少配置两支队伍。
 - 控制台是否指出具体缺失路径。
 
 ## 自动找不到床
@@ -53,6 +53,7 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 
 ## 大厅玩家能修改物品或方块
 
+- 当前版本会阻止大厅玩家点击、拖拽、合成、交换副手、使用和丢弃背包物品。
 - 确认 `serverType` 是 MULTIARENA。
 - 确认玩家所在世界就是 `/bw setLobby` 保存的大厅世界。
 - 管理员若执行过 `/bw build`，再次执行退出建造会话。

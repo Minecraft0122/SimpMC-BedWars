@@ -329,7 +329,12 @@ public class BwSidebar implements ISidebar {
 
             providers.add(new PlaceholderProvider("{time}", () -> {
                 GameState status = this.arena.getStatus();
-                if (status == GameState.playing || status == GameState.restarting) {
+                if (status == GameState.restarting) {
+                    return arena.getRestartingTask() == null
+                            ? "0"
+                            : String.valueOf(Math.max(0, arena.getRestartingTask().getRestarting()));
+                }
+                if (status == GameState.playing) {
                     return getNextEventTime();
                 } else {
                     if (status == GameState.starting) {

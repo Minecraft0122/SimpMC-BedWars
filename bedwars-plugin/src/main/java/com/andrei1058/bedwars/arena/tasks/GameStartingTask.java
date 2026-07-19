@@ -32,6 +32,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.tasks.StartingTask;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.ArenaStartPolicy;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
@@ -95,11 +96,8 @@ public class GameStartingTask implements Runnable, StartingTask {
             long activeTeams = getArena().getTeams().stream()
                     .filter(team -> !team.getMembers().isEmpty())
                     .count();
-            if (activeTeams < 2) {
-                BedWars.plugin.getLogger().warning("Stopped arena " + getArena().getArenaName()
-                        + " from starting because fewer than two teams have players.");
-                task.cancel();
-                getArena().changeStatus(GameState.waiting);
+            if (!ArenaStartPolicy.hasEnoughActiveTeams(activeTeams)) {
+                abortInvalidTeamAssignment();
                 return;
             }
 
@@ -193,5 +191,25 @@ public class GameStartingTask implements Runnable, StartingTask {
 
     public void cancel() {
         task.cancel();
+    }
+
+    private void abortInvalidTeamAssignment() {
+        for (ITeam team : getArena().getTeams()) {
+            if (team instanceof BedWarsTeam bedWarsTeam) {
+                bedWarsTeam.clearPreGameAssignments();
+            } else {
+                for (Player player : new ArrayList<>(team.getMembers())) {
+                    team.destroyBedHolo(player);
+                }
+                team.getMembers().clear();
+            }
+        }
+        BedWars.plugin.getLogger().warning("已停止竞技场 " + getArena().getArenaName()
+                + " 的开局：分队后少于两支非空队伍。");
+        for (Player player : getArena().getPlayers()) {
+            player.sendMessage(getMsg(player, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
+        }
+        task.cancel();
+        getArena().changeStatus(GameState.waiting);
     }
 }

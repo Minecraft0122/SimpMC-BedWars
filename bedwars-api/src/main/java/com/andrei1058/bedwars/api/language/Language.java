@@ -50,6 +50,8 @@ public class Language extends ConfigManager {
     public Language(Plugin plugin, String iso) {
         super(plugin, "messages_" + iso, plugin.getDataFolder().getPath() + "/Languages");
         this.iso = iso;
+        getYml().addDefault(Messages.ARENA_RESTART_COUNTDOWN,
+                "&eArena resets in &c{time}&e seconds.");
 
         // replace old placeholders
         List<String> oldMsg = getYml().getStringList(Messages.GAME_END_TOP_PLAYER_CHAT);
@@ -132,6 +134,9 @@ public class Language extends ConfigManager {
         setComments(Messages.FORMATTING_CHAT_SHOUT, "游戏内全体喊话格式。");
         setComments(Messages.FORMATTING_CHAT_TEAM, "游戏内队伍聊天格式。");
         setComments(Messages.FORMATTING_CHAT_SPECTATOR, "观战者聊天格式。");
+        setComments(Messages.ARENA_RESTART_COUNTDOWN, "游戏结束后的竞技场重置倒计时；必须保留 {time}。");
+        setComments(Messages.FORMATTING_SB_TAB_BASE,
+                "TAB 玩家列表的头部、底部、玩家名前缀与后缀；避免使用大量空格强制宽度。");
         setComments(Messages.SCOREBOARD_LOBBY, "主大厅计分板文本列表。");
         setComments(Messages.SCOREBOARD_DEFAULT_WAITING, "默认分组等待阶段计分板文本列表。");
         setComments(Messages.SCOREBOARD_DEFAULT_PLAYING, "默认分组游戏阶段计分板文本列表。");

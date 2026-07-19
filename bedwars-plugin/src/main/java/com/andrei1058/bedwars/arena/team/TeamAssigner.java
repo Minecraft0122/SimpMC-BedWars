@@ -62,8 +62,8 @@ public class TeamAssigner implements ITeamAssigner {
             }
 
             if (approvedAllocation.stream().filter(team -> !team.isEmpty()).count() < 2) {
-                BedWars.plugin.getLogger().warning("Cancelled team assignments would leave arena "
-                        + arena.getArenaName() + " with fewer than two active teams; game start was stopped.");
+                BedWars.plugin.getLogger().warning("竞技场 " + arena.getArenaName()
+                        + " 的分队事件被取消后少于两支非空队伍，已停止开局。");
                 return;
             }
 

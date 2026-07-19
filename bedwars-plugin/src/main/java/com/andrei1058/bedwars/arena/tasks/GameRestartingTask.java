@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.shop.ShopHolo;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
+import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.tasks.RestartingTask;
 import com.andrei1058.bedwars.arena.Arena;
@@ -42,7 +43,10 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.Random;
+
+import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class GameRestartingTask implements Runnable, RestartingTask {
 
@@ -114,6 +118,7 @@ public class GameRestartingTask implements Runnable, RestartingTask {
         restarting--;
 
         if (getArena().getPlayers().isEmpty() && restarting > 9) restarting = 9;
+        announceRestartCountdown();
         if (restarting == 7) {
             for (Player on : new ArrayList<>(getArena().getPlayers())) {
                 getArena().removePlayer(on, BedWars.getServerType() == ServerType.BUNGEE);
@@ -148,6 +153,16 @@ public class GameRestartingTask implements Runnable, RestartingTask {
 
     public void cancel() {
         task.cancel();
+    }
+
+    private void announceRestartCountdown() {
+        if (restarting <= 0) return;
+        LinkedHashSet<Player> audience = new LinkedHashSet<>(getArena().getPlayers());
+        audience.addAll(getArena().getSpectators());
+        for (Player player : audience) {
+            BedWars.nms.playAction(player, getMsg(player, Messages.ARENA_RESTART_COUNTDOWN)
+                    .replace("{time}", String.valueOf(restarting)));
+        }
     }
 
 }

@@ -14,7 +14,7 @@
 - `countdowns`：开局、床消失、决战、结束和复活倒计时。
 - `party-settings`：内部及外部组队集成。
 - `tnt-jump-settings`、`blast-protection`、`tnt-prime-settings`：TNT 参数。
-- `fireball-settings`：火球速度、爆炸、击退、冷却和伤害。
+- `fireball`：火球速度、爆炸、击退、冷却和伤害。2.10.5 的增强默认值为范围 3.5、水平击退 1.25、垂直击退 0.8、敌方伤害 4.0。
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。
@@ -29,7 +29,7 @@
 
 每张地图一份。主要节点：
 
-- `group`、`display-name`、`minPlayers`、`maxInTeam`。
+- `group`、`display-name`、`maxInTeam`。
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
@@ -39,6 +39,8 @@
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。
 
 坐标由插件生成，建议使用设置命令，不要手写。方向字段与坐标分开，避免破坏方块中心格式。
+
+`minPlayers` 已被删除并会从旧竞技场配置中自动清理。竞技场固定在至少两名玩家时开始倒计时，正式开局前还会再次确认至少有两支非空队伍。
 
 ## generators.yml
 

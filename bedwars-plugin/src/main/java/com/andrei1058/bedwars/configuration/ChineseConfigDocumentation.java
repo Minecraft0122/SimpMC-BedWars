@@ -37,7 +37,16 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃力度、伤害与重心修正参数。");
         comment(config, ConfigPath.GENERAL_TNT_PROTECTION_END_STONE_BLAST, "TNT 对末地石、玻璃等方块的爆炸抗性参数。");
         comment(config, ConfigPath.GENERAL_TNT_AUTO_IGNITE, "TNT 放置后是否自动点燃，以及引信持续 tick 数。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, "火球爆炸范围、飞行速度、火焰、击退、冷却与伤害设置。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
+                "火球爆炸和击退生效范围；2.10.5 默认增强为 3.5。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, "火球飞行速度倍率。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否点燃方块。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.5 默认增强为 1.25。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, "火球垂直击退强度；2.10.5 默认增强为 0.8。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_COOLDOWN, "连续使用火球的冷却时间，单位为秒。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, "火球对发射者造成的伤害。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, "火球对敌人造成的伤害；2.10.5 默认增强为 4.0。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES, "火球对队友造成的伤害；0 表示不伤害队友。");
         comment(config, "database.enable", "数据存储设置：关闭时使用 SQLite，开启时连接 MySQL。", "修改连接信息后必须完整重启，切勿公开数据库密码。");
         comment(config, "database.pass", "MySQL 专用账户密码；不要沿用示例值，也不要提交到公开仓库。");
         comment(config, "database.ssl", "MySQL 连接是否启用 TLS；远程数据库建议开启并限制允许连接的来源地址。");
@@ -58,7 +67,6 @@ public final class ChineseConfigDocumentation {
     public static void arena(ConfigManager config) {
         comment(config, "group", "竞技场分组，用于匹配、菜单、生成器和升级配置。");
         comment(config, ConfigPath.ARENA_DISPLAY_NAME, "玩家可见名称；留空时使用竞技场世界名。");
-        comment(config, "minPlayers", "开始倒计时所需的最少玩家数，插件会强制至少为 2。");
         comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数。");
         comment(config, "allowSpectate", "是否允许玩家在游戏开始后进入观战。");
         comment(config, ConfigPath.ARENA_SPAWN_PROTECTION, "队伍出生点保护半径，单位为方块。");

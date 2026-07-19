@@ -146,6 +146,20 @@ public class BedWarsTeam implements ITeam {
     }
 
     /**
+     * Roll back a team assignment that failed the final multi-team start check.
+     * No player has spawned yet, so only assignment caches and bed holograms
+     * need to be cleared.
+     */
+    public void clearPreGameAssignments() {
+        for (Player player : new ArrayList<>(members)) {
+            BedHolo bedHolo = beds.remove(player.getUniqueId());
+            if (bedHolo != null) bedHolo.destroy();
+        }
+        members.clear();
+        membersCache.clear();
+    }
+
+    /**
      * first spawn
      */
     public void firstSpawn(Player p) {
