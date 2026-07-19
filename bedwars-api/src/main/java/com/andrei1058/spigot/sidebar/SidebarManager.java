@@ -49,6 +49,11 @@ public class SidebarManager {
         headerFooterCache.remove(player);
     }
 
+    public void clearHeaderFooter(@NotNull Player player) {
+        player.setPlayerListHeaderFooter("", "");
+        clearHeaderFooterCache(player);
+    }
+
     private static String renderLines(@NotNull List<SidebarLine> lines,
                                       @NotNull Collection<PlaceholderProvider> placeholders) {
         List<String> rendered = new ArrayList<>(lines.size());

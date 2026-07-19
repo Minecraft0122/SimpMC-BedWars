@@ -122,40 +122,40 @@ public class SidebarService implements ISidebarService {
     public void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay) {
         if (sidebarHandler == null) return;
         BwSidebar sidebar = sidebars.getOrDefault(player.getUniqueId(), null);
+        boolean sidebarEnabled = arena == null
+                ? config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR)
+                    && BedWars.getServerType() != ServerType.SHARED
+                : config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR);
+        boolean lobbyTabEnabled = arena == null && shouldKeepLobbyTabContext(
+                config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE),
+                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY));
 
         // check if we might need to remove the existing sidebar
         if (null != sidebar) {
             if (null == arena) {
-                // if sidebar is disabled in lobby on shared or multi-arena mode
-                if (!config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR) ||
-                        BedWars.getServerType() == ServerType.SHARED) {
+                if (!sidebarEnabled && !lobbyTabEnabled) {
                     this.remove(sidebar);
                     return;
                 }
             } else {
                 // if sidebar is disabled in game
-                if (!config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR)) {
+                if (!sidebarEnabled) {
                     this.remove(sidebar);
                     return;
                 }
             }
         }
 
-        // if sidebar was null but still disabled for lobbies
-        if (!config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR) && null == arena) {
-            return;
-        }
-        // if sidebar was null but still disabled in game
-        if (!config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR) && null != arena) {
-            return;
-        }
+        if (!sidebarEnabled && !lobbyTabEnabled) return;
 
         // set sidebar lines based on game state or lobby
         List<String> lines = null;
         List<String> title;
         if (null == arena) {
-            if (BedWars.getServerType() != ServerType.SHARED) {
+            if (sidebarEnabled) {
                 lines = Language.getList(player, Messages.SCOREBOARD_LOBBY);
+            } else if (lobbyTabEnabled) {
+                lines = Collections.emptyList();
             }
         } else {
             if (arena.getStatus() == GameState.waiting) {
@@ -202,6 +202,20 @@ public class SidebarService implements ISidebarService {
 
         // if we do not have lines we eventually remove the sidebar
         if (null == lines || lines.isEmpty()) {
+            if (arena == null && lobbyTabEnabled) {
+                boolean newlyAdded = false;
+                if (sidebar == null) {
+                    sidebar = new BwSidebar(player);
+                    newlyAdded = true;
+
+                    PlayerSidebarInitEvent event = new PlayerSidebarInitEvent(player, sidebar);
+                    Bukkit.getPluginManager().callEvent(event);
+                    if (event.isCancelled()) return;
+                }
+                sidebar.setContent(Collections.emptyList(), Collections.emptyList(), null);
+                if (newlyAdded) sidebars.put(player.getUniqueId(), sidebar);
+                return;
+            }
             if (null != sidebar) {
                 this.remove(sidebar);
             }
@@ -259,6 +273,10 @@ public class SidebarService implements ISidebarService {
 
     public static SidebarService getInstance() {
         return instance;
+    }
+
+    static boolean shouldKeepLobbyTabContext(boolean headerFooterEnabled, boolean playerListFormattingEnabled) {
+        return headerFooterEnabled || playerListFormattingEnabled;
     }
 
     protected SidebarManager getSidebarHandler() {

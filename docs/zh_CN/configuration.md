@@ -25,6 +25,15 @@
 
 刷新周期通常以 tick 为单位；20 tick 约等于 1 秒。倒计时和重连时间以秒为单位。
 
+TAB 相关常用项：
+
+- `scoreboard-settings.tab-header-footer.enable`：显示 TAB 顶部和底部内容，默认开启，且不依赖右侧大厅计分板。
+- `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，2.10.10 起默认开启。
+- `scoreboard-settings.player-list.teammate-color`：游戏中队友名字的特殊颜色。
+- `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制。
+
+简体中文 TAB 会在内容过短时自动补充适中的分隔线以维持可读宽度；自定义模板已经足够宽时不会继续撑宽。
+
 ## Arenas/<竞技场>.yml
 
 每张地图一份。主要节点：

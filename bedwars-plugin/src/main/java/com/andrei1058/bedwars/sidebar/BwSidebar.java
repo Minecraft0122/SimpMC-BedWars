@@ -8,7 +8,6 @@ import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
-import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.sidebar.ISidebar;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.stats.StatisticsOrdered;
@@ -68,12 +67,12 @@ public class BwSidebar implements ISidebar {
     }
 
     public void remove() {
-        if (handle == null) {
-            return;
+        if (handle != null) {
+            tabList.onSidebarRemoval();
+            handle.remove(player);
         }
-        tabList.onSidebarRemoval();
-        SidebarManager.getInstance().clearHeaderFooterCache(player);
-        handle.remove(player);
+        SidebarManager.getInstance().clearHeaderFooter(player);
+        headerFooter = null;
     }
 
     public void setContent(List<String> titleArray, List<String> lineArray, @Nullable IArena arena) {
@@ -477,6 +476,8 @@ public class BwSidebar implements ISidebar {
     // Provide header and footer for current game state
     private void assignTabHeaderFooter() {
         if (!config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE)) {
+            SidebarManager.getInstance().clearHeaderFooter(player);
+            this.headerFooter = null;
             return;
         }
 
@@ -486,10 +487,6 @@ public class BwSidebar implements ISidebar {
         String footerPath;
 
         if (hasNoArena()) {
-            if (getServerType() == ServerType.SHARED) {
-                this.headerFooter = null;
-                return;
-            }
             headerPath = Messages.FORMATTING_SB_TAB_LOBBY_HEADER;
             footerPath = Messages.FORMATTING_SB_TAB_LOBBY_FOOTER;
         } else {
@@ -558,9 +555,11 @@ public class BwSidebar implements ISidebar {
 
         }
 
+        List<String> footerLines = lang.l(footerPath);
+        List<String> headerLines = TabLayout.ensureMinimumHeaderWidth(lang.l(headerPath), footerLines);
         this.headerFooter = new TabHeaderFooter(
-                this.normalizeLines(lang.l(headerPath)),
-                this.normalizeLines(lang.l(footerPath)),
+                this.normalizeLines(headerLines),
+                this.normalizeLines(footerLines),
                 withPersistentPlaceholders(getPlaceholders(this.getPlayer()))
         );
 

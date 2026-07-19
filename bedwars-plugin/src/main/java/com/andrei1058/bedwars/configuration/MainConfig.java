@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 10;
+    private static final int CONFIG_VERSION = 11;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -66,7 +66,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_TITLE_REFRESH_INTERVAL, 4);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_PLACEHOLDERS_REFRESH_INTERVAL, 20);
-        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY, false);
+        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING, false);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING, false);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING, true);
@@ -74,7 +74,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH, 1200);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, "GREEN");
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_ENABLE, true);
-        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, true);
+        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, false);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_REFRESH, 300);
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE, true);
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL, 20);
@@ -269,7 +269,11 @@ public class MainConfig extends ConfigManager {
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
+        setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY,
+                "是否在大厅 TAB 中显示玩家前后缀；默认开启，且不依赖右侧大厅计分板。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, "TAB 玩家列表中队友名字使用的特殊颜色。", "填写 Bukkit ChatColor 名称，例如 GREEN、AQUA 或 YELLOW。");
+        setComments(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB,
+                "是否在 TAB 玩家列表中额外显示生命值数字。默认关闭，只保留原版网络延迟图标，避免被误认为两个 ping。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
         setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");
@@ -292,6 +296,7 @@ public class MainConfig extends ConfigManager {
         if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300) == 300) {
             yml.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
         }
+        migrateTabDisplayDefaults(yml);
         moveIfAbsent(yml, "formatChat", ConfigPath.GENERAL_CHAT_FORMATTING);
         moveIfAbsent(yml, "globalChat", ConfigPath.GENERAL_CHAT_GLOBAL);
         moveIfAbsent(yml, "bungee-settings.lobby-servers", ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS);
@@ -335,6 +340,17 @@ public class MainConfig extends ConfigManager {
             yml.set(obsoletePath, null);
         }
         migrateLobbyLocation(yml);
+    }
+
+    static void migrateTabDisplayDefaults(YamlConfiguration yml) {
+        // Version 10 shipped these opposite defaults. Change them once during
+        // the schema-11 migration; administrators can still opt back in later.
+        if (!yml.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY, false)) {
+            yml.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY, true);
+        }
+        if (yml.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, true)) {
+            yml.set(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, false);
+        }
     }
 
     static void upgradeLegacyNumber(YamlConfiguration yml, String path, double oldValue, double newValue) {

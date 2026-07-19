@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
@@ -24,7 +25,8 @@ public final class LobbyProtection implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getWhoClicked() instanceof Player player && isProtected(player)) {
+        if (event.getWhoClicked() instanceof Player player
+                && (isProtected(player) || (isLobbyWorld(player) && isInventoryDropAction(event.getAction())))) {
             event.setCancelled(true);
         }
     }
@@ -66,14 +68,30 @@ public final class LobbyProtection implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDrop(PlayerDropItemEvent event) {
-        if (isProtected(event.getPlayer())) {
+        // Dropping is never part of a lobby build session. Do not reuse the
+        // general interaction exception here or Q/Ctrl+Q can bypass protection.
+        if (isLobbyWorld(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
     private static boolean isProtected(Player player) {
-        return BedWars.getServerType() == ServerType.MULTIARENA
-                && player.getWorld().getName().equalsIgnoreCase(BedWars.getLobbyWorld())
+        return isLobbyWorld(player)
                 && !BreakPlace.isBuildSession(player);
+    }
+
+    private static boolean isLobbyWorld(Player player) {
+        return shouldProtectLobbyDrop(BedWars.getServerType(), player.getWorld().getName(), BedWars.getLobbyWorld());
+    }
+
+    static boolean shouldProtectLobbyDrop(ServerType serverType, String playerWorld, String lobbyWorld) {
+        return (serverType == ServerType.MULTIARENA || serverType == ServerType.SHARED)
+                && playerWorld != null && lobbyWorld != null && !lobbyWorld.isBlank()
+                && playerWorld.equalsIgnoreCase(lobbyWorld);
+    }
+
+    static boolean isInventoryDropAction(InventoryAction action) {
+        return action == InventoryAction.DROP_ALL_CURSOR || action == InventoryAction.DROP_ONE_CURSOR
+                || action == InventoryAction.DROP_ALL_SLOT || action == InventoryAction.DROP_ONE_SLOT;
     }
 }

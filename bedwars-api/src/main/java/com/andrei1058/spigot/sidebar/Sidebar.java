@@ -241,10 +241,15 @@ public class Sidebar {
         removeLineTeams(scoreboard);
         unregisterObjective(scoreboard, SIDEBAR_OBJECTIVE);
 
+        String renderedTitle = renderText(title, placeholders);
+        if (lines.isEmpty() && renderedTitle.isBlank()) {
+            return;
+        }
+
         Objective objective = scoreboard.registerNewObjective(
                 SIDEBAR_OBJECTIVE,
                 Criteria.DUMMY,
-                component(renderText(title, placeholders))
+                component(renderedTitle)
         );
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.numberFormat(NumberFormat.blank());
