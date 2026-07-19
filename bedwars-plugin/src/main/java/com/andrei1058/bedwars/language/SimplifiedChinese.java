@@ -36,6 +36,10 @@ import static com.andrei1058.bedwars.BedWars.mainCmd;
 
 public class SimplifiedChinese extends Language {
 
+    /** Exact blank header width used by andrei1058/BedWars1058 master. */
+    static final int ORIGINAL_TAB_WIDTH = 104;
+    static final String ORIGINAL_TAB_WIDTH_SPACER = " ".repeat(ORIGINAL_TAB_WIDTH);
+
     public SimplifiedChinese() {
         super(BedWars.plugin, "zh_cn");
 
@@ -706,7 +710,7 @@ public class SimplifiedChinese extends Language {
         // start of TAB
         // main lobby tab format
         yml.addDefault(Messages.FORMATTING_SB_TAB_LOBBY_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 ""
         ));
@@ -720,7 +724,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_LOBBY_SUFFIX, List.of(" {level}"));
         // player waiting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 ""
         ));
@@ -737,7 +741,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX, List.of(" {level}"));
         // spectator waiting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_HEADER_SPEC, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 ""
         ));
@@ -755,7 +759,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC, List.of(" {level}"));
         // player starting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 "&7{date}",
                 "&7地图：&f{map} &7模式：&f{group}",
@@ -774,7 +778,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX, List.of(" {level}"));
         // spectator starting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_HEADER_SPEC, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 "&7{date}",
                 "&7地图：&f{map} &7模式：&f{group}",
@@ -793,7 +797,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC, List.of(" {level}"));
         // player playing
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 "&7{date}",
                 "&7地图：&f{map} &7模式：&f{group}",
@@ -812,7 +816,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // player eliminated - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 "&7{date}",
                 "&7地图：&f{map} &7模式：&f{group}",
@@ -832,7 +836,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, List.of(" &c&o已淘汰 {teamColor}&o{teamName}", " {teamColor}&o已淘汰 {vPrefix}", "{teamColor}&o已淘汰 {level}"));
         // spectator - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 "&7{date}",
                 "&7地图：&f{map} &7模式：&f{group}",
@@ -849,7 +853,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // winner alive - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&6⭐ {winnerTeamColor}&l你的队伍赢得了游戏！ &6⭐",
                 "&7{date}", "&7地图：&f{map} &7模式：&f{group}",
                 ""
@@ -869,7 +873,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // winner dead - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&6⭐ {winnerTeamColor}&l{winnerTeamName}队赢得了游戏！ &6⭐",
                 "&7{date}",
                 "&7地图：&f{map} &7模式：&f{group}",
@@ -890,7 +894,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, List.of(" {vPrefix}", " &c&o已淘汰", " {level}", " &c&o已淘汰"));
         // loser - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&6⭐ {winnerTeamColor}&l{winnerTeamName}队赢得了游戏！ &6⭐",
                 "&7{date}",
                 "&7地图：&f{map} &7模式：&f{group}",
@@ -910,7 +914,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, List.of(" {vPrefix}", " &c&o已淘汰", " {level}", " &c&o已淘汰"));
         // spectator - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_HEADER, List.of(
-                "                                                                                                        ",
+                ORIGINAL_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 "&6⭐ {winnerTeamColor}&l{winnerTeamName}队赢得了游戏！ &6⭐",
                 "&7{date}",

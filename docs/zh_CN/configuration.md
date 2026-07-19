@@ -32,7 +32,7 @@ TAB 相关常用项：
 - 游戏进行时，玩家列表和玩家头顶名字统一使用其所属队伍颜色；旧 `teammate-color` 配置会自动删除。
 - `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制。
 
-2.10.13 按原仓库 `andrei1058/BedWars1058` 恢复状态化 TAB：大厅、等待、开局、游戏、旁观、胜负分别读取 `Languages/messages_<语言>.yml` 中 `format-sb.tab` 下对应的 `header`、`footer`、`prefix` 和 `suffix`。简体中文默认模板保留原版行数、空白宽度、动画和统计布局，仅翻译显示文字。
+2.10.13 按原仓库 `andrei1058/BedWars1058` 恢复状态化 TAB：大厅、等待、开局、游戏、旁观、胜负分别读取 `Languages/messages_<语言>.yml` 中 `format-sb.tab` 下对应的 `header`、`footer`、`prefix` 和 `suffix`。简体中文默认模板保留原版行数、动画和统计布局，仅翻译显示文字。2.10.14 将全部 12 个默认页首统一固定为上游源码的精确 104 空格宽度。
 
 `countdowns.game-restart` 默认迁移为 60 秒，聊天栏仅在 `60、30、15、10、5、4、3、2、1、0` 秒时提示。
 

@@ -8,8 +8,17 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimplifiedChineseMigrationTest {
+
+    @Test
+    void originalTabSpacerIsExactlyTheUpstreamSourceWidth() {
+        assertEquals(104, SimplifiedChinese.ORIGINAL_TAB_WIDTH);
+        assertEquals(104, SimplifiedChinese.ORIGINAL_TAB_WIDTH_SPACER.length());
+        assertTrue(SimplifiedChinese.ORIGINAL_TAB_WIDTH_SPACER.chars()
+                .allMatch(character -> character == ' '));
+    }
 
     @Test
     void replacesCompactTabTemplateWithOriginalRepositoryStyle() {
