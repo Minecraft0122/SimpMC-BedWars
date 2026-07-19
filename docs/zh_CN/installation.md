@@ -7,6 +7,12 @@
 - 地图较多时建议使用 SSD；内部地图恢复会压缩和解压完整世界。
 - 建议至少保留一份服务端离线备份。
 
+## 获取自动发布版本
+
+默认分支的每次提交都会先执行完整 Maven 验证；只有构建和测试全部成功，才会自动创建 [GitHub Release](https://github.com/Minecraft0122/SimpMC-BedWars/releases)，并附带可直接安装的 JAR 与用于校验下载完整性的 `SHA256SUMS.txt`。
+
+Release 标签格式为 `v版本号-提交前八位`。同一版本号发生纯文档或构建流程更新时仍会创建独立 Release，不会覆盖旧提交的产物；重新运行同一次工作流则不会重复发布。
+
 ## 首次安装
 
 1. 从项目构建产物中取得 `SimpMC-BedWars-版本.jar`。

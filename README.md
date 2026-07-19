@@ -15,6 +15,7 @@
 - [常见问题与排错](docs/zh_CN/troubleshooting.md)
 - [更新记录](CHANGELOG.md)
 - [BUG 记录](BUGS.md)
+- [自动发布的 Releases](https://github.com/Minecraft0122/SimpMC-BedWars/releases)
 
 ## 主要功能
 
@@ -39,6 +40,8 @@
 5. 重新启动并使用 `/bw setupArena <世界名>` 创建竞技场。
 
 插件会自动迁移旧版配置：升级前创建 `.bak` 备份，删除已废弃字段，补充新字段和中文注释。不要使用 `/reload` 或插件热重载。
+
+默认分支的每次提交都必须先通过完整 Maven 验证，随后自动上传 JAR 和 `SHA256SUMS.txt` 到 GitHub Releases。标签格式为 `v版本号-提交前八位`，因此即使同一插件版本只有文档或工作流更新，也不会发生标签冲突；工作流重跑不会重复创建 Release。
 
 ## Vault 经济支持
 

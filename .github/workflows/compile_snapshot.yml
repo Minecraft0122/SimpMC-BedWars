@@ -1,4 +1,4 @@
-name: 构建与测试
+name: 构建、测试与自动发布
 
 on:
   push:
@@ -7,12 +7,15 @@ on:
 
 concurrency:
   group: build-${{ github.ref }}
-  cancel-in-progress: true
+  # 默认分支的每个提交都必须完成构建并发布，不能被后续提交取消。
+  cancel-in-progress: false
 
 jobs:
   build:
     name: Maven 验证
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: 检出代码
         uses: actions/checkout@v7
@@ -35,3 +38,61 @@ jobs:
             bedwars-plugin/target/SimpMC-BedWars-*.jar
             !bedwars-plugin/target/original-*.jar
           if-no-files-found: error
+
+  release:
+    name: 发布到 GitHub Releases
+    needs: build
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: 下载已验证的插件 JAR
+        uses: actions/download-artifact@v8
+        with:
+          name: SimpMC-BedWars
+          path: release
+
+      - name: 创建 GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t jars < <(find release -maxdepth 1 -type f -name 'SimpMC-BedWars-*.jar' ! -name 'original-*.jar' | sort)
+          if [[ ${#jars[@]} -ne 1 ]]; then
+            echo "错误：预期恰好一个插件 JAR，实际找到 ${#jars[@]} 个。" >&2
+            printf '%s\n' "${jars[@]:-}"
+            exit 1
+          fi
+
+          jar_path="${jars[0]}"
+          jar_name="$(basename "$jar_path")"
+          version="${jar_name#SimpMC-BedWars-}"
+          version="${version%.jar}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "错误：无法从 $jar_name 解析标准版本号。" >&2
+            exit 1
+          fi
+
+          short_sha="${GITHUB_SHA:0:8}"
+          tag="v${version}-${short_sha}"
+          title="SimpMC-BedWars ${version} (${short_sha})"
+          commit_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          checksum_path="release/SHA256SUMS.txt"
+          (cd "$(dirname "$jar_path")" && sha256sum "$(basename "$jar_path")" > "$(basename "$checksum_path")")
+
+          # 工作流重跑时复用同一提交标签，避免生成重复 Release。
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag 已存在，无需重复发布。"
+            exit 0
+          fi
+
+          gh release create "$tag" "$jar_path" "$checksum_path" \
+            --target "$GITHUB_SHA" \
+            --title "$title" \
+            --notes "由默认分支提交 [${short_sha}](${commit_url}) 自动构建。构建、测试和 JAR 上传全部成功后才会发布。" \
+            --generate-notes \
+            --latest
