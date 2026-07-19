@@ -1,101 +1,69 @@
-# Contributing to SimpMC-BedWars
-👍 First off, thanks for taking the time to contribute!
+# 为 SimpMC-BedWars 贡献代码
 
-The following is a set of guidelines for contributing to SimpMC-BedWars.
-These are mostly guidelines, not rules. Use your best judgment, and feel free
-to propose changes to this document in a pull request.
+感谢你愿意参与项目。以下规则用于减少来回沟通，并保证 Paper 1.21.11 分支保持可测试、可维护。
 
-### What should I know before I get started?
-#### SimpMC-BedWars and its structure
+## 项目结构
 
-![Structure](.github/assets/contributing/structure.png)  
-We have a module for the public API called `simpmc-bedwars-api` where we expose
-some parts of the mini-game. The magic happens in the `bedwars-plugin`
-module and the version support modules are focused on Paper 1.21.11+.
-`simpmc-bedwars-versionsupport-common` defines shared version-support behavior.
+![项目结构](.github/assets/contributing/structure.png)
 
-## How Can I Contribute?
-#### Reporting Bugs
+- `bedwars-api`：供附属插件使用的公开 API。
+- `bedwars-plugin`：主要游戏逻辑、监听器、配置和内置功能。
+- `versionsupport_common`：版本支持的共用接口与实现。
+- `versionsupport_v1_21_R3`：Paper 1.21.11 的版本相关实现。
+- `docs/zh_CN`：面向服主和开发者的中文教程。
 
-When you are creating a bug report, please include as many details as possible.
-Fill out the required template, the information it asks for helps us resolve issues faster.
+## 报告问题
 
-> **Note:** If you find a **Closed** issue that seems like it is the same thing that you're experiencing, open a new issue and include a link to the original issue in the body of your new one.
+请使用仓库的问题模板，并尽量只在一个 Issue 中报告一个问题。至少提供：
 
-### Suggesting Enhancements
-Enhancement suggestions are tracked as GitHub issues. Please provide the following information:
-- Use a clear and descriptive title for the issue to identify the suggestion.
-- Provide a step-by-step description of the suggested enhancement in as many details as possible.
-- Describe the current behavior and explain which behavior you expected to see instead and why.
-- Explain why this enhancement would be useful.
-- Specify which version of BedWars you're using.
+- SimpMC-BedWars 版本、Paper 构建号、Java 版本和操作系统；
+- 可重复执行的操作步骤；
+- 预期结果和实际结果；
+- 未删节的异常堆栈或 mclo.gs 日志链接；
+- 相关竞技场或配置片段；
+- 是否能在仅安装必要依赖的测试服复现。
 
+如果相同问题曾被关闭，请创建新 Issue 并链接旧 Issue，不要在无关问题下追加报告。
 
-### Your First Code Contribution
-Unsure where to begin contributing to SimpMC-BedWars?
-You can start by looking through these `beginner` and `help-wanted` issues:
-- [Beginner issues](https://github.com/Minecraft0122/SimpMC-BedWars/issues?q=is%3Aissue%20is%3Aopen%20label%3Abeginner) - issues which should only require a few lines of code, and a test or two.
-- [Help wanted issues](https://github.com/Minecraft0122/SimpMC-BedWars/issues?q=is%3Aissue%20is%3Aopen%20label%3Ahelp-wanted) - issues which should be a bit more involved than beginner issues.
-  
-  
-#### Local development
-Before starting make sure you have `git`, `java` and `maven` installed.
-The plugin can be developed locally by cloning this repository, applying your
-changes and building the jar running `mvn clean install`.
+## 建议功能
 
+功能建议应说明现有行为、期望行为、实际使用场景、替代方案和版本信息。涉及兼容性变化时，请说明旧配置或附属插件应如何迁移。
 
-## Pull Requests
-Please follow all instructions in the template to have your contribution
-considered by the maintainers:
-1. Copy the correct template for your contribution:
-  - 🐛 Are you fixing a bug? Copy the template [from here](.github/templates/contributing/bug_fix.md).
-  - 📈 Are you improving performance? Copy the template [from here](.github/templates/contributing/performance_improvement.md).
-  - 📝 Are you updating documentation? Copy the template [from here](.github/templates/contributing/documentation.md).
-  - 💻 Are you changing functionality? Copy the template [from here](.github/templates/contributing/feature_change.md).
-2. Replace this text with the contents of the template
-3. Fill in all sections of the template
-4. Click "Create pull request"
+## 本地开发
 
-# Additional Notes
+需要 Git、Java 21 和 Maven。克隆后执行：
 
-### Issue and Pull Request Labels
-| Label name | Description |  
-| ---  | --- |
-| `enhancement` | Feature requests. |
-| `bug` | Confirmed bugs or reports that are very likely to be bugs. |
-| `question` | Questions more than bug reports or feature requests (e.g. how do I do X). |
-| `feedback` | General feedback more than bug reports or feature requests. |
-| `help-wanted` | The team would appreciate help from the community in resolving these issues. |
-| `beginner` | Less complex issues which would be good first issues to work on for users who want to contribute. |
-| `more-information-needed` | More information needs to be collected about these problems or feature requests (e.g. steps to reproduce). |
-| `needs-reproduction` | Likely bugs, but haven't been reliably reproduced. |
-| `duplicate` | Issues which are duplicates of other issues, i.e. they have been reported before. |
-| `wontfix` | The team has decided not to fix these issues for now, either because they're working as intended or for some other reason. |
-| `invalid` | Issues which aren't valid (e.g. user errors). |
+```bash
+mvn -B clean verify
+```
 
-### Pull Request Labels
+不要使用热重载验证插件。请在 Paper 1.21.11 测试服完整重启，并至少测试一次大厅、加入、开局、死亡、复活和结束恢复流程。
 
+## Pull Request
 
-| Label name | Description
+1. 每个 PR 只处理一个明确主题。
+2. 从 `.github/templates/contributing` 选择对应的中文模板。
+3. 说明实现思路、风险、验证方式和面向用户的更新摘要。
+4. 新增或修复逻辑时补充自动化测试。
+5. 不提交 `target`、服务端世界、日志、数据库或私密配置。
+6. 确保 `mvn -B clean verify` 通过。
+
+## 标签说明
+
+| 标签 | 含义 |
 | --- | --- |
-| `work-in-progress` | Pull requests which are still being worked on, more changes will follow. |
-| `needs-review` | Pull requests which need code review, and approval from maintainers or 
-core team. |
-| `under-review` | Pull requests being reviewed by maintainers. |
-| `requires-changes` | Pull requests which need to be updated based on review comments and then reviewed again. |
-| `needs-testing` | Pull requests which need manual testing. |
+| `enhancement` | 新功能或行为改进 |
+| `bug` | 已确认或高度可信的缺陷 |
+| `question` | 使用或开发问题 |
+| `feedback` | 一般反馈 |
+| `help-wanted` | 维护者希望社区协助 |
+| `beginner` | 适合首次贡献的任务 |
+| `more-information-needed` | 需要补充信息 |
+| `needs-reproduction` | 尚未稳定复现 |
+| `duplicate` | 重复问题 |
+| `wontfix` | 当前不会处理 |
+| `invalid` | 无效报告或使用错误 |
 
-# How to add support for a new Minecraft version
+## 更新 Minecraft 版本支持
 
-First give a look at the project structure above on this page, clone the versionsupport of 
-the latest supported version and then make sure to rename the package and class, plus update 
-the pom file with the new version name.
-
-At this point make sure to map the following aspects on the new NMS:
-- Pathfinders for goals and targets in `DespawnableProvider`
-- `PlayerConnection` used to send packets in `v1_nn_Rx` class
-- Glass and other modified blocks in `v1_nn_Rx#registerTntWhitelist`
-- NBTTags in `v1_nn_Rx` for Item, Entity and ItemStacks
-- eventually other functions that were not mapped yet by spigot
-
-For your update to go live, [SidebarLib](https://github.com/andrei1058/SidebarLib) needs to be updated to your new version as well.
+版本适配必须新建对应模块，更新包名、类名和 Maven 依赖，并逐项验证实体寻路、数据包、TNT 白名单、物品与实体数据、世界恢复和计分板实现。版本支持属于高风险改动，必须提供真实服务端验证记录，不能只以编译成功作为完成标准。

@@ -23,9 +23,15 @@ package com.andrei1058.bedwars.support.vault;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
-public class WithChat implements Chat {
+import java.util.Objects;
 
-    private static net.milkbowl.vault.chat.Chat chat;
+public final class WithChat implements Chat {
+
+    private final net.milkbowl.vault.chat.Chat chat;
+
+    public WithChat(net.milkbowl.vault.chat.Chat chat) {
+        this.chat = Objects.requireNonNull(chat, "chat");
+    }
 
     @Override
     public String getPrefix(Player p) {
@@ -35,9 +41,5 @@ public class WithChat implements Chat {
     @Override
     public String getSuffix(Player p) {
         return ChatColor.translateAlternateColorCodes('&', chat.getPlayerSuffix(p));
-    }
-
-    public static void setChat(net.milkbowl.vault.chat.Chat chat) {
-        WithChat.chat = chat;
     }
 }

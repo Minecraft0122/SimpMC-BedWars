@@ -42,9 +42,18 @@ debug: false
 ## 可选依赖
 
 - PlaceholderAPI：在消息、计分板等位置解析扩展占位符。
-- Vault + 经济插件：启用 `rewards.yml` 金币奖励及 Vault 货币购买。
+- Vault + 经济插件：启用 `rewards.yml` 金币奖励及 Vault 货币购买。Vault 只是桥接层，不能单独提供余额。
 - Citizens：创建加入竞技场的 NPC。
 - Parties / PartyAndFriends：接入外部组队系统。
+
+### 正确安装 Vault 经济支持
+
+1. 安装 Vault。
+2. 安装一个会向 Vault 注册经济服务的插件，例如带经济模块的 EssentialsX。
+3. 安装 SimpMC-BedWars，并完整重启服务端。
+4. 在控制台确认出现 `已接入 Vault 经济服务`，后面会同时显示服务名称和提供插件。
+
+插件直接查询 Bukkit 服务注册表，并监听经济服务的延迟注册和注销，不依赖固定的插件文件名。如果控制台显示 `已检测到 Vault API，但没有已注册的经济服务`，说明 Vault 已经可用，但没有经济插件提供玩家余额；继续重复安装 Vault 无法解决此问题。
 
 ## 更新插件
 
@@ -62,7 +71,7 @@ debug: false
 ```bash
 git clone https://github.com/Minecraft0122/SimpMC-BedWars.git
 cd SimpMC-BedWars
-mvn clean package
+mvn -B clean verify
 ```
 
 最终插件位于 `bedwars-plugin/target/SimpMC-BedWars-版本.jar`。

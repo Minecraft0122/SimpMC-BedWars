@@ -23,10 +23,7 @@ public class MoneyPerMinuteTask {
             return;
         }
         task = Bukkit.getScheduler().runTaskTimer(BedWars.plugin, () -> {
-            if (null == arena){
-                this.cancel();
-                return;
-            }
+            if (!BedWars.getEconomy().isEconomy()) return;
             for (Player p : arena.getPlayers()) {
                 BedWars.getEconomy().giveMoney(p, money);
                 p.sendMessage(Language.getMsg(p, Messages.MONEY_REWARD_PER_MINUTE).replace("{money}", String.valueOf(money)));

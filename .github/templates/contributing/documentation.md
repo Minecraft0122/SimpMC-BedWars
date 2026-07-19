@@ -1,30 +1,15 @@
-### Requirements for Contributing Documentation
+### 文档修改说明
 
-* Fill out the template below. Any pull request that does not include enough information to be reviewed in a timely manner may be closed at the maintainers' discretion.
-* The pull request must only contribute documentation (for example, markdown files or API docs). To contribute other changes, you must use a different template. You can see all templates at  <https://github.com/andrei1058/BedWars1058/blob/master/CONTRIBUTING.md>.
+此 Pull Request 应只修改文档、注释或 API 文档。
 
-### Description of the Change
+### 修改内容
 
-<!--
+<!-- 说明修改了哪些页面、解决了什么理解或使用问题。 -->
 
-We must be able to understand the purpose of your change from this description. If we can't get a good idea of the benefits of the change from the description here, the pull request may be closed at the maintainers' discretion.
+### 验证过程
 
--->
+<!-- 检查链接、命令、配置示例和版本信息是否正确。 -->
 
-### Release Notes
+### 更新摘要
 
-<!--
-
-Please describe the changes in a single line that explains this improvement in
-terms that a user can understand.  This text will be used in BedWars1058's release notes.
-
-If this change is not user-facing or notable enough to be included in release notes
-you may use the strings "Not applicable" or "N/A" here.
-
-Examples:
-
-- The GitHub package now allows you to add co-authors to commits.
-- Fixed an issue where multiple cursors did not work in a file with a single line.
-- Increased the performance of searching and replacing across a whole project.
-
--->
+<!-- 用一行中文概括文档改进；不适用时填写“不适用”。 -->

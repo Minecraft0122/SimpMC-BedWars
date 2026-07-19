@@ -18,6 +18,15 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 - 不要手动修改 `config-version`。
 - Material、Sound、Enchantment、PotionEffect 使用 Paper 1.21.11 名称。
 
+## 已安装 Vault，但插件仍然没有经济功能
+
+先根据控制台信息区分两种情况：
+
+- `未检测到 Vault API`：Vault 没有成功加载、版本不兼容，或插件 JAR 放置错误。检查 `/plugins`、Vault 自身启动日志和依赖版本，然后完整重启。
+- `已检测到 Vault API，但没有已注册的经济服务`：Vault 已经被识别，但没有经济插件向它注册服务。Vault 本身不保存余额，需要另装支持 Vault 的经济插件。
+
+正确加载时会显示 `已接入 Vault 经济服务：服务名（提供插件：插件名）`。本插件会监听服务的延迟注册，因此经济插件稍晚启用时不需要再次重载 SimpMC-BedWars。不要使用 `/reload` 解决依赖顺序问题。
+
 ## `Missing message key ... zh_cn.v1.bak`
 
 这是旧版本误加载语言迁移备份造成的。2.10.0 及之后严格只加载 `messages_<语言>.yml`。升级并完整重启即可，`.bak` 文件可以保留。

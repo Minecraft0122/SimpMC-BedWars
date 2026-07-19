@@ -22,9 +22,15 @@ package com.andrei1058.bedwars.support.vault;
 
 import org.bukkit.entity.Player;
 
-public class WithEconomy implements Economy {
+import java.util.Objects;
 
-    private static net.milkbowl.vault.economy.Economy economy;
+public final class WithEconomy implements Economy {
+
+    private final net.milkbowl.vault.economy.Economy economy;
+
+    public WithEconomy(net.milkbowl.vault.economy.Economy economy) {
+        this.economy = Objects.requireNonNull(economy, "economy");
+    }
 
     @Override
     public boolean isEconomy() {
@@ -38,15 +44,11 @@ public class WithEconomy implements Economy {
 
     @Override
     public void giveMoney(Player p, double money) {
-        economy.depositPlayer (p, money);
+        economy.depositPlayer(p, money);
     }
 
     @Override
     public void buyAction(Player p, double cost) {
-        economy.bankWithdraw(p.getName(), cost);
-    }
-
-    public static void setEconomy(net.milkbowl.vault.economy.Economy economy) {
-        WithEconomy.economy = economy;
+        economy.withdrawPlayer(p, cost);
     }
 }

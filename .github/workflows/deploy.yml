@@ -1,10 +1,12 @@
-name: Deploy with Maven (disabled)
+name: 正式版部署（已停用）
 
 on:
   workflow_dispatch:
 
 jobs:
   disabled:
+    name: 部署已停用
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Deployment workflow is disabled for this fork. Use the Build workflow for CI artifacts."
+      - name: 显示说明
+        run: echo "此分支已停用自动部署，请从“构建与测试”工作流下载构建产物。"

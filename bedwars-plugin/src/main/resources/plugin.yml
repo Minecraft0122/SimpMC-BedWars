@@ -3,7 +3,7 @@ api-version: '1.21'
 version: ${project.version}
 author: SimpMC
 prefix: SimpMC-BedWars
-description: SimpMC BedWars minigame
+description: 面向 Paper 1.21.11 的中文起床战争小游戏插件
 main: com.andrei1058.bedwars.BedWars
 softdepend: [Vault,PlaceholderAPI,Citizens,Parties,VipFeatures,PartyAndFriends,Spigot-Party-API-PAF]
 #load: STARTUP

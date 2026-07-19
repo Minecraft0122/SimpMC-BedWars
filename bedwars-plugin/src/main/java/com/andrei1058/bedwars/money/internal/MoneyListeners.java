@@ -23,6 +23,7 @@ public class MoneyListeners implements Listener {
      */
     @EventHandler
     public void onGameEnd(GameEndEvent e) {
+        if (!BedWars.getEconomy().isEconomy()) return;
         for (UUID p : e.getWinners()) {
             Player player = Bukkit.getPlayer(p);
             if (player == null) continue;
@@ -65,6 +66,7 @@ public class MoneyListeners implements Listener {
      */
     @EventHandler
     public void onBreakBed(PlayerBedBreakEvent e) {
+        if (!BedWars.getEconomy().isEconomy()) return;
         Player player = e.getPlayer ();
         if (player == null) return;
         int bedDestroy = MoneyConfig.money.getInt("money-rewards.bed-destroyed");
@@ -79,6 +81,7 @@ public class MoneyListeners implements Listener {
      */
     @EventHandler
     public void onKill(PlayerKillEvent e) {
+        if (!BedWars.getEconomy().isEconomy()) return;
         Player player = e.getKiller();
         Player victim = e.getVictim();
         if (player == null || victim.equals(player)) return;

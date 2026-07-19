@@ -89,11 +89,12 @@ import org.bukkit.WorldCreator;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.server.ServiceRegisterEvent;
 import org.bukkit.generator.ChunkGenerator;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -118,7 +119,7 @@ public class BedWars extends JavaPlugin {
     private static Party party = new NoParty();
     private static Chat chat = new NoChat();
     protected static Level level;
-    private static Economy economy;
+    private static Economy economy = new NoEconomy();
     private static final String version = Bukkit.getBukkitVersion().split("-")[0];
     private static String lobbyWorld = "";
     private static boolean shuttingDown = false;
@@ -129,6 +130,8 @@ public class BedWars extends JavaPlugin {
     private static Database remoteDatabase;
 
     private boolean serverSoftwareSupport = true;
+    private boolean vaultSupportInitialized;
+    private boolean vaultRetryListenerRegistered;
 
     private static com.andrei1058.bedwars.api.BedWars api;
 
@@ -258,7 +261,7 @@ public class BedWars extends JavaPlugin {
                 new Inventory(), new Interact(), new LobbyProtection(), new RefreshGUI(), new HungerWeatherSpawn(), new CmdProcess(),
                 new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(),
                 new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK(),
-                new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(),
+                new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),
                 PreGameSquadManager.getInstance()
         );
 
@@ -386,46 +389,7 @@ public class BedWars extends JavaPlugin {
             new PAPISupport().register();
             SupportPAPI.setSupportPAPI(new SupportPAPI.withPAPI());
         }
-        /*
-         * Vault support
-         * The task is to initialize after all plugins have loaded,
-         *  to make sure any economy/chat plugins have been loaded and registered.
-         */
-        Bukkit.getScheduler().runTask(this, () -> {
-            if (this.getServer().getPluginManager().getPlugin("Vault") != null) {
-                try {
-                    //noinspection rawtypes
-                    RegisteredServiceProvider rsp = this.getServer().getServicesManager().getRegistration(net.milkbowl.vault.chat.Chat.class);
-                    if (rsp != null) {
-                        WithChat.setChat((net.milkbowl.vault.chat.Chat) rsp.getProvider());
-                        plugin.getLogger().info("Hooked into vault chat support!");
-                        chat = new WithChat();
-                    } else {
-                        plugin.getLogger().info("Vault found, but no chat provider!");
-                        chat = new NoChat();
-                    }
-                } catch (Exception var2_2) {
-                    chat = new NoChat();
-                }
-                try {
-                    registerEvents(new MoneyListeners());
-                    RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp = this.getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
-                    if (rsp != null) {
-                        WithEconomy.setEconomy(rsp.getProvider());
-                        plugin.getLogger().info("Hooked into vault economy support!");
-                        economy = new WithEconomy();
-                    } else {
-                        plugin.getLogger().info("Vault found, but no economy provider!");
-                        economy = new NoEconomy();
-                    }
-                } catch (Exception var2_2) {
-                    economy = new NoEconomy();
-                }
-            } else {
-                chat = new NoChat();
-                economy = new NoEconomy();
-            }
-        });
+        initializeVaultSupport();
 
         /* Chat support */
         if (config.getBoolean(ConfigPath.GENERAL_CHAT_FORMATTING)) {
@@ -570,6 +534,42 @@ public class BedWars extends JavaPlugin {
         Arrays.stream(listeners).forEach(l -> plugin.getServer().getPluginManager().registerEvents(l, plugin));
     }
 
+    /**
+     * 初始化 Vault 服务。服务提供者可能晚于本插件注册，因此同时监听后续变化。
+     */
+    private void initializeVaultSupport() {
+        if (vaultSupportInitialized) return;
+        try {
+            Class.forName("net.milkbowl.vault.economy.Economy", false, getClass().getClassLoader());
+            VaultIntegration integration = new VaultIntegration(this);
+            registerEvents(integration);
+            vaultSupportInitialized = true;
+            Bukkit.getScheduler().runTask(this, integration::refresh);
+        } catch (ClassNotFoundException | LinkageError exception) {
+            chat = new NoChat();
+            economy = new NoEconomy();
+            getLogger().info("未检测到 Vault API；经济奖励和 Vault 聊天前后缀已停用。");
+            if (!vaultRetryListenerRegistered) {
+                vaultRetryListenerRegistered = true;
+                registerEvents(new VaultServiceBootstrapListener());
+            }
+        }
+    }
+
+    /**
+     * 兼容未在 plugin.yml 中声明自身为 Vault、且晚于本插件加载的实现。
+     */
+    private final class VaultServiceBootstrapListener implements Listener {
+
+        @EventHandler
+        public void onServiceRegister(ServiceRegisterEvent event) {
+            String serviceName = event.getProvider().getService().getName();
+            if (serviceName.startsWith("net.milkbowl.vault.")) {
+                initializeVaultSupport();
+            }
+        }
+    }
+
     public static void setDebug(boolean value) {
         debug = value;
     }
@@ -644,6 +644,15 @@ public class BedWars extends JavaPlugin {
     }
 
     /**
+     * 设置聊天前后缀适配器。
+     *
+     * @param chatAdapter 新适配器
+     */
+    public static void setChatAdapter(Chat chatAdapter) {
+        chat = Objects.requireNonNull(chatAdapter, "chatAdapter");
+    }
+
+    /**
      * Get current levels manager.
      */
     public static Level getLevelSupport() {
@@ -674,6 +683,15 @@ public class BedWars extends JavaPlugin {
 
     public static Economy getEconomy() {
         return economy;
+    }
+
+    /**
+     * 设置经济适配器。
+     *
+     * @param economyAdapter 新适配器
+     */
+    public static void setEconomyAdapter(Economy economyAdapter) {
+        economy = Objects.requireNonNull(economyAdapter, "economyAdapter");
     }
 
     public static ConfigManager getGeneratorsCfg() {

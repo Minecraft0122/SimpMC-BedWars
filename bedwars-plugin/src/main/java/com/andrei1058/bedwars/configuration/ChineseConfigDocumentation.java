@@ -153,7 +153,7 @@ public final class ChineseConfigDocumentation {
     }
 
     public static void rewards(ConfigManager config) {
-        comment(config, "money-rewards", "启用 Vault 经济支持时发放的金币奖励。");
+        comment(config, "money-rewards", "Vault 与实际经济服务提供者均可用时发放的金币奖励；只安装 Vault 不会创建余额。");
         comment(config, "money-rewards.per-minute", "每游戏分钟奖励的金币。");
         comment(config, "money-rewards.per-teammate", "每名队友带来的金币奖励。");
         comment(config, "money-rewards.game-win", "游戏获胜金币奖励。");

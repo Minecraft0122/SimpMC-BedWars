@@ -77,7 +77,7 @@ example-category:
           currency: gold
 ```
 
-货币支持 `iron`、`gold`、`diamond`、`emerald`；安装 Vault 后可按现有格式使用经济货币。Material、附魔和药水名称必须适用于 Paper 1.21.11。
+货币支持 `iron`、`gold`、`diamond`、`emerald`；同时安装 Vault 和实际经济服务提供者后，可按现有格式使用经济货币。只安装 Vault 不会创建余额。Material、附魔和药水名称必须适用于 Paper 1.21.11。
 
 ## upgrades2.yml
 
@@ -112,7 +112,7 @@ event-name:
 
 ## rewards.yml
 
-Vault 金币奖励。没有 Vault 经济插件时文件仍会生成，但奖励不会生效。
+Vault 金币奖励。没有 Vault 或没有向 Vault 注册的经济服务提供者时，文件仍会生成，但奖励不会生效。服务可用状态以启动日志中的 `已接入 Vault 经济服务` 为准。
 
 ## signs.yml
 

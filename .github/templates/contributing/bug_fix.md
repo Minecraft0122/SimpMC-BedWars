@@ -1,55 +1,27 @@
-### Requirements for Contributing a Bug Fix
+### BUG 修复说明
 
-* Fill out the template below. Any pull request that does not include enough information to be reviewed in a timely manner may be closed at the maintainers' discretion.
-* The pull request must only fix an existing bug. To contribute other changes, you must use a different template. You can see all templates at <https://github.com/andrei1058/BedWars1058/blob/master/CONTRIBUTING.md>.
-### Identify the Bug
+此 Pull Request 应只修复一个已经确认的问题，并提供足够信息供维护者复核。
 
-<!--
+### 对应问题
 
-Link to the issue describing the bug that you're fixing.
+<!-- 链接相关 Issue，并说明根本原因。 -->
 
-If there is not yet an issue for your bug, please open a new issue and then link to that issue in your pull request.
-Note: In some cases, one person's "bug" is another person's "feature." If the pull request does not address an existing issue with the "bug" label, the maintainers have the final say on whether the current behavior is a bug.
+### 修改内容
 
--->
+<!-- 说明实现方式和关键代码路径。 -->
 
-### Description of the Change
+### 其他方案
 
-<!--
+<!-- 说明考虑过的替代实现，以及未采用的原因。 -->
 
-We must be able to understand the design of your change from this description. If we can't get a good idea of what the code will be doing from the description here, the pull request may be closed at the maintainers' discretion. Keep in mind that the maintainer reviewing this PR may not be familiar with or have worked with the code here recently, so please walk us through the concepts.
+### 可能风险
 
--->
+<!-- 说明兼容性、副作用和回滚方式。 -->
 
-### Alternate Designs
+### 验证过程
 
-<!-- Explain what other alternates were considered and why the proposed version was selected -->
+<!-- 列出自动化测试、服务端测试步骤和观察结果。 -->
 
-### Possible Drawbacks
+### 更新摘要
 
-<!-- What are the possible side-effects or negative impacts of the code change? -->
-
-### Verification Process
-
-<!--
-
-What process did you follow to verify that the change has not introduced any regressions? Describe the actions you performed (including buttons you clicked, text you typed, commands you ran, etc.), and describe the results you observed.
-
--->
-
-### Release Notes
-
-<!--
-
-Please describe the changes in a single line that explains this improvement in
-terms that a user can understand. This text will be used in BedWars1058's release notes.
-
-If this change is not user-facing or notable enough to be included in release notes
-you may use the strings "Not applicable" or "N/A" here.
-
-Examples:
-
-- The GitHub package now allows you to add co-authors to commits.
-- Increased the performance of restoring worlds.
-
--->
+<!-- 用一行面向服主的中文描述概括本次修复。 -->

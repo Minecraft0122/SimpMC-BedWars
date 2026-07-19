@@ -1,54 +1,27 @@
-### Requirements for Contributing a Performance Improvement
+### 性能优化说明
 
-* Fill out the template below. Any pull request that does not include enough information to be reviewed in a timely manner may be closed at the maintainers' discretion.
-* The pull request must only affect performance of existing functionality. To contribute other changes, you must use a different template. You can see all templates at <https://github.com/andrei1058/BedWars1058/blob/master/CONTRIBUTING.md>.
+此 Pull Request 应只优化现有功能的性能，不应暗中改变玩法行为。
 
-### Description of the Change
+### 修改内容
 
-<!--
+<!-- 说明热点、优化策略和受影响代码路径。 -->
 
-We must be able to understand the design of your change from this description. If we can't get a good idea of what the code will be doing from the description here, the pull request may be closed at the maintainers' discretion. Keep in mind that the maintainer reviewing this PR may not be familiar with or have worked with the code here recently, so please walk us through the concepts.
+### 量化结果
 
--->
+<!-- 提供优化前后的耗时、内存、实体数或采样结果，并说明测试方法。 -->
 
-### Quantitative Performance Benefits
+### 可能风险
 
-<!--
+<!-- 说明精度、兼容性、内存与 CPU 之间的取舍。 -->
 
-Describe the exact performance improvement observed (for example, reduced time to complete an operation, reduced memory use, etc.). Describe how you measured this change. Bonus points for including graphs that demonstrate the improvement.
+### 验证过程
 
--->
+<!-- 列出基准条件、自动化测试和真实服务端回归结果。 -->
 
-### Possible Drawbacks
+### 对应问题
 
-<!-- What are the possible side-effects or negative impacts of the code change? -->
+<!-- 链接相关 Issue。 -->
 
-### Verification Process
+### 更新摘要
 
-<!--
-
-What process did you follow to verify that the change has not introduced any regressions? Describe the actions you performed (including buttons you clicked, text you typed, commands you ran, etc.), and describe the results you observed.
-
--->
-
-### Applicable Issues
-
-<!-- Enter any applicable Issues here -->
-
-### Release Notes
-
-<!--
-
-Please describe the changes in a single line that explains this improvement in
-terms that a user can understand.  This text will be used in BedWars1058's release notes.
-
-If this change is not user-facing or notable enough to be included in release notes
-you may use the strings "Not applicable" or "N/A" here.
-
-Examples:
-
-- The GitHub package now allows you to add co-authors to commits.
-- Fixed an issue where multiple cursors did not work in a file with a single line.
-- Increased the performance of searching and replacing across a whole project.
-
--->
+<!-- 用一行面向服主的中文描述概括性能收益。 -->

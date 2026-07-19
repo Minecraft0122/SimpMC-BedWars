@@ -1,5 +1,6 @@
-I want to thank you all that helped the development of this plugin.
-Casual order. If I forgot to add you on this list please contact me.
+# 特别感谢
+
+感谢所有参与开发、测试、翻译和反馈的贡献者。以下名单按非特定顺序排列；如有遗漏，请联系项目维护者。
 
 - FoviOX
 - Mr. Ceasar
@@ -8,5 +9,5 @@ Casual order. If I forgot to add you on this list please contact me.
 - 𝐌𝐚𝐫𝐜𝐞𝐥𝐞𝐤𝐭𝐫𝐨
 - Barnaby
 - Ryan DeTree
-- Dragoș (gamster.org)
-- J.T. McQuigg (JT122406)
+- Dragoș（gamster.org）
+- J.T. McQuigg（JT122406）

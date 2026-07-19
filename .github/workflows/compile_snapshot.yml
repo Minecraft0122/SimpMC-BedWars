@@ -1,4 +1,4 @@
-name: Build
+name: 构建与测试
 
 on:
   push:
@@ -11,21 +11,23 @@ concurrency:
 
 jobs:
   build:
+    name: Maven 验证
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 检出代码
+        uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: 配置 JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
+      - name: 使用 Maven 构建并测试
         run: mvn -B -U verify -s ci_settings.xml
 
-      - name: Upload plugin jar
+      - name: 上传插件 JAR
         uses: actions/upload-artifact@v4
         with:
           name: SimpMC-BedWars

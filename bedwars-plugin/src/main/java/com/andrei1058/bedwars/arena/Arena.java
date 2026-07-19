@@ -73,7 +73,6 @@ import com.andrei1058.bedwars.sidebar.SidebarService;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
-import com.andrei1058.bedwars.support.vault.WithEconomy;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
@@ -1517,9 +1516,7 @@ public class Arena implements IArena {
             if (BedWars.getLevelSupport() instanceof InternalLevel) {
                 perMinuteTask = new PerMinuteTask(this);
             }
-            if (BedWars.getEconomy() instanceof WithEconomy) {
-                moneyperMinuteTask = new MoneyPerMinuteTask(this);
-            }
+            moneyperMinuteTask = new MoneyPerMinuteTask(this);
             playingTask = new GamePlayingTask(this);
         } else if (status == GameState.restarting) {
             restartingTask = new GameRestartingTask(this);

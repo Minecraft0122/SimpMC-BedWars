@@ -1,20 +1,27 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
+name: 功能建议
+about: 建议新增功能或改进行为
 title: ''
 labels: enhancement
 assignees: ''
-
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## 使用场景
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+<!-- 说明当前遇到的问题，以及为什么需要这个功能。 -->
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+## 期望方案
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+<!-- 具体说明期望的行为、命令、配置或 API。 -->
+
+## 考虑过的替代方案
+
+<!-- 说明已有功能或其他实现为什么不能满足需求。 -->
+
+## 兼容性影响
+
+<!-- 是否需要迁移旧配置、数据或附属插件？ -->
+
+## 补充信息
+
+<!-- 可附示例、截图或相关链接。 -->

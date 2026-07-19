@@ -1,129 +1,80 @@
 # SimpMC-BedWars
 
-SimpMC-BedWars is a Paper 1.21.11 BedWars mini-game plugin maintained for modern Paper servers.
+面向现代 Paper 服务端维护的起床战争插件。玩家需要保护己方床、摧毁敌方床，并淘汰所有对手；床被摧毁后将无法再次复活。
 
-项目维护文档：
+> 当前分支仅支持 **Paper 1.21.11 + Java 21**。不支持 Spigot、Folia、其他 Minecraft 版本或旧版 Java。
+
+## 文档
 
 - [完整中文教程](docs/zh_CN/README.md)
+- [安装、更新与服务器模式](docs/zh_CN/installation.md)
+- [从零创建竞技场](docs/zh_CN/arena-setup.md)
+- [全部配置文件说明](docs/zh_CN/configuration.md)
+- [命令与权限](docs/zh_CN/commands-permissions.md)
+- [API 与附属插件开发](docs/zh_CN/api-development.md)
+- [常见问题与排错](docs/zh_CN/troubleshooting.md)
 - [更新记录](CHANGELOG.md)
-- [BUG 记录与报告模板](BUGS.md)
+- [BUG 记录](BUGS.md)
 
-# Description
-BedWars is a mini-game where you have to defend your bed and destroy the others.  
-Once your bed is destroyed, you cannot respawn.
+## 主要功能
 
-# System requirements
-This fork targets [Paper](https://papermc.io/) **1.21.11 only** using the Paper API.
-Spigot, legacy NMS builds, Minecraft versions other than 1.21.11, and Folia are not supported.
-It is required to use **Java 21** or newer.
+- 支持 MULTIARENA、SHARED、BUNGEE 和 BUNGEE-LEGACY 运行模式。
+- 提供竞技场选择菜单、加入告示牌、Citizens NPC 和命令加入方式。
+- 支持单独配置竞技场分组、队伍、生成器、商店、团队升级、陷阱和初始物品。
+- 内置中文语言、玩家独立语言、计分板、TAB、历史战绩和等级系统。
+- 提供开局前邀请组队与自动分队，并保证正式开局至少存在两支非空队伍。
+- 支持掉线后 30 秒内重连；超时后按离开处理。
+- 自动跟踪玩家放置的方块，并在每局结束后完整恢复竞技场世界。
+- 支持 PlaceholderAPI、Vault、Citizens、Parties 和 PartyAndFriends 等可选依赖。
+- 提供公开 API，附属插件可以查询竞技场、控制大厅状态、操作预组队和登记玩家放置方块。
 
-The internal world restore system is based on zipping and unzipping maps which can become
-heavy if you are still making use of HDDs and you do not have a decent CPU. Use an SSD and a
-reasonably fast processor for arena-heavy servers.
+## 安装
 
-# Pre-made setups and community add-ons
+1. 准备 Paper 1.21.11 服务端和 Java 21。
+2. 将 `SimpMC-BedWars-版本.jar` 放入 `plugins` 目录。
+3. 首次启动生成配置后完整停服。
+4. 按[安装教程](docs/zh_CN/installation.md)配置服务器模式和大厅。
+5. 重新启动并使用 `/bw setupArena <世界名>` 创建竞技场。
 
-Pre-made setups and community add-ons should be tested against this Paper-only fork before use.
+插件会自动迁移旧版配置：升级前创建 `.bak` 备份，删除已废弃字段，补充新字段和中文注释。不要使用 `/reload` 或插件热重载。
 
-# Main features
+## Vault 经济支持
 
-###### Flexible | Ways you can run the plugin:
-- **SHARED**: can run among other mini-games on the same Paper instance. Games will only be accessible via commands.
-- **MULTIARENA**: will require an entire server instance for hosting the mini-game. It will protect the lobby world and games can be joined via commands, NPCs, signs and GUIs.
-- **BUNGEE-LEGACY**: the old classic bungee mode where a game means an entire server instance. You'll be added to the game when joining the server. Arena status will be displayed as MOTD.
-- **BUNGEE**: a brand new scalable bungee mode. It can host multiple arenas on the same server instance, clone and start new arenas when needed so other players can join. The server can be automatically restarted after a certain amount of games played. This will require installing [BedWarsProxy](https://www.spigotmc.org/resources/bedwarsproxy.66642/) on your lobby servers so players can join. And of course, you can run as many servers as you want in bungee mode.
+Vault 是经济接口桥接层，本身不会创建玩家余额。要启用金币奖励或 Vault 货币购买，必须同时安装：
 
-###### Language | Per player language system:
-- each player can receive messages, holograms, GUIs etc. in their desired language. /bw lang.
-- you can either remove or add new languages.
-- team names, group names, shop contents and a lot more can be translated in your languages.
-- custom titles and subtitles for the arena starting countdown.
+1. Vault；
+2. 一个向 Vault 注册经济服务的经济插件，例如带经济模块的 EssentialsX；
+3. SimpMC-BedWars。
 
-###### Lobby removal | Optional:
-The waiting-lobby inside the map can be removed once the game starts.
+插件以 Bukkit 服务注册表为准，不再依赖名为 `Vault` 的固定插件名称，并会监听服务的延迟注册与注销。控制台显示“已检测到 Vault API，但没有已注册的经济服务”时，缺少的是经济服务提供者，不是 Vault 桥接层。
 
-###### Arena Groups | Customization:
-- you can group arenas by type (4v4, 50v50). You can name them however you want.
-- groups can have custom scoreboard layouts, team upgrades, start items and custom generator settings.
-- you can join maps by group: /bw join Solo, /bw gui Solo.
+## 运行模式
 
-###### Shop | Customization:
-- you may configure quick-buy default items.
-- you may add or remove categories.
-- you may add new shop items or execute commands when bought.
-- permanent items are given after you re-spawn.
-- permanent items can be downgradable which will make you lose one tier per death.
-- items can have weight so you can't buy a weaker item than your current one etc.
-- special items available: BedBug, Dream Defender, Egg Bridge, TNT Jump and Straight Fireball.
-- quick buy feature is available and is synced between nodes as well in bungee mode.
+- `MULTIARENA`：一个 Paper 实例承载大厅和多张竞技场，适合独立小游戏服。
+- `SHARED`：与其他玩法共享实例，玩家离开竞技场后恢复进入前状态。
+- `BUNGEE`：代理网络的多竞技场自动扩容模式，需要匹配的代理端接入方案。
+- `BUNGEE-LEGACY`：一张竞技场占用一个后端实例的传统代理模式。
 
-###### Team Upgrades | Customization:
-- you may have different team upgrades per arena group.
-- you may either add and remove categories and contents.
-- you may make upgrade elements that: enchant items, give potion effects (to team-mates/ base/ enemies when they enter the island), you can edit generator settings and change the dragons amount for the Sudden Death phase.
-- you may add new traps that: disenchant-items (sword, armor, bow), give potion effects (team/ base/ enemies), remove potion effect when an enemy enters your island range and trigger commands.
+## 自行构建
 
-###### Ways to join an arena:
+```bash
+git clone https://github.com/Minecraft0122/SimpMC-BedWars.git
+cd SimpMC-BedWars
+mvn -B clean verify
+```
 
-- arena selector, which can be configured. /bw gui will display all arena groups while /bw gui Solo will show games from Solo groups and /bw gui Solo+4v4 will show games from Solo and 4v4.
-- you can also join games via NPCs by installing Citizens.
-- join-signs are also available with status block.
-- commands can be used as well. /bw join random will bring you the most filled arena, while /bw join mapName will send you to the given arena and /bw join groupName+groupName2 will bring you on a map from the given groups.
+构建产物位于 `bedwars-plugin/target/SimpMC-BedWars-版本.jar`。
 
-###### Arena Settings | Customization:
-- you can set a custom display name used on signs, GUIs etc.
-- option to set the amount of min/ max players and team size.
-- toggle options for: allowing spectators, disabling generators for empty teams, disabling NPCs for empty teams, disabling internal drops management, bed holograms usage.
-- protection range for team-spawn and team NPCs.
-- island radius (for features like triggering traps and map) border radius.
-- instant kill on void based on Y coordinate.
-- you can create as many teams as you want.
-- you can allow map breaking like on a SkyWars game.
-- you can toggle generator split.
-- custom game rules per map.
-- unlimited iron/ gold / emerald (this one can pe activated from upgrades) generators per team.
+## 参与贡献
 
-###### Vip Kick | Privilege:
-Players with bw.vip permission are able to join full arenas in starting phase. This will kick a player without bw.vip permission from that game.
+提交问题前请阅读 [BUGS.md](BUGS.md)，并提供插件版本、Paper 构建、Java 版本、复现步骤、完整日志和相关竞技场配置。提交代码前请阅读[贡献指南](CONTRIBUTING.md)，所有改动都应通过 `mvn -B clean verify`。
 
-###### Player Statistics:
-- we do not provide top holograms but you can use ajLeaderboards for that or LeaderHeads using the placeholders we provide.
-- players can see their stats using the internal stats GUI, which can be customized and accessed by /bw stats.
+## 第三方组件
 
-###### Party System:
-- we provide a basic and functional internal party system to play with your friends on the same team or arena.
-- we also support Parties by AlessioDP and Party and Friends by Simonsator which could be a better solution if you are a large network.
-
-###### Anti AFK System:
-Inactive players for more than 45 seconds can't pick-up items from generators.
-
-###### Custom Join Items:
-- you can add and remove items that you receive when you join the server (only on multi-arena) and the items you receive when you join a game in starting/ waiting phase or when you join as a spectator.
-- join items can execute commands.
-
-###### Map Restore System:
-- the default restore adapter from SimpMC-BedWars is based on un-loading the map, un-zipping a backup and loading it again. This may be heavy for servers with cheap hardware. We recommend using gaming processors and a SSD.
-- you can also implement your own map adapter trough the API.
-- it may seem heavy than other plugins because we don't simply keep track of modified blocks. We need to restore the entire map because server owners can allow players to destroy the maps like on a SkyWars game. Regions like generators, NPCs and team spawns will be protected.
-
-###### Re-Join | Feature:
-If you get disconnected, or if you leave a game (configurable) you can re-join it via command or by joining the server again. This is also available in bungee scalable mode.
-
-###### TNT Jump | Feature:
-- players are able to do tnt jump with configurable values.
-- players with tnt in their inventory have a red particle on their head (configurable).
-
-###### Season events:
-- Halloween special. It is enabled automatically based on your machine timezone and will provide cool effects.
-
-# Contributing
-Any help is appreciated. Please test changes on Paper 1.21.11 before opening a pull request.
-
-Issues and pull requests are tracked in the SimpMC-BedWars repository.
-
-# 3rd party libraries
 - [bStats](https://bstats.org/getting-started/include-metrics)
-- Native Paper/Bukkit scoreboard support
-- [Commons IO](https://mvnrepository.com/artifact/commons-io/commons-io)
-- [HikariCP](https://mvnrepository.com/artifact/com.zaxxer/HikariCP)
-- [SLF4J](http://www.slf4j.org/)
+- Paper/Bukkit 原生计分板接口
+- [Commons IO](https://commons.apache.org/proper/commons-io/)
+- [HikariCP](https://github.com/brettwooldridge/HikariCP)
+- [SLF4J](https://www.slf4j.org/)
+
+本项目采用 [GPL-3.0](LICENSE) 许可证。第三方组件遵循各自许可证。

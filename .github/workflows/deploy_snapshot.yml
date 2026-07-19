@@ -1,10 +1,12 @@
-name: Deploy snapshot with Maven (disabled)
+name: 快照版部署（已停用）
 
 on:
   workflow_dispatch:
 
 jobs:
   disabled:
+    name: 快照部署已停用
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Snapshot deployment workflow is disabled for this fork. Use the Build workflow for CI artifacts."
+      - name: 显示说明
+        run: echo "此分支已停用快照部署，请从“构建与测试”工作流下载构建产物。"

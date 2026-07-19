@@ -1,42 +1,43 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: BUG 报告
+about: 报告可以稳定复现的问题
 title: ''
 labels: bug
 assignees: ''
-
 ---
 
-<!-- 
-NOTE: Please do not merge multiple bugs into one issue.
-It is easier to address the bugs if they are created as seperate issues
+<!-- 一个 Issue 只报告一个问题。请勿删除必要信息或只提供截图。 -->
 
-Also note: Things in this (<!--) are comments and will not show up in the final report.
-Go to the Preview tab above to see that they arent there
--->
-**Describe the bug**
-<!-- A clear and concise description of what the bug is.-->
+## 问题描述
 
-**To Reproduce**
-Steps to reproduce the behavior:
-<!-- Example:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
--->
+<!-- 清楚、简短地说明发生了什么。 -->
 
-**Expected behavior**
-<!-- A clear and concise description of what you expected to happen. -->
+## 复现步骤
 
-**Screenshots**
-<!-- If applicable, add screenshots to help explain your problem. -->
+1. （第一步）
+2. （第二步）
+3. （第三步）
 
-**System (please complete the following information):**
- - OS: <!-- e.g. MacOS, Windows Server, Linux -->
- - Server software <!-- e.g. spigot, paper -->
- - Server Version <!-- e.g. 1.8.8 -->
- - Plugin Version <!-- e.g. 21.11.2 -->
+## 预期行为
 
-**Additional context**
-<!-- Add any other context about the problem here. -->
+<!-- 正常情况下应该发生什么？ -->
+
+## 实际行为
+
+<!-- 实际发生了什么？是否每次都能复现？ -->
+
+## 运行环境
+
+- 操作系统：
+- Java 版本：
+- Paper 完整版本：
+- SimpMC-BedWars 版本：
+- 其他插件：
+
+## 日志与配置
+
+<!-- 请提供完整异常或 mclo.gs 链接，以及经过脱敏的相关配置。 -->
+
+## 补充信息
+
+<!-- 可附截图、视频，以及是否能在仅安装必要依赖的测试服复现。 -->
