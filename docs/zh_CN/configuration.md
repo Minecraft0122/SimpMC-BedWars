@@ -9,7 +9,7 @@
 - `serverType`：MULTIARENA、SHARED 或 BUNGEE。
 - `language`、禁用语言列表：默认语言及玩家可选语言。
 - `chat`：全局聊天和插件聊天格式。
-- `scoreboard-settings`：大厅/游戏计分板、TAB、队友颜色、血量和刷新周期。
+- `scoreboard-settings`：大厅/游戏计分板、TAB、队伍颜色、血量和刷新周期。
 - `rejoin-time`：掉线重连窗口，默认 30 秒。
 - `countdowns`：开局、床消失、决战、结束和复活倒计时。
 - `party-settings`：内部及外部组队集成。
@@ -28,11 +28,13 @@
 TAB 相关常用项：
 
 - `scoreboard-settings.tab-header-footer.enable`：显示 TAB 顶部和底部内容，默认开启，且不依赖右侧大厅计分板。
+- `scoreboard-settings.tab-header-footer.header`：经典 TAB 页首，按列表逐行配置，支持颜色代码与 `{serverIp}`。
+- `scoreboard-settings.tab-header-footer.footer`：经典 TAB 页尾，按列表逐行配置，支持颜色代码与 `{serverIp}`。
 - `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，2.10.10 起默认开启。
-- `scoreboard-settings.player-list.teammate-color`：游戏中队友名字的特殊颜色。
+- 游戏进行时，玩家列表和玩家头顶名字统一使用其所属队伍颜色；旧 `teammate-color` 配置会自动删除。
 - `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制。
 
-简体中文 TAB 会在内容过短时自动补充适中的分隔线以维持可读宽度；自定义模板已经足够宽时不会继续撑宽。
+2.10.12 起恢复经典 TAB 页首/页尾，不再插入人为撑宽的横线。`countdowns.game-restart` 默认迁移为 60 秒，聊天栏仅在 `60、30、15、10、5、4、3、2、1、0` 秒时提示。
 
 ## Arenas/<竞技场>.yml
 

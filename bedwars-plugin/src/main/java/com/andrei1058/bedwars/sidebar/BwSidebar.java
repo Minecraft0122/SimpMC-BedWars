@@ -473,7 +473,8 @@ public class BwSidebar implements ISidebar {
         return null == arena;
     }
 
-    // Provide header and footer for current game state
+    // TAB-style global header and footer. Player rows are managed separately
+    // by BwTabList and are never mixed into these administrator templates.
     private void assignTabHeaderFooter() {
         if (!config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE)) {
             SidebarManager.getInstance().clearHeaderFooter(player);
@@ -481,82 +482,8 @@ public class BwSidebar implements ISidebar {
             return;
         }
 
-        Language lang = Language.getPlayerLanguage(player);
-
-        String headerPath;
-        String footerPath;
-
-        if (hasNoArena()) {
-            headerPath = Messages.FORMATTING_SB_TAB_LOBBY_HEADER;
-            footerPath = Messages.FORMATTING_SB_TAB_LOBBY_FOOTER;
-        } else {
-            if (arena.isSpectator(player)) {
-
-                ITeam exTeam = arena.getExTeam(player.getUniqueId());
-                if (null == exTeam) {
-                    switch (arena.getStatus()) {
-                        case waiting:
-                            headerPath = Messages.FORMATTING_SB_TAB_WAITING_HEADER_SPEC;
-                            footerPath = Messages.FORMATTING_SB_TAB_WAITING_FOOTER_SPEC;
-                            break;
-                        case starting:
-                            headerPath = Messages.FORMATTING_SB_TAB_STARTING_HEADER_SPEC;
-                            footerPath = Messages.FORMATTING_SB_TAB_STARTING_FOOTER_SPEC;
-                            break;
-                        case playing:
-                            headerPath = Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER;
-                            footerPath = Messages.FORMATTING_SB_TAB_PLAYING_SPEC_FOOTER;
-                            break;
-                        case restarting:
-                            headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_HEADER;
-                            footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_FOOTER;
-                            break;
-                        default:
-                            throw new IllegalStateException("Unhandled arena status");
-                    }
-                } else {
-                    // eliminated player
-                    if (arena.getStatus() == GameState.restarting) {
-                        if (null != arena.getWinner() && arena.getWinner().equals(exTeam)) {
-                            headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_HEADER;
-                            footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_FOOTER;
-                        } else {
-                            headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_ELM_HEADER;
-                            footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_ELM_FOOTER;
-                        }
-                    } else {
-                        headerPath = Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER;
-                        footerPath = Messages.FORMATTING_SB_TAB_PLAYING_ELM_FOOTER;
-                    }
-                }
-
-            } else {
-                switch (arena.getStatus()) {
-                    case waiting:
-                        headerPath = Messages.FORMATTING_SB_TAB_WAITING_HEADER;
-                        footerPath = Messages.FORMATTING_SB_TAB_WAITING_FOOTER;
-                        break;
-                    case starting:
-                        headerPath = Messages.FORMATTING_SB_TAB_STARTING_HEADER;
-                        footerPath = Messages.FORMATTING_SB_TAB_STARTING_FOOTER;
-                        break;
-                    case playing:
-                        headerPath = Messages.FORMATTING_SB_TAB_PLAYING_HEADER;
-                        footerPath = Messages.FORMATTING_SB_TAB_PLAYING_FOOTER;
-                        break;
-                    case restarting:
-                        headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_HEADER;
-                        footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_FOOTER;
-                        break;
-                    default:
-                        throw new IllegalStateException("Unhandled arena status");
-                }
-            }
-
-        }
-
-        List<String> footerLines = lang.l(footerPath);
-        List<String> headerLines = TabLayout.ensureMinimumHeaderWidth(lang.l(headerPath), footerLines);
+        List<String> headerLines = config.getList(ConfigPath.SB_CONFIG_TAB_HEADER);
+        List<String> footerLines = config.getList(ConfigPath.SB_CONFIG_TAB_FOOTER);
         this.headerFooter = new TabHeaderFooter(
                 this.normalizeLines(headerLines),
                 this.normalizeLines(footerLines),

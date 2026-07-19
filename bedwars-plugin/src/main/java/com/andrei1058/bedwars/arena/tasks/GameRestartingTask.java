@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.shop.ShopHolo;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
+import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.tasks.RestartingTask;
@@ -45,13 +46,16 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Random;
+import java.util.Set;
 
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class GameRestartingTask implements Runnable, RestartingTask {
 
+    private static final Set<Integer> CHAT_COUNTDOWN_SECONDS = Set.of(60, 30, 15, 10, 5, 4, 3, 2, 1, 0);
+
     private Arena arena;
-    private int restarting = BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_RESTART) + 5;
+    private int restarting = Math.max(0, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_RESTART));
     private final BukkitTask task;
 
     public GameRestartingTask(@NotNull Arena arena) {
@@ -114,41 +118,21 @@ public class GameRestartingTask implements Runnable, RestartingTask {
 
     @Override
     public void run() {
-
-        restarting--;
-
-        if (getArena().getPlayers().isEmpty() && restarting > 9) restarting = 9;
+        if (getArena().getPlayers().isEmpty() && getArena().getSpectators().isEmpty() && restarting > 9) {
+            restarting = 9;
+        }
         announceRestartCountdown();
-        if (restarting == 7) {
-            for (Player on : new ArrayList<>(getArena().getPlayers())) {
-                getArena().removePlayer(on, BedWars.getServerType() == ServerType.BUNGEE);
-            }
-            for (Player on : new ArrayList<>(getArena().getSpectators())) {
-                getArena().removeSpectator(on, BedWars.getServerType() == ServerType.BUNGEE);
-            }
-        } else if (restarting == 4) {
-            ShopHolo.clearForArena(getArena());
-            for (Entity e : getArena().getWorld().getEntities()) {
-                if (e.getType() == EntityType.PLAYER) {
-                    Player p = (Player) e;
-                    Misc.moveToLobbyOrKick(p, getArena(), true);
-                    if (getArena().isSpectator(p)) getArena().removeSpectator(p, false);
-                    if (getArena().isPlayer(p)) getArena().removePlayer(p, false);
-                }
-            }
-            for (IGenerator eg : getArena().getOreGenerators()) {
-                eg.disable();
-            }
-            for (ITeam t : getArena().getTeams()) {
-                for (IGenerator eg : t.getGenerators()) {
-                    eg.disable();
-                }
-            }
+
+        if (restarting == 4) {
+            prepareArenaReset();
         } else if (restarting == 0) {
-            getArena().restart();
+            finishArenaReset();
             task.cancel();
             arena = null;
+            return;
         }
+
+        restarting--;
     }
 
     public void cancel() {
@@ -156,13 +140,50 @@ public class GameRestartingTask implements Runnable, RestartingTask {
     }
 
     private void announceRestartCountdown() {
-        if (restarting <= 0) return;
+        if (!shouldAnnounceRestartCountdown(restarting)) return;
         LinkedHashSet<Player> audience = new LinkedHashSet<>(getArena().getPlayers());
         audience.addAll(getArena().getSpectators());
         for (Player player : audience) {
-            BedWars.nms.playAction(player, getMsg(player, Messages.ARENA_RESTART_COUNTDOWN)
-                    .replace("{time}", String.valueOf(restarting)));
+            Language language = Language.getPlayerLanguage(player);
+            String template = language.exists(Messages.ARENA_RESTART_COUNTDOWN)
+                    ? getMsg(player, Messages.ARENA_RESTART_COUNTDOWN)
+                    : "§e竞技场将在 §c{time} §e秒后重置";
+            player.sendMessage(template.replace("{time}", String.valueOf(restarting)));
         }
+    }
+
+    static boolean shouldAnnounceRestartCountdown(int seconds) {
+        return CHAT_COUNTDOWN_SECONDS.contains(seconds);
+    }
+
+    private void prepareArenaReset() {
+        ShopHolo.clearForArena(getArena());
+        for (IGenerator generator : getArena().getOreGenerators()) {
+            generator.disable();
+        }
+        for (ITeam team : getArena().getTeams()) {
+            for (IGenerator generator : team.getGenerators()) {
+                generator.disable();
+            }
+        }
+    }
+
+    private void finishArenaReset() {
+        Arena currentArena = getArena();
+        for (Player player : new ArrayList<>(currentArena.getPlayers())) {
+            currentArena.removePlayer(player, BedWars.getServerType() == ServerType.BUNGEE);
+        }
+        for (Player spectator : new ArrayList<>(currentArena.getSpectators())) {
+            currentArena.removeSpectator(spectator, BedWars.getServerType() == ServerType.BUNGEE);
+        }
+        for (Entity entity : currentArena.getWorld().getEntities()) {
+            if (entity.getType() != EntityType.PLAYER) continue;
+            Player player = (Player) entity;
+            Misc.moveToLobbyOrKick(player, currentArena, true);
+            if (currentArena.isSpectator(player)) currentArena.removeSpectator(player, false);
+            if (currentArena.isPlayer(player)) currentArena.removePlayer(player, false);
+        }
+        currentArena.restart();
     }
 
 }

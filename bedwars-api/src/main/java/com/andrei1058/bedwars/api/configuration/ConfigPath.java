@@ -149,6 +149,8 @@ public class ConfigPath {
     public static final String SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING = "scoreboard-settings.player-list.format-playing-list";
     public static final String SB_CONFIG_SIDEBAR_LIST_FORMAT_RESTARTING = "scoreboard-settings.player-list.format-restarting-list";
     public static final String SB_CONFIG_SIDEBAR_LIST_REFRESH = "scoreboard-settings.player-list.names-refresh-interval";
+    /** @deprecated Player names now always use their team color during a game. */
+    @Deprecated
     public static final String SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR = "scoreboard-settings.player-list.teammate-color";
     public static final String SB_CONFIG_SIDEBAR_HEALTH_ENABLE = "scoreboard-settings.health.enable";
     public static final String SB_CONFIG_SIDEBAR_HEALTH_IN_TAB = "scoreboard-settings.health.display-in-tab";
@@ -156,6 +158,8 @@ public class ConfigPath {
 
     public static final String SB_CONFIG_TAB_HEADER_FOOTER_ENABLE = "scoreboard-settings.tab-header-footer.enable";
     public static final String SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL = "scoreboard-settings.tab-header-footer.refresh-interval";
+    public static final String SB_CONFIG_TAB_HEADER = "scoreboard-settings.tab-header-footer.header";
+    public static final String SB_CONFIG_TAB_FOOTER = "scoreboard-settings.tab-header-footer.footer";
 
     public static final String GENERAL_CONFIGURATION_DISABLED_LANGUAGES = "disabled-languages";
 

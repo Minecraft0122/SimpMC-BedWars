@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 11;
+    private static final int CONFIG_VERSION = 12;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -67,17 +67,18 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_TITLE_REFRESH_INTERVAL, 4);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_PLACEHOLDERS_REFRESH_INTERVAL, 20);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY, true);
-        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING, false);
-        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING, false);
+        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING, true);
+        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_RESTARTING, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH, 1200);
-        yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, "GREEN");
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_ENABLE, true);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, false);
         yml.addDefault(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_REFRESH, 300);
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE, true);
         yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL, 20);
+        yml.addDefault(ConfigPath.SB_CONFIG_TAB_HEADER, List.of("", "&b&lSimpMC MiniGame - BedWars", ""));
+        yml.addDefault(ConfigPath.SB_CONFIG_TAB_FOOTER, List.of("", "&f服务器地址：&a{serverIp}", ""));
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY, 4000);
@@ -88,13 +89,13 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, 40);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_HALF, 25);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_SHORTENED, 5);
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RESTART, 45);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RESTART, 60);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN, 5);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BEDS_DESTROY_COUNTDOWN, 360);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DRAGON_SPAWN_COUNTDOWN, 600);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_GAME_END_COUNTDOWN, 120);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, 30);
-        yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "yourServer.Com");
+        yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "simpmc.org");
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_POWERED_BY, "SimpMC-BedWars");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, "bw1");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT, 5000);
@@ -271,9 +272,13 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY,
                 "是否在大厅 TAB 中显示玩家前后缀；默认开启，且不依赖右侧大厅计分板。");
-        setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, "TAB 玩家列表中队友名字使用的特殊颜色。", "填写 Bukkit ChatColor 名称，例如 GREEN、AQUA 或 YELLOW。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB,
                 "是否在 TAB 玩家列表中额外显示生命值数字。默认关闭，只保留原版网络延迟图标，避免被误认为两个 ping。");
+        setComments(ConfigPath.SB_CONFIG_TAB_HEADER, "TAB 页首文本列表；支持 & 颜色代码及 {serverIp} 等占位符。", "默认显示 SimpMC MiniGame - BedWars。");
+        setComments(ConfigPath.SB_CONFIG_TAB_FOOTER, "TAB 页尾文本列表；支持 & 颜色代码及 {serverIp} 等占位符。", "默认显示服务器地址 simpmc.org。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_RESTART,
+                "游戏结束后竞技场重置倒计时，单位为秒；默认 60 秒。",
+                "聊天栏只在 60、30、15、10、5、4、3、2、1、0 秒时广播，避免刷屏。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
         setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");
@@ -293,6 +298,7 @@ public class MainConfig extends ConfigManager {
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0, 1.25);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65, 0.8);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0, 4.0);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 45.0, 60.0);
         if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300) == 300) {
             yml.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
         }
@@ -350,6 +356,17 @@ public class MainConfig extends ConfigManager {
         }
         if (yml.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, true)) {
             yml.set(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, false);
+        }
+        if (!yml.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING, false)) {
+            yml.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING, true);
+        }
+        if (!yml.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING, false)) {
+            yml.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING, true);
+        }
+        yml.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, null);
+        String serverIp = yml.getString(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP);
+        if (serverIp == null || serverIp.isBlank() || "yourServer.Com".equalsIgnoreCase(serverIp)) {
+            yml.set(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "simpmc.org");
         }
     }
 
