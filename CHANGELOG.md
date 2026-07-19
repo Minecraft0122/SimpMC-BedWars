@@ -33,6 +33,7 @@
 ### 仓库中文化
 
 - 完整重写中文首页、贡献指南、致谢、Issue 模板、Pull Request 模板和 GitHub Actions 显示文本。
+- 升级 GitHub Actions 到支持当前 Node.js 运行时的主版本，清除 Node.js 20 弃用警告。
 - 为安装、配置和排错教程补充 Vault 桥接层与经济服务提供者的区别。
 - 删除重复且长期未维护的旧英文 `CHANGELOG`，统一使用中文 `CHANGELOG.md`。
 - 插件元数据说明改为中文。
