@@ -114,7 +114,7 @@ public class ConfigManager {
                 || !first.getWorld().equals(second.getWorld())) {
             return false;
         }
-        return first.distanceSquared(second) < radius * radius;
+        return first.distanceSquared(second) <= radius * radius;
     }
 
     /**

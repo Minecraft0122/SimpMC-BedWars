@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.arena.NextEvent;
 import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.events.player.PlayerBedBreakEvent;
 import com.andrei1058.bedwars.api.language.Language;
@@ -48,7 +49,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
@@ -62,6 +62,7 @@ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -72,8 +73,7 @@ import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class BreakPlace implements Listener {
 
-    private static final String PLAYER_PLACED_FALLING_BLOCK = "bw-player-placed-falling-block";
-    private static final List<Player> buildSession = new ArrayList<>();
+    private static final Set<UUID> BUILD_SESSIONS = new HashSet<>();
     private final boolean allowFireBreak;
     private final BlastProtectionUtil blastProtection;
 
@@ -214,23 +214,6 @@ public class BreakPlace implements Listener {
         }
     }
 
-    /**
-     * Record only placements that survived every cancellation handler. This also
-     * covers multi-block placements and avoids leaving a marker for auto-ignited
-     * TNT or the cancelled pop-up tower item.
-     */
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockPlaceMonitor(BlockPlaceEvent event) {
-        IArena arena = Arena.getArenaByPlayer(event.getPlayer());
-        if (arena == null || arena.getStatus() != GameState.playing) return;
-
-        if (event instanceof BlockMultiPlaceEvent multiPlaceEvent) {
-            multiPlaceEvent.getReplacedBlockStates().forEach(state -> trackCurrentBlock(arena, state.getBlock()));
-            return;
-        }
-        trackCurrentBlock(arena, event.getBlockPlaced());
-    }
-
     @EventHandler(ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
@@ -249,14 +232,6 @@ public class BreakPlace implements Listener {
                     //return;
                 }
             }
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockBreakMonitor(BlockBreakEvent event) {
-        IArena a = Arena.getArenaByPlayer(event.getPlayer());
-        if (a != null) {
-            a.removePlacedBlock(event.getBlock());
         }
     }
 
@@ -565,51 +540,6 @@ public class BreakPlace implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onEntityExplodeMonitor(@NotNull EntityExplodeEvent event) {
-        IArena arena = Arena.getArenaByIdentifier(event.getLocation().getWorld().getName());
-        if (arena == null) return;
-        event.blockList().forEach(arena::removePlacedBlock);
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockExplodeMonitor(@NotNull BlockExplodeEvent event) {
-        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
-        if (arena == null) return;
-        event.blockList().forEach(arena::removePlacedBlock);
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockBurnMonitor(@NotNull BlockBurnEvent event) {
-        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
-        if (arena != null) arena.removePlacedBlock(event.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockFadeMonitor(@NotNull BlockFadeEvent event) {
-        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
-        if (arena != null) arena.removePlacedBlock(event.getBlock());
-    }
-
-    /**
-     * Pistons can move an original map block into a coordinate previously marked
-     * as player-placed. Keep protected maps static instead of allowing that bypass.
-     */
-    @EventHandler(ignoreCancelled = true)
-    public void onPistonExtend(BlockPistonExtendEvent event) {
-        protectPiston(event);
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onPistonRetract(BlockPistonRetractEvent event) {
-        protectPiston(event);
-    }
-
-    private void protectPiston(BlockPistonEvent event) {
-        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
-        if (arena != null && !arena.isAllowMapBreak()) event.setCancelled(true);
-    }
-
     @EventHandler
     public void onPaintingRemove(HangingBreakByEntityEvent e) {
         IArena a = Arena.getArenaByIdentifier(e.getEntity().getWorld().getName());
@@ -671,84 +601,56 @@ public class BreakPlace implements Listener {
         }
     }
 
-    /**
-     * Preserve ownership when a player-placed gravity block falls, while leaving
-     * naturally falling map blocks untracked.
-     */
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void trackFallingBlocks(EntityChangeBlockEvent event) {
-        if (!(event.getEntity() instanceof FallingBlock fallingBlock)) return;
-        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
-        if (arena == null) return;
-
-        if (event.getTo() == Material.AIR) {
-            if (arena.isBlockPlaced(event.getBlock())) {
-                arena.removePlacedBlock(event.getBlock());
-                fallingBlock.setMetadata(PLAYER_PLACED_FALLING_BLOCK, new org.bukkit.metadata.FixedMetadataValue(plugin, true));
-            }
-            return;
-        }
-        if (fallingBlock.hasMetadata(PLAYER_PLACED_FALLING_BLOCK)) {
-            arena.addPlacedBlock(event.getBlock());
-            fallingBlock.removeMetadata(PLAYER_PLACED_FALLING_BLOCK, plugin);
-        }
-    }
-
     private boolean isPlayerRestrictedInArena(@NotNull IArena a, @NotNull Player p) {
         if (a.isSpectator(p)) return true;
         if (a.getRespawnSessions().containsKey(p)) return true;
         return a.getStatus() != GameState.playing;
     }
 
-    private void trackCurrentBlock(@NotNull IArena arena, @NotNull Block block) {
-        if (block.getType() != Material.AIR) arena.addPlacedBlock(block);
-    }
-
     private boolean isAboveMaxBuildY(@NotNull IArena a, @NotNull Location location) {
-        try {
-            return location.getBlockY() >= a.getConfig().getInt(ConfigPath.ARENA_CONFIGURATION_MAX_BUILD_Y);
-        } catch (Exception ignored) {
-            return false;
-        }
+        return location.getBlockY() >= a.getConfig().getInt(ConfigPath.ARENA_CONFIGURATION_MAX_BUILD_Y);
     }
 
     private boolean isSpawnProtectedLocation(@NotNull IArena a, @NotNull Location location) {
-        try {
-            for (ITeam t : a.getTeams()) {
-                if (t.getSpawn().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION)) return true;
-            }
-        } catch (Exception ignored) {
+        int radius = a.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION);
+        for (ITeam team : a.getTeams()) {
+            if (ConfigManager.isSameWorldWithin(location, team.getSpawn(), radius)) return true;
         }
         return false;
     }
 
     private boolean isShopUpgradeOrGeneratorProtected(@NotNull IArena a, @NotNull Location location) {
-        try {
-            for (ITeam t : a.getTeams()) {
-                if (t.getShop().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_SHOP_PROTECTION)) return true;
-                if (t.getTeamUpgrades().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_UPGRADES_PROTECTION)) return true;
-                for (IGenerator o : t.getGenerators()) {
-                    if (o.getLocation().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_GENERATOR_PROTECTION)) return true;
-                }
+        int shopRadius = a.getConfig().getInt(ConfigPath.ARENA_SHOP_PROTECTION);
+        int upgradeRadius = a.getConfig().getInt(ConfigPath.ARENA_UPGRADES_PROTECTION);
+        int generatorRadius = a.getConfig().getInt(ConfigPath.ARENA_GENERATOR_PROTECTION);
+        for (ITeam team : a.getTeams()) {
+            if (ConfigManager.isSameWorldWithin(location, team.getShop(), shopRadius)) return true;
+            if (ConfigManager.isSameWorldWithin(location, team.getTeamUpgrades(), upgradeRadius)) return true;
+            for (IGenerator generator : team.getGenerators()) {
+                if (ConfigManager.isSameWorldWithin(location, generator.getLocation(), generatorRadius)) return true;
             }
-            for (IGenerator o : a.getOreGenerators()) {
-                if (o.getLocation().distance(location) <= a.getConfig().getInt(ConfigPath.ARENA_GENERATOR_PROTECTION)) return true;
-            }
-        } catch (Exception ignored) {
+        }
+        for (IGenerator generator : a.getOreGenerators()) {
+            if (ConfigManager.isSameWorldWithin(location, generator.getLocation(), generatorRadius)) return true;
         }
         return false;
     }
 
     public static boolean isBuildSession(Player p) {
-        return buildSession.contains(p);
+        return BUILD_SESSIONS.contains(p.getUniqueId());
     }
 
     public static void addBuildSession(Player p) {
-        buildSession.add(p);
+        BUILD_SESSIONS.add(p.getUniqueId());
     }
 
     public static void removeBuildSession(Player p) {
-        buildSession.remove(p);
+        BUILD_SESSIONS.remove(p.getUniqueId());
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        removeBuildSession(event.getPlayer());
     }
 
     private static boolean isFire(Material material) {

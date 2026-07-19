@@ -87,6 +87,17 @@ class ConfigManagerTest {
         assertFalse(ConfigManager.isSameWorldWithin(lobby, arena, 4));
     }
 
+    @Test
+    void radiusCheckIncludesConfiguredBoundary() {
+        World world = world("arena");
+        Location center = new Location(world, 0, 64, 0);
+        Location boundary = new Location(world, 3, 68, 0);
+
+        assertTrue(ConfigManager.isSameWorldWithin(center, boundary, 5));
+        assertFalse(ConfigManager.isSameWorldWithin(center, boundary, 4.99));
+        assertFalse(ConfigManager.isSameWorldWithin(center, center, -1));
+    }
+
     private static World world(String name) {
         return (World) Proxy.newProxyInstance(World.class.getClassLoader(), new Class<?>[]{World.class},
                 (proxy, method, args) -> switch (method.getName()) {

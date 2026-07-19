@@ -30,15 +30,18 @@ import com.andrei1058.bedwars.shop.main.ShopIndex;
 import com.andrei1058.bedwars.shop.quickbuy.PlayerQuickBuyCache;
 import com.andrei1058.bedwars.shop.quickbuy.QuickBuyAdd;
 import com.andrei1058.bedwars.shop.quickbuy.QuickBuyElement;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.*;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 
 import static com.andrei1058.bedwars.BedWars.nms;
-import static org.bukkit.event.inventory.InventoryAction.HOTBAR_SWAP;
 import static org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY;
 
 public class InventoryListener implements Listener {
@@ -130,67 +133,63 @@ public class InventoryListener implements Listener {
 
     @EventHandler
     public void onUpgradableMove(InventoryClickEvent e) {
-
-        Player p = (Player) e.getWhoClicked();
+        if (e.isCancelled()) return;
+        if (!(e.getWhoClicked() instanceof Player p)) return;
         ShopCache sc = ShopCache.getShopCache(p.getUniqueId());
         if (sc == null) return;
 
-        //block moving from hotbar
-        if (e.getAction() == HOTBAR_SWAP && e.getClick() == ClickType.NUMBER_KEY) {
-            if (e.getHotbarButton() > -1) {
-                ItemStack i = e.getWhoClicked().getInventory().getItem(e.getHotbarButton());
-                if (i != null) {
-                    if (e.getClickedInventory() != e.getWhoClicked().getInventory()) {
-                        if (shouldCancelMovement(i, sc)) {
-                            e.setCancelled(true);
-                        }
-                    }
-                }
-            }
+        // Clicking outside an inventory drops the cursor item.
+        if (e.getClickedInventory() == null) {
+            if (shouldCancelMovement(e.getCursor(), sc)) e.setCancelled(true);
+            return;
         }
 
-        //block moving cursor item
-        if (e.getCursor() != null) {
-            if (e.getCursor().getType() != Material.AIR) {
-                if (e.getClickedInventory() == null) {
-                    if (shouldCancelMovement(e.getCursor(), sc)) {
-                        e.getWhoClicked().closeInventory();
-                        e.setCancelled(true);
-                    }
-                } else if (e.getClickedInventory().getType() != e.getWhoClicked().getInventory().getType()) {
-                    if (shouldCancelMovement(e.getCursor(), sc)) {
-                        e.getWhoClicked().closeInventory();
-                        e.setCancelled(true);
-                    }
-                }
-            }
-        }
-
-        //block moving current item
-        if (e.getCurrentItem() != null) {
-            if (e.getCurrentItem().getType() != Material.AIR) {
-                if (e.getClickedInventory() == null) {
-                    if (shouldCancelMovement(e.getCursor(), sc)) {
-                        e.getWhoClicked().closeInventory();
-                        e.setCancelled(true);
-                    }
-                } else if (e.getClickedInventory().getType() != e.getWhoClicked().getInventory().getType()) {
-                    if (shouldCancelMovement(e.getCurrentItem(), sc)) {
-                        e.getWhoClicked().closeInventory();
-                        e.setCancelled(true);
-                    }
-                }
-            }
-        }
-
-        //block moving with shift
-        if (e.getAction() == MOVE_TO_OTHER_INVENTORY) {
-            if (shouldCancelMovement(e.getCurrentItem(), sc)) {
-                if (e.getView().getTopInventory().getHolder() != null && e.getInventory().getHolder() == e.getWhoClicked())
-                    return;
+        boolean clickedPlayerInventory = e.getClickedInventory() == p.getInventory();
+        if (!clickedPlayerInventory) {
+            // Placing with the cursor or swapping a protected hotbar/off-hand item
+            // would move it into an external container.
+            if (shouldCancelMovement(e.getCursor(), sc)
+                    || shouldCancelMovement(getSwappedPlayerItem(e, p), sc)) {
                 e.setCancelled(true);
             }
+            return;
         }
+
+        // Shift-clicking only leaves the player's inventory when a non-player
+        // top inventory is open. Regular crafting/inventory views stay usable.
+        if (e.getAction() == MOVE_TO_OTHER_INVENTORY
+                && e.getView().getTopInventory().getType() != InventoryType.CRAFTING
+                && shouldCancelMovement(e.getCurrentItem(), sc)) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onUpgradableDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        ShopCache cache = ShopCache.getShopCache(player.getUniqueId());
+        if (!shouldCancelMovement(event.getOldCursor(), cache)) return;
+
+        if (touchesTopInventory(event.getRawSlots(), event.getView().getTopInventory().getSize())) {
+            event.setCancelled(true);
+        }
+    }
+
+    static boolean touchesTopInventory(Iterable<Integer> rawSlots, int topInventorySize) {
+        for (int slot : rawSlots) {
+            if (slot >= 0 && slot < topInventorySize) return true;
+        }
+        return false;
+    }
+
+    private static ItemStack getSwappedPlayerItem(InventoryClickEvent event, Player player) {
+        if (event.getClick() == ClickType.NUMBER_KEY && event.getHotbarButton() >= 0) {
+            return player.getInventory().getItem(event.getHotbarButton());
+        }
+        if (event.getClick() == ClickType.SWAP_OFFHAND) {
+            return player.getInventory().getItemInOffHand();
+        }
+        return null;
     }
 
     @EventHandler
@@ -208,11 +207,8 @@ public class InventoryListener implements Listener {
         if (i == null) return false;
         if (sc == null) return false;
 
-        if (nms.isCustomBedWarsItem(i)){
-            if (nms.getCustomData(i).equalsIgnoreCase("DEFAULT_ITEM")){
-                return true;
-            }
-        }
+        if (nms.isCustomBedWarsItem(i)
+                && "DEFAULT_ITEM".equalsIgnoreCase(nms.getCustomData(i))) return true;
 
         String identifier = nms.getShopUpgradeIdentifier(i);
         if (identifier == null) return false;
