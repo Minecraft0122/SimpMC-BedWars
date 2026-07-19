@@ -26,7 +26,7 @@ class MainConfigTest {
     }
 
     @Test
-    void removesTemporaryGlobalTabAndRestoresOriginalPlayerRows() {
+    void migratesTemporaryTabDefaultsWithoutRemovingLobbyOverride() {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY, false);
         configuration.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING, true);
@@ -34,6 +34,7 @@ class MainConfigTest {
         configuration.set(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB, true);
         configuration.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR, "GREEN");
         configuration.set(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "yourServer.Com");
+        configuration.set(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER, List.of("&b自定义大厅"));
         configuration.set(ConfigPath.SB_CONFIG_TAB_HEADER, List.of("temporary"));
         configuration.set(ConfigPath.SB_CONFIG_TAB_FOOTER, List.of("temporary"));
 
@@ -46,6 +47,8 @@ class MainConfigTest {
         assertFalse(configuration.isSet(ConfigPath.SB_CONFIG_SIDEBAR_LIST_TEAMMATE_COLOR));
         assertFalse(configuration.isSet(ConfigPath.SB_CONFIG_TAB_HEADER));
         assertFalse(configuration.isSet(ConfigPath.SB_CONFIG_TAB_FOOTER));
+        assertEquals(List.of("&b自定义大厅"),
+                configuration.getStringList(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER));
         assertEquals("simpmc.org", configuration.getString(
                 ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP));
     }

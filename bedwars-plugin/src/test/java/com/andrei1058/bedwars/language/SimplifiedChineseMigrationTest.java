@@ -7,17 +7,19 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimplifiedChineseMigrationTest {
 
     @Test
-    void originalTabSpacerIsExactlyTheUpstreamSourceWidth() {
+    void arenaTabKeepsUpstreamWidthWhileLobbyIsWider() {
         assertEquals(104, SimplifiedChinese.ORIGINAL_TAB_WIDTH);
         assertEquals(104, SimplifiedChinese.ORIGINAL_TAB_WIDTH_SPACER.length());
         assertTrue(SimplifiedChinese.ORIGINAL_TAB_WIDTH_SPACER.chars()
                 .allMatch(character -> character == ' '));
+        assertEquals(128, SimplifiedChinese.LOBBY_TAB_WIDTH);
+        assertEquals(128, SimplifiedChinese.LOBBY_TAB_WIDTH_SPACER.length());
+        assertTrue(SimplifiedChinese.LOBBY_TAB_WIDTH > SimplifiedChinese.ORIGINAL_TAB_WIDTH);
     }
 
     @Test
@@ -73,11 +75,34 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
-    void spectatorStartingAffixesUseTheirOwnConfigurationPaths() {
-        assertNotEquals(Messages.FORMATTING_SB_TAB_STARTING_PREFIX,
+    void spectatorStartingAffixesUseTheExactUpstreamPaths() {
+        assertEquals(Messages.FORMATTING_SB_TAB_STARTING_PREFIX,
                 Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC);
-        assertNotEquals(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX,
+        assertEquals(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX,
                 Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC);
+    }
+
+    @Test
+    void widensOnlyTheOldBuiltInLobbyHeader() {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(Messages.FORMATTING_SB_TAB_LOBBY_HEADER,
+                List.of(SimplifiedChinese.ORIGINAL_TAB_WIDTH_SPACER, "&a{serverIp}", ""));
+
+        SimplifiedChinese.widenBuiltInLobbyTabHeader(language);
+
+        assertEquals(List.of(SimplifiedChinese.LOBBY_TAB_WIDTH_SPACER, "&a{serverIp}", ""),
+                language.getStringList(Messages.FORMATTING_SB_TAB_LOBBY_HEADER));
+    }
+
+    @Test
+    void lobbyWidthMigrationPreservesCustomHeader() {
+        YamlConfiguration language = new YamlConfiguration();
+        List<String> custom = List.of("custom width", "&b自定义大厅");
+        language.set(Messages.FORMATTING_SB_TAB_LOBBY_HEADER, custom);
+
+        SimplifiedChinese.widenBuiltInLobbyTabHeader(language);
+
+        assertEquals(custom, language.getStringList(Messages.FORMATTING_SB_TAB_LOBBY_HEADER));
     }
 
     @Test

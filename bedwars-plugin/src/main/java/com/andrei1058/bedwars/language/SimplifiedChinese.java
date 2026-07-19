@@ -39,6 +39,9 @@ public class SimplifiedChinese extends Language {
     /** Exact blank header width used by andrei1058/BedWars1058 master. */
     static final int ORIGINAL_TAB_WIDTH = 104;
     static final String ORIGINAL_TAB_WIDTH_SPACER = " ".repeat(ORIGINAL_TAB_WIDTH);
+    /** Wider lobby-only header; arena states keep the upstream width above. */
+    static final int LOBBY_TAB_WIDTH = 128;
+    static final String LOBBY_TAB_WIDTH_SPACER = " ".repeat(LOBBY_TAB_WIDTH);
 
     public SimplifiedChinese() {
         super(BedWars.plugin, "zh_cn");
@@ -710,7 +713,7 @@ public class SimplifiedChinese extends Language {
         // start of TAB
         // main lobby tab format
         yml.addDefault(Messages.FORMATTING_SB_TAB_LOBBY_HEADER, List.of(
-                ORIGINAL_TAB_WIDTH_SPACER,
+                LOBBY_TAB_WIDTH_SPACER,
                 "&a{serverIp}",
                 ""
         ));
@@ -1107,7 +1110,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(6, SimplifiedChinese::migrateLegacyMessages);
+        updateToLatestVersion(8, SimplifiedChinese::migrateLegacyMessages);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
@@ -1125,6 +1128,7 @@ public class SimplifiedChinese extends Language {
                 Messages.FORMATTING_CHAT_SPECTATOR)) {
             migrateChatSeparator(yml, path);
         }
+        widenBuiltInLobbyTabHeader(yml);
         migrateOriginalTabMessages(yml);
         migrateCurrentMessageDefaults(yml);
         migrateCommandHelp(yml, mainCmd);
@@ -1162,6 +1166,14 @@ public class SimplifiedChinese extends Language {
                     || usesLegacyTabTemplate(current, originalDefault)) {
                 yml.set(path, originalDefault);
             }
+        }
+    }
+
+    static void widenBuiltInLobbyTabHeader(YamlConfiguration yml) {
+        List<String> oldBuiltInHeader = List.of(ORIGINAL_TAB_WIDTH_SPACER, "&a{serverIp}", "");
+        if (yml.getStringList(Messages.FORMATTING_SB_TAB_LOBBY_HEADER).equals(oldBuiltInHeader)) {
+            yml.set(Messages.FORMATTING_SB_TAB_LOBBY_HEADER,
+                    List.of(LOBBY_TAB_WIDTH_SPACER, "&a{serverIp}", ""));
         }
     }
 

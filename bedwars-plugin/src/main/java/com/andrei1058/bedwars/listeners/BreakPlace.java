@@ -47,6 +47,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -156,7 +157,7 @@ public class BreakPlace implements Listener {
                 return;
             }
 
-            if (isShopUpgradeOrGeneratorProtected(a, e.getBlock().getLocation())) {
+            if (hasProtectedPlacedBlock(a, e)) {
                 e.setCancelled(true);
                 p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
                 return;
@@ -620,12 +621,12 @@ public class BreakPlace implements Listener {
     }
 
     private boolean isShopUpgradeOrGeneratorProtected(@NotNull IArena a, @NotNull Location location) {
-        int shopRadius = a.getConfig().getInt(ConfigPath.ARENA_SHOP_PROTECTION);
-        int upgradeRadius = a.getConfig().getInt(ConfigPath.ARENA_UPGRADES_PROTECTION);
+        int shopRadius = Math.max(1, a.getConfig().getInt(ConfigPath.ARENA_SHOP_PROTECTION));
+        int upgradeRadius = Math.max(1, a.getConfig().getInt(ConfigPath.ARENA_UPGRADES_PROTECTION));
         int generatorRadius = a.getConfig().getInt(ConfigPath.ARENA_GENERATOR_PROTECTION);
         for (ITeam team : a.getTeams()) {
-            if (ConfigManager.isSameWorldWithin(location, team.getShop(), shopRadius)) return true;
-            if (ConfigManager.isSameWorldWithin(location, team.getTeamUpgrades(), upgradeRadius)) return true;
+            if (isWithinNpcProtection(location, team.getShop(), shopRadius)) return true;
+            if (isWithinNpcProtection(location, team.getTeamUpgrades(), upgradeRadius)) return true;
             for (IGenerator generator : team.getGenerators()) {
                 if (ConfigManager.isSameWorldWithin(location, generator.getLocation(), generatorRadius)) return true;
             }
@@ -634,6 +635,35 @@ public class BreakPlace implements Listener {
             if (ConfigManager.isSameWorldWithin(location, generator.getLocation(), generatorRadius)) return true;
         }
         return false;
+    }
+
+    private boolean hasProtectedPlacedBlock(@NotNull IArena arena, @NotNull BlockPlaceEvent event) {
+        if (isShopUpgradeOrGeneratorProtected(arena, event.getBlockPlaced().getLocation())) return true;
+        if (event instanceof BlockMultiPlaceEvent multiPlaceEvent) {
+            for (BlockState replacedState : multiPlaceEvent.getReplacedBlockStates()) {
+                if (isShopUpgradeOrGeneratorProtected(arena, replacedState.getLocation())) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Compare integer block coordinates so an NPC stored at x.5/z.5 protects
+     * every direction symmetrically. Villagers occupy their feet and head
+     * blocks, so the vertical range includes one block around both.
+     */
+    static boolean isWithinNpcProtection(@NotNull Location blockLocation, Location npcLocation, int radius) {
+        if (npcLocation == null || radius < 0 || blockLocation.getWorld() == null
+                || !blockLocation.getWorld().equals(npcLocation.getWorld())) {
+            return false;
+        }
+
+        int npcY = npcLocation.getBlockY();
+        int blockY = blockLocation.getBlockY();
+        return Math.abs(blockLocation.getBlockX() - npcLocation.getBlockX()) <= radius
+                && Math.abs(blockLocation.getBlockZ() - npcLocation.getBlockZ()) <= radius
+                && blockY >= npcY - radius
+                && blockY <= npcY + 1 + radius;
     }
 
     public static boolean isBuildSession(Player p) {

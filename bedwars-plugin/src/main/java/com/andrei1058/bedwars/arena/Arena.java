@@ -1650,6 +1650,9 @@ public class Arena implements IArena {
     private void broadcastArenaJoin(Player joined) {
         Set<Player> audience = new LinkedHashSet<>(players);
         audience.addAll(spectators);
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (LobbyAnnouncements.isLobbyPlayer(viewer)) audience.add(viewer);
+        }
         for (Player viewer : audience) {
             viewer.sendMessage(
                     getMsg(viewer, Messages.COMMAND_JOIN_PLAYER_JOIN_MSG)

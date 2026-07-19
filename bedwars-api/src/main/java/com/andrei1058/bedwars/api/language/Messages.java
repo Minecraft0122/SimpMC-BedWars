@@ -215,8 +215,8 @@ public class Messages {
     // TAB STARTING FOR SPECTATORS
     public static String FORMATTING_SB_TAB_STARTING_HEADER_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.header";
     public static String FORMATTING_SB_TAB_STARTING_FOOTER_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.footer";
-    public static String FORMATTING_SB_TAB_STARTING_PREFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.prefix";
-    public static String FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.spectator.suffix";
+    public static String FORMATTING_SB_TAB_STARTING_PREFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.player.prefix";
+    public static String FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC = FORMATTING_SB_TAB_BASE+".starting.player.suffix";
 
     // TAB PLAYING
     public static String FORMATTING_SB_TAB_PLAYING_HEADER = FORMATTING_SB_TAB_BASE+".playing.alive.header";
