@@ -73,6 +73,8 @@ import com.andrei1058.bedwars.sidebar.SidebarService;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
@@ -1154,9 +1156,9 @@ public class Arena implements IArena {
         if (getRestartingTask() != null) getRestartingTask().cancel();
         if (getStartingTask() != null) getStartingTask().cancel();
         if (getPlayingTask() != null) getPlayingTask().cancel();
-        plugin.getLogger().log(Level.WARNING, "Disabling arena: " + getArenaName());
+        plugin.getComponentLogger().info(Component.text("正在卸载竞技场：" + getArenaName(), NamedTextColor.YELLOW));
         for (Player inWorld : getWorld().getPlayers()) {
-            inWorld.kickPlayer("You're not supposed to be here.");
+            inWorld.kickPlayer("服务器正在卸载竞技场。");
         }
         BedWars.getAPI().getRestoreAdapter().onDisable(this);
         Bukkit.getPluginManager().callEvent(new ArenaDisableEvent(getArenaName(), getWorldName()));
