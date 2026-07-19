@@ -56,42 +56,39 @@ public class CreateTeam extends SubCommand {
         if (args.length < 2) {
             p.sendMessage("§c▪ §7用法：/" + mainCmd + " createTeam §o<名称> §o<颜色>");
             StringBuilder colors = new StringBuilder("§7");
-            for (TeamColor t : TeamColor.values()) {
+            for (TeamColor t : TeamColor.selectableValues()) {
                 colors.append(t.chat()).append(t).append(ChatColor.GRAY).append(", ");
             }
             colors = new StringBuilder(colors.substring(0, colors.toString().length() - 2) + ChatColor.GRAY + ".");
             p.sendMessage("§6 ▪ §7可用颜色：" + colors);
         } else {
-            boolean y = true;
-            for (TeamColor t : TeamColor.values()) {
-                if (t.toString().equalsIgnoreCase(args[1])) {
-                    y = false;
-                }
-            }
-            if (y) {
+            TeamColor selectedColor;
+            try {
+                selectedColor = TeamColor.fromName(args[1]);
+            } catch (IllegalArgumentException exception) {
                 p.sendMessage("§c▪ §7无效的颜色！");
                 StringBuilder colors = new StringBuilder("§7");
-                for (TeamColor t : TeamColor.values()) {
+                for (TeamColor t : TeamColor.selectableValues()) {
                     colors.append(t.chat()).append(t).append(ChatColor.GRAY).append(", ");
                 }
                 colors = new StringBuilder(colors.substring(0, colors.toString().length() - 2) + ChatColor.GRAY + ".");
                 p.sendMessage("§6 ▪ §7可用颜色：" + colors);
-            } else {
-                if (ss.getConfig().getYml().get("Team." + args[0] + ".Color") != null) {
-                    p.sendMessage("§c▪ §7队伍 " + args[0] + " 已存在！");
-                    return true;
+                return true;
+            }
+            if (ss.getConfig().getYml().get("Team." + args[0] + ".Color") != null) {
+                p.sendMessage("§c▪ §7队伍 " + args[0] + " 已存在！");
+                return true;
+            }
+            ss.getConfig().set("Team." + args[0] + ".Color", selectedColor.name());
+            p.sendMessage("§6 ▪ §7已创建队伍 " + selectedColor.chat() + args[0] + "§7！");
+            if (ss.getSetupType() == SetupType.ASSISTED) {
+                ss.getConfig().reload();
+                int teams = ss.getConfig().getYml().getConfigurationSection("Team").getKeys(false).size();
+                int max = 1;
+                if (teams == 4) {
+                    max = 2;
                 }
-                ss.getConfig().set("Team." + args[0] + ".Color", args[1].toUpperCase());
-                p.sendMessage("§6 ▪ §7已创建队伍 " + TeamColor.getChatColor(args[1]) + args[0] + "§7！");
-                if (ss.getSetupType() == SetupType.ASSISTED) {
-                    ss.getConfig().reload();
-                    int teams = ss.getConfig().getYml().getConfigurationSection("Team").getKeys(false).size();
-                    int max = 1;
-                    if (teams == 4) {
-                        max = 2;
-                    }
-                    ss.getConfig().set("maxInTeam", max);
-                }
+                ss.getConfig().set("maxInTeam", max);
             }
         }
         return true;

@@ -64,6 +64,8 @@ MULTIARENA 首次使用时，在希望玩家出现的位置面向目标方向执
 /bw createTeam <名称> <颜色>
 ```
 
+青色队伍请使用 `CYAN`。插件会从 `CYAN_WOOL` 自动识别青色队伍，旧竞技场配置中的 `AQUA` 会在启动时自动迁移为 `CYAN`；`LIGHT_BLUE_WOOL` 不再被误认为青色。
+
 查看当前队伍：
 
 ```text

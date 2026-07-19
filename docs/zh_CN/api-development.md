@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.2</version>
+    <version>2.10.11</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -112,6 +112,12 @@ public void onState(GameStateChangeEvent event) {
 - 至少产生两支非空队伍，否则开局会被阻止。
 - 分配前调用 `TeamAssignEvent` 并尊重取消结果。
 - 只在主线程修改 Bukkit 玩家和队伍。
+
+## 队伍颜色 API
+
+青色队伍使用 `TeamColor.CYAN`。读取管理员配置时建议调用 `TeamColor.fromName(value)`，它会把 2.10.11 以前的旧值 `AQUA` 安全规范为 `CYAN`。列出可创建颜色时使用 `TeamColor.selectableValues()`，避免展示为附属插件二进制兼容而保留的弃用别名 `AQUA`。
+
+`TeamColor.CYAN.woolMaterial()` 返回 `Material.CYAN_WOOL`；Minecraft 没有独立的青色聊天代码，因此 `chat()` 仍返回最接近的 `ChatColor.AQUA`。
 
 ## 玩家放置方块 API
 

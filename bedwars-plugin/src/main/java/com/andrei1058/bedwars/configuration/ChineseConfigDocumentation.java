@@ -97,7 +97,7 @@ public final class ChineseConfigDocumentation {
         if (teams == null) return;
         for (String team : teams.getKeys(false)) {
             String root = "Team." + team + '.';
-            comment(config, root + "Color", "队伍颜色，填写 TeamColor 枚举名称。");
+            comment(config, root + "Color", "队伍颜色，填写 TeamColor 枚举名称；青色使用 CYAN。", "旧值 AQUA 会自动迁移为 CYAN。");
             comment(config, root + "Spawn", "队伍出生和复活坐标。");
             comment(config, root + ConfigPath.ARENA_TEAM_SPAWN_FACING, "出生和复活时使用的 yaw,pitch 朝向。");
             comment(config, root + "Bed", "队伍床的坐标；插件也可在设置出生点时自动识别。");

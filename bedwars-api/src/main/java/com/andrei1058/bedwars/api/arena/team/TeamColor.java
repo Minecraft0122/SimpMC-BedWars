@@ -1,5 +1,5 @@
 /*
- * BedWars1058 - A bed wars mini-game.
+ * BedWars1058 - a Bed Wars mini-game.
  * Copyright (C) 2021 Andrei Dascălu
  *
  * This program is free software: you can redistribute it and/or modify
@@ -9,11 +9,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  * Contact e-mail: andrew.dascalu@gmail.com
  */
@@ -26,784 +26,257 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Locale;
+
+/**
+ * Colors supported by a Bed Wars team.
+ *
+ * <p>Block, item, dye and armor mappings are kept together so a team cannot
+ * accidentally receive two different Minecraft colors. Minecraft has no
+ * {@code ChatColor.CYAN}; cyan therefore uses the visually matching
+ * {@link ChatColor#AQUA} for text only.</p>
+ */
 public enum TeamColor {
 
-    RED,
-    BLUE,
-    GREEN,
-    YELLOW,
-    AQUA,
-    WHITE,
-    PINK,
-    GRAY,
-    DARK_GREEN,
-    DARK_GRAY;
+    RED(ChatColor.RED, DyeColor.RED, 14, Color.RED,
+            Material.RED_BED, Material.RED_STAINED_GLASS, Material.RED_STAINED_GLASS_PANE,
+            Material.RED_TERRACOTTA, Material.RED_WOOL),
+    BLUE(ChatColor.BLUE, DyeColor.BLUE, 11, Color.BLUE,
+            Material.BLUE_BED, Material.BLUE_STAINED_GLASS, Material.BLUE_STAINED_GLASS_PANE,
+            Material.BLUE_TERRACOTTA, Material.BLUE_WOOL),
+    GREEN(ChatColor.GREEN, DyeColor.LIME, 5, Color.LIME,
+            Material.LIME_BED, Material.LIME_STAINED_GLASS, Material.LIME_STAINED_GLASS_PANE,
+            Material.LIME_TERRACOTTA, Material.LIME_WOOL),
+    YELLOW(ChatColor.YELLOW, DyeColor.YELLOW, 4, Color.YELLOW,
+            Material.YELLOW_BED, Material.YELLOW_STAINED_GLASS, Material.YELLOW_STAINED_GLASS_PANE,
+            Material.YELLOW_TERRACOTTA, Material.YELLOW_WOOL),
+    CYAN(ChatColor.AQUA, DyeColor.CYAN, 9, Color.TEAL,
+            Material.CYAN_BED, Material.CYAN_STAINED_GLASS, Material.CYAN_STAINED_GLASS_PANE,
+            Material.CYAN_TERRACOTTA, Material.CYAN_WOOL),
+    WHITE(ChatColor.WHITE, DyeColor.WHITE, 0, Color.WHITE,
+            Material.WHITE_BED, Material.WHITE_STAINED_GLASS, Material.WHITE_STAINED_GLASS_PANE,
+            Material.WHITE_TERRACOTTA, Material.WHITE_WOOL),
+    PINK(ChatColor.LIGHT_PURPLE, DyeColor.PINK, 6, Color.FUCHSIA,
+            Material.PINK_BED, Material.PINK_STAINED_GLASS, Material.PINK_STAINED_GLASS_PANE,
+            Material.PINK_TERRACOTTA, Material.PINK_WOOL),
+    GRAY(ChatColor.GRAY, DyeColor.LIGHT_GRAY, 8, Color.GRAY,
+            Material.LIGHT_GRAY_BED, Material.LIGHT_GRAY_STAINED_GLASS, Material.LIGHT_GRAY_STAINED_GLASS_PANE,
+            Material.LIGHT_GRAY_TERRACOTTA, Material.LIGHT_GRAY_WOOL),
+    DARK_GREEN(ChatColor.DARK_GREEN, DyeColor.GREEN, 13, Color.GREEN,
+            Material.GREEN_BED, Material.GREEN_STAINED_GLASS, Material.GREEN_STAINED_GLASS_PANE,
+            Material.GREEN_TERRACOTTA, Material.GREEN_WOOL),
+    DARK_GRAY(ChatColor.DARK_GRAY, DyeColor.GRAY, 7, Color.fromRGB(74, 74, 74),
+            Material.GRAY_BED, Material.GRAY_STAINED_GLASS, Material.GRAY_STAINED_GLASS_PANE,
+            Material.GRAY_TERRACOTTA, Material.GRAY_WOOL),
 
     /**
-     * Get chat color by team color.
-     *
-     * @param tColor - {@link TeamColor} string.
-     * @return {@link ChatColor} for given team.
-     */
-    public static ChatColor getChatColor(@NotNull String tColor) {
-        ChatColor color;
-        TeamColor teamColor = TeamColor.valueOf(tColor.toUpperCase());
-        if (teamColor == TeamColor.PINK) {
-            color = ChatColor.LIGHT_PURPLE;
-        } else {
-            color = ChatColor.valueOf(teamColor.toString());
-        }
-        return color;
-    }
-
-    /**
-     * @return Chat color for this team color.
-     */
-    public ChatColor chat() {
-        ChatColor color;
-        TeamColor teamColor = TeamColor.valueOf(this.toString());
-        if (teamColor == TeamColor.PINK) {
-            color = ChatColor.LIGHT_PURPLE;
-        } else {
-            color = ChatColor.valueOf(teamColor.toString());
-        }
-        return color;
-    }
-
-    /**
-     * @param teamColor team color.
-     * @return Chat color for this team color.
+     * Compatibility alias for configurations and add-ons compiled before 2.10.11.
+     * New code and newly saved configurations must use {@link #CYAN}.
      */
     @Deprecated
-    public static ChatColor getChatColor(TeamColor teamColor) {
-        ChatColor color;
-        if (teamColor == TeamColor.PINK) {
-            color = ChatColor.LIGHT_PURPLE;
-        } else {
-            color = ChatColor.valueOf(teamColor.toString());
-        }
-        return color;
+    AQUA(ChatColor.AQUA, DyeColor.CYAN, 9, Color.TEAL,
+            Material.CYAN_BED, Material.CYAN_STAINED_GLASS, Material.CYAN_STAINED_GLASS_PANE,
+            Material.CYAN_TERRACOTTA, Material.CYAN_WOOL);
+
+    private static final TeamColor[] SELECTABLE_VALUES = {
+            RED, BLUE, GREEN, YELLOW, CYAN, WHITE, PINK, GRAY, DARK_GREEN, DARK_GRAY
+    };
+
+    private final ChatColor chatColor;
+    private final DyeColor dyeColor;
+    private final byte legacyItemColor;
+    private final Color bukkitColor;
+    private final Material bedMaterial;
+    private final Material glassMaterial;
+    private final Material glassPaneMaterial;
+    private final Material terracottaMaterial;
+    private final Material woolMaterial;
+
+    TeamColor(ChatColor chatColor, DyeColor dyeColor, int legacyItemColor, Color bukkitColor,
+              Material bedMaterial, Material glassMaterial, Material glassPaneMaterial,
+              Material terracottaMaterial, Material woolMaterial) {
+        this.chatColor = chatColor;
+        this.dyeColor = dyeColor;
+        this.legacyItemColor = (byte) legacyItemColor;
+        this.bukkitColor = bukkitColor;
+        this.bedMaterial = bedMaterial;
+        this.glassMaterial = glassMaterial;
+        this.glassPaneMaterial = glassPaneMaterial;
+        this.terracottaMaterial = terracottaMaterial;
+        this.woolMaterial = woolMaterial;
     }
 
     /**
-     * @param teamColor team color.
-     * @return DyeColor color for this team color.
+     * Parse a configured team color and normalize the legacy AQUA name to CYAN.
+     *
+     * @param name configured color name
+     * @return canonical team color
+     * @throws IllegalArgumentException if the name is not supported
+     */
+    public static @NotNull TeamColor fromName(@NotNull String name) {
+        TeamColor parsed = TeamColor.valueOf(name.trim().toUpperCase(Locale.ROOT));
+        return parsed == AQUA ? CYAN : parsed;
+    }
+
+    /**
+     * Return colors that may be selected for a new team. The deprecated AQUA
+     * compatibility alias is intentionally omitted.
+     */
+    public static TeamColor[] selectableValues() {
+        return SELECTABLE_VALUES.clone();
+    }
+
+    /**
+     * Get chat color by configured team color name.
+     */
+    public static ChatColor getChatColor(@NotNull String teamColor) {
+        return fromName(teamColor).chat();
+    }
+
+    /**
+     * @return chat color for this team color
+     */
+    public ChatColor chat() {
+        return chatColor;
+    }
+
+    /**
+     * @return chat color for this team color
+     */
+    @Deprecated
+    public static ChatColor getChatColor(@NotNull TeamColor teamColor) {
+        return teamColor.chat();
+    }
+
+    /**
+     * @return dye color for the configured team color
      */
     @Deprecated
     public static DyeColor getDyeColor(@NotNull String teamColor) {
-        DyeColor color;
-        switch (TeamColor.valueOf(teamColor.toUpperCase())) {
-            case GREEN:
-                color = DyeColor.LIME;
-                break;
-            case AQUA:
-                color = DyeColor.LIGHT_BLUE;
-                break;
-            case DARK_GREEN:
-                color = DyeColor.GREEN;
-                break;
-            case DARK_GRAY:
-                color = DyeColor.GRAY;
-                break;
-            default:
-                color = DyeColor.valueOf(teamColor.toUpperCase());
-                break;
-        }
-        return color;
+        return fromName(teamColor).dye();
     }
 
     /**
-     * @return DyeColor color for this team color.
+     * @return equivalent Minecraft dye color
      */
     public DyeColor dye() {
-        DyeColor color;
-        switch (this) {
-            case GREEN:
-                color = DyeColor.LIME;
-                break;
-            case AQUA:
-                color = DyeColor.LIGHT_BLUE;
-                break;
-            case DARK_GREEN:
-                color = DyeColor.GREEN;
-                break;
-            case DARK_GRAY:
-                color = DyeColor.GRAY;
-                break;
-            default:
-                color = DyeColor.valueOf(this.toString());
-                break;
-        }
-        return color;
+        return dyeColor;
     }
 
     /**
-     * @param teamColor team color.
-     * @return byte color for MC versions until 1.12 included
+     * @return legacy wool color data value for Minecraft 1.12 and older
      */
     @Deprecated
     public static byte itemColor(@NotNull TeamColor teamColor) {
-        // 0 white
-        int i = 0;
-        switch (teamColor) {
-            case WHITE:
-                break;
-            case PINK:
-                i = 6;
-                break;
-            case RED:
-                i = 14;
-                break;
-            case AQUA:
-                i = 9;
-                break;
-            case GREEN:
-                i = 5;
-                break;
-            case DARK_GREEN:
-                i = 13;
-                break;
-            case YELLOW:
-                i = 4;
-                break;
-            case BLUE:
-                i = 11;
-                break;
-            case GRAY:
-                i = 8;
-                break;
-            case DARK_GRAY:
-                i = 7;
-                break;
-        }
-        return (byte) i;
+        return teamColor.itemByte();
     }
 
     /**
-     * @return byte color for MC versions until 1.12 included
+     * @return legacy wool color data value for Minecraft 1.12 and older
      */
     public byte itemByte() {
-        // 0 white
-        int i = 0;
-        switch (this) {
-            case WHITE:
-                break;
-            case PINK:
-                i = 6;
-                break;
-            case RED:
-                i = 14;
-                break;
-            case AQUA:
-                i = 9;
-                break;
-            case GREEN:
-                i = 5;
-                break;
-            case DARK_GREEN:
-                i = 13;
-                break;
-            case YELLOW:
-                i = 4;
-                break;
-            case BLUE:
-                i = 11;
-                break;
-            case GRAY:
-                i = 8;
-                break;
-            case DARK_GRAY:
-                i = 7;
-        }
-        return (byte) i;
+        return legacyItemColor;
     }
 
     /**
-     * Get the english for material as color name.
+     * Get the supported team color name represented by a modern wool material.
      *
-     * @param material material string.
-     * @return the english color name for given material. EMPTY if item is not supported.
+     * @return English color name, or an empty string when unsupported
      */
-    public static String enName(@NotNull String material) {
-        String name = "";
-        switch (material.toUpperCase()) {
-            case "PINK_WOOL":
-                name = "Pink";
-                break;
-            case "RED_WOOL":
-                name = "Red";
-                break;
-            case "LIGHT_GRAY_WOOL":
-                name = "Gray";
-                break;
-            case "BLUE_WOOL":
-                name = "Blue";
-                break;
-            case "WHITE_WOOL":
-                name = "White";
-                break;
-            case "LIGHT_BLUE_WOOL":
-                name = "Aqua";
-                break;
-            case "LIME_WOOL":
-                name = "Green";
-                break;
-            case "YELLOW_WOOL":
-                name = "Yellow";
-                break;
-            case "GRAY_WOOL":
-                name = "Dark_Gray";
-                break;
-        }
-        return name;
+    public static @NotNull String enName(@NotNull String material) {
+        return switch (material.toUpperCase(Locale.ROOT)) {
+            case "PINK_WOOL" -> "Pink";
+            case "RED_WOOL" -> "Red";
+            case "LIGHT_GRAY_WOOL" -> "Gray";
+            case "BLUE_WOOL" -> "Blue";
+            case "WHITE_WOOL" -> "White";
+            case "CYAN_WOOL" -> "Cyan";
+            case "LIME_WOOL" -> "Green";
+            case "YELLOW_WOOL" -> "Yellow";
+            case "GRAY_WOOL" -> "Dark_Gray";
+            case "GREEN_WOOL" -> "Dark_Green";
+            default -> "";
+        };
     }
 
     /**
-     * Get the english for byte as color name.
+     * Get the supported team color name represented by legacy wool data.
      *
-     * @param b color byte. Used for 1.12 and older.
-     * @return the english color name for given material. EMPTY if item is not supported.
+     * @return English color name, or an empty string when unsupported
      */
-    public static String enName(byte b) {
-        String name = "";
-        switch (b) {
-            case 6:
-                name = "Pink";
-                break;
-            case 14:
-                name = "Red";
-                break;
-            case 9:
-                name = "Aqua";
-                break;
-            case 5:
-                name = "Green";
-                break;
-            case 4:
-                name = "Yellow";
-                break;
-            case 11:
-                name = "Blue";
-                break;
-            case 0:
-                name = "White";
-                break;
-            case 8:
-                name = "Dark_Gray";
-                break;
-            case 7:
-                name = "Gray";
-                break;
-
-        }
-        return name;
+    public static @NotNull String enName(byte color) {
+        return switch (color) {
+            case 6 -> "Pink";
+            case 14 -> "Red";
+            case 9 -> "Cyan";
+            case 5 -> "Green";
+            case 4 -> "Yellow";
+            case 11 -> "Blue";
+            case 0 -> "White";
+            case 8 -> "Gray";
+            case 7 -> "Dark_Gray";
+            case 13 -> "Dark_Green";
+            default -> "";
+        };
     }
 
     /**
-     * This may be used for leather armor.
-     *
-     * @param teamColor team color.
-     * @return Equivalent color. Returns WHITE if given color has no equivalent.
+     * @return equivalent Bukkit color for leather armor
      */
     @Deprecated
     public static Color getColor(@NotNull TeamColor teamColor) {
-        Color color = Color.WHITE;
-        switch (teamColor) {
-            case PINK:
-                color = Color.FUCHSIA;
-                break;
-            case GRAY:
-                color = Color.GRAY;
-                break;
-            case BLUE:
-                color = Color.BLUE;
-                break;
-            case WHITE:
-                break;
-            case DARK_GREEN:
-                color = Color.GREEN;
-                break;
-            case AQUA:
-                color = Color.AQUA;
-                break;
-            case RED:
-                color = Color.RED;
-                break;
-            case GREEN:
-                color = Color.LIME;
-                break;
-            case YELLOW:
-                color = Color.YELLOW;
-                break;
-            case DARK_GRAY:
-                color = Color.fromBGR(74, 74, 74);
-                break;
-        }
-        return color;
+        return teamColor.bukkitColor();
     }
 
     /**
-     * This is usually used for leather armor.
-     *
-     * @return Equivalent color. Returns WHITE if given color has no equivalent.
+     * @return equivalent Bukkit color for leather armor
      */
     public Color bukkitColor() {
-        Color color = Color.WHITE;
-        switch (this) {
-            case PINK:
-                color = Color.FUCHSIA;
-                break;
-            case GRAY:
-                color = Color.GRAY;
-                break;
-            case BLUE:
-                color = Color.BLUE;
-                break;
-            case WHITE:
-                break;
-            case DARK_GREEN:
-                color = Color.GREEN;
-                break;
-            case AQUA:
-                color = Color.AQUA;
-                break;
-            case RED:
-                color = Color.RED;
-                break;
-            case GREEN:
-                color = Color.LIME;
-                break;
-            case YELLOW:
-                color = Color.YELLOW;
-                break;
-            case DARK_GRAY:
-                color = Color.fromBGR(74, 74, 74);
-                break;
-        }
-        return color;
+        return bukkitColor;
     }
 
-    /**
-     * Get bed with color.
-     *
-     * @param teamColor team color.
-     * @return 1.13+ material
-     */
     @Deprecated
     public static Material getBedBlock(@NotNull TeamColor teamColor) {
-        String color = "RED_BED";
-        switch (teamColor) {
-            case PINK:
-                color = "PINK_BED";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_BED";
-                break;
-            case BLUE:
-                color = "BLUE_BED";
-                break;
-            case WHITE:
-                color = "WHITE_BED";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_BED";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_BED";
-                break;
-            case GREEN:
-                color = "LIME_BED";
-                break;
-            case YELLOW:
-                color = "YELLOW_BED";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_BED";
-                break;
-        }
-        return Material.valueOf(color);
+        return teamColor.bedMaterial();
     }
 
-    /**
-     * Get bed with color. Used for 1.13+.
-     *
-     * @return 1.13+ bed material. Return RED_BED if not found.
-     */
     public Material bedMaterial() {
-        String color = "RED_BED";
-        switch (this) {
-            case PINK:
-                color = "PINK_BED";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_BED";
-                break;
-            case BLUE:
-                color = "BLUE_BED";
-                break;
-            case WHITE:
-                color = "WHITE_BED";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_BED";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_BED";
-                break;
-            case GREEN:
-                color = "LIME_BED";
-                break;
-            case YELLOW:
-                color = "YELLOW_BED";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_BED";
-                break;
-        }
-        return Material.valueOf(color);
+        return bedMaterial;
     }
 
-    /**
-     * Get glass with team color.
-     *
-     * @param teamColor team color.
-     * @return 1.13+ material
-     */
     @Deprecated
     public static Material getGlass(@NotNull TeamColor teamColor) {
-        String color = "GLASS";
-        switch (teamColor) {
-            case PINK:
-                color = "PINK_STAINED_GLASS";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_STAINED_GLASS";
-                break;
-            case BLUE:
-                color = "BLUE_STAINED_GLASS";
-                break;
-            case WHITE:
-                color = "WHITE_STAINED_GLASS";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_STAINED_GLASS";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_STAINED_GLASS";
-                break;
-            case GREEN:
-                color = "LIME_STAINED_GLASS";
-                break;
-            case YELLOW:
-                color = "YELLOW_STAINED_GLASS";
-                break;
-            case RED:
-                color = "RED_STAINED_GLASS";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_STAINED_GLASS";
-                break;
-        }
-        return Material.valueOf(color);
+        return teamColor.glassMaterial();
     }
 
-    /**
-     * Get glass with team color. Used for 1.13+ team glass.
-     *
-     * @return 1.13+ glass material. Return GLASS if this team does not have a custom glass.
-     */
     public Material glassMaterial() {
-        String color = "GLASS";
-        switch (this) {
-            case PINK:
-                color = "PINK_STAINED_GLASS";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_STAINED_GLASS";
-                break;
-            case BLUE:
-                color = "BLUE_STAINED_GLASS";
-                break;
-            case WHITE:
-                color = "WHITE_STAINED_GLASS";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_STAINED_GLASS";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_STAINED_GLASS";
-                break;
-            case GREEN:
-                color = "LIME_STAINED_GLASS";
-                break;
-            case YELLOW:
-                color = "YELLOW_STAINED_GLASS";
-                break;
-            case RED:
-                color = "RED_STAINED_GLASS";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_STAINED_GLASS";
-                break;
-        }
-        return Material.valueOf(color);
+        return glassMaterial;
     }
 
-    /**
-     * Retrieve glass pane with team color.
-     *
-     * @param teamColor team color.
-     * @return glass pane material for 1.13+.
-     */
     @Deprecated
     public static Material getGlassPane(@NotNull TeamColor teamColor) {
-        String color = "GLASS";
-        switch (teamColor) {
-            case PINK:
-                color = "PINK_STAINED_GLASS_PANE";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_STAINED_GLASS_PANE";
-                break;
-            case BLUE:
-                color = "BLUE_STAINED_GLASS_PANE";
-                break;
-            case WHITE:
-                color = "WHITE_STAINED_GLASS_PANE";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_STAINED_GLASS_PANE";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_STAINED_GLASS_PANE";
-                break;
-            case GREEN:
-                color = "LIME_STAINED_GLASS_PANE";
-                break;
-            case YELLOW:
-                color = "YELLOW_STAINED_GLASS_PANE";
-                break;
-            case RED:
-                color = "RED_STAINED_GLASS_PANE";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_STAINED_PANE";
-                break;
-        }
-        return Material.valueOf(color);
+        return teamColor.glassPaneMaterial();
     }
 
-    /**
-     * Retrieve glass pane with team color.
-     *
-     * @return glass pane material for 1.13+.
-     */
     public Material glassPaneMaterial() {
-        String color = "GLASS";
-        switch (this) {
-            case PINK:
-                color = "PINK_STAINED_GLASS_PANE";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_STAINED_GLASS_PANE";
-                break;
-            case BLUE:
-                color = "BLUE_STAINED_GLASS_PANE";
-                break;
-            case WHITE:
-                color = "WHITE_STAINED_GLASS_PANE";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_STAINED_GLASS_PANE";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_STAINED_GLASS_PANE";
-                break;
-            case GREEN:
-                color = "LIME_STAINED_GLASS_PANE";
-                break;
-            case YELLOW:
-                color = "YELLOW_STAINED_GLASS_PANE";
-                break;
-            case RED:
-                color = "RED_STAINED_GLASS_PANE";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_STAINED_PANE";
-                break;
-        }
-        return Material.valueOf(color);
+        return glassPaneMaterial;
     }
 
-    /**
-     * Get glazed terracotta with team color.
-     *
-     * @param teamColor team color.
-     * @return 1.13+ material
-     */
     @Deprecated
     public static Material getGlazedTerracotta(@NotNull TeamColor teamColor) {
-        String color = "ORANGE_TERRACOTTA";
-        switch (teamColor) {
-            case PINK:
-                color = "PINK_TERRACOTTA";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_TERRACOTTA";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_TERRACOTTA";
-                break;
-            case BLUE:
-                color = "BLUE_TERRACOTTA";
-                break;
-            case WHITE:
-                color = "WHITE_TERRACOTTA";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_TERRACOTTA";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_TERRACOTTA";
-                break;
-            case GREEN:
-                color = "LIME_TERRACOTTA";
-                break;
-            case YELLOW:
-                color = "YELLOW_TERRACOTTA";
-                break;
-            case RED:
-                color = "RED_TERRACOTTA";
-                break;
-        }
-        return Material.valueOf(color);
+        return teamColor.glazedTerracottaMaterial();
     }
 
-    /**
-     * Get glazed terracotta with team color.
-     *
-     * @return 1.13+ material.
-     */
     public Material glazedTerracottaMaterial() {
-        String color = "ORANGE_TERRACOTTA";
-        switch (this) {
-            case PINK:
-                color = "PINK_TERRACOTTA";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_TERRACOTTA";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_TERRACOTTA";
-                break;
-            case BLUE:
-                color = "BLUE_TERRACOTTA";
-                break;
-            case WHITE:
-                color = "WHITE_TERRACOTTA";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_TERRACOTTA";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_TERRACOTTA";
-                break;
-            case GREEN:
-                color = "LIME_TERRACOTTA";
-                break;
-            case YELLOW:
-                color = "YELLOW_TERRACOTTA";
-                break;
-            case RED:
-                color = "RED_TERRACOTTA";
-                break;
-        }
-        return Material.valueOf(color);
+        return terracottaMaterial;
     }
 
-    /**
-     * Get wool with team color.
-     *
-     * @param teamColor team color.
-     * @return 1.13+ material.
-     */
     @Deprecated
     public static Material getWool(@NotNull TeamColor teamColor) {
-        String color = "WHITE_WOOL";
-        switch (teamColor) {
-            case PINK:
-                color = "PINK_WOOL";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_WOOL";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_WOOL";
-                break;
-            case BLUE:
-                color = "BLUE_WOOL";
-                break;
-            case WHITE:
-                color = "WHITE_WOOL";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_WOOL";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_WOOL";
-                break;
-            case GREEN:
-                color = "LIME_WOOL";
-                break;
-            case YELLOW:
-                color = "YELLOW_WOOL";
-                break;
-            case RED:
-                color = "RED_WOOL";
-                break;
-        }
-        return Material.valueOf(color);
+        return teamColor.woolMaterial();
     }
 
-    /**
-     * Get wool with team color.
-     *
-     * @return 1.13+ material.
-     */
     public Material woolMaterial() {
-        String color = "WHITE_WOOL";
-        switch (this) {
-            case PINK:
-                color = "PINK_WOOL";
-                break;
-            case GRAY:
-                color = "LIGHT_GRAY_WOOL";
-                break;
-            case DARK_GRAY:
-                color = "GRAY_WOOL";
-                break;
-            case BLUE:
-                color = "BLUE_WOOL";
-                break;
-            case WHITE:
-                color = "WHITE_WOOL";
-                break;
-            case DARK_GREEN:
-                color = "GREEN_WOOL";
-                break;
-            case AQUA:
-                color = "LIGHT_BLUE_WOOL";
-                break;
-            case GREEN:
-                color = "LIME_WOOL";
-                break;
-            case YELLOW:
-                color = "YELLOW_WOOL";
-                break;
-            case RED:
-                color = "RED_WOOL";
-                break;
-        }
-        return Material.valueOf(color);
+        return woolMaterial;
     }
 }

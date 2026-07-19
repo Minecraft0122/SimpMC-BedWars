@@ -1,5 +1,18 @@
 # 更新记录
 
+## 2.10.11 - 2026-07-19
+
+### BUG 修复
+
+- 将队伍颜色 `AQUA` 统一更正为 `CYAN`；自动创建队伍现在识别 `CYAN_WOOL`，不再把淡蓝色羊毛误认为青色。
+- 青色队伍从商店购买羊毛时现在获得 `CYAN_WOOL`，队伍床、玻璃、玻璃板、陶瓦、染料和皮革装备颜色同步使用青色映射。
+
+### 配置与 API 兼容
+
+- 竞技场配置架构升级到版本 9，旧 `Team.<队伍>.Color: AQUA` 会自动备份并迁移为 `CYAN`。
+- 新增 `TeamColor.CYAN`、`TeamColor.fromName` 和不包含旧别名的 `selectableValues`；保留弃用的 `TeamColor.AQUA` 二进制兼容入口，但其方块和物品映射也已改为青色。
+- Minecraft 没有独立的青色聊天代码，因此文字仍使用最接近的 `ChatColor.AQUA`，不会影响方块或商店物品颜色。
+
 本文档记录 SimpMC-BedWars 2.x 系列面向服务器管理员和玩家的变化。
 
 ## 版本规则

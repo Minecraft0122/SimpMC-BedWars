@@ -260,7 +260,7 @@ public class Arena implements IArena {
             if (colorS == null) continue;
             colorS = colorS.toUpperCase();
             try {
-                TeamColor.valueOf(colorS);
+                TeamColor.fromName(colorS);
             } catch (Exception e) {
                 if (p != null) p.sendMessage("§c队伍 " + team + " 的颜色无效，竞技场：" + name);
                 plugin.getLogger().severe("Invalid color at team: " + team + " in arena: " + name);
@@ -335,7 +335,7 @@ public class Arena implements IArena {
             String teamRoot = "Team." + team + ".";
             Location teamSpawn = configuredPlayerLocation(teamRoot + "Spawn",
                     teamRoot + ConfigPath.ARENA_TEAM_SPAWN_FACING);
-            BedWarsTeam bwt = new BedWarsTeam(team, TeamColor.valueOf(yml.getString(teamRoot + "Color").toUpperCase()), teamSpawn,
+            BedWarsTeam bwt = new BedWarsTeam(team, TeamColor.fromName(yml.getString(teamRoot + "Color")), teamSpawn,
                     cm.getArenaLoc("Team." + team + ".Bed"), cm.getArenaLoc("Team." + team + ".Shop"), cm.getArenaLoc("Team." + team + ".Upgrade"), this);
             teams.add(bwt);
             bwt.spawnGenerators();

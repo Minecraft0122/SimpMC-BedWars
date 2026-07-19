@@ -38,7 +38,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 8;
+    private static final int CONFIG_VERSION = 9;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -126,6 +126,7 @@ public class ArenaConfig extends ConfigManager {
         if (teams == null) {
             return;
         }
+        migrateLegacyTeamColors(config, teams);
         for (String team : teams.getKeys(false)) {
             String root = "Team." + team + '.';
             config.set(root + "Respawn", null);
@@ -145,6 +146,20 @@ public class ArenaConfig extends ConfigManager {
                     List.of("玩家出生和复活时的 yaw,pitch；坐标仍单独固定在方块中心。"));
             for (String generator : List.of("Iron", "Gold", "Emerald")) {
                 normalizeLocationList(plugin, config, root + generator);
+            }
+        }
+    }
+
+    /**
+     * AQUA was historically backed by LIGHT_BLUE blocks even though its
+     * legacy data value represented cyan. Keep old arenas loadable while
+     * making CYAN the single name written by current versions.
+     */
+    static void migrateLegacyTeamColors(YamlConfiguration config, ConfigurationSection teams) {
+        for (String team : teams.getKeys(false)) {
+            String path = "Team." + team + ".Color";
+            if ("AQUA".equalsIgnoreCase(config.getString(path))) {
+                config.set(path, "CYAN");
             }
         }
     }
