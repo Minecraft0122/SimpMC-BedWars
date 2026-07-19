@@ -6,4 +6,77 @@ prefix: SimpMC-BedWars
 description: 面向 Paper 1.21.11 的中文起床战争小游戏插件
 main: com.andrei1058.bedwars.BedWars
 softdepend: [Vault,PlaceholderAPI,Citizens,Parties,VipFeatures,PartyAndFriends,Spigot-Party-API-PAF]
+permissions:
+  bw.player:
+    description: 普通玩家常用的 BedWars 命令权限集合
+    default: false
+    children:
+      bw.command.help: true
+      bw.command.cmds: true
+      bw.command.join: true
+      bw.command.leave: true
+      bw.command.lang: true
+      bw.command.gui: true
+      bw.command.stats: true
+      bw.command.team: true
+      bw.command.invite: true
+      bw.command.teleporter: true
+      bw.command.upgradesmenu: true
+      bw.command.shout: true
+      bw.command.rejoin: true
+      bw.command.party: true
+  'bw.command.*':
+    description: 所有 BedWars 命令权限，不包含其他游戏特权
+    default: false
+    children:
+      bw.command.help: true
+      bw.command.cmds: true
+      bw.command.join: true
+      bw.command.leave: true
+      bw.command.lang: true
+      bw.command.teleporter: true
+      bw.command.gui: true
+      bw.command.stats: true
+      bw.command.team: true
+      bw.command.invite: true
+      bw.command.forcestart: true
+      bw.command.start: true
+      bw.command.setlobby: true
+      bw.command.setuparena: true
+      bw.command.arenalist: true
+      bw.command.delarena: true
+      bw.command.enablearena: true
+      bw.command.disablearena: true
+      bw.command.clonearena: true
+      bw.command.arenagroup: true
+      bw.command.build: true
+      bw.command.level: true
+      bw.command.reload: true
+      bw.command.autocreateteams: true
+      bw.command.setwaitingspawn: true
+      bw.command.setspectspawn: true
+      bw.command.createteam: true
+      bw.command.listteams: true
+      bw.command.waitingpos: true
+      bw.command.removeteam: true
+      bw.command.setmaxinteam: true
+      bw.command.setmaxbuildheight: true
+      bw.command.setspawn: true
+      bw.command.setbed: true
+      bw.command.setshop: true
+      bw.command.setupgrade: true
+      bw.command.addgenerator: true
+      bw.command.removegenerator: true
+      bw.command.settype: true
+      bw.command.save: true
+      bw.command.npc: true
+      bw.command.tp: true
+      bw.command.upgradesmenu: true
+      bw.command.setkilldrops: true
+      bw.command.shout: true
+      bw.command.rejoin: true
+      bw.command.party: true
+  'bw.*':
+    description: SimpMC-BedWars 全部权限
+    default: op
 #load: STARTUP

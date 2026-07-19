@@ -11,15 +11,20 @@ class LobbyProtectionTest {
 
     @Test
     void blocksDropsInMultiArenaAndSharedLobbies() {
-        assertTrue(LobbyProtection.shouldProtectLobbyDrop(ServerType.MULTIARENA, "Lobby", "lobby"));
-        assertTrue(LobbyProtection.shouldProtectLobbyDrop(ServerType.SHARED, "world", "world"));
+        assertTrue(LobbyProtection.shouldProtectLobbyDrop(ServerType.MULTIARENA, "Lobby", "lobby", true, true));
+        assertTrue(LobbyProtection.shouldProtectLobbyDrop(ServerType.SHARED, "world", "world", false, false));
     }
 
     @Test
     void doesNotTreatArenaOrProxyWorldAsLobby() {
-        assertFalse(LobbyProtection.shouldProtectLobbyDrop(ServerType.MULTIARENA, "arena", "lobby"));
-        assertFalse(LobbyProtection.shouldProtectLobbyDrop(ServerType.BUNGEE, "lobby", "lobby"));
-        assertFalse(LobbyProtection.shouldProtectLobbyDrop(ServerType.MULTIARENA, "world", ""));
+        assertFalse(LobbyProtection.shouldProtectLobbyDrop(ServerType.MULTIARENA, "arena", "lobby", true, true));
+        assertFalse(LobbyProtection.shouldProtectLobbyDrop(ServerType.BUNGEE, "lobby", "lobby", false, false));
+    }
+
+    @Test
+    void protectsFallbackLobbyWhenConfiguredWorldIsMissing() {
+        assertTrue(LobbyProtection.shouldProtectLobbyDrop(ServerType.MULTIARENA, "world", "", false, false));
+        assertFalse(LobbyProtection.shouldProtectLobbyDrop(ServerType.MULTIARENA, "summer", "", false, true));
     }
 
     @Test

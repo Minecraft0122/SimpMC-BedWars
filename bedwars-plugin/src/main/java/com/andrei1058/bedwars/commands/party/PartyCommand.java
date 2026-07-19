@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.commands.party;
 
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.configuration.Permissions;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -49,6 +50,10 @@ public class PartyCommand extends BukkitCommand {
     public boolean execute(CommandSender s, String c, String[] args) {
         if (s instanceof ConsoleCommandSender) return true;
         Player p = (Player) s;
+        if (!Permissions.hasCommandPermission(p, "party")) {
+            p.sendMessage(getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+            return true;
+        }
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
             sendPartyCmds(p);
             return true;

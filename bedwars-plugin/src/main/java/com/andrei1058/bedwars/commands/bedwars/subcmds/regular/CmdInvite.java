@@ -196,6 +196,6 @@ public final class CmdInvite extends SubCommand {
     public boolean canSee(CommandSender sender, BedWars api) {
         if (sender instanceof ConsoleCommandSender || !(sender instanceof Player player)) return false;
         if (SetupSession.isInSetupSession(player.getUniqueId())) return false;
-        return LobbyAnnouncements.isLobbyPlayer(player) || preGameArena(player) != null;
+        return (LobbyAnnouncements.isLobbyPlayer(player) || preGameArena(player) != null) && hasPermission(sender);
     }
 }

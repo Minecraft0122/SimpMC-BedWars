@@ -20,28 +20,51 @@
 
 package com.andrei1058.bedwars.configuration;
 
-import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.api.command.SubCommand;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class Permissions {
-    public static final String PERMISSION_FORCESTART = BedWars.mainCmd+".forcestart";
-    public static final String PERMISSION_ALL = BedWars.mainCmd+".*";
-    public static final String PERMISSION_COMMAND_BYPASS = BedWars.mainCmd+".cmd.bypass";
-    public static final String PERMISSION_SHOUT_COMMAND = BedWars.mainCmd+".shout";
+import java.util.Locale;
 
-    public static final String PERMISSION_SETUP_ARENA = BedWars.mainCmd+".setup";
-    public static final String PERMISSION_ARENA_GROUP = BedWars.mainCmd+".groups";
-    public static final String PERMISSION_BUILD = BedWars.mainCmd+".build";
-    public static final String PERMISSION_CLONE = BedWars.mainCmd+".clone";
-    public static final String PERMISSION_DEL_ARENA = BedWars.mainCmd+".delete";
-    public static final String PERMISSION_ARENA_ENABLE = BedWars.mainCmd+".enableRotation";
-    public static final String PERMISSION_ARENA_DISABLE = BedWars.mainCmd+".disable";
-    public static final String PERMISSION_NPC = BedWars.mainCmd+".npc";
-    public static final String PERMISSION_RELOAD = BedWars.mainCmd+".reload";
-    public static final String PERMISSION_REJOIN = BedWars.mainCmd+".rejoin";
-    public static final String PERMISSION_LEVEL = BedWars.mainCmd+".level";
-    public static final String PERMISSION_CHAT_COLOR = BedWars.mainCmd+".chatcolor";
-    public static final String PERMISSION_VIP = BedWars.mainCmd+".vip";
+public class Permissions {
+    private static final String PREFIX = "bw";
+
+    public static final String PERMISSION_FORCESTART = PREFIX + ".forcestart";
+    public static final String PERMISSION_ALL = PREFIX + ".*";
+    public static final String PERMISSION_COMMAND_BYPASS = PREFIX + ".cmd.bypass";
+    public static final String PERMISSION_SHOUT_COMMAND = PREFIX + ".shout";
+
+    public static final String PERMISSION_SETUP_ARENA = PREFIX + ".setup";
+    public static final String PERMISSION_ARENA_GROUP = PREFIX + ".groups";
+    public static final String PERMISSION_BUILD = PREFIX + ".build";
+    public static final String PERMISSION_CLONE = PREFIX + ".clone";
+    public static final String PERMISSION_DEL_ARENA = PREFIX + ".delete";
+    public static final String PERMISSION_ARENA_ENABLE = PREFIX + ".enableRotation";
+    public static final String PERMISSION_ARENA_DISABLE = PREFIX + ".disable";
+    public static final String PERMISSION_NPC = PREFIX + ".npc";
+    public static final String PERMISSION_RELOAD = PREFIX + ".reload";
+    public static final String PERMISSION_REJOIN = PREFIX + ".rejoin";
+    public static final String PERMISSION_LEVEL = PREFIX + ".level";
+    public static final String PERMISSION_CHAT_COLOR = PREFIX + ".chatcolor";
+    public static final String PERMISSION_VIP = PREFIX + ".vip";
+    public static final String PERMISSION_PLAYER = "bw.player";
+    public static final String PERMISSION_COMMAND_ALL = "bw.command.*";
+
+    public static String command(String name) {
+        return "bw.command." + name.toLowerCase(Locale.ROOT);
+    }
+
+    public static boolean hasCommandPermission(CommandSender sender, String name, String... legacyPermissions) {
+        if (sender.hasPermission(PERMISSION_ALL) || sender.hasPermission(PERMISSION_COMMAND_ALL)
+                || sender.hasPermission(command(name))
+                || (SubCommand.isPlayerCommand(name) && sender.hasPermission(PERMISSION_PLAYER))) {
+            return true;
+        }
+        for (String permission : legacyPermissions) {
+            if (sender.hasPermission(permission)) return true;
+        }
+        return false;
+    }
 
     /**
      * Check if player has one of the given permissions.

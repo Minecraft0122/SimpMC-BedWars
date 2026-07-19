@@ -62,4 +62,16 @@ class MainConfigTest {
         assertEquals(60, configuration.getInt("restart.default"));
         assertEquals(75, configuration.getInt("restart.custom"));
     }
+
+    @Test
+    void removesObsoleteBackToLobbyItemFromMainLobby() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        String path = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
+        configuration.set(path + ".command", "bw leave");
+        configuration.set(path + ".material", "RED_BED");
+
+        MainConfig.removeObsoleteLobbyItems(configuration);
+
+        assertFalse(configuration.isSet(path));
+    }
 }

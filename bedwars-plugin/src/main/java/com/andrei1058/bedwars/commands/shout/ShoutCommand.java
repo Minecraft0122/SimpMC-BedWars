@@ -26,6 +26,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.configuration.Permissions;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.defaults.BukkitCommand;
@@ -46,6 +47,10 @@ public class ShoutCommand extends BukkitCommand {
     public boolean execute(CommandSender s, String st, String[] args) {
         if (s instanceof ConsoleCommandSender) return true;
         Player p = (Player) s;
+        if (!Permissions.hasCommandPermission(p, "shout", Permissions.PERMISSION_SHOUT_COMMAND)) {
+            p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+            return true;
+        }
         IArena a = Arena.getArenaByPlayer(p);
         if (a == null || a.isSpectator(p)) {
             p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));

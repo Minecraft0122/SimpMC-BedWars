@@ -27,8 +27,14 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 public abstract class SubCommand {
+
+    private static final Set<String> PLAYER_COMMANDS = Set.of(
+            "help", "cmds", "join", "leave", "lang", "teleporter", "gui", "stats",
+            "team", "invite", "upgradesmenu", "shout", "rejoin", "party");
 
     // SubCommand name
     private String name;
@@ -44,6 +50,8 @@ public abstract class SubCommand {
     private boolean arenaSetupCommand = false;
     // Sub command permission
     private String permission = "";
+    // Stable per-command permission used by permission plugins.
+    private final String commandPermission;
 
     /**
      * Create a sub-command for a bedWars command
@@ -55,6 +63,7 @@ public abstract class SubCommand {
     public SubCommand(ParentCommand parent, String name) {
         this.name = name;
         this.parent = parent;
+        this.commandPermission = "bw.command." + name.toLowerCase(Locale.ROOT);
         parent.addSubCommand(this);
     }
 
@@ -145,10 +154,27 @@ public abstract class SubCommand {
     }
 
     /**
+     * Get the stable permission assigned to this exact sub-command.
+     */
+    public String getCommandPermission() {
+        return commandPermission;
+    }
+
+    /**
      * Check if player has permission to use the command
      */
     public boolean hasPermission(CommandSender p) {
-        return permission.isEmpty() || p.hasPermission("bw.*") || p.hasPermission(permission);
+        return p.hasPermission("bw.*") || p.hasPermission("bw.command.*")
+                || p.hasPermission(commandPermission)
+                || (isPlayerCommand(name) && p.hasPermission("bw.player"))
+                || (!permission.isEmpty() && p.hasPermission(permission));
+    }
+
+    /**
+     * Whether a command is part of the ordinary-player permission bundle.
+     */
+    public static boolean isPlayerCommand(String name) {
+        return name != null && PLAYER_COMMANDS.contains(name.toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -158,7 +184,7 @@ public abstract class SubCommand {
      */
     public boolean canSee(CommandSender sender, BedWars api) {
         if (sender instanceof ConsoleCommandSender) return false;
-        if (isArenaSetupCommand() && api.isInSetupSession(((Player) sender).getUniqueId())) return true;
+        if (isArenaSetupCommand() && api.isInSetupSession(((Player) sender).getUniqueId())) return hasPermission(sender);
         if (!isArenaSetupCommand() && api.isInSetupSession(((Player) sender).getUniqueId())) return false;
         return !isArenaSetupCommand() && hasPermission(sender);
     }

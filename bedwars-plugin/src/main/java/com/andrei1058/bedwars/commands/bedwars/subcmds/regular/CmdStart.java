@@ -43,6 +43,7 @@ public class CmdStart extends SubCommand {
 
     public CmdStart(ParentCommand parent, String name) {
         super(parent, name);
+        setPermission(Permissions.PERMISSION_FORCESTART);
         setPriority(15);
         showInList(true);
         setDisplayInfo(com.andrei1058.bedwars.commands.bedwars.MainCommand.createTC("§6 ▪ §7/"+ MainCommand.getInstance().getName()+" "+getSubCommandName()+" §8 - §e强制开始竞技场",
@@ -62,7 +63,7 @@ public class CmdStart extends SubCommand {
             p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NOT_IN_GAME));
             return true;
         }
-        if (!(p.hasPermission(Permissions.PERMISSION_ALL) || p.hasPermission(Permissions.PERMISSION_FORCESTART))){
+        if (!hasPermission(p)){
             p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
             return true;
         }
@@ -107,6 +108,6 @@ public class CmdStart extends SubCommand {
 
         if (SetupSession.isInSetupSession(p.getUniqueId())) return false;
 
-        return s.hasPermission(Permissions.PERMISSION_FORCESTART);
+        return hasPermission(s);
     }
 }

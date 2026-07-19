@@ -31,6 +31,7 @@ import com.andrei1058.bedwars.commands.bedwars.subcmds.regular.*;
 import com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.Level;
 import com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.Reload;
 import com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup.*;
+import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -121,6 +122,14 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
     public boolean execute(CommandSender s, String st, String[] args) {
 
         if (args.length == 0) {
+            if (!Permissions.hasCommandPermission(s, "help")) {
+                if (s instanceof Player player) {
+                    player.sendMessage(getMsg(player, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                } else {
+                    s.sendMessage(Language.getDefaultLanguage().m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                }
+                return true;
+            }
             /* Set op commands*/
             if ((s.isOp() || s.hasPermission(BedWars.mainCmd + ".*"))) {
                 if (s instanceof Player) {

@@ -19,7 +19,7 @@
 - `fireball`：火球速度、爆炸、击退、冷却和伤害。2.10.5 的增强默认值为范围 3.5、水平击退 1.25、垂直击退 0.8、敌方伤害 4.0。
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
-- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。
+- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认只提供历史战绩和竞技场选择器；2.10.17 会自动删除旧的 `lobby-items.leave`，等待大厅和旁观阶段的离开物品不受影响。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
 - `allowed-commands`：游戏内允许的命令。

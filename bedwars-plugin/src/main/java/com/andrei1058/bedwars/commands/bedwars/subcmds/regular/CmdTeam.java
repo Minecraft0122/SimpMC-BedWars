@@ -221,6 +221,6 @@ public class CmdTeam extends SubCommand {
     public boolean canSee(CommandSender sender, BedWars api) {
         if (sender instanceof ConsoleCommandSender || !(sender instanceof Player player)) return false;
         if (SetupSession.isInSetupSession(player.getUniqueId())) return false;
-        return preGameArena(player) != null;
+        return preGameArena(player) != null && hasPermission(sender);
     }
 }

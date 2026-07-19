@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 14;
+    private static final int CONFIG_VERSION = 15;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -157,7 +157,6 @@ public class MainConfig extends ConfigManager {
         /* Multi-Arena Lobby Command Items */
         saveLobbyCommandItem("stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
         saveLobbyCommandItem("arena-selector", "bw gui", true, "CHEST", 5, 4);
-        saveLobbyCommandItem("leave", "bw leave", false, "RED_BED", 0, 8);
 
         /* Pre Game Command Items */
         savePreGameCommandItem("stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
@@ -288,7 +287,7 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
-                "多竞技场大厅固定物品。stats、arena-selector 和 leave 会在旧配置迁移时自动补齐。");
+                "多竞技场大厅固定物品。默认提供历史战绩和竞技场选择器；大厅内不再发放无意义的“回到主大厅”。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置，大小必须是 9 的倍数。");
         setComments(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅掉入虚空时是否传送回大厅出生点。");
     }
@@ -336,7 +335,7 @@ public class MainConfig extends ConfigManager {
 
         ensureLobbyItem(yml, "stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
         ensureLobbyItem(yml, "arena-selector", "bw gui", true, "CHEST", 5, 4);
-        ensureLobbyItem(yml, "leave", "bw leave", false, "RED_BED", 0, 8);
+        removeObsoleteLobbyItems(yml);
 
         for (String obsoletePath : List.of("arenaGui", "statsGUI", "startItems", "generators",
                 "bedsDestroyCountdown", "dragonSpawnCountdown", "gameEndCountdown", "npcLoc", "blockedCmds",
@@ -346,6 +345,10 @@ public class MainConfig extends ConfigManager {
             yml.set(obsoletePath, null);
         }
         migrateLobbyLocation(yml);
+    }
+
+    static void removeObsoleteLobbyItems(YamlConfiguration yml) {
+        yml.set(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave", null);
     }
 
     static void migrateTabDisplayDefaults(YamlConfiguration yml) {

@@ -45,7 +45,7 @@ public class RejoinCommand extends BukkitCommand {
 
         Player p = (Player) s;
 
-        if (!p.hasPermission(Permissions.PERMISSION_REJOIN)) {
+        if (!Permissions.hasCommandPermission(p, "rejoin", Permissions.PERMISSION_REJOIN)) {
             p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             return true;
         }

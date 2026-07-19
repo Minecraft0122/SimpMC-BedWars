@@ -20,6 +20,9 @@
 
 package com.andrei1058.bedwars.commands.leave;
 
+import com.andrei1058.bedwars.api.language.Language;
+import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.configuration.Permissions;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -36,6 +39,10 @@ public class LeaveCommand extends BukkitCommand {
     public boolean execute(CommandSender s, String st, String[] args) {
         if (s instanceof ConsoleCommandSender) return true;
         Player p = (Player) s;
+        if (!Permissions.hasCommandPermission(p, "leave")) {
+            p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+            return true;
+        }
         Bukkit.dispatchCommand(p, "bw leave");
         return true;
     }
