@@ -81,6 +81,10 @@ public class InventoryListener implements Listener {
             }
             for (QuickBuyElement element : cache.getElements()) {
                 if (element.getSlot() == e.getSlot()) {
+                    if (isBulkPurchaseClick(e.getClick())) {
+                        element.getCategoryContent().executeBulk(p, shopCache, element.getSlot());
+                        return;
+                    }
                     if (e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
                         cache.setElement(element.getSlot(), null);
                         p.closeInventory();
@@ -104,6 +108,10 @@ public class InventoryListener implements Listener {
                 if (sc.getSlot() != shopCache.getSelectedCategory()) continue;
                 for (CategoryContent cc : sc.getCategoryContentList()) {
                     if (cc.getSlot() == e.getSlot()) {
+                        if (isBulkPurchaseClick(e.getClick())) {
+                            cc.executeBulk(p, shopCache, cc.getSlot());
+                            return;
+                        }
                         if (e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
                             if (cache.hasCategoryContent(cc)) return;
                             new QuickBuyAdd(p, cc);
@@ -180,6 +188,10 @@ public class InventoryListener implements Listener {
             if (slot >= 0 && slot < topInventorySize) return true;
         }
         return false;
+    }
+
+    static boolean isBulkPurchaseClick(ClickType clickType) {
+        return clickType == ClickType.SHIFT_RIGHT;
     }
 
     private static ItemStack getSwappedPlayerItem(InventoryClickEvent event, Player player) {

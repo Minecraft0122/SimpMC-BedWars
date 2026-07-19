@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.listeners;
 
 import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
@@ -34,6 +35,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.block.data.Openable;
 import org.bukkit.entity.EntityType;
@@ -49,8 +51,11 @@ import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
+
+import java.util.Map;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -108,6 +113,44 @@ public class Interact implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onTeamChestQuickDeposit(PlayerInteractEvent event) {
+        if (event.getAction() != Action.LEFT_CLICK_BLOCK || !event.getPlayer().isSneaking()) return;
+        if (event.getHand() != null && event.getHand() != EquipmentSlot.HAND) return;
+
+        Block block = event.getClickedBlock();
+        if (block == null || !isChest(block.getType()) || !(block.getState() instanceof Chest chest)) return;
+
+        Player player = event.getPlayer();
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null || arena.getStatus() != GameState.playing || arena.isSpectator(player)
+                || arena.getRespawnSessions().containsKey(player)) return;
+
+        ITeam team = arena.getTeam(player);
+        if (team == null || findChestOwner(arena, block) != team) return;
+
+        // A left click would otherwise start breaking the team's map chest.
+        event.setCancelled(true);
+
+        ItemStack held = player.getInventory().getItemInMainHand();
+        if (held.getType() == Material.AIR || held.getAmount() <= 0) return;
+
+        ShopCache shopCache = ShopCache.getShopCache(player.getUniqueId());
+        if (InventoryListener.shouldCancelMovement(held, shopCache)) return;
+
+        int offeredAmount = held.getAmount();
+        Map<Integer, ItemStack> leftovers = chest.getInventory().addItem(held.clone());
+        int transferred = TeamChestQuickDeposit.transferredAmount(offeredAmount, leftovers);
+        if (transferred <= 0) return;
+
+        if (transferred == offeredAmount) {
+            player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+        } else {
+            held.setAmount(offeredAmount - transferred);
+            player.getInventory().setItemInMainHand(held);
+        }
+    }
+
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
         if (e == null) return;
@@ -144,19 +187,13 @@ public class Interact implements Listener {
                     }
                     return;
                 }
-                if (b.getType() == Material.CHEST) {
+                if (isChest(b.getType())) {
                     if (a.isSpectator(p) || a.getRespawnSessions().containsKey(p)) {
                         e.setCancelled(true);
                         return;
                     }
                     //make it so only team members can open chests while team is alive, and all when is eliminated
-                    ITeam owner = null;
-                    int isRad = a.getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS);
-                    for (ITeam t : a.getTeams()) {
-                        if (t.getSpawn().distance(e.getClickedBlock().getLocation()) <= isRad) {
-                            owner = t;
-                        }
-                    }
+                    ITeam owner = findChestOwner(a, b);
                     if (owner != null) {
                         if (!owner.isMember(p)) {
                             if (!(owner.getMembers().isEmpty() && owner.isBedDestroyed())) {
@@ -309,5 +346,29 @@ public class Interact implements Listener {
                 e.getInventory().setResult(new ItemStack(Material.AIR));
             }
         }
+    }
+
+    private static boolean isChest(Material material) {
+        return material == Material.CHEST || material == Material.TRAPPED_CHEST;
+    }
+
+    private static ITeam findChestOwner(IArena arena, Block block) {
+        double radius = Math.max(0, arena.getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS));
+        double radiusSquared = radius * radius;
+        Location chestLocation = block.getLocation();
+        ITeam nearestTeam = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        for (ITeam team : arena.getTeams()) {
+            Location spawn = team.getSpawn();
+            if (spawn == null || spawn.getWorld() == null || !spawn.getWorld().equals(chestLocation.getWorld())) continue;
+
+            double distance = spawn.distanceSquared(chestLocation);
+            if (distance <= radiusSquared && distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestTeam = team;
+            }
+        }
+        return nearestTeam;
     }
 }

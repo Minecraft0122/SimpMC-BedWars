@@ -136,6 +136,19 @@ public class CategoryContent implements ICategoryContent {
     }
 
     public void execute(Player player, ShopCache shopCache, int slot) {
+        execute(player, shopCache, slot, false);
+    }
+
+    /**
+     * Buy as many units as the player's item currency can afford. Permanent,
+     * tiered, command-based and Vault purchases deliberately remain single
+     * purchases because repeating those may bypass upgrade or addon semantics.
+     */
+    public void executeBulk(Player player, ShopCache shopCache, int slot) {
+        execute(player, shopCache, slot, true);
+    }
+
+    private void execute(Player player, ShopCache shopCache, int slot, boolean buyToLimit) {
 
         IContentTier ct;
 
@@ -173,23 +186,29 @@ public class CategoryContent implements ICategoryContent {
             return;
         }
 
+        int purchases = buyToLimit && supportsBatchPurchase(ct)
+                ? PurchaseBatch.affordablePurchases(money, ct.getPrice())
+                : 1;
+        if (purchases <= 0) return;
+
         ShopBuyEvent event;
         //call shop buy event
-        Bukkit.getPluginManager().callEvent(event = new ShopBuyEvent(player, Arena.getArenaByPlayer(player), this));
+        Bukkit.getPluginManager().callEvent(event = new ShopBuyEvent(
+                player, Arena.getArenaByPlayer(player), this, purchases));
 
         if (event.isCancelled()){
             return;
         }
 
         //take money
-        takeMoney(player, ct.getCurrency(), ct.getPrice());
+        takeMoney(player, ct.getCurrency(), ct.getPrice() * purchases);
 
         //upgrade if possible
         shopCache.upgradeCachedItem(this, slot);
 
 
         //give items
-        giveItems(player, shopCache, Arena.getArenaByPlayer(player));
+        giveItems(player, shopCache, Arena.getArenaByPlayer(player), purchases);
 
         //play sound
         Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, player);
@@ -212,9 +231,35 @@ public class CategoryContent implements ICategoryContent {
      * Add tier items to player inventory
      */
     public void giveItems(Player player, ShopCache shopCache, IArena arena) {
+        giveItems(player, shopCache, arena, 1);
+    }
+
+    private void giveItems(Player player, ShopCache shopCache, IArena arena, int purchases) {
+        boolean inventoryChanged = false;
         for (IBuyItem bi : contentTiers.get(shopCache.getContentTier(getIdentifier()) - 1).getBuyItemsList()) {
-            bi.give(player, arena);
+            if (bi instanceof BuyItem buyItem) {
+                buyItem.give(player, arena, purchases, false);
+                inventoryChanged = true;
+            } else {
+                bi.give(player, arena);
+            }
         }
+        if (inventoryChanged) player.updateInventory();
+    }
+
+    private boolean supportsBatchPurchase(IContentTier tier) {
+        if (permanent || contentTiers.size() != 1 || tier.getCurrency() == Material.AIR || tier.getPrice() <= 0) {
+            return false;
+        }
+        if (tier.getBuyItemsList().isEmpty()) return false;
+
+        for (IBuyItem buyItem : tier.getBuyItemsList()) {
+            if (!(buyItem instanceof BuyItem) || buyItem.isAutoEquip() || buyItem.isPermanent()
+                    || buyItem.getItemStack() == null || buyItem.getItemStack().getType() == Material.AIR) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -440,21 +485,21 @@ public class CategoryContent implements ICategoryContent {
         }
 
         int cost = amount;
-        for (ItemStack i : player.getInventory().getContents()) {
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int slot = 0; slot < contents.length && cost > 0; slot++) {
+            ItemStack i = contents[slot];
             if (i == null) continue;
             if (i.getType() == currency) {
-                if (i.getAmount() < cost) {
+                if (i.getAmount() <= cost) {
                     cost -= i.getAmount();
-                    nms.minusAmount(player, i, i.getAmount());
-                    player.updateInventory();
+                    contents[slot] = null;
                 } else {
-                    nms.minusAmount(player, i, cost);
-                    player.updateInventory();
-                    break;
+                    i.setAmount(i.getAmount() - cost);
+                    cost = 0;
                 }
             }
         }
-
+        player.getInventory().setContents(contents);
     }
 
     public void setLoaded(boolean loaded) {

@@ -175,9 +175,22 @@ public class BuyItem implements IBuyItem {
      * Give to a player
      */
     public void give(Player player, IArena arena) {
+        give(player, arena, 1);
+    }
+
+    /**
+     * Give multiple purchases while preparing metadata and synchronizing the
+     * inventory only once. This path is used only for non-permanent items.
+     */
+    void give(Player player, IArena arena, int purchases) {
+        give(player, arena, purchases, true);
+    }
+
+    void give(Player player, IArena arena, int purchases, boolean synchronizeInventory) {
+        if (purchases <= 0) return;
 
         ItemStack i = itemStack.clone();
-        BedWars.debug("Giving BuyItem: " + getUpgradeIdentifier() + " to: " + player.getName());
+        BedWars.debug("Giving BuyItem: " + getUpgradeIdentifier() + " x" + purchases + " to: " + player.getName());
         if (i.getType() == Material.AIR) {
             return;
         }
@@ -212,7 +225,7 @@ public class BuyItem implements IBuyItem {
                 if (permanent) i = nms.setShopUpgradeIdentifier(i, upgradeIdentifier);
                 player.getInventory().setBoots(i);
             }
-            player.updateInventory();
+            if (synchronizeInventory) player.updateInventory();
             Sounds.playSound("shop-auto-equip", player);
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -265,8 +278,8 @@ public class BuyItem implements IBuyItem {
             }
         }
         //
-        player.getInventory().addItem(i);
-        player.updateInventory();
+        player.getInventory().addItem(PurchaseBatch.createStacks(i, purchases));
+        if (synchronizeInventory) player.updateInventory();
     }
 
 

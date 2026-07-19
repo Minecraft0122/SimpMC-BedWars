@@ -34,6 +34,7 @@ public class ShopBuyEvent extends Event implements Cancellable {
     private final Player buyer;
     private final IArena arena;
     private final ICategoryContent categoryContent;
+    private final int purchaseCount;
     private boolean cancelled = false;
 
     /**
@@ -43,18 +44,27 @@ public class ShopBuyEvent extends Event implements Cancellable {
      */
     @Deprecated
     public ShopBuyEvent(Player buyer, ICategoryContent categoryContent) {
-        this.categoryContent = categoryContent;
-        this.buyer = buyer;
-        this.arena = null;
+        this(buyer, null, categoryContent, 1);
     }
 
     /**
      * Triggered when a player buys from the shop
      */
     public ShopBuyEvent(Player buyer, IArena arena, ICategoryContent categoryContent) {
+        this(buyer, arena, categoryContent, 1);
+    }
+
+    /**
+     * Triggered when a player buys one or more units from the shop.
+     *
+     * @param purchaseCount number of price units bought by this action
+     */
+    public ShopBuyEvent(Player buyer, IArena arena, ICategoryContent categoryContent, int purchaseCount) {
+        if (purchaseCount < 1) throw new IllegalArgumentException("purchaseCount must be at least 1");
         this.categoryContent = categoryContent;
         this.buyer = buyer;
         this.arena = arena;
+        this.purchaseCount = purchaseCount;
     }
 
     public IArena getArena() {
@@ -73,6 +83,14 @@ public class ShopBuyEvent extends Event implements Cancellable {
      */
     public ICategoryContent getCategoryContent() {
         return categoryContent;
+    }
+
+    /**
+     * Get the number of price units bought by this action. A normal click is
+     * always one; a buy-to-limit click may be greater than one.
+     */
+    public int getPurchaseCount() {
+        return purchaseCount;
     }
 
     @Override

@@ -90,7 +90,7 @@ api.getArenaUtil().applyLobbyState(player);
 - `TeamAssignEvent`
 - `PlayerFirstSpawnEvent` / `PlayerReSpawnEvent`
 - `PlayerBedBreakEvent` / `PlayerKillEvent`
-- `ShopBuyEvent` / `UpgradeBuyEvent`
+- `ShopBuyEvent` / `UpgradeBuyEvent`（商店事件的 `getPurchaseCount()` 可区分普通单次购买与 Shift+右键批量购买）
 - `ArenaEnableEvent` / `ArenaDisableEvent`
 
 示例：
