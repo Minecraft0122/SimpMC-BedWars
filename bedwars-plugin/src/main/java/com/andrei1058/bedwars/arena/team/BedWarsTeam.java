@@ -26,6 +26,7 @@ import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
 import com.andrei1058.bedwars.api.arena.team.TeamEnchant;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.events.player.PlayerFirstSpawnEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerReSpawnEvent;
@@ -557,7 +558,7 @@ public class BedWarsTeam implements ITeam {
     public void addBaseEffect(PotionEffectType pef, int amp, int duration) {
         getBaseEffects().add(new PotionEffect(pef, duration, amp));
         for (Player p : new ArrayList<>(getMembers())) {
-            if (p.getLocation().distance(getBed()) <= getArena().getIslandRadius()) {
+            if (ConfigManager.isSameWorldWithin(p.getLocation(), getBed(), getArena().getIslandRadius())) {
                 for (PotionEffect e : getBaseEffects()) {
                     p.addPotionEffect(e, true);
                 }

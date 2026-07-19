@@ -20,12 +20,16 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
+import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
+import com.andrei1058.bedwars.api.upgrades.UpgradesIndex;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.upgrades.UpgradesManager;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -41,16 +45,20 @@ public class CmdUpgrades extends SubCommand {
 
     @Override
     public boolean execute(String[] args, CommandSender s) {
-        if (!(s instanceof Player)) return false;
-        IArena a = Arena.getArenaByPlayer((Player) s);
-        if (a == null) return false;
-        if (!a.isPlayer((Player) s)) return false;
-        ITeam t = a.getTeam((Player) s);
-        if (t.getTeamUpgrades().distance(((Player)s).getLocation()) < 4){
-            UpgradesManager.getMenuForArena(a).open((Player) s);
-            return true;
+        if (!(s instanceof Player player)) return false;
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null) return true;
+        ITeam team = arena.getTeam(player);
+        if (canOpenMenu(arena.getStatus(), arena.isPlayer(player), team, player.getLocation())) {
+            UpgradesIndex menu = UpgradesManager.getMenuForArena(arena);
+            if (menu != null) menu.open(player);
         }
-        return false;
+        return true;
+    }
+
+    static boolean canOpenMenu(GameState state, boolean arenaPlayer, ITeam team, Location playerLocation) {
+        return state == GameState.playing && arenaPlayer && team != null
+                && ConfigManager.isSameWorldWithin(playerLocation, team.getTeamUpgrades(), 4D);
     }
 
     @Override

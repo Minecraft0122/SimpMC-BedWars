@@ -22,6 +22,7 @@ package com.andrei1058.bedwars.upgrades.menu;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.events.upgrades.UpgradeBuyEvent;
 import com.andrei1058.bedwars.api.language.Language;
@@ -285,7 +286,8 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
         for (Player arenaPlayer : team.getArena().getPlayers()) {
             if (team.isMember(arenaPlayer)) continue;
             if (team.getArena().isReSpawning(arenaPlayer)) continue;
-            if (arenaPlayer.getLocation().distance(team.getBed()) <= team.getArena().getIslandRadius()) {
+            if (ConfigManager.isSameWorldWithin(arenaPlayer.getLocation(), team.getBed(),
+                    team.getArena().getIslandRadius())) {
                 team.getActiveTraps().remove(0).trigger(team, arenaPlayer);
                 break;
             }

@@ -57,10 +57,16 @@ public class TeleporterGUI {
         if (p.getOpenInventory() == null) return;
         IArena arena = Arena.getArenaByPlayer(p);
         if (arena == null) {
+            refresh.remove(p);
             p.closeInventory();
             return;
         }
-        List<Player> players = arena.getPlayers();
+        List<Player> players = getTeleportTargets(arena);
+        if (players.isEmpty()) {
+            refresh.remove(p);
+            p.closeInventory();
+            return;
+        }
         for (int i = 0; i < inv.getSize(); i++) {
             if (i < players.size()) {
                 inv.setItem(i, createHead(players.get(i), p));
@@ -77,17 +83,35 @@ public class TeleporterGUI {
         IArena arena = Arena.getArenaByPlayer(p);
         if (arena == null) return;
 
-        int playerCount = arena.getPlayers().size();
-        int size = (playerCount % 9) == 0 ? playerCount : ((int) Math.ceil(playerCount / 9.0)) * 9;
-
-        if (size > 54) {
-            size = 54;
+        int size = inventorySizeFor(getTeleportTargets(arena).size());
+        if (size == 0) {
+            refresh.remove(p);
+            p.closeInventory();
+            return;
         }
 
         Inventory inv = Bukkit.createInventory(p, size, getMsg(p, Messages.ARENA_SPECTATOR_TELEPORTER_GUI_NAME));
         refreshInv(p, inv);
         refresh.put(p, inv);
         p.openInventory(inv);
+    }
+
+    static int inventorySizeFor(int playerCount) {
+        if (playerCount <= 0) return 0;
+        return Math.min(54, ((playerCount + 8) / 9) * 9);
+    }
+
+    private static List<Player> getTeleportTargets(IArena arena) {
+        if (arena == null) return List.of();
+        return arena.getPlayers().stream()
+                .filter(Player::isOnline)
+                .filter(player -> !player.isDead())
+                .filter(arena::isPlayer)
+                .filter(player -> !arena.isSpectator(player))
+                .filter(player -> !arena.isReSpawning(player.getUniqueId()))
+                .filter(player -> arena.getTeam(player) != null)
+                .limit(54)
+                .toList();
     }
 
     /**
@@ -112,9 +136,11 @@ public class TeleporterGUI {
     private static ItemStack createHead(Player targetPlayer, Player GUIholder) {
         ItemStack i = nms.getPlayerHead(targetPlayer, null);
         ItemMeta im = i.getItemMeta();
-        assert im != null;
+        if (im == null) return i;
         IArena currentArena = Arena.getArenaByPlayer(targetPlayer);
+        if (currentArena == null) return new ItemStack(Material.AIR);
         ITeam targetPlayerTeam = currentArena.getTeam(targetPlayer);
+        if (targetPlayerTeam == null) return new ItemStack(Material.AIR);
 
         im.setDisplayName(getMsg(GUIholder, Messages.ARENA_SPECTATOR_TELEPORTER_GUI_HEAD_NAME)
                 .replace("{vPrefix}", BedWars.getChatSupport().getPrefix(targetPlayer))

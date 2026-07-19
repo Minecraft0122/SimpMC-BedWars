@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.upgrades.trapaction;
 
 import com.andrei1058.bedwars.api.arena.team.ITeam;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.upgrades.TrapAction;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
@@ -62,7 +63,8 @@ public class PlayerEffectAction implements TrapAction {
             }
         } else if (type == ApplyType.BASE){
             for (Player p : targetTeam.getMembers()){
-                if (p.getLocation().distance(targetTeam.getBed()) <= targetTeam.getArena().getIslandRadius()) {
+                if (ConfigManager.isSameWorldWithin(p.getLocation(), targetTeam.getBed(),
+                        targetTeam.getArena().getIslandRadius())) {
                     p.addPotionEffect(new PotionEffect(potionEffectType, duration, amplifier), true);
                 }
             }

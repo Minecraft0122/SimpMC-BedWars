@@ -23,12 +23,14 @@ package com.andrei1058.bedwars.arena.upgrades;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.events.player.PlayerBaseEnterEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerBaseLeaveEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerLeaveArenaEvent;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -82,9 +84,10 @@ public class BaseListener implements Listener {
         if (a.isSpectator(p)) return;
         if (a.isReSpawning(p)) return;
         boolean notOnBase = true;
+        Location playerLocation = p.getLocation();
         for (ITeam bwt : a.getTeams()) {
             /* BaseEnterEvent */
-            if (p.getLocation().distance(bwt.getBed()) <= a.getIslandRadius()) {
+            if (isInsideBase(playerLocation, bwt.getBed(), a.getIslandRadius())) {
                 notOnBase = false;
                 if (isOnABase.containsKey(p)) {
                     if (isOnABase.get(p) != bwt) {
@@ -109,6 +112,10 @@ public class BaseListener implements Listener {
                 isOnABase.remove(p);
             }
         }
+    }
+
+    static boolean isInsideBase(Location playerLocation, Location bedLocation, double islandRadius) {
+        return ConfigManager.isSameWorldWithin(playerLocation, bedLocation, islandRadius);
     }
 
     @EventHandler

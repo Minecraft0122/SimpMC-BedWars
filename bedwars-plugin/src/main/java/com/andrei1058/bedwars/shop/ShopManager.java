@@ -408,12 +408,17 @@ public class ShopManager extends ConfigManager {
         shop = new ShopIndex(Messages.SHOP_INDEX_NAME, qbb, Messages.SHOP_SEPARATOR_NAME, Messages.SHOP_SEPARATOR_LORE, separatorSelected, separatorStandard);
 
         for (String s : getYml().getConfigurationSection("").getKeys(false)) {
-            if (s.equalsIgnoreCase(ConfigPath.SHOP_SETTINGS_PATH)) continue;
-            if (s.equals(ConfigPath.SHOP_QUICK_DEFAULTS_PATH)) continue;
-            if (s.equalsIgnoreCase(ConfigPath.SHOP_SPECIALS_PATH)) continue;
+            if (!isCategoryRoot(getYml(), s)) continue;
             ShopCategory sc = new ShopCategory(s, getYml());
             if (sc.isLoaded()) shop.addShopCategory(sc);
         }
+    }
+
+    static boolean isCategoryRoot(org.bukkit.configuration.file.YamlConfiguration yml, String path) {
+        if (yml == null || path == null || !yml.isConfigurationSection(path)) return false;
+        return !path.equalsIgnoreCase(ConfigPath.SHOP_SETTINGS_PATH)
+                && !path.equalsIgnoreCase(ConfigPath.SHOP_QUICK_DEFAULTS_PATH)
+                && !path.equalsIgnoreCase(ConfigPath.SHOP_SPECIALS_PATH);
     }
 
     /**
