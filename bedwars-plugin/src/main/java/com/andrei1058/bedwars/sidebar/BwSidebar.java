@@ -473,8 +473,8 @@ public class BwSidebar implements ISidebar {
         return null == arena;
     }
 
-    // TAB-style global header and footer. Player rows are managed separately
-    // by BwTabList and are never mixed into these administrator templates.
+    // Keep the original BedWars1058 state-specific TAB style. Player rows are
+    // still managed separately by BwTabList.
     private void assignTabHeaderFooter() {
         if (!config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE)) {
             SidebarManager.getInstance().clearHeaderFooter(player);
@@ -482,11 +482,72 @@ public class BwSidebar implements ISidebar {
             return;
         }
 
-        List<String> headerLines = config.getList(ConfigPath.SB_CONFIG_TAB_HEADER);
-        List<String> footerLines = config.getList(ConfigPath.SB_CONFIG_TAB_FOOTER);
+        Language language = Language.getPlayerLanguage(player);
+        String headerPath;
+        String footerPath;
+
+        if (hasNoArena()) {
+            headerPath = Messages.FORMATTING_SB_TAB_LOBBY_HEADER;
+            footerPath = Messages.FORMATTING_SB_TAB_LOBBY_FOOTER;
+        } else if (arena.isSpectator(player)) {
+            ITeam formerTeam = arena.getExTeam(player.getUniqueId());
+            if (formerTeam == null) {
+                switch (arena.getStatus()) {
+                    case waiting -> {
+                        headerPath = Messages.FORMATTING_SB_TAB_WAITING_HEADER_SPEC;
+                        footerPath = Messages.FORMATTING_SB_TAB_WAITING_FOOTER_SPEC;
+                    }
+                    case starting -> {
+                        headerPath = Messages.FORMATTING_SB_TAB_STARTING_HEADER_SPEC;
+                        footerPath = Messages.FORMATTING_SB_TAB_STARTING_FOOTER_SPEC;
+                    }
+                    case playing -> {
+                        headerPath = Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER;
+                        footerPath = Messages.FORMATTING_SB_TAB_PLAYING_SPEC_FOOTER;
+                    }
+                    case restarting -> {
+                        headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_HEADER;
+                        footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_FOOTER;
+                    }
+                    default -> throw new IllegalStateException("Unhandled arena status");
+                }
+            } else if (arena.getStatus() == GameState.restarting) {
+                if (arena.getWinner() != null && arena.getWinner().equals(formerTeam)) {
+                    headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_HEADER;
+                    footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_FOOTER;
+                } else {
+                    headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_ELM_HEADER;
+                    footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_ELM_FOOTER;
+                }
+            } else {
+                headerPath = Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER;
+                footerPath = Messages.FORMATTING_SB_TAB_PLAYING_ELM_FOOTER;
+            }
+        } else {
+            switch (arena.getStatus()) {
+                case waiting -> {
+                    headerPath = Messages.FORMATTING_SB_TAB_WAITING_HEADER;
+                    footerPath = Messages.FORMATTING_SB_TAB_WAITING_FOOTER;
+                }
+                case starting -> {
+                    headerPath = Messages.FORMATTING_SB_TAB_STARTING_HEADER;
+                    footerPath = Messages.FORMATTING_SB_TAB_STARTING_FOOTER;
+                }
+                case playing -> {
+                    headerPath = Messages.FORMATTING_SB_TAB_PLAYING_HEADER;
+                    footerPath = Messages.FORMATTING_SB_TAB_PLAYING_FOOTER;
+                }
+                case restarting -> {
+                    headerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_HEADER;
+                    footerPath = Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_FOOTER;
+                }
+                default -> throw new IllegalStateException("Unhandled arena status");
+            }
+        }
+
         this.headerFooter = new TabHeaderFooter(
-                this.normalizeLines(headerLines),
-                this.normalizeLines(footerLines),
+                this.normalizeLines(language.l(headerPath)),
+                this.normalizeLines(language.l(footerPath)),
                 withPersistentPlaceholders(getPlaceholders(this.getPlayer()))
         );
 

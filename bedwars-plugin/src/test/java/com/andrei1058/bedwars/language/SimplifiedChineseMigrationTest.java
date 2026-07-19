@@ -12,20 +12,20 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 class SimplifiedChineseMigrationTest {
 
     @Test
-    void replacesLegacyEnglishTabTemplateWithCompactChineseDefault() {
+    void replacesCompactTabTemplateWithOriginalRepositoryStyle() {
         YamlConfiguration defaults = new YamlConfiguration();
         defaults.set(Messages.FORMATTING_SB_TAB_LOBBY_FOOTER,
-                List.of("&7大厅人数：&f{on}", "&8{poweredBy}"));
+                List.of("", "&f当前大厅共有 {on} 名玩家", "由 {poweredBy} 提供支持,&a{serverIp}", ""));
         defaults.set(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX,
-                List.of(" &7[已淘汰]"));
+                List.of(" {vPrefix}", " &c&o已淘汰", " {level}", " &c&o已淘汰"));
         YamlConfiguration language = new YamlConfiguration();
         language.setDefaults(defaults);
         language.set(Messages.FORMATTING_SB_TAB_LOBBY_FOOTER,
-                List.of("&fThere are {on} players on this lobby", "Powered by {poweredBy},&a{serverIp}"));
+                List.of("&7大厅人数：&f{on}", "&8{poweredBy}"));
         language.set(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX,
-                List.of(" {vPrefix}", " &c&oEliminated", " {level}", " &c&oEliminated"));
+                List.of(" &7[已淘汰]"));
 
-        SimplifiedChinese.migrateCompactTabMessages(language);
+        SimplifiedChinese.migrateOriginalTabMessages(language);
 
         assertEquals(defaults.getStringList(Messages.FORMATTING_SB_TAB_LOBBY_FOOTER),
                 language.getStringList(Messages.FORMATTING_SB_TAB_LOBBY_FOOTER));
@@ -34,18 +34,18 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
-    void removesWidthSpacerWithoutOverwritingCustomChineseText() {
+    void preservesCustomChineseTextAndItsConfiguredWidth() {
         YamlConfiguration defaults = new YamlConfiguration();
-        defaults.set(Messages.FORMATTING_SB_TAB_LOBBY_HEADER, List.of("&a&l{serverIp}"));
+        defaults.set(Messages.FORMATTING_SB_TAB_LOBBY_HEADER,
+                List.of("                                                                                                        ", "&a{serverIp}", ""));
         YamlConfiguration language = new YamlConfiguration();
         language.setDefaults(defaults);
-        language.set(Messages.FORMATTING_SB_TAB_LOBBY_HEADER,
-                List.of("                                                                ", "&b自定义标题"));
+        List<String> custom = List.of("                                                                ", "&b自定义标题");
+        language.set(Messages.FORMATTING_SB_TAB_LOBBY_HEADER, custom);
 
-        SimplifiedChinese.migrateCompactTabMessages(language);
+        SimplifiedChinese.migrateOriginalTabMessages(language);
 
-        assertEquals(List.of("&b自定义标题"),
-                language.getStringList(Messages.FORMATTING_SB_TAB_LOBBY_HEADER));
+        assertEquals(custom, language.getStringList(Messages.FORMATTING_SB_TAB_LOBBY_HEADER));
     }
 
     @Test
@@ -58,7 +58,7 @@ class SimplifiedChineseMigrationTest {
         List<String> custom = List.of("&7Map: &f{map}", "&bCustom tournament");
         language.set(Messages.FORMATTING_SB_TAB_STARTING_HEADER, custom);
 
-        SimplifiedChinese.migrateCompactTabMessages(language);
+        SimplifiedChinese.migrateOriginalTabMessages(language);
 
         assertEquals(custom, language.getStringList(Messages.FORMATTING_SB_TAB_STARTING_HEADER));
     }

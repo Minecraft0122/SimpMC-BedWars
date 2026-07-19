@@ -706,148 +706,226 @@ public class SimplifiedChinese extends Language {
         // start of TAB
         // main lobby tab format
         yml.addDefault(Messages.FORMATTING_SB_TAB_LOBBY_HEADER, List.of(
-                "&a&l{serverIp}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_LOBBY_FOOTER, List.of(
-                "&7大厅人数：&f{on}",
-                "&8{poweredBy}"
+                "",
+                "&f当前大厅共有 {on} 名玩家",
+                "由 {poweredBy} 提供支持,&a{serverIp}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_LOBBY_PREFIX, List.of("{vPrefix}"));
         yml.addDefault(Messages.FORMATTING_SB_TAB_LOBBY_SUFFIX, List.of(" {level}"));
         // player waiting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_HEADER, List.of(
-                "&a&l{serverIp}",
-                "&7地图：&f{map} &8| &7模式：&f{group}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_FOOTER, List.of(
-                "&e等待更多玩家……",
-                "&7人数：&f{on}&7/&f{max}"
+                "",
+                "等待更多玩家,等待更多玩家.,等待更多玩家..,等待更多玩家...",
+                "&f{on}&a/&f{max}",
+                "",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_PREFIX, List.of("{vPrefix}"));
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX, List.of(" {level}"));
         // spectator waiting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_HEADER_SPEC, List.of(
-                "&a&l{serverIp}",
-                "&7地图：&f{map} &8| &7模式：&f{group}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_FOOTER_SPEC, List.of(
-                "&7你正在旁观",
-                "&e等待更多玩家……",
-                "&7人数：&f{on}&7/&f{max}"
+                "",
+                "&7&o你正在旁观",
+                "等待更多玩家,等待更多玩家.,等待更多玩家..,等待更多玩家...",
+                "&f{on}&a/&f{max}",
+                "",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC, List.of("&7[旁观] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC, List.of("{vPrefix}"));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC, List.of(" {level}"));
         // player starting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_HEADER, List.of(
-                "&a&l{serverIp}",
-                "&7地图：&f{map} &8| &7模式：&f{group}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_FOOTER, List.of(
-                "&e{time} 秒后开始",
-                "&7人数：&f{on}&7/&f{max}"
+                "",
+                "&f游戏将在 &a{time} &f秒后开始,&f游戏将在 &a{time} &f秒后开始.,&f游戏将在 &a{time} &f秒后开始..,&f游戏将在 &a{time} &f秒后开始...",
+                "&f{on}&a/&f{max}",
+                "",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_PREFIX, List.of("{vPrefix} "));
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX, List.of(" {level}"));
         // spectator starting lobby
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_HEADER_SPEC, List.of(
-                "&a&l{serverIp}",
-                "&7地图：&f{map} &8| &7模式：&f{group}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_FOOTER_SPEC, List.of(
-                "&7你正在旁观",
-                "&e{time} 秒后开始",
-                "&7人数：&f{on}&7/&f{max}"
+                "",
+                "&f游戏将在 &a{time} &f秒后开始,&f游戏将在 &a{time} &f秒后开始.,&f游戏将在 &a{time} &f秒后开始..,&f游戏将在 &a{time} &f秒后开始...",
+                "&f{on}&a/&f{max}",
+                "",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC, List.of("&7[旁观] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC, List.of("{vPrefix} "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC, List.of(" {level}"));
         // player playing
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_HEADER, List.of(
-                "&a&l{serverIp}",
-                "&7{map} &8| &7{group}",
-                "&f{nextEvent} &a{time}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                "",
+                "{nextEvent}：{time}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER, List.of(
-                "&7队伍：{teamColor}{teamName}",
-                "&8{poweredBy}"
+                "",
+                "&f你正在为 {teamColor}{teamName}队 &f而战",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}[{teamLetter}] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}{teamName} "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // player eliminated - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER, List.of(
-                "&a&l{serverIp}",
-                "&7{map} &8| &7{group}",
-                "&f{nextEvent} &a{time}",
-                "&c你已被淘汰"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                "",
+                "{nextEvent}：{time}",
+                "",
+                "&7&o你已被淘汰,&f&o你已被淘汰"
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_FOOTER, List.of(
-                "&7继续观战",
-                "&8{poweredBy}"
+                "",
+                "&f你曾属于 {teamColor}{teamName}队",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, List.of("&7[旁观] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, List.of(" &c[淘汰]"));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, List.of("&f&o旁观者 "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, List.of(" &c&o已淘汰 {teamColor}&o{teamName}", " {teamColor}&o已淘汰 {vPrefix}", "{teamColor}&o已淘汰 {level}"));
         // spectator - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER, List.of(
-                "&a&l{serverIp}",
-                "&7{map} &8| &7{group}",
-                "&f{nextEvent} &a{time}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                "",
+                "{nextEvent}：{time}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_FOOTER, List.of(
-                "&7你正在旁观",
-                "&8{poweredBy}"
+                "",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX, List.of("&7[旁观] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX, List.of("&f&o旁观者 "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // winner alive - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_HEADER, List.of(
-                "&6&l★ 你的队伍获胜！",
-                "&7{map} &8| &7{group}"
+                "                                                                                                        ",
+                "&6⭐ {winnerTeamColor}&l你的队伍赢得了游戏！ &6⭐",
+                "&7{date}", "&7地图：&f{map} &7模式：&f{group}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_FOOTER, List.of(
-                "&a本局胜利",
-                "&e击杀 &f{kills} &8| &e最终击杀 &f{finalKills}",
-                "&e破坏床 &f{beds} &8| &e死亡 &f{deaths}",
-                "&7竞技场将在 &e{time} &7秒后重置"
+                "",
+                "&6&l你随 {teamColor}&l{teamName}队&6&l赢得了游戏！,&6&l你随 {teamColor}&l{teamName}队&6&l赢得了游戏！,&f&l你随 {teamColor}&l{teamName}队&f&l赢得了游戏！",
+                "&7本局统计",
+                "&e击杀：&f{kills} &8| &e最终击杀：&f{finalKills} &8| &e破坏床：&f{beds} &8| &e死亡：&f{deaths},&e击杀：&7{kills} &8| &e最终击杀：&7{finalKills} &8| &e破坏床：&7{beds} &8| &e死亡：&7{deaths}",
+                "",
+                "&f感谢游玩，{player}！",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, List.of("&6★ {teamColor}[{teamLetter}] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, List.of("&6&l⭐ {teamColor}{teamName} "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // winner dead - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_HEADER, List.of(
-                "&6&l★ 你的队伍获胜！",
-                "&7{map} &8| &7{group}"
+                "                                                                                                        ",
+                "&6⭐ {winnerTeamColor}&l{winnerTeamName}队赢得了游戏！ &6⭐",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_FOOTER, List.of(
-                "&a本局胜利",
-                "&e击杀 &f{kills} &8| &e最终击杀 &f{finalKills}",
-                "&e破坏床 &f{beds} &8| &e死亡 &f{deaths}",
-                "&7竞技场将在 &e{time} &7秒后重置"
+                "",
+                "&6&l你随 {teamColor}&l{teamName}队&6&l赢得了游戏！,&6&l你随 {teamColor}&l{teamName}队&6&l赢得了游戏！,&f&l你随 {teamColor}&l{teamName}队&f&l赢得了游戏！",
+                "&7本局统计",
+                "&e击杀：&f{kills} &8| &e最终击杀：&f{finalKills} &8| &e破坏床：&f{beds} &8| &e死亡：&f{deaths},&e击杀：&7{kills} &8| &e最终击杀：&7{finalKills} &8| &e破坏床：&7{beds} &8| &e死亡：&7{deaths}",
+                "",
+                "&f感谢游玩，{player}！",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, List.of("&6★ {teamColor}[{teamLetter}] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, List.of(" &7[已淘汰]"));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, List.of("&6&l⭐ {teamColor}{teamName} "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, List.of(" {vPrefix}", " &c&o已淘汰", " {level}", " &c&o已淘汰"));
         // loser - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_HEADER, List.of(
-                "&6★ {winnerTeamColor}&l{winnerTeamName}队获胜",
-                "&7{map} &8| &7{group}"
+                "                                                                                                        ",
+                "&6⭐ {winnerTeamColor}&l{winnerTeamName}队赢得了游戏！ &6⭐",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_FOOTER, List.of(
-                "&c本局失败",
-                "&e击杀 &f{kills} &8| &e最终击杀 &f{finalKills}",
-                "&e破坏床 &f{beds} &8| &e死亡 &f{deaths}",
-                "&7竞技场将在 &e{time} &7秒后重置"
+                "",
+                "&f你随 {teamColor}{teamName}队输掉了游戏",
+                "&7本局统计",
+                "&e击杀：&f{kills} &8| &e最终击杀：&f{finalKills} &8| &e破坏床：&f{beds} &8| &e死亡：&f{deaths},&e击杀：&7{kills} &8| &e最终击杀：&7{finalKills} &8| &e破坏床：&7{beds} &8| &e死亡：&7{deaths}",
+                "&f感谢游玩，{player}！",
+                "&a{serverIp}",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, List.of("{teamColor}[{teamLetter}] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, List.of(" &c[失败]"));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, List.of("{teamColor}{teamName} "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, List.of(" {vPrefix}", " &c&o已淘汰", " {level}", " &c&o已淘汰"));
         // spectator - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_HEADER, List.of(
-                "&a&l{serverIp}",
-                "&6★ {winnerTeamColor}&l{winnerTeamName}队获胜",
-                "&7{map} &8| &7{group}"
+                "                                                                                                        ",
+                "&a{serverIp}",
+                "&6⭐ {winnerTeamColor}&l{winnerTeamName}队赢得了游戏！ &6⭐",
+                "&7{date}",
+                "&7地图：&f{map} &7模式：&f{group}",
+                "",
+                "&f感谢游玩，{player}！",
+                ""
         ));
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_FOOTER, List.of(
-                "&7竞技场将在 &e{time} &7秒后重置",
-                "&8{poweredBy}"
+                "",
+                "&f由 {poweredBy} 提供支持",
+                ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX, List.of("&7[旁观] "));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_SUFFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX, List.of("&f&o旁观者 "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // end of tab
 
         yml.addDefault(Messages.SHOP_INDEX_NAME, "&8快速购买");
@@ -1025,7 +1103,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(4, SimplifiedChinese::migrateLegacyMessages);
+        updateToLatestVersion(5, SimplifiedChinese::migrateLegacyMessages);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
@@ -1043,10 +1121,10 @@ public class SimplifiedChinese extends Language {
                 Messages.FORMATTING_CHAT_SPECTATOR)) {
             migrateChatSeparator(yml, path);
         }
-        migrateCompactTabMessages(yml);
+        migrateOriginalTabMessages(yml);
     }
 
-    static void migrateCompactTabMessages(YamlConfiguration yml) {
+    static void migrateOriginalTabMessages(YamlConfiguration yml) {
         if (yml.getDefaults() == null) return;
         ConfigurationSection defaults = yml.getDefaults()
                 .getConfigurationSection(Messages.FORMATTING_SB_TAB_BASE);
@@ -1057,19 +1135,67 @@ public class SimplifiedChinese extends Language {
             if (!yml.getDefaults().isList(path)) continue;
 
             List<String> current = yml.getStringList(path);
-            List<String> compactDefault = yml.getDefaults().getStringList(path);
-            if (usesLegacyTabTemplate(current, compactDefault)) {
-                yml.set(path, compactDefault);
-                continue;
-            }
-
-            List<String> withoutArtificialWidth = current.stream()
-                    .filter(line -> !isArtificialTabSpacer(line))
-                    .toList();
-            if (!withoutArtificialWidth.equals(current)) {
-                yml.set(path, withoutArtificialWidth);
+            List<String> originalDefault = yml.getDefaults().getStringList(path);
+            List<String> compactDefault = compactTabDefault(path);
+            if ((compactDefault != null && current.equals(compactDefault))
+                    || usesLegacyTabTemplate(current, originalDefault)) {
+                yml.set(path, originalDefault);
             }
         }
+    }
+
+    private static List<String> compactTabDefault(String path) {
+        if (path.equals(Messages.FORMATTING_SB_TAB_LOBBY_HEADER)) return List.of("&a&l{serverIp}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_LOBBY_FOOTER)) return List.of("&7大厅人数：&f{on}", "&8{poweredBy}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_LOBBY_PREFIX)) return List.of("{vPrefix}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_LOBBY_SUFFIX)) return List.of(" {level}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_HEADER)
+                || path.equals(Messages.FORMATTING_SB_TAB_WAITING_HEADER_SPEC)
+                || path.equals(Messages.FORMATTING_SB_TAB_STARTING_HEADER)
+                || path.equals(Messages.FORMATTING_SB_TAB_STARTING_HEADER_SPEC)) {
+            return List.of("&a&l{serverIp}", "&7地图：&f{map} &8| &7模式：&f{group}");
+        }
+        if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_FOOTER)) return List.of("&e等待更多玩家……", "&7人数：&f{on}&7/&f{max}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_PREFIX)) return List.of("{vPrefix}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX)) return List.of(" {level}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_FOOTER_SPEC)) return List.of("&7你正在旁观", "&e等待更多玩家……", "&7人数：&f{on}&7/&f{max}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC)
+                || path.equals(Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC)
+                || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX)
+                || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX)
+                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX)) return List.of("&7[旁观] ");
+        if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC)
+                || path.equals(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC)
+                || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX)
+                || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX)
+                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX)
+                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_SUFFIX)) return List.of("");
+        if (path.equals(Messages.FORMATTING_SB_TAB_STARTING_FOOTER)) return List.of("&e{time} 秒后开始", "&7人数：&f{on}&7/&f{max}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_STARTING_PREFIX)) return List.of("{vPrefix} ");
+        if (path.equals(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX)) return List.of(" {level}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_STARTING_FOOTER_SPEC)) return List.of("&7你正在旁观", "&e{time} 秒后开始", "&7人数：&f{on}&7/&f{max}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_HEADER)
+                || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER)) return List.of("&a&l{serverIp}", "&7{map} &8| &7{group}", "&f{nextEvent} &a{time}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER)) return List.of("&7队伍：{teamColor}{teamName}", "&8{poweredBy}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX)) return List.of("{teamColor}[{teamLetter}] ");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER)) return List.of("&a&l{serverIp}", "&7{map} &8| &7{group}", "&f{nextEvent} &a{time}", "&c你已被淘汰");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_FOOTER)) return List.of("&7继续观战", "&8{poweredBy}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX)) return List.of(" &c[淘汰]");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_FOOTER)) return List.of("&7你正在旁观", "&8{poweredBy}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_HEADER)
+                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_HEADER)) return List.of("&6&l★ 你的队伍获胜！", "&7{map} &8| &7{group}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_FOOTER)
+                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_FOOTER)) return List.of("&a本局胜利", "&e击杀 &f{kills} &8| &e最终击杀 &f{finalKills}", "&e破坏床 &f{beds} &8| &e死亡 &f{deaths}", "&7竞技场将在 &e{time} &7秒后重置");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX)
+                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX)) return List.of("&6★ {teamColor}[{teamLetter}] ");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX)) return List.of(" &7[已淘汰]");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_HEADER)) return List.of("&6★ {winnerTeamColor}&l{winnerTeamName}队获胜", "&7{map} &8| &7{group}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_FOOTER)) return List.of("&c本局失败", "&e击杀 &f{kills} &8| &e最终击杀 &f{finalKills}", "&e破坏床 &f{beds} &8| &e死亡 &f{deaths}", "&7竞技场将在 &e{time} &7秒后重置");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX)) return List.of("{teamColor}[{teamLetter}] ");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX)) return List.of(" &c[失败]");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_HEADER)) return List.of("&a&l{serverIp}", "&6★ {winnerTeamColor}&l{winnerTeamName}队获胜", "&7{map} &8| &7{group}");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_FOOTER)) return List.of("&7竞技场将在 &e{time} &7秒后重置", "&8{poweredBy}");
+        return null;
     }
 
     private static boolean usesLegacyTabTemplate(List<String> lines, List<String> compactDefault) {
@@ -1120,10 +1246,6 @@ public class SimplifiedChinese extends Language {
                     "&fThanks for playing {player}!", "&fYou have lost in the {teamColor}{teamName} Team" -> true;
             default -> false;
         };
-    }
-
-    private static boolean isArtificialTabSpacer(String line) {
-        return line != null && line.length() > 32 && line.isBlank();
     }
 
     private static void renameStatsItem(YamlConfiguration yml, String path) {
