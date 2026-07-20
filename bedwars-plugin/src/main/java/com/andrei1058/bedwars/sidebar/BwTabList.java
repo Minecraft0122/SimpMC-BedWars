@@ -49,6 +49,7 @@ public class BwTabList {
 
     private static final char SPECTATOR_PREFIX = 'z';
     private static final char ELIMINATED_FROM_TEAM_PREFIX = 'z';
+    private static final SidebarLine TEAM_COLOR_ONLY_PREFIX = new SidebarLine();
     private static final Comparator<Player> PLAYER_NAME_ORDER = Comparator
             .comparing(Player::getName, String.CASE_INSENSITIVE_ORDER)
             .thenComparing(Player::getName)
@@ -260,14 +261,14 @@ public class BwTabList {
 
                 if (arena.getStatus() == GameState.restarting && null != arena.getWinner()) {
                     if (arena.getWinner().equals(exTeam)) {
-                        prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, player, replacements);
+                        prefix = TEAM_COLOR_ONLY_PREFIX;
                         suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, player, replacements);
                     } else {
-                        prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, player, replacements);
+                        prefix = TEAM_COLOR_ONLY_PREFIX;
                         suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, player, replacements);
                     }
                 } else {
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, player, replacements);
+                    prefix = TEAM_COLOR_ONLY_PREFIX;
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, player, replacements);
                 }
 
@@ -331,7 +332,7 @@ public class BwTabList {
 
                     HashMap<String, String> replacements = getTeamReplacements(team);
 
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, player, replacements);
+                    prefix = TEAM_COLOR_ONLY_PREFIX;
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, player, replacements);
                     break;
                 default:
@@ -351,7 +352,7 @@ public class BwTabList {
         // tab list of playing state
         HashMap<String, String> replacements = getTeamReplacements(team);
 
-        prefix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, player, replacements);
+        prefix = TEAM_COLOR_ONLY_PREFIX;
         suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, player, replacements);
 
         PlayerTab teamTab = handle.playerTabCreate(
@@ -509,6 +510,10 @@ public class BwTabList {
         replacements.put("{teamColor}", null == team ? "" : team.getColor().chat().toString());
 
         return replacements;
+    }
+
+    static String teamColorOnlyPrefix() {
+        return TEAM_COLOR_ONLY_PREFIX.getLine();
     }
 
     static ChatColor getPlayerListColor(@Nullable ITeam targetTeam) {

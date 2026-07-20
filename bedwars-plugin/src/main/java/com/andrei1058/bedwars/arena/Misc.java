@@ -59,6 +59,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getList;
@@ -68,36 +69,37 @@ public class Misc {
 
     public static void moveToLobbyOrKick(Player p, @Nullable IArena arena, boolean notAbandon) {
         if (getServerType() != ServerType.BUNGEE) {
-            if (!p.getWorld().getName().equalsIgnoreCase(config.getLobbyWorldName())) {
-                Location loc = config.getConfigLoc("lobbyLoc");
-                if (loc != null){ // Can happen when location is not set in config
-                    try{
-                        boolean teleported = p.teleport(loc);
-                        if (teleported && arena == null && getServerType() == ServerType.MULTIARENA) {
-                            Arena.enterLobby(p);
-                        }
-                    } catch (Exception ignored){
-                        Bukkit.getLogger().severe("Could not teleport player to lobby! Try setting the lobby again with /bw setLobby");
-                    }
+            if (arena != null) {
+                if (arena.isSpectator(p)) {
+                    arena.removeSpectator(p, false);
                 } else {
-                    forceKick(p, arena, notAbandon);
+                    arena.removePlayer(p, false);
+                    if (!notAbandon && arena.getStatus() == GameState.playing
+                            && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
+                        arena.abandonGame(p);
+                    }
+                }
+                return;
+            }
+
+            Location loc = config.getConfigLoc("lobbyLoc");
+            if (loc == null) { // Can happen when location is not set in config
+                forceKick(p, arena, notAbandon);
+                return;
+            }
+
+            try {
+                if (!p.teleport(loc)) {
+                    Bukkit.getLogger().warning("Could not teleport player to lobby. The teleport was cancelled.");
                     return;
                 }
-                if (arena != null) {
-                    if (arena.isSpectator(p)) {
-                        arena.removeSpectator(p, false);
-                    } else {
-                        arena.removePlayer(p, false);
-                        if (!notAbandon && arena.getStatus() == GameState.playing) {
-                            if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
-                                arena.abandonGame(p);
-                            }
-                        }
-                    }
-                }
-            } else {
-                forceKick(p, arena, notAbandon);
+            } catch (Exception exception) {
+                plugin.getLogger().log(Level.SEVERE,
+                        "Could not teleport player to lobby! Try setting the lobby again with /bw setLobby", exception);
+                return;
             }
+
+            if (getServerType() == ServerType.MULTIARENA) Arena.enterLobby(p);
             return;
         }
         forceKick(p, arena, notAbandon);

@@ -31,6 +31,7 @@ class BwTabListTest {
 
         assertSame(ChatColor.RED, BwTabList.getPlayerListColor(redTeam));
         assertSame(ChatColor.WHITE, BwTabList.getPlayerListColor(null));
+        assertEquals("", BwTabList.teamColorOnlyPrefix());
     }
 
     @Test

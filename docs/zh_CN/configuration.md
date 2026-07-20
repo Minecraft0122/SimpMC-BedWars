@@ -19,7 +19,7 @@
 - `fireball`：火球速度、爆炸、击退、冷却和伤害。2.10.20 的平衡默认值为范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
-- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.22 会自动补回缺失的 `lobby-items.leave`，但不覆盖已有自定义值。
+- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.22 会自动补回缺失的 `lobby-items.leave`，但不覆盖已有自定义值。2.10.25 起点击默认返回红床会直接回到 `/bw setLobby` 保存的位置并重新发放大厅物品，不依赖玩家是否拥有 `bw.command.leave`。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
 - `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。该开关只影响商店，正式开局始终发放队伍色皮革四件套。
@@ -35,7 +35,7 @@ TAB 相关常用项：
 - `scoreboard-settings.tab-header-footer.enable`：显示 TAB 顶部和底部内容，默认开启，且不依赖右侧大厅计分板。
 - `scoreboard-settings.tab-header-footer.lobby-header`：仅配置大厅 TAB 顶部文字。空列表沿用语言文件中的默认 128 空格宽度模板；非空时逐行填写，系统仍会自动保留内置宽度行。支持 `&` 颜色代码和 `{serverIp}`、`{on}` 等占位符，大厅页尾及竞技场各状态不会被覆盖。
 - `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，默认开启。
-- 游戏进行时，玩家列表和玩家头顶名字统一使用其所属队伍颜色；同队玩家连续显示并按玩家名字典序排列，淘汰玩家仍留在原队伍分组；旧 `teammate-color` 配置会自动删除。
+- 游戏进行时，玩家列表和玩家头顶名字只使用其所属队伍颜色渲染玩家名本身，名字前不再添加队伍名称或队伍字母；同队玩家连续显示并按玩家名字典序排列，淘汰玩家仍留在原队伍分组；旧 `teammate-color` 配置会自动删除。简体中文语言配置架构 9 会自动清理仍等于插件旧默认值的游戏队伍前缀，其他自定义文本保持不变。
 - `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制。
 
 竞技场各状态继续使用原仓库的 104 空格宽度、行数、颜色代码、占位符和动画帧。2.10.18 只将大厅默认宽度扩大到 128 空格；升级时仅写回未修改的旧内置页首，不覆盖管理员自定义文本。运行时不足 128 的自定义宽度会补齐，更宽设置保持不变。

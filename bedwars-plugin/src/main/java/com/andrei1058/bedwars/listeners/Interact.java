@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
 import com.andrei1058.bedwars.shop.listeners.InventoryListener;
@@ -84,10 +85,20 @@ public class Interact implements Listener {
             if (customData.length >= 2) {
                 if (customData[0].equals("RUNCOMMAND")) {
                     e.setCancelled(true);
-                    Bukkit.getScheduler().runTask(plugin, () -> Bukkit.dispatchCommand(p, customData[1]));
+                    String command = customData[1].trim();
+                    if (isLobbyReturnCommand(command, LobbyProtection.isLobbyWorld(p), BedWars.mainCmd)) {
+                        Bukkit.getScheduler().runTask(plugin, () -> Misc.moveToLobbyOrKick(p, null, true));
+                    } else {
+                        Bukkit.getScheduler().runTask(plugin, () -> Bukkit.dispatchCommand(p, command));
+                    }
                 }
             }
         }
+    }
+
+    static boolean isLobbyReturnCommand(String command, boolean lobbyPlayer, String mainCommand) {
+        return lobbyPlayer && command != null && mainCommand != null
+                && command.trim().equalsIgnoreCase(mainCommand + " leave");
     }
 
     @EventHandler

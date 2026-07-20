@@ -112,6 +112,9 @@ class SimplifiedChineseMigrationTest {
                 "{prefix}&7{player}&e加入了游戏(&b{on}&e/&b{max}&e)！");
         language.set(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER,
                 List.of("", "&f你正在为 {teamColor}{teamName}队 &f而战", "&a{serverIp}", "&f由 {poweredBy} 提供支持", ""));
+        language.set(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}{teamName} "));
+        language.set(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX,
+                List.of("&6&l⭐ {teamColor}{teamName} "));
 
         SimplifiedChinese.migrateCurrentMessageDefaults(language);
 
@@ -119,6 +122,8 @@ class SimplifiedChineseMigrationTest {
                 language.getString(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG));
         assertEquals("&f你属于 {teamColor}{teamName}队",
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER).get(1));
+        assertEquals(List.of(""), language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
+        assertEquals(List.of(""), language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
     }
 
     @Test
