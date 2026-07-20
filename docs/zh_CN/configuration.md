@@ -22,7 +22,7 @@
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.22 会自动补回缺失的 `lobby-items.leave`，但不覆盖已有自定义值。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
-- `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。
+- `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。该开关只影响商店，正式开局始终发放队伍色皮革四件套。
 - `allowed-commands`：游戏内允许的命令。
 - `game-end`：淘汰玩家和最佳数据展示。
 
@@ -132,7 +132,7 @@ shop-settings:
   sell-full-armor: true
 ```
 
-修改后需要完整重启服务器。该开关只决定实际发放哪些槽位，不会覆盖 `shop.yml` 的价格或自定义商品。`shop.yml` 的 `config-version` 会自动升级到 4：只有仍使用内置护腿与靴子材质的旧商品会补齐上装；已删除的商品、自定义下装材质和已有自定义上装不会被覆盖。旧 `config.yml` 也会自动备份并升级到架构 16，补入默认值和中文注释。
+修改后需要完整重启服务器。该开关只决定商店购买永久护甲时实际发放哪些槽位，不影响开局的队伍色皮革四件套，也不会覆盖 `shop.yml` 的价格或自定义商品。`shop.yml` 的 `config-version` 会自动升级到 4：只有仍使用内置护腿与靴子材质的旧商品会补齐上装；已删除的商品、自定义下装材质和已有自定义上装不会被覆盖。旧 `config.yml` 也会自动备份并升级到架构 16，补入默认值和中文注释。
 
 货币支持 `iron`、`gold`、`diamond`、`emerald`；同时安装 Vault 和实际经济服务提供者后，可按现有格式使用经济货币。只安装 Vault 不会创建余额。Material、附魔和药水名称必须适用于 Paper 1.21.11。
 

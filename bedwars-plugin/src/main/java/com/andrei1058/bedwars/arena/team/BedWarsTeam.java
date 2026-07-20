@@ -64,6 +64,14 @@ import static com.andrei1058.bedwars.api.language.Language.getMsg;
 @SuppressWarnings("WeakerAccess")
 public class BedWarsTeam implements ITeam {
 
+    /** Bukkit armor-content order: boots, leggings, chestplate, helmet. */
+    private static final List<Material> DEFAULT_ARMOR_MATERIALS = List.of(
+            Material.LEATHER_BOOTS,
+            Material.LEATHER_LEGGINGS,
+            Material.LEATHER_CHESTPLATE,
+            Material.LEATHER_HELMET
+    );
+
     private List<Player> members = new ArrayList<>();
     private TeamColor color;
     private Location spawn, bed, shop, teamUpgrades;
@@ -213,7 +221,10 @@ public class BedWarsTeam implements ITeam {
      * Gives the start inventory
      */
     public void sendDefaultInventory(Player p, boolean clean) {
-        if (clean) p.getInventory().clear();
+        if (clean) {
+            p.getInventory().clear();
+            p.getInventory().setArmorContents(null);
+        }
         String path = config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_DEFAULT_ITEMS + "." + arena.getGroup()) == null ?
                 ConfigPath.GENERAL_CONFIGURATION_DEFAULT_ITEMS + ".Default" : ConfigPath.GENERAL_CONFIGURATION_DEFAULT_ITEMS + "." + arena.getGroup();
         for (String s : config.getYml().getStringList(path)) {
@@ -282,7 +293,8 @@ public class BedWarsTeam implements ITeam {
                 }
             }
         }
-        sendArmor(p);
+        sendArmor(p, clean);
+        if (clean) p.updateInventory();
     }
 
     public void defaultSword(Player p, boolean sword) {
@@ -459,12 +471,38 @@ public class BedWarsTeam implements ITeam {
      * Equip a player with default armor
      */
     public void sendArmor(Player p) {
-        if (p.getInventory().getHelmet() == null) p.getInventory().setHelmet(createArmor(Material.LEATHER_HELMET));
-        if (p.getInventory().getChestplate() == null)
+        sendArmor(p, false);
+    }
+
+    private void sendArmor(Player p, boolean replaceExisting) {
+        if (replaceExisting) {
+            ItemStack[] armor = DEFAULT_ARMOR_MATERIALS.stream()
+                    .map(this::createArmor)
+                    .toArray(ItemStack[]::new);
+            p.getInventory().setArmorContents(armor);
+            return;
+        }
+
+        if (isEmptyArmorSlot(p.getInventory().getHelmet()))
+            p.getInventory().setHelmet(createArmor(Material.LEATHER_HELMET));
+        if (isEmptyArmorSlot(p.getInventory().getChestplate()))
             p.getInventory().setChestplate(createArmor(Material.LEATHER_CHESTPLATE));
-        if (p.getInventory().getLeggings() == null)
+        if (isEmptyArmorSlot(p.getInventory().getLeggings()))
             p.getInventory().setLeggings(createArmor(Material.LEATHER_LEGGINGS));
-        if (p.getInventory().getBoots() == null) p.getInventory().setBoots(createArmor(Material.LEATHER_BOOTS));
+        if (isEmptyArmorSlot(p.getInventory().getBoots()))
+            p.getInventory().setBoots(createArmor(Material.LEATHER_BOOTS));
+    }
+
+    static List<Material> defaultArmorMaterials() {
+        return DEFAULT_ARMOR_MATERIALS;
+    }
+
+    static boolean isEmptyArmorSlot(ItemStack item) {
+        return isEmptyArmorMaterial(item == null ? null : item.getType());
+    }
+
+    static boolean isEmptyArmorMaterial(Material material) {
+        return material == null || material == Material.AIR;
     }
 
     @Override
