@@ -36,6 +36,7 @@ import com.andrei1058.bedwars.api.region.Region;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.util.BlastProtectionUtil;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
 import com.andrei1058.bedwars.popuptower.TowerEast;
@@ -122,6 +123,8 @@ public class BreakPlace implements Listener {
         if (e.isCancelled()) return;
 
         Player p = e.getPlayer();
+        if (SetupSession.isEditingWorld(p.getUniqueId(), e.getBlock().getWorld().getName())) return;
+
         //Prevent player from placing during the removal from the arena
         IArena arena = Arena.getArenaByIdentifier(e.getBlock().getWorld().getName());
         IArena playerArena = Arena.getArenaByPlayer(p);

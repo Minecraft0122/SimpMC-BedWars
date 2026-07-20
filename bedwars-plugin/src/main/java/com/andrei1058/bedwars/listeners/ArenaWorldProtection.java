@@ -2,6 +2,7 @@ package com.andrei1058.bedwars.listeners;
 
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.SetupSession;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -28,6 +29,7 @@ public final class ArenaWorldProtection implements Listener {
 
         IArena destinationArena = Arena.getArenaByIdentifier(destination.getWorld().getName());
         if (destinationArena == null) return;
+        if (SetupSession.isEditingWorld(event.getPlayer().getUniqueId(), destination.getWorld().getName())) return;
         if (Arena.getArenaByPlayer(event.getPlayer()) != destinationArena) {
             event.setCancelled(true);
         }
@@ -59,6 +61,7 @@ public final class ArenaWorldProtection implements Listener {
     }
 
     private boolean isUnregisteredInArena(Player player) {
+        if (SetupSession.isEditingWorld(player.getUniqueId(), player.getWorld().getName())) return false;
         IArena worldArena = Arena.getArenaByIdentifier(player.getWorld().getName());
         return worldArena != null && Arena.getArenaByPlayer(player) != worldArena;
     }

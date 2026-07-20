@@ -204,6 +204,20 @@ public class SetupSession implements ISetupSession {
     }
 
     /**
+     * Check whether a player is editing the given world in an arena setup
+     * session. Matching the world as well as the player prevents a setup
+     * session from bypassing protection after the player leaves its map.
+     */
+    public static boolean isEditingWorld(UUID player, String worldName) {
+        SetupSession session = getSession(player);
+        return session != null && worldNamesMatch(session.getWorldName(), worldName);
+    }
+
+    static boolean worldNamesMatch(String setupWorld, String targetWorld) {
+        return setupWorld != null && targetWorld != null && setupWorld.equalsIgnoreCase(targetWorld);
+    }
+
+    /**
      * Get a player session
      */
     public static SetupSession getSession(UUID p) {
