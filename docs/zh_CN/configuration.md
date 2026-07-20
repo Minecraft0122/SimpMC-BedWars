@@ -22,6 +22,7 @@
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认只提供历史战绩和竞技场选择器；2.10.17 会自动删除旧的 `lobby-items.leave`，等待大厅和旁观阶段的离开物品不受影响。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
+- `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。
 - `allowed-commands`：游戏内允许的命令。
 - `game-end`：淘汰玩家和最佳数据展示。
 
@@ -32,7 +33,7 @@ TAB 相关常用项：
 - `scoreboard-settings.tab-header-footer.enable`：显示 TAB 顶部和底部内容，默认开启，且不依赖右侧大厅计分板。
 - `scoreboard-settings.tab-header-footer.lobby-header`：仅配置大厅 TAB 顶部文字。空列表沿用语言文件中的默认 128 空格宽度模板；非空时逐行填写，系统仍会自动保留内置宽度行。支持 `&` 颜色代码和 `{serverIp}`、`{on}` 等占位符，大厅页尾及竞技场各状态不会被覆盖。
 - `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，默认开启。
-- 游戏进行时，玩家列表和玩家头顶名字统一使用其所属队伍颜色；旧 `teammate-color` 配置会自动删除。
+- 游戏进行时，玩家列表和玩家头顶名字统一使用其所属队伍颜色；同队玩家连续显示并按玩家名字典序排列，淘汰玩家仍留在原队伍分组；旧 `teammate-color` 配置会自动删除。
 - `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制。
 
 竞技场各状态继续使用原仓库的 104 空格宽度、行数、颜色代码、占位符和动画帧。2.10.18 只将大厅默认宽度扩大到 128 空格；升级时仅写回未修改的旧内置页首，不覆盖管理员自定义文本。运行时不足 128 的自定义宽度会补齐，更宽设置保持不变。
@@ -120,6 +121,16 @@ blocks-category:
 ```
 
 例如 TNT 默认路径是 `utility-category.category-content.tnt.content-tiers.tier1.tier-settings.cost`。修改 `cost` 后完整重启服务器。
+
+全服护甲售卖模式在 `config.yml` 中设置：
+
+```yaml
+shop-settings:
+  # true：头盔、胸甲、护腿、靴子；false：仅护腿、靴子
+  sell-full-armor: true
+```
+
+修改后需要完整重启服务器。该开关只决定实际发放哪些槽位，不会覆盖 `shop.yml` 的价格或自定义商品。`shop.yml` 的 `config-version` 会自动升级到 4：只有仍使用内置护腿与靴子材质的旧商品会补齐上装；已删除的商品、自定义下装材质和已有自定义上装不会被覆盖。旧 `config.yml` 也会自动备份并升级到架构 16，补入默认值和中文注释。
 
 货币支持 `iron`、`gold`、`diamond`、`emerald`；同时安装 Vault 和实际经济服务提供者后，可按现有格式使用经济货币。只安装 Vault 不会创建余额。Material、附魔和药水名称必须适用于 Paper 1.21.11。
 

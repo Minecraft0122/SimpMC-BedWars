@@ -137,6 +137,7 @@ public class ConfigPath {
 
     public static final String GENERAL_CONFIGURATION_NPC_LOC_STORAGE = "join-npc-locations";
     public static final String GENERAL_CONFIGURATION_DEFAULT_ITEMS = "start-items-per-group";
+    public static final String GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR = "shop-settings.sell-full-armor";
 
     public static final String CENERAL_CONFIGURATION_ALLOWED_COMMANDS = "allowed-commands";
     public static final String SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR = "scoreboard-settings.sidebar.enable-lobby-sidebar";

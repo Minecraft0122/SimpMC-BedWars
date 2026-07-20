@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.spigot.sidebar.PlayerTab;
 import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
@@ -48,6 +49,11 @@ public class BwTabList {
 
     private static final char SPECTATOR_PREFIX = 'z';
     private static final char ELIMINATED_FROM_TEAM_PREFIX = 'z';
+    private static final Comparator<Player> PLAYER_NAME_ORDER = Comparator
+            .comparing(Player::getName, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(Player::getName)
+            .thenComparing(Player::getUniqueId);
+    private static boolean playerListOrderUpdateScheduled;
 
     // Player list container. Used to manipulate deployed player tab: lines ecc.
     // Key is player uuid.
@@ -82,6 +88,7 @@ public class BwTabList {
         }
 
         handleHealthIcon();
+        requestPlayerListOrderUpdate();
 
         if (this.isTabFormattingDisabled()) {
             return;
@@ -200,6 +207,8 @@ public class BwTabList {
      * Will handle invisibility potion as well.
      */
     public void giveUpdateTabFormat(@NotNull Player player, boolean skipStateCheck, @Nullable Boolean spectator) {
+        requestPlayerListOrderUpdate();
+
         // if sidebar was not created
         if (sidebar.getHandle() == null) {
             return;
@@ -265,7 +274,7 @@ public class BwTabList {
                 PlayerTab tab = handle.playerTabCreate(
                         getPlayerTabIdentifierEliminatedInTeam(exTeam, playerTabId),
                         player, prefix, suffix, PlayerTab.PushingRule.NEVER,
-                        this.sidebar.getPlaceholders(player)
+                        this.sidebar.getPlaceholders(player), getPlayerListColor(exTeam)
                 );
                 deployedPerPlayerTabList.put(player.getUniqueId(), tab);
                 return;
@@ -306,6 +315,7 @@ public class BwTabList {
         if (status != GameState.playing) {
 
             String currentTabId = playerTabId;
+            ITeam team = arena.getTeam(player);
 
             switch (status) {
                 case waiting:
@@ -317,7 +327,6 @@ public class BwTabList {
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX, player, null);
                     break;
                 case restarting:
-                    ITeam team = arena.getTeam(player);
                     currentTabId = getPlayerTabIdentifierAliveInTeam(team, playerTabId);
 
                     HashMap<String, String> replacements = getTeamReplacements(team);
@@ -329,7 +338,8 @@ public class BwTabList {
                     throw new IllegalStateException("Unhandled game status!");
             }
             PlayerTab t = handle.playerTabCreate(
-                    currentTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER, this.sidebar.getPlaceholders(player)
+                    currentTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
+                    this.sidebar.getPlaceholders(player), getPlayerListColor(team)
             );
             deployedPerPlayerTabList.put(player.getUniqueId(), t);
             return;
@@ -504,6 +514,87 @@ public class BwTabList {
     static ChatColor getPlayerListColor(@Nullable ITeam targetTeam) {
         if (targetTeam == null) return ChatColor.WHITE;
         return targetTeam.getColor().chat();
+    }
+
+    /**
+     * Returns the arena roster grouped by configured team order. Members of each
+     * team are ordered by player name; former team members keep their group while
+     * spectating, and unassigned spectators are placed last.
+     */
+    static List<Player> orderedArenaPlayers(@NotNull IArena arena) {
+        LinkedHashMap<UUID, Player> roster = new LinkedHashMap<>();
+        arena.getPlayers().forEach(player -> roster.put(player.getUniqueId(), player));
+        arena.getSpectators().forEach(player -> roster.put(player.getUniqueId(), player));
+
+        LinkedHashMap<UUID, List<Player>> teamMembers = new LinkedHashMap<>();
+        for (ITeam team : arena.getTeams()) {
+            teamMembers.put(team.getIdentity(), new ArrayList<>());
+        }
+
+        List<Player> unassigned = new ArrayList<>();
+        for (Player player : roster.values()) {
+            ITeam team = arena.getTeam(player);
+            if (team == null) team = arena.getExTeam(player.getUniqueId());
+            List<Player> members = team == null ? null : teamMembers.get(team.getIdentity());
+            if (members == null) {
+                unassigned.add(player);
+            } else {
+                members.add(player);
+            }
+        }
+
+        List<Player> ordered = new ArrayList<>(roster.size());
+        for (List<Player> members : teamMembers.values()) {
+            members.sort(PLAYER_NAME_ORDER);
+            ordered.addAll(members);
+        }
+        unassigned.sort(PLAYER_NAME_ORDER);
+        ordered.addAll(unassigned);
+        return ordered;
+    }
+
+    /**
+     * Coalesce the many sidebar updates produced by a join/team/death event into
+     * one player-list refresh on the next tick.
+     */
+    private static void requestPlayerListOrderUpdate() {
+        if (playerListOrderUpdateScheduled) return;
+        playerListOrderUpdateScheduled = true;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            playerListOrderUpdateScheduled = false;
+            applyServerPlayerListOrder();
+        });
+    }
+
+    private static void applyServerPlayerListOrder() {
+        List<IArena> arenas = new ArrayList<>(Arena.getArenas());
+        arenas.sort(Comparator.comparing(IArena::getArenaName, String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(IArena::getArenaName));
+
+        LinkedHashMap<UUID, Player> arenaPlayers = new LinkedHashMap<>();
+        for (IArena arena : arenas) {
+            for (Player player : orderedArenaPlayers(arena)) {
+                if (player.isOnline()) arenaPlayers.put(player.getUniqueId(), player);
+            }
+        }
+
+        List<Player> lobbyPlayers = new ArrayList<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!arenaPlayers.containsKey(player.getUniqueId())) lobbyPlayers.add(player);
+        }
+        lobbyPlayers.sort(PLAYER_NAME_ORDER);
+
+        int order = 1;
+        for (Player player : lobbyPlayers) {
+            setPlayerListOrderIfChanged(player, order++);
+        }
+        for (Player player : arenaPlayers.values()) {
+            setPlayerListOrderIfChanged(player, order++);
+        }
+    }
+
+    private static void setPlayerListOrderIfChanged(Player player, int order) {
+        if (player.getPlayerListOrder() != order) player.setPlayerListOrder(order);
     }
 
     /**

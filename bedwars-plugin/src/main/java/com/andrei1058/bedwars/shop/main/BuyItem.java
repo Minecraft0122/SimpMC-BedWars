@@ -189,6 +189,11 @@ public class BuyItem implements IBuyItem {
     void give(Player player, IArena arena, int purchases, boolean synchronizeInventory) {
         if (purchases <= 0) return;
 
+        if (autoEquip && nms.isArmor(itemStack)
+                && !shouldSellArmorPiece(itemStack.getType(), isFullArmorSaleEnabled())) {
+            return;
+        }
+
         ItemStack i = itemStack.clone();
         BedWars.debug("Giving BuyItem: " + getUpgradeIdentifier() + " x" + purchases + " to: " + player.getName());
         if (i.getType() == Material.AIR) {
@@ -280,6 +285,19 @@ public class BuyItem implements IBuyItem {
         //
         player.getInventory().addItem(PurchaseBatch.createStacks(i, purchases));
         if (synchronizeInventory) player.updateInventory();
+    }
+
+    private static boolean isFullArmorSaleEnabled() {
+        return BedWars.config == null
+                || BedWars.config.getYml().getBoolean(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR, true);
+    }
+
+    static boolean shouldSellArmorPiece(Material material, boolean fullArmorSaleEnabled) {
+        if (fullArmorSaleEnabled) return true;
+        String materialName = material.name();
+        return !materialName.endsWith("_HELMET")
+                && !materialName.endsWith("_CHESTPLATE")
+                && material != Material.ELYTRA;
     }
 
 

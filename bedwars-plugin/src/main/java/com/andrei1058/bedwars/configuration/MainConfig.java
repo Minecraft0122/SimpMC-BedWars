@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 15;
+    private static final int CONFIG_VERSION = 16;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -198,6 +198,7 @@ public class MainConfig extends ConfigManager {
         }
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DEFAULT_ITEMS + ".Default", Collections.singletonList("WOODEN_SWORD"));
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR, true);
         yml.addDefault(ConfigPath.CENERAL_CONFIGURATION_ALLOWED_COMMANDS, Arrays.asList("shout", "bw", "leave"));
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, true);
 
@@ -288,6 +289,9 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
                 "多竞技场大厅固定物品。默认提供历史战绩和竞技场选择器；大厅内不再发放无意义的“回到主大厅”。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR,
+                "商店永久护甲是否出售全身四件套。true=头盔、胸甲、护腿、靴子；false=仅护腿、靴子。",
+                "该开关作用于整个服务器，修改后需要完整重启服务器。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置，大小必须是 9 的倍数。");
         setComments(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅掉入虚空时是否传送回大厅出生点。");
     }

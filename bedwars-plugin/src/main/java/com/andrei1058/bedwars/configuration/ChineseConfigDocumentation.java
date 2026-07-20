@@ -59,6 +59,9 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置；菜单大小必须是 9 的倍数，槽位使用英文逗号分隔。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_STATS_GUI_SIZE, "历史战绩菜单大小和每个统计项的材质、槽位。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DEFAULT_ITEMS, "按竞技场分组配置开局默认物品，填写 Bukkit Material 名称。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR,
+                "全服商店护甲售卖模式：true 发放头盔、胸甲、护腿和靴子；false 只发放护腿和靴子。",
+                "修改后需要完整重启服务器；切换模式不会覆盖 shop.yml 中的价格和自定义商品。");
         comment(config, ConfigPath.CENERAL_CONFIGURATION_ALLOWED_COMMANDS, "游戏中允许玩家使用的命令名称，不要填写开头的斜杠。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, "是否允许同队玩家共享生成器掉落物。");
         comment(config, ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅虚空传送开关和触发高度。");
@@ -206,7 +209,9 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.SHOP_QUICK_DEFAULTS_PATH, "新玩家快捷购买栏；path 指向商品，slot 是菜单槽位。");
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_BLOCKS, "方块分类。分类含菜单槽位、显示物品和 category-content 商品。");
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_MELEE, "近战武器分类。");
-        comment(config, ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "永久护甲分类；weight 用于阻止购买更低等级护甲。");
+        comment(config, ConfigPath.SHOP_PATH_CATEGORY_ARMOR,
+                "永久护甲分类；内置商品包含完整四件套，实际发放上半身与否由 config.yml 的 shop-settings.sell-full-armor 决定。",
+                "weight 用于阻止购买更低等级护甲；自定义 buy-items 不会被迁移器覆盖。");
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_TOOLS, "工具分类；permanent/downgradable 控制永久保留和死亡降级。");
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_RANGED, "弓箭分类。");
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_POTIONS, "药水分类；potion 格式为 效果,持续秒数,等级。");
