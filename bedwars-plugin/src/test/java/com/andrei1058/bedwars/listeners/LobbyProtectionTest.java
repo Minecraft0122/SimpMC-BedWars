@@ -35,4 +35,12 @@ class LobbyProtectionTest {
         assertTrue(LobbyProtection.isInventoryDropAction(InventoryAction.DROP_ONE_SLOT));
         assertFalse(LobbyProtection.isInventoryDropAction(InventoryAction.PICKUP_ALL));
     }
+
+    @Test
+    void protectsOnlyNonOperatorsInLobbyInventories() {
+        assertTrue(LobbyProtection.shouldProtectLobbyInventory(false, true));
+        assertFalse(LobbyProtection.shouldProtectLobbyInventory(true, true));
+        assertFalse(LobbyProtection.shouldProtectLobbyInventory(false, false));
+        assertFalse(LobbyProtection.shouldProtectLobbyInventory(true, false));
+    }
 }

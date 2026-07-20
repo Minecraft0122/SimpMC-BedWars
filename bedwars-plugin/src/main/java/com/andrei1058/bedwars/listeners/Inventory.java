@@ -66,6 +66,11 @@ public class Inventory implements Listener {
      */
     @EventHandler
     public void onCommandItemClick(InventoryClickEvent e) {
+        if (e.getWhoClicked() instanceof Player player
+                && !shouldProtectCommandItems(player.isOp(), LobbyProtection.isLobbyWorld(player))) {
+            return;
+        }
+
         //block moving from hotBar
         if (e.getAction() == HOTBAR_SWAP && e.getClick() == ClickType.NUMBER_KEY) {
             if (e.getHotbarButton() > -1) {
@@ -216,6 +221,10 @@ public class Inventory implements Listener {
             }
         }
         return false;
+    }
+
+    static boolean shouldProtectCommandItems(boolean operator, boolean lobbyWorld) {
+        return !operator || !lobbyWorld;
     }
 
     @EventHandler

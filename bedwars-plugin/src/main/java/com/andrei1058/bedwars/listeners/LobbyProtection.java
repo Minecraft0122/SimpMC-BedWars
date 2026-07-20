@@ -24,8 +24,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Prevents lobby players from changing inventories or using vanilla items.
- * Explicit lobby build sessions remain available to administrators.
+ * Prevents non-operator lobby players from changing inventories or using
+ * vanilla items. Operators and explicit lobby build sessions remain usable.
  */
 public final class LobbyProtection implements Listener {
 
@@ -34,7 +34,9 @@ public final class LobbyProtection implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getWhoClicked() instanceof Player player
-                && (isProtected(player) || (isLobbyWorld(player) && isInventoryDropAction(event.getAction())))) {
+                && (isProtected(player)
+                || (shouldProtectLobbyInventory(player.isOp(), isLobbyWorld(player))
+                && isInventoryDropAction(event.getAction())))) {
             event.setCancelled(true);
         }
     }
@@ -78,26 +80,29 @@ public final class LobbyProtection implements Listener {
     public void onDrop(PlayerDropItemEvent event) {
         // Dropping is never part of a lobby build session. Do not reuse the
         // general interaction exception here or Q/Ctrl+Q can bypass protection.
-        if (isLobbyWorld(event.getPlayer())) {
+        Player player = event.getPlayer();
+        if (shouldProtectLobbyInventory(player.isOp(), isLobbyWorld(player))) {
             event.setCancelled(true);
             // Paper normally restores a cancelled drop immediately. Refresh on
             // the next tick as well so Q/Ctrl+Q cannot leave a client-side gap.
-            Player player = event.getPlayer();
             if (pendingInventoryRefresh.add(player.getUniqueId())) {
                 Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
                     pendingInventoryRefresh.remove(player.getUniqueId());
-                    if (player.isOnline() && isLobbyWorld(player)) player.updateInventory();
+                    if (player.isOnline()
+                            && shouldProtectLobbyInventory(player.isOp(), isLobbyWorld(player))) {
+                        player.updateInventory();
+                    }
                 });
             }
         }
     }
 
     private static boolean isProtected(Player player) {
-        return isLobbyWorld(player)
+        return shouldProtectLobbyInventory(player.isOp(), isLobbyWorld(player))
                 && !BreakPlace.isBuildSession(player);
     }
 
-    private static boolean isLobbyWorld(Player player) {
+    static boolean isLobbyWorld(Player player) {
         String playerWorld = player.getWorld().getName();
         return shouldProtectLobbyDrop(BedWars.getServerType(), playerWorld, BedWars.getLobbyWorld(),
                 Arena.getArenaByPlayer(player) != null, Arena.getArenaByIdentifier(playerWorld) != null);
@@ -117,5 +122,9 @@ public final class LobbyProtection implements Listener {
     static boolean isInventoryDropAction(InventoryAction action) {
         return action == InventoryAction.DROP_ALL_CURSOR || action == InventoryAction.DROP_ONE_CURSOR
                 || action == InventoryAction.DROP_ALL_SLOT || action == InventoryAction.DROP_ONE_SLOT;
+    }
+
+    static boolean shouldProtectLobbyInventory(boolean operator, boolean lobbyWorld) {
+        return lobbyWorld && !operator;
     }
 }

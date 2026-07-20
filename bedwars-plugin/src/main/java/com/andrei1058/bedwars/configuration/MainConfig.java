@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 17;
+    private static final int CONFIG_VERSION = 18;
     private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
     private static final double FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT = 1.15;
     private static final double FIREBALL_VERTICAL_KNOCKBACK_DEFAULT = 0.75;
@@ -161,6 +161,7 @@ public class MainConfig extends ConfigManager {
         /* Multi-Arena Lobby Command Items */
         saveLobbyCommandItem("stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
         saveLobbyCommandItem("arena-selector", "bw gui", true, "CHEST", 5, 4);
+        saveLobbyCommandItem("leave", "bw leave", false, "RED_BED", 0, 8);
 
         /* Pre Game Command Items */
         savePreGameCommandItem("stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
@@ -293,7 +294,8 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
-                "多竞技场大厅固定物品。默认提供历史战绩和竞技场选择器；大厅内不再发放无意义的“回到主大厅”。");
+                "多竞技场大厅固定物品。默认提供历史战绩、竞技场选择器和“回到主大厅”红床。",
+                "旧配置升级时只补齐缺失字段，不覆盖管理员已有的自定义材质、命令或槽位。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR,
                 "商店永久护甲是否出售全身四件套。true=头盔、胸甲、护腿、靴子；false=仅护腿、靴子。",
                 "该开关作用于整个服务器，修改后需要完整重启服务器。");
@@ -341,7 +343,7 @@ public class MainConfig extends ConfigManager {
 
         ensureLobbyItem(yml, "stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
         ensureLobbyItem(yml, "arena-selector", "bw gui", true, "CHEST", 5, 4);
-        removeObsoleteLobbyItems(yml);
+        ensureLobbyItem(yml, "leave", "bw leave", false, "RED_BED", 0, 8);
 
         for (String obsoletePath : List.of("arenaGui", "statsGUI", "startItems", "generators",
                 "bedsDestroyCountdown", "dragonSpawnCountdown", "gameEndCountdown", "npcLoc", "blockedCmds",
@@ -377,10 +379,6 @@ public class MainConfig extends ConfigManager {
                 FIREBALL_ENEMY_DAMAGE_DEFAULT);
     }
 
-    static void removeObsoleteLobbyItems(YamlConfiguration yml) {
-        yml.set(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave", null);
-    }
-
     static void migrateTabDisplayDefaults(YamlConfiguration yml) {
         // Version 10 shipped these opposite defaults. Change them once during
         // the schema-11 migration; administrators can still opt back in later.
@@ -411,8 +409,8 @@ public class MainConfig extends ConfigManager {
         }
     }
 
-    private static void ensureLobbyItem(YamlConfiguration yml, String name, String command, boolean enchanted,
-                                        String material, int data, int slot) {
+    static void ensureLobbyItem(YamlConfiguration yml, String name, String command, boolean enchanted,
+                                String material, int data, int slot) {
         setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_COMMAND.replace("%path%", name), command);
         setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_MATERIAL.replace("%path%", name), material);
         setIfMissing(yml, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_DATA.replace("%path%", name), data);

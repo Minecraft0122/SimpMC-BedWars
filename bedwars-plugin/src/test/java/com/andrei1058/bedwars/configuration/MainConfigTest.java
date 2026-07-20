@@ -117,14 +117,17 @@ class MainConfigTest {
     }
 
     @Test
-    void removesObsoleteBackToLobbyItemFromMainLobby() {
+    void restoresBackToLobbyItemWithoutOverwritingCustomValues() {
         YamlConfiguration configuration = new YamlConfiguration();
         String path = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
-        configuration.set(path + ".command", "bw leave");
-        configuration.set(path + ".material", "RED_BED");
+        configuration.set(path + ".material", "BLUE_BED");
 
-        MainConfig.removeObsoleteLobbyItems(configuration);
+        MainConfig.ensureLobbyItem(configuration, "leave", "bw leave", false, "RED_BED", 0, 8);
 
-        assertFalse(configuration.isSet(path));
+        assertEquals("BLUE_BED", configuration.getString(path + ".material"));
+        assertEquals("bw leave", configuration.getString(path + ".command"));
+        assertEquals(0, configuration.getInt(path + ".data"));
+        assertEquals(8, configuration.getInt(path + ".slot"));
+        assertFalse(configuration.getBoolean(path + ".enchanted"));
     }
 }
