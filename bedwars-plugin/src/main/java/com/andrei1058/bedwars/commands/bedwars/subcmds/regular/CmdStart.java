@@ -29,6 +29,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
+import com.andrei1058.bedwars.arena.tasks.GameStartingTask;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
 import org.bukkit.command.CommandSender;
@@ -54,6 +55,8 @@ public class CmdStart extends SubCommand {
     public boolean execute(String[] args, CommandSender s) {
         if (s instanceof ConsoleCommandSender) return false;
         Player p = (Player) s;
+        boolean debugStart = isDebugStartRequest(args);
+        if (args.length > 0 && !debugStart) return true;
         IArena a = Arena.getArenaByPlayer(p);
         if (a == null){
             p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NOT_IN_GAME));
@@ -67,15 +70,23 @@ public class CmdStart extends SubCommand {
             p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
             return true;
         }
+        if (debugStart && !hasDebugStartPermission(p)) {
+            p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
+            return true;
+        }
         if (a.getStatus() == GameState.playing) return true;
         if (a.getStatus() == GameState.restarting) return true;
         if (a.getStartingTask() == null){
-            if (args.length == 1 && args[0].equalsIgnoreCase("debug") && s.isOp()){
+            if (debugStart){
                 a.changeStatus(GameState.starting);
-                BedWars.debug = true;
             } else {
                 return true;
             }
+        }
+        if (debugStart) {
+            if (!(a.getStartingTask() instanceof GameStartingTask task)) return true;
+            task.enableSingleTeamDebugStart();
+            BedWars.debug = true;
         }
         if (a.getStartingTask().getCountdown() < 5) return true;
         a.getStartingTask().setCountdown(5);
@@ -86,6 +97,17 @@ public class CmdStart extends SubCommand {
     @Override
     public List<String> getTabComplete() {
         return null;
+    }
+
+    static boolean isDebugStartRequest(String[] args) {
+        return args.length == 1 && args[0].equalsIgnoreCase("debug");
+    }
+
+    static boolean hasDebugStartPermission(CommandSender sender) {
+        return sender.isOp()
+                || sender.hasPermission(Permissions.PERMISSION_ALL)
+                || sender.hasPermission(Permissions.PERMISSION_COMMAND_ALL)
+                || sender.hasPermission(Permissions.PERMISSION_DEBUG_START);
     }
 
     @Override

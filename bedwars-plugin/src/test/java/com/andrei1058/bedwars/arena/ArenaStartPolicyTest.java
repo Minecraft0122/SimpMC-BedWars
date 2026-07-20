@@ -19,4 +19,12 @@ class ArenaStartPolicyTest {
         assertFalse(ArenaStartPolicy.hasEnoughActiveTeams(1));
         assertTrue(ArenaStartPolicy.hasEnoughActiveTeams(2));
     }
+
+    @Test
+    void allowsExactlyOneTeamOnlyForDebugStarts() {
+        assertFalse(ArenaStartPolicy.canStartWithActiveTeams(0, true));
+        assertFalse(ArenaStartPolicy.canStartWithActiveTeams(1, false));
+        assertTrue(ArenaStartPolicy.canStartWithActiveTeams(1, true));
+        assertTrue(ArenaStartPolicy.canStartWithActiveTeams(2, false));
+    }
 }

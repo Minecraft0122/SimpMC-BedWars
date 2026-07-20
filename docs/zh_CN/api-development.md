@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.20</version>
+    <version>2.10.21</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -109,7 +109,7 @@ public void onState(GameStateChangeEvent event) {
 `IArena#setTeamAssigner(ITeamAssigner)` 可替换单个竞技场的分配逻辑。实现必须遵守：
 
 - 不超过 `arena.getMaxInTeam()`。
-- 至少产生两支非空队伍，否则开局会被阻止。
+- 普通开局至少产生两支非空队伍，否则开局会被阻止。管理员执行 `/bw start debug` 时，`arena.getStartingTask().isSingleTeamDebugStart()` 返回 `true`，此时允许恰好一支非空队伍，但仍不得产生零队伍。
 - 分配前调用 `TeamAssignEvent` 并尊重取消结果。
 - 只在主线程修改 Bukkit 玩家和队伍。
 

@@ -13,7 +13,8 @@ package com.andrei1058.bedwars.arena;
 /**
  * Central start requirements shared by the waiting and starting phases.
  * Arena configuration controls team capacity, but not the minimum number of
- * opponents: every round always requires at least two players and two teams.
+ * opponents: normal rounds always require at least two players and two teams.
+ * A deliberate administrator debug start may use one active team, but never zero.
  */
 public final class ArenaStartPolicy {
 
@@ -28,5 +29,10 @@ public final class ArenaStartPolicy {
 
     public static boolean hasEnoughActiveTeams(long activeTeamCount) {
         return activeTeamCount >= 2;
+    }
+
+    public static boolean canStartWithActiveTeams(long activeTeamCount, boolean allowSingleTeamDebugStart) {
+        return hasEnoughActiveTeams(activeTeamCount)
+                || (allowSingleTeamDebugStart && activeTeamCount == 1);
     }
 }

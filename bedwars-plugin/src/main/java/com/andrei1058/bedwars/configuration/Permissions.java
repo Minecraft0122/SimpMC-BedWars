@@ -30,6 +30,7 @@ public class Permissions {
     private static final String PREFIX = "bw";
 
     public static final String PERMISSION_FORCESTART = PREFIX + ".forcestart";
+    public static final String PERMISSION_DEBUG_START = PREFIX + ".command.start.debug";
     public static final String PERMISSION_ALL = PREFIX + ".*";
     public static final String PERMISSION_COMMAND_BYPASS = PREFIX + ".cmd.bypass";
     public static final String PERMISSION_SHOUT_COMMAND = PREFIX + ".shout";

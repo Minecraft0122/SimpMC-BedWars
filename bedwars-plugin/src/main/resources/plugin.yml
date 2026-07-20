@@ -41,6 +41,7 @@ permissions:
       bw.command.invite: true
       bw.command.forcestart: true
       bw.command.start: true
+      bw.command.start.debug: true
       bw.command.setlobby: true
       bw.command.setuparena: true
       bw.command.arenalist: true
@@ -76,6 +77,9 @@ permissions:
       bw.command.shout: true
       bw.command.rejoin: true
       bw.command.party: true
+  bw.command.start.debug:
+    description: 允许 /bw start debug 绕过单队开局限制
+    default: op
   'bw.*':
     description: SimpMC-BedWars 全部权限
     default: op

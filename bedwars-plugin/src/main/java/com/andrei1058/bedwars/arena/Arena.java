@@ -795,7 +795,9 @@ public class Arena implements IArena {
 
         if (p.getPassenger() != null && p.getPassenger().getType() == EntityType.ARMOR_STAND) p.getPassenger().remove();
 
-        if (status == GameState.starting && !ArenaStartPolicy.hasEnoughPlayers(players.size())) {
+        boolean singleTeamDebugStart = startingTask != null && startingTask.isSingleTeamDebugStart();
+        if (status == GameState.starting && !singleTeamDebugStart
+                && !ArenaStartPolicy.hasEnoughPlayers(players.size())) {
             changeStatus(GameState.waiting);
             for (Player on : players) {
                 on.sendMessage(getMsg(on, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));

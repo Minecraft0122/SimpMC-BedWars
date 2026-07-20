@@ -35,5 +35,13 @@ public interface StartingTask {
 
     BukkitTask getBukkitTask();
 
+    /**
+     * Whether this task was explicitly forced by an administrator for a
+     * single-team debug round. Normal and third-party tasks default to false.
+     */
+    default boolean isSingleTeamDebugStart() {
+        return false;
+    }
+
     void cancel();
 }

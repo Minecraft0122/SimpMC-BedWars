@@ -23,6 +23,9 @@ class PermissionManifestTest {
         Permission player = description.getPermissions().stream()
                 .filter(permission -> permission.getName().equals("bw.player"))
                 .findFirst().orElseThrow();
+        Permission allCommands = description.getPermissions().stream()
+                .filter(permission -> permission.getName().equals("bw.command.*"))
+                .findFirst().orElseThrow();
         Set<String> common = Set.of("help", "cmds", "join", "leave", "lang", "gui", "stats", "team",
                 "invite", "teleporter", "upgradesmenu", "shout", "rejoin", "party");
 
@@ -31,5 +34,6 @@ class PermissionManifestTest {
         }
         assertFalse(player.getChildren().getOrDefault("bw.command.reload", false));
         assertFalse(player.getChildren().getOrDefault("bw.command.setuparena", false));
+        assertTrue(allCommands.getChildren().getOrDefault("bw.command.start.debug", false));
     }
 }

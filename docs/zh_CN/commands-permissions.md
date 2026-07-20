@@ -36,6 +36,7 @@
 | 命令 | 独立权限 | 兼容的旧权限 |
 | --- | --- | --- |
 | `/bw start` | `bw.command.start` | `bw.forcestart` |
+| `/bw start debug` | `bw.command.start` + `bw.command.start.debug` | 仅 OP 或明确授权的管理员可绕过单队限制 |
 | `/bw forceStart` | `bw.command.forcestart` | `bw.forcestart` |
 | `/bw setLobby` | `bw.command.setlobby` | `bw.setup` |
 | `/bw setupArena <世界>` | `bw.command.setuparena` | `bw.setup` |

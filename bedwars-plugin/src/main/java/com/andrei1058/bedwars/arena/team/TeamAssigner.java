@@ -25,6 +25,8 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.ITeamAssigner;
 import com.andrei1058.bedwars.api.events.gameplay.TeamAssignEvent;
+import com.andrei1058.bedwars.api.tasks.StartingTask;
+import com.andrei1058.bedwars.arena.ArenaStartPolicy;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -61,7 +63,8 @@ public class TeamAssigner implements ITeamAssigner {
                 }
             }
 
-            if (approvedAllocation.stream().filter(team -> !team.isEmpty()).count() < 2) {
+            long activeTeams = approvedAllocation.stream().filter(team -> !team.isEmpty()).count();
+            if (!canApplyAllocation(activeTeams, arena.getStartingTask())) {
                 BedWars.plugin.getLogger().warning("竞技场 " + arena.getArenaName()
                         + " 的分队事件被取消后少于两支非空队伍，已停止开局。");
                 return;
@@ -77,5 +80,10 @@ public class TeamAssigner implements ITeamAssigner {
         } finally {
             squads.clearArena(arena);
         }
+    }
+
+    static boolean canApplyAllocation(long activeTeams, StartingTask startingTask) {
+        return ArenaStartPolicy.canStartWithActiveTeams(activeTeams,
+                startingTask != null && startingTask.isSingleTeamDebugStart());
     }
 }

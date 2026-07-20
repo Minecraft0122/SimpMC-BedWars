@@ -51,6 +51,7 @@ public class GameStartingTask implements Runnable, StartingTask {
     private int countdown;
     private final IArena arena;
     private final BukkitTask task;
+    private boolean singleTeamDebugStart;
 
     public GameStartingTask(Arena arena) {
         this.arena = arena;
@@ -68,6 +69,15 @@ public class GameStartingTask implements Runnable, StartingTask {
 
     public void setCountdown(int countdown) {
         this.countdown = countdown;
+    }
+
+    public void enableSingleTeamDebugStart() {
+        singleTeamDebugStart = true;
+    }
+
+    @Override
+    public boolean isSingleTeamDebugStart() {
+        return singleTeamDebugStart;
     }
 
     /**
@@ -96,7 +106,7 @@ public class GameStartingTask implements Runnable, StartingTask {
             long activeTeams = getArena().getTeams().stream()
                     .filter(team -> !team.getMembers().isEmpty())
                     .count();
-            if (!ArenaStartPolicy.hasEnoughActiveTeams(activeTeams)) {
+            if (!ArenaStartPolicy.canStartWithActiveTeams(activeTeams, singleTeamDebugStart)) {
                 abortInvalidTeamAssignment();
                 return;
             }
