@@ -26,6 +26,56 @@ class MainConfigTest {
     }
 
     @Test
+    void slightlyReducesOnlyBuiltInFireballDefaults() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.5);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.25);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.8);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 4.0);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, 1.75);
+
+        MainConfig.migrateFireballDefaults(configuration, 16);
+
+        assertEquals(3.25, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE));
+        assertEquals(1.15, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL));
+        assertEquals(0.75, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL));
+        assertEquals(3.5, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY));
+        assertEquals(1.75, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF));
+    }
+
+    @Test
+    void preservesEarlyLookingValuesWhenTheyWereCustomizedInANewerConfig() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0);
+
+        MainConfig.migrateFireballDefaults(configuration, 16);
+
+        assertEquals(3.0, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE));
+        assertEquals(1.0, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL));
+        assertEquals(0.65, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL));
+        assertEquals(2.0, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY));
+    }
+
+    @Test
+    void migratesPreEnhancementDefaultsForOldConfigs() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0);
+
+        MainConfig.migrateFireballDefaults(configuration, 9);
+
+        assertEquals(3.25, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE));
+        assertEquals(1.15, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL));
+        assertEquals(0.75, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL));
+        assertEquals(3.5, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY));
+    }
+
+    @Test
     void migratesTemporaryTabDefaultsWithoutRemovingLobbyOverride() {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.set(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY, false);

@@ -39,7 +39,11 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 16;
+    private static final int CONFIG_VERSION = 17;
+    private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
+    private static final double FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT = 1.15;
+    private static final double FIREBALL_VERTICAL_KNOCKBACK_DEFAULT = 0.75;
+    private static final double FIREBALL_ENEMY_DAMAGE_DEFAULT = 3.5;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -126,14 +130,14 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_TNT_FUSE_TICKS, 45);
 
         // fireball category
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.5);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, FIREBALL_EXPLOSION_SIZE_DEFAULT);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 10);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, false);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.25);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.8);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, FIREBALL_VERTICAL_KNOCKBACK_DEFAULT);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_COOLDOWN, 0.5);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, 2.0);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 4.0);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, FIREBALL_ENEMY_DAMAGE_DEFAULT);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES, 0.0);
         //
         yml.addDefault("database.enable", false);
@@ -283,7 +287,8 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
         setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");
         setComments(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
-                "火球爆炸、击退、冷却与伤害设置。2.10.5 默认增强爆炸范围、水平/垂直击退和敌方伤害。");
+                "火球爆炸、击退、冷却与伤害设置。2.10.20 略微降低默认爆炸范围、击退和敌方伤害。",
+                "迁移器只调整仍使用上一版默认值的配置，不覆盖管理员自定义参数。");
         setComments("database.enable", "是否使用 MySQL；关闭时使用本地 SQLite。", "启用前请正确填写下面的连接信息。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
@@ -297,10 +302,7 @@ public class MainConfig extends ConfigManager {
     }
 
     private static void migrateLegacyConfig(YamlConfiguration yml) {
-        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0, 3.5);
-        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0, 1.25);
-        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65, 0.8);
-        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0, 4.0);
+        migrateFireballDefaults(yml, yml.getInt(CONFIG_VERSION_PATH, 0));
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 45.0, 60.0);
         if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300) == 300) {
             yml.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
@@ -349,6 +351,30 @@ public class MainConfig extends ConfigManager {
             yml.set(obsoletePath, null);
         }
         migrateLobbyLocation(yml);
+    }
+
+    static void migrateFireballDefaults(YamlConfiguration yml, int storedConfigVersion) {
+        // Fireball enhancement defaults were introduced by configuration schema 10.
+        // Treat earlier values as defaults only for files that predate that schema;
+        // otherwise an administrator may have deliberately chosen those numbers.
+        if (storedConfigVersion < 10) {
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0,
+                    FIREBALL_EXPLOSION_SIZE_DEFAULT);
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0,
+                    FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT);
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65,
+                    FIREBALL_VERTICAL_KNOCKBACK_DEFAULT);
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0,
+                    FIREBALL_ENEMY_DAMAGE_DEFAULT);
+        }
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.5,
+                FIREBALL_EXPLOSION_SIZE_DEFAULT);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.25,
+                FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.8,
+                FIREBALL_VERTICAL_KNOCKBACK_DEFAULT);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 4.0,
+                FIREBALL_ENEMY_DAMAGE_DEFAULT);
     }
 
     static void removeObsoleteLobbyItems(YamlConfiguration yml) {
