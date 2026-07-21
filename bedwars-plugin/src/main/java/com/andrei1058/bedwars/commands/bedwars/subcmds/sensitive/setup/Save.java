@@ -23,7 +23,6 @@ package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
-import com.andrei1058.bedwars.arena.GeneratorStructureLocator;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -69,18 +68,6 @@ public class Save extends SubCommand {
                         + getParent().getName() + " setBed <队伍> 手动设置。");
             }
             return true;
-        }
-
-        if (assisted) {
-            p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "正在严格检查钻石/绿宝石生成器结构……");
-            GeneratorStructureLocator.ScanResult generators = ss.autoDetectGlobalGenerators();
-            p.sendMessage(ss.getPrefix() + ChatColor.GREEN + "已识别全局生成器：钻石 "
-                    + generators.diamondGenerators().size() + " 个，绿宝石 "
-                    + generators.emeraldGenerators().size() + " 个。");
-            if (generators.diamondGenerators().isEmpty() || generators.emeraldGenerators().isEmpty()) {
-                p.sendMessage(ss.getPrefix() + ChatColor.YELLOW
-                        + "未识别到的类型不会写入；请检查 3×3×3 结构，或使用 /bw addGenerator 手动设置。");
-            }
         }
 
         //Clear setup armor-stands

@@ -63,6 +63,7 @@ permissions:
       bw.command.setbed: true
       bw.command.setshop: true
       bw.command.setupgrade: true
+      bw.command.autodetectgenerators: true
       bw.command.addgenerator: true
       bw.command.removegenerator: true
       bw.command.settype: true

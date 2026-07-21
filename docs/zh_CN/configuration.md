@@ -61,7 +61,7 @@ TAB 相关常用项：
 
 2.10.26 起 `/bw autoCreateTeams` 直接使用羊毛的完整 `Material` 做精确映射，不使用模糊名称匹配。亮绿/深绿分别是 `LIME_WOOL → GREEN`、`GREEN_WOOL → DARK_GREEN`；亮灰/深灰分别是 `LIGHT_GRAY_WOOL → GRAY`、`GRAY_WOOL → DARK_GRAY`。
 
-2.10.27 起只有引导式快速设置会自动写入队伍床位及 `generator.Diamond`、`generator.Emerald`。高级设置只读取和校验管理员手动填写的点位。自动生成器要求严格的三层 `3×3×3` 资源块/楼梯/空气结构，识别结果只追加缺失点位，不覆盖已有列表。
+2.10.29 起只有引导式快速设置中的 `/bw autoDetectGenerators` 会扫描并写入 `generator.Diamond`、`generator.Emerald`，`/bw save` 不再隐式扫描。底层可为 `3×3` 同种资源块实心层，或只有中心一格为对应资源块；中层必须是楼梯环和中心空气，顶层必须全为空气。识别结果只追加缺失点位，不覆盖已有列表。队伍床位仍会在引导式设置中自动识别。
 
 队伍名称直接取 `Team.<队伍>` 的节点名并保持原大小写，不经过语言翻译。旧语言文件中可能存在的 `team-name-<竞技场>-<队伍>` 不再参与显示。
 

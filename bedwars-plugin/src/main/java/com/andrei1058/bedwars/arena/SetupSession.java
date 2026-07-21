@@ -472,7 +472,7 @@ public class SetupSession implements ISetupSession {
 
     /**
      * Detect strict diamond/emerald structures and merge their center-air blocks
-     * into global generator configuration. Assisted setup only.
+     * into global generator configuration when explicitly requested by the assisted setup command.
      */
     public GeneratorStructureLocator.ScanResult autoDetectGlobalGenerators() {
         if (!usesAutomaticAssistance(getSetupType())) {

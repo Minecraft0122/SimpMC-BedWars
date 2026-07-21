@@ -65,6 +65,7 @@
 | `setBed` | `bw.command.setbed` |
 | `setShop` | `bw.command.setshop` |
 | `setUpgrade` | `bw.command.setupgrade` |
+| `autoDetectGenerators` | `bw.command.autodetectgenerators` |
 | `addGenerator` | `bw.command.addgenerator` |
 | `removeGenerator` | `bw.command.removegenerator` |
 | `setType` | `bw.command.settype` |

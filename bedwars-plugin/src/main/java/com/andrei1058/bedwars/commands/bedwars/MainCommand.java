@@ -106,6 +106,7 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         new com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup.SetBed(this, "setBed");
         new SetShop(this, "setShop");
         new com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup.SetUpgrade(this, "setUpgrade");
+        new AutoDetectGenerators(this, "autoDetectGenerators");
         new com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup.AddGenerator(this, "addGenerator");
         new RemoveGenerator(this, "removeGenerator");
         new com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup.SetType(this, "setType");

@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Strict detector for the 3x3x3 global-generator structure used by assisted setup.
+ * Strict detector for assisted setup's 3x3x3 global-generator structures.
+ * The base is either a solid resource layer or a single resource block at the center.
  */
 public final class GeneratorStructureLocator {
 
@@ -50,10 +51,16 @@ public final class GeneratorStructureLocator {
 
     static boolean matchesStructure(Material resource, MaterialLookup blocks) {
         if (resource != Material.DIAMOND_BLOCK && resource != Material.EMERALD_BLOCK) return false;
+        if (blocks.get(0, 0, 0) != resource) return false;
 
+        int matchingBaseBlocks = 0;
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
-                if (blocks.get(x, 0, z) != resource) return false;
+                Material base = blocks.get(x, 0, z);
+                if (base == resource) matchingBaseBlocks++;
+                if ((x != 0 || z != 0) && base != resource && isGlobalResourceBlock(base)) {
+                    return false;
+                }
 
                 Material middle = blocks.get(x, 1, z);
                 if (x == 0 && z == 0) {
@@ -65,7 +72,11 @@ public final class GeneratorStructureLocator {
                 if (blocks.get(x, 2, z) != Material.AIR) return false;
             }
         }
-        return true;
+        return matchingBaseBlocks == 1 || matchingBaseBlocks == 9;
+    }
+
+    private static boolean isGlobalResourceBlock(Material material) {
+        return material == Material.DIAMOND_BLOCK || material == Material.EMERALD_BLOCK;
     }
 
     static boolean isStairs(Material material) {
