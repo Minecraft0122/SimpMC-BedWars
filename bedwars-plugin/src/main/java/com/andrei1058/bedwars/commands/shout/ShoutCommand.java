@@ -47,7 +47,7 @@ public class ShoutCommand extends BukkitCommand {
     public boolean execute(CommandSender s, String st, String[] args) {
         if (s instanceof ConsoleCommandSender) return true;
         Player p = (Player) s;
-        if (!Permissions.hasCommandPermission(p, "shout", Permissions.PERMISSION_SHOUT_COMMAND)) {
+        if (!Permissions.hasShoutPermission(p)) {
             p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             return true;
         }

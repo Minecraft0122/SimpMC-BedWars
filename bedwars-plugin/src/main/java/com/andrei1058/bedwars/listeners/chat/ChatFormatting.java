@@ -33,6 +33,7 @@ import com.andrei1058.bedwars.commands.shout.ShoutCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
 import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -93,6 +94,11 @@ public class ChatFormatting implements Listener {
 
             // shout format
             if (isShouting(msg, language)) {
+                if (!hasShoutPermission(p)) {
+                    e.setCancelled(true);
+                    p.sendMessage(language.m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                    return;
+                }
                 if (ShoutCommand.isShoutCooldown(p)) {
                     e.setCancelled(true);
                     p.sendMessage(language.m(Messages.COMMAND_COOLDOWN)
@@ -167,6 +173,10 @@ public class ChatFormatting implements Listener {
     private static boolean isShouting(String msg, Language lang) {
         return msg.startsWith("!") || msg.startsWith("shout") ||
                 msg.startsWith("SHOUT") || msg.startsWith(lang.m(Messages.MEANING_SHOUT));
+    }
+
+    static boolean hasShoutPermission(CommandSender sender) {
+        return Permissions.hasShoutPermission(sender);
     }
 
     private static String clearShout(String msg, Language lang) {

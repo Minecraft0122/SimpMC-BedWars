@@ -104,10 +104,7 @@ public class CmdStart extends SubCommand {
     }
 
     static boolean hasDebugStartPermission(CommandSender sender) {
-        return sender.isOp()
-                || sender.hasPermission(Permissions.PERMISSION_ALL)
-                || sender.hasPermission(Permissions.PERMISSION_COMMAND_ALL)
-                || sender.hasPermission(Permissions.PERMISSION_DEBUG_START);
+        return sender.isOp();
     }
 
     @Override

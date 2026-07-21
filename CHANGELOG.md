@@ -1,5 +1,16 @@
 # 更新记录
 
+## 2.10.28 - 2026-07-21
+
+### 官方权限行为与喊话权限修复
+
+- 修复游戏内 `!消息`、`shout消息` 等聊天喊话入口没有检查权限的问题；聊天入口和 `/shout` 现在共用同一个权限门，必须拥有官方 `bw.shout`、兼容节点 `bw.command.shout` 或全命令权限。
+- 按 BedWars1058 官方权限表恢复无需权限的玩家命令：`/bw`、`join`、`leave`、`gui`、`lang`、`cmds`、`stats`、`teleporter`、`upgradesmenu`、`arenaList`、`/leave` 和 `/party` 均可直接使用；本插件新增的 `team`、`invite` 同样作为普通玩家功能开放。
+- `/rejoin` 继续严格要求 `bw.rejoin`，`/shout` 与 `!消息` 继续严格要求 `bw.shout`；`bw.player` 不再隐式授予这两个受限功能。
+- 启用竞技场的主权限从源码旧值 `bw.enableRotation` 修正为官方文档中的 `bw.enable`，同时保留旧值和 `bw.command.enablearena` 作为兼容别名。
+- `/bw start debug` 恢复为官方定义的严格仅 OP 可用；`bw.*`、`bw.command.*` 和旧 `bw.command.start.debug` 均不能让非 OP 绕过单队开局限制。
+- `plugin.yml` 补齐官方权限节点的中文说明，教程按官方节点重写，并新增无需权限命令、喊话绕过、启用竞技场别名、OP 调试开局和权限清单回归测试。
+
 ## 2.10.27 - 2026-07-21
 
 ### 快速模式自动设置

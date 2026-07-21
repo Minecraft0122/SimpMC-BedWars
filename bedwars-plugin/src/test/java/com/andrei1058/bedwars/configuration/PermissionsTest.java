@@ -6,19 +6,36 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Proxy;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PermissionsTest {
 
     @Test
-    void playerBundleWorksWithoutBukkitChildPermissionExpansion() {
-        CommandSender player = sender("bw.player");
+    void officialPermissionFreeCommandsNeedNoGrant() {
+        CommandSender player = sender();
 
+        assertTrue(Permissions.hasCommandPermission(player, "help"));
         assertTrue(Permissions.hasCommandPermission(player, "join"));
-        assertTrue(Permissions.hasCommandPermission(player, "shout", Permissions.PERMISSION_SHOUT_COMMAND));
         assertTrue(Permissions.hasCommandPermission(player, "party"));
+        assertTrue(Permissions.hasCommandPermission(player, "arenaList"));
         assertFalse(Permissions.hasCommandPermission(player, "reload", Permissions.PERMISSION_RELOAD));
+    }
+
+    @Test
+    void shoutRequiresItsOfficialOrCompatiblePermission() {
+        assertFalse(Permissions.hasShoutPermission(sender()));
+        assertFalse(Permissions.hasShoutPermission(sender("bw.player")));
+        assertTrue(Permissions.hasShoutPermission(sender("bw.shout")));
+        assertTrue(Permissions.hasShoutPermission(sender("bw.command.shout")));
+        assertTrue(Permissions.hasShoutPermission(sender("bw.*")));
+    }
+
+    @Test
+    void usesDocumentedEnablePermissionAndKeepsLegacyAliasSeparate() {
+        assertEquals("bw.enable", Permissions.PERMISSION_ARENA_ENABLE);
+        assertEquals("bw.enableRotation", Permissions.PERMISSION_ARENA_ENABLE_LEGACY);
     }
 
     @Test

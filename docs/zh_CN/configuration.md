@@ -19,7 +19,7 @@
 - `fireball`：火球速度、爆炸、击退、冷却和伤害。2.10.20 的平衡默认值为范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
-- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.22 会自动补回缺失的 `lobby-items.leave`，但不覆盖已有自定义值。2.10.25 起点击默认返回红床会直接回到 `/bw setLobby` 保存的位置并重新发放大厅物品，不依赖玩家是否拥有 `bw.command.leave`。
+- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.22 会自动补回缺失的 `lobby-items.leave`，但不覆盖已有自定义值。2.10.25 起点击默认返回红床会直接回到 `/bw setLobby` 保存的位置并重新发放大厅物品；2.10.28 起手动 `/leave` 也按照官方规则无需权限。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
 - `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。该开关只影响商店，正式开局始终发放队伍色皮革四件套。

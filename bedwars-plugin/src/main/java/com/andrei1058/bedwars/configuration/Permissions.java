@@ -30,7 +30,6 @@ public class Permissions {
     private static final String PREFIX = "bw";
 
     public static final String PERMISSION_FORCESTART = PREFIX + ".forcestart";
-    public static final String PERMISSION_DEBUG_START = PREFIX + ".command.start.debug";
     public static final String PERMISSION_ALL = PREFIX + ".*";
     public static final String PERMISSION_COMMAND_BYPASS = PREFIX + ".cmd.bypass";
     public static final String PERMISSION_SHOUT_COMMAND = PREFIX + ".shout";
@@ -40,7 +39,8 @@ public class Permissions {
     public static final String PERMISSION_BUILD = PREFIX + ".build";
     public static final String PERMISSION_CLONE = PREFIX + ".clone";
     public static final String PERMISSION_DEL_ARENA = PREFIX + ".delete";
-    public static final String PERMISSION_ARENA_ENABLE = PREFIX + ".enableRotation";
+    public static final String PERMISSION_ARENA_ENABLE = PREFIX + ".enable";
+    public static final String PERMISSION_ARENA_ENABLE_LEGACY = PREFIX + ".enableRotation";
     public static final String PERMISSION_ARENA_DISABLE = PREFIX + ".disable";
     public static final String PERMISSION_NPC = PREFIX + ".npc";
     public static final String PERMISSION_RELOAD = PREFIX + ".reload";
@@ -56,6 +56,9 @@ public class Permissions {
     }
 
     public static boolean hasCommandPermission(CommandSender sender, String name, String... legacyPermissions) {
+        if (SubCommand.isPermissionFreeCommand(name)) {
+            return true;
+        }
         if (sender.hasPermission(PERMISSION_ALL) || sender.hasPermission(PERMISSION_COMMAND_ALL)
                 || sender.hasPermission(command(name))
                 || (SubCommand.isPlayerCommand(name) && sender.hasPermission(PERMISSION_PLAYER))) {
@@ -65,6 +68,13 @@ public class Permissions {
             if (sender.hasPermission(permission)) return true;
         }
         return false;
+    }
+
+    /**
+     * Shared permission gate for both /shout and the in-chat !message syntax.
+     */
+    public static boolean hasShoutPermission(CommandSender sender) {
+        return hasCommandPermission(sender, "shout", PERMISSION_SHOUT_COMMAND);
     }
 
     /**

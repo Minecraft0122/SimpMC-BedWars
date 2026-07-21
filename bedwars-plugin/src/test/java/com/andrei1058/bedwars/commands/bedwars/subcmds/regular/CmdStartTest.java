@@ -21,11 +21,11 @@ class CmdStartTest {
     }
 
     @Test
-    void debugStartRequiresItsDedicatedAdministrativePermission() {
-        assertTrue(CmdStart.hasDebugStartPermission(sender(false, "bw.command.start.debug")));
-        assertTrue(CmdStart.hasDebugStartPermission(sender(false, "bw.command.*")));
-        assertTrue(CmdStart.hasDebugStartPermission(sender(false, "bw.*")));
+    void debugStartStrictlyRequiresOperatorStatus() {
         assertTrue(CmdStart.hasDebugStartPermission(sender(true)));
+        assertFalse(CmdStart.hasDebugStartPermission(sender(false, "bw.command.start.debug")));
+        assertFalse(CmdStart.hasDebugStartPermission(sender(false, "bw.command.*")));
+        assertFalse(CmdStart.hasDebugStartPermission(sender(false, "bw.*")));
         assertFalse(CmdStart.hasDebugStartPermission(sender(false, "bw.command.start")));
     }
 

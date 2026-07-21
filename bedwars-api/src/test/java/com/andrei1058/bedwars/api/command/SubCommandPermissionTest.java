@@ -26,9 +26,19 @@ class SubCommandPermissionTest {
     }
 
     @Test
-    void playerBundleOnlyGrantsOrdinaryCommands() {
+    void officialPermissionFreeCommandsWorkWithoutAnyGrant() {
+        assertTrue(new TestCommand(new TestParent(), "join").hasPermission(sender()));
+        assertTrue(new TestCommand(new TestParent(), "party").hasPermission(sender()));
+        assertTrue(new TestCommand(new TestParent(), "arenaList").hasPermission(sender()));
+        assertFalse(new TestCommand(new TestParent(), "shout").hasPermission(sender()));
+        assertFalse(new TestCommand(new TestParent(), "rejoin").hasPermission(sender()));
+    }
+
+    @Test
+    void playerBundleDoesNotBypassOfficialRestrictedCommands() {
         assertTrue(new TestCommand(new TestParent(), "join").hasPermission(sender("bw.player")));
-        assertTrue(new TestCommand(new TestParent(), "shout").hasPermission(sender("bw.player")));
+        assertFalse(new TestCommand(new TestParent(), "shout").hasPermission(sender("bw.player")));
+        assertFalse(new TestCommand(new TestParent(), "rejoin").hasPermission(sender("bw.player")));
         assertFalse(new TestCommand(new TestParent(), "reload").hasPermission(sender("bw.player")));
     }
 
@@ -39,6 +49,17 @@ class SubCommandPermissionTest {
 
         assertTrue(command.hasPermission(sender("bw.setup")));
         assertTrue(command.hasPermission(sender("bw.command.setuparena")));
+    }
+
+    @Test
+    void acceptsAdditionalPermissionAliases() {
+        TestCommand command = new TestCommand(new TestParent(), "enableArena");
+        command.setPermission("bw.enable");
+        command.addPermission("bw.enableRotation");
+
+        assertTrue(command.hasPermission(sender("bw.enable")));
+        assertTrue(command.hasPermission(sender("bw.enableRotation")));
+        assertFalse(command.hasPermission(sender()));
     }
 
     private static CommandSender sender(String... permissions) {

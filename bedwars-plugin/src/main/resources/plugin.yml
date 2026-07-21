@@ -8,7 +8,7 @@ main: com.andrei1058.bedwars.BedWars
 softdepend: [Vault,PlaceholderAPI,Citizens,Parties,VipFeatures,PartyAndFriends,Spigot-Party-API-PAF]
 permissions:
   bw.player:
-    description: 普通玩家常用的 BedWars 命令权限集合
+    description: 旧版普通玩家命令集合；官方无需权限的命令现在无需授予此节点
     default: false
     children:
       bw.command.help: true
@@ -22,8 +22,6 @@ permissions:
       bw.command.invite: true
       bw.command.teleporter: true
       bw.command.upgradesmenu: true
-      bw.command.shout: true
-      bw.command.rejoin: true
       bw.command.party: true
   'bw.command.*':
     description: 所有 BedWars 命令权限，不包含其他游戏特权
@@ -41,7 +39,6 @@ permissions:
       bw.command.invite: true
       bw.command.forcestart: true
       bw.command.start: true
-      bw.command.start.debug: true
       bw.command.setlobby: true
       bw.command.setuparena: true
       bw.command.arenalist: true
@@ -77,10 +74,64 @@ permissions:
       bw.command.shout: true
       bw.command.rejoin: true
       bw.command.party: true
-  bw.command.start.debug:
-    description: 允许 /bw start debug 绕过单队开局限制
-    default: op
+  bw.rejoin:
+    description: 重新加入仍处于有效重连窗口的竞技场
+    default: false
+  bw.shout:
+    description: 使用 /shout 或 !消息进行全场喊话
+    default: false
+  bw.forcestart:
+    description: 强制开始当前竞技场
+    default: false
+  bw.tp:
+    description: 使用管理员传送命令
+    default: false
+  bw.groups:
+    description: 管理竞技场分组
+    default: false
+  bw.build:
+    description: 切换竞技场建造模式
+    default: false
+  bw.clone:
+    description: 克隆竞技场
+    default: false
+  bw.delete:
+    description: 删除竞技场
+    default: false
+  bw.disable:
+    description: 禁用竞技场
+    default: false
+  bw.enable:
+    description: 启用竞技场
+    default: false
+  bw.enableRotation:
+    description: 旧版启用竞技场权限别名；请改用 bw.enable
+    default: false
+  bw.npc:
+    description: 管理加入竞技场的 NPC
+    default: false
+  bw.reload:
+    description: 重载插件配置
+    default: false
+  bw.setup:
+    description: 设置大厅和竞技场
+    default: false
+  bw.level:
+    description: 管理玩家等级
+    default: false
+  bw.vip:
+    description: VIP 满服加入及相关特权
+    default: false
+  bw.chatcolor:
+    description: 在聊天消息中使用颜色代码
+    default: false
+  bw.cmd.bypass:
+    description: 绕过竞技场内的命令限制
+    default: false
+  bw.shout.bypass:
+    description: 绕过全场喊话冷却
+    default: false
   'bw.*':
-    description: SimpMC-BedWars 全部权限
+    description: 官方 BedWars 全命令权限
     default: op
 #load: STARTUP

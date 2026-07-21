@@ -51,6 +51,7 @@ public class EnableArena extends SubCommand {
         showInList(true);
         setPriority(5);
         setPermission(Permissions.PERMISSION_ARENA_ENABLE);
+        addPermission(Permissions.PERMISSION_ARENA_ENABLE_LEGACY);
     }
 
     @Override

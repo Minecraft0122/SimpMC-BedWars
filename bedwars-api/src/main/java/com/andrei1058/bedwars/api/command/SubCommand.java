@@ -26,6 +26,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -34,7 +35,10 @@ public abstract class SubCommand {
 
     private static final Set<String> PLAYER_COMMANDS = Set.of(
             "help", "cmds", "join", "leave", "lang", "teleporter", "gui", "stats",
-            "team", "invite", "upgradesmenu", "shout", "rejoin", "party");
+            "team", "invite", "upgradesmenu", "party");
+    private static final Set<String> PERMISSION_FREE_COMMANDS = Set.of(
+            "help", "cmds", "join", "leave", "lang", "teleporter", "gui", "stats",
+            "team", "invite", "upgradesmenu", "party", "arenalist");
 
     // SubCommand name
     private String name;
@@ -48,8 +52,8 @@ public abstract class SubCommand {
     private TextComponent displayInfo;
     // True if this is an arena setup SubCommand
     private boolean arenaSetupCommand = false;
-    // Sub command permission
-    private String permission = "";
+    // Legacy/official permissions accepted in addition to the stable per-command permission.
+    private final List<String> permissions = new ArrayList<>();
     // Stable per-command permission used by permission plugins.
     private final String commandPermission;
 
@@ -150,7 +154,17 @@ public abstract class SubCommand {
      * Set permission for sub-command
      */
     public void setPermission(String permission) {
-        this.permission = permission;
+        permissions.clear();
+        addPermission(permission);
+    }
+
+    /**
+     * Add a compatible permission alias without replacing the primary permission.
+     */
+    public void addPermission(String permission) {
+        if (permission != null && !permission.isBlank() && !permissions.contains(permission)) {
+            permissions.add(permission);
+        }
     }
 
     /**
@@ -164,10 +178,11 @@ public abstract class SubCommand {
      * Check if player has permission to use the command
      */
     public boolean hasPermission(CommandSender p) {
-        return p.hasPermission("bw.*") || p.hasPermission("bw.command.*")
+        return isPermissionFreeCommand(name)
+                || p.hasPermission("bw.*") || p.hasPermission("bw.command.*")
                 || p.hasPermission(commandPermission)
                 || (isPlayerCommand(name) && p.hasPermission("bw.player"))
-                || (!permission.isEmpty() && p.hasPermission(permission));
+                || permissions.stream().anyMatch(p::hasPermission);
     }
 
     /**
@@ -175,6 +190,13 @@ public abstract class SubCommand {
      */
     public static boolean isPlayerCommand(String name) {
         return name != null && PLAYER_COMMANDS.contains(name.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Whether the official permission table exposes the command without a permission.
+     */
+    public static boolean isPermissionFreeCommand(String name) {
+        return name != null && PERMISSION_FREE_COMMANDS.contains(name.toLowerCase(Locale.ROOT));
     }
 
     /**

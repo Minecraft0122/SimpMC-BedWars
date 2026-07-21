@@ -2,63 +2,55 @@
 
 主命令别名：`/bw`、`/bedwars`、`/simpmcbedwars`、`/simpmcbw`。
 
-从 2.10.17 起，每个一级命令都有稳定权限点，格式为 `bw.command.<小写命令名>`。权限默认不向普通玩家开放，建议用 LuckPerms 给默认组授予玩家权限集合：
-
-```text
-/lp group default permission set bw.player true
-```
-
-`bw.player` 只包含常用玩家命令，不包含强制开局、竞技场设置、重载、删除地图等管理能力。代码会直接识别该权限，不依赖 LuckPerms 是否启用 Bukkit 子权限继承。
+从 2.10.28 起，命令的默认权限行为与 [BedWars1058 官方权限表](https://wiki.andrei1058.com/docs/BedWars1058/configuration/permissions/) 一致。官方标记为无需权限的命令不需要给默认组授予任何节点；`bw.command.<命令>`、`bw.command.*` 和 `bw.player` 仅作为旧版 SimpMC-BedWars 配置的兼容节点保留。
 
 ## 玩家命令
 
-| 命令 | 独立权限 | 作用 |
+| 命令 | 官方权限 | 作用 |
 | --- | --- | --- |
-| `/bw` | `bw.command.help` | 查看有权使用的命令 |
-| `/bw cmds` | `bw.command.cmds` | 查看玩家命令帮助 |
-| `/bw join <竞技场/分组/random>` | `bw.command.join` | 加入竞技场 |
-| `/bw leave`、`/leave` | `bw.command.leave` | 离开当前竞技场 |
-| `/bw gui [分组+分组]` | `bw.command.gui` | 打开竞技场选择菜单 |
-| `/bw stats` | `bw.command.stats` | 查看历史战绩 |
-| `/bw lang <语言代码>` | `bw.command.lang` | 切换个人语言 |
-| `/bw team ...` | `bw.command.team` | 管理开局前的固定队友邀请 |
-| `/bw invite ...` | `bw.command.invite` | 邀请大厅玩家加入等待中的竞技场 |
-| `/bw teleporter` | `bw.command.teleporter` | 打开旁观传送菜单 |
-| `/bw upgradesmenu` | `bw.command.upgradesmenu` | 打开本队升级菜单；主要由 NPC 调用 |
-| `/shout <消息>` | `bw.command.shout` | 游戏内全体喊话 |
-| `/rejoin` | `bw.command.rejoin` | 在有效窗口内重连 |
-| `/party ...` | `bw.command.party` | 使用插件内置组队命令 |
+| `/bw`、`/bw cmds` | 无 | 查看命令帮助 |
+| `/bw join <竞技场/分组/random>` | 无 | 加入竞技场 |
+| `/bw leave`、`/leave` | 无 | 离开当前竞技场 |
+| `/bw gui [分组+分组]` | 无 | 打开竞技场选择菜单 |
+| `/bw stats` | 无 | 查看历史战绩 |
+| `/bw lang <语言代码>` | 无 | 切换个人语言 |
+| `/bw team ...` | 无 | 管理开局前的固定队友邀请 |
+| `/bw invite ...` | 无 | 邀请大厅玩家加入等待中的竞技场 |
+| `/bw teleporter` | 无 | 打开旁观传送菜单 |
+| `/bw upgradesmenu` | 无 | 打开本队升级菜单；主要由 NPC 调用 |
+| `/bw arenaList` | 无 | 查看竞技场列表 |
+| `/party ...` | 无 | 使用插件内置组队命令 |
+| `/shout <消息>`、`!消息` | `bw.shout` | 游戏内全体喊话；两种入口使用相同权限检查 |
+| `/rejoin` | `bw.rejoin` | 在有效窗口内重连 |
 
-以上权限全部包含在 `bw.player` 中。
-
-主大厅默认“回到主大厅”红床是受保护的内置操作，点击时不要求 `bw.command.leave`；玩家在聊天栏手动执行 `/bw leave` 或 `/leave` 仍需要该权限。
+`bw.player` 不再是普通玩家使用基础命令的前置条件，也不会授予 `bw.shout` 或 `bw.rejoin`。
 
 ## 管理命令
 
-| 命令 | 独立权限 | 兼容的旧权限 |
+| 命令 | 官方权限 | 兼容的细粒度/旧权限 |
 | --- | --- | --- |
-| `/bw start` | `bw.command.start` | `bw.forcestart` |
-| `/bw start debug` | `bw.command.start` + `bw.command.start.debug` | 仅 OP 或明确授权的管理员可绕过单队限制 |
-| `/bw forceStart` | `bw.command.forcestart` | `bw.forcestart` |
-| `/bw setLobby` | `bw.command.setlobby` | `bw.setup` |
-| `/bw setupArena <世界>` | `bw.command.setuparena` | `bw.setup` |
-| `/bw arenaList` | `bw.command.arenalist` | 无 |
-| `/bw delArena <世界>` | `bw.command.delarena` | `bw.delete` |
-| `/bw enableArena <世界>` | `bw.command.enablearena` | `bw.enableRotation` |
-| `/bw disableArena <世界>` | `bw.command.disablearena` | `bw.disable` |
-| `/bw cloneArena <源> <目标>` | `bw.command.clonearena` | `bw.clone` |
-| `/bw arenaGroup ...` | `bw.command.arenagroup` | `bw.groups` |
-| `/bw build` | `bw.command.build` | `bw.build` |
-| `/bw level ...` | `bw.command.level` | `bw.level` |
-| `/bw reload` | `bw.command.reload` | `bw.reload` |
-| `/bw npc ...` | `bw.command.npc` | `bw.npc` |
-| `/bw tp ...` | `bw.command.tp` | `bw.tp` |
+| `/bw start`、`/bw forceStart` | `bw.forcestart` | `bw.command.start`、`bw.command.forcestart` |
+| `/bw start debug` | 仅 OP | 其他权限（包括 `bw.*`）不能代替 OP 状态 |
+| `/bw setLobby` | `bw.setup` | `bw.command.setlobby` |
+| `/bw setupArena <世界>` | `bw.setup` | `bw.command.setuparena` |
+| `/bw delArena <世界>` | `bw.delete` | `bw.command.delarena` |
+| `/bw enableArena <世界>` | `bw.enable` | `bw.command.enablearena`、旧别名 `bw.enableRotation` |
+| `/bw disableArena <世界>` | `bw.disable` | `bw.command.disablearena` |
+| `/bw cloneArena <源> <目标>` | `bw.clone` | `bw.command.clonearena` |
+| `/bw arenaGroup ...` | `bw.groups` | `bw.command.arenagroup` |
+| `/bw build` | `bw.build` | `bw.command.build` |
+| `/bw level ...` | `bw.level` | `bw.command.level` |
+| `/bw reload` | `bw.reload` | `bw.command.reload` |
+| `/bw npc ...` | `bw.npc` | `bw.command.npc` |
+| `/bw tp ...` | `bw.tp` | `bw.command.tp` |
+
+官方 Wiki 曾把启用竞技场写成 `bw.enable`，而旧源码使用 `bw.enableRotation`。本插件以文档节点 `bw.enable` 为主，同时接受旧节点，方便现有 LuckPerms 数据平滑迁移。
 
 ## 竞技场设置命令
 
-设置会话中的命令仍兼容旧权限 `bw.setup`，同时各自拥有独立节点：
+设置会话中的命令统一使用官方权限 `bw.setup`。以下细粒度节点继续兼容，但不是必需配置：
 
-| 命令 | 独立权限 |
+| 命令 | 兼容的细粒度权限 |
 | --- | --- |
 | `autoCreateTeams` | `bw.command.autocreateteams` |
 | `setWaitingSpawn` | `bw.command.setwaitingspawn` |
@@ -83,13 +75,12 @@
 
 | 权限 | 作用 |
 | --- | --- |
-| `bw.player` | 常用玩家命令集合，推荐授予默认玩家组 |
-| `bw.command.*` | 所有命令，但不包含聊天颜色、VIP 等非命令特权 |
-| `bw.*` | 插件全部权限；默认仅 OP 拥有 |
+| `bw.*` | 官方全命令权限；默认 OP 拥有，但不能让非 OP 使用 `/bw start debug` |
+| `bw.command.*` | SimpMC-BedWars 兼容的细粒度全命令集合，不包含调试开局 |
+| `bw.player` | 旧版普通玩家集合；基础命令现已无需此权限 |
 | `bw.vip` | VIP 满服加入和相关特权 |
 | `bw.chatcolor` | 允许在聊天消息中使用 `&` 颜色代码 |
-| `bw.shout` | 旧版 `/shout` 权限，继续兼容 |
-| `bw.rejoin` | 旧版重连权限，继续兼容 |
 | `bw.cmd.bypass` | 绕过游戏内命令限制 |
+| `bw.shout.bypass` | 绕过喊话冷却；仍然必须拥有 `bw.shout` 或兼容命令权限 |
 
-不要把 `bw.*` 或 `bw.command.*` 授予普通玩家。若只希望开放个别功能，可以直接授予对应的 `bw.command.<命令>`。
+不要把 `bw.*` 或 `bw.command.*` 授予普通玩家。通常只需按需授予 `bw.shout`、`bw.rejoin` 等官方节点。

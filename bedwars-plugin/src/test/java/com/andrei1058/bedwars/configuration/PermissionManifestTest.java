@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PermissionManifestTest {
 
     @Test
-    void playerBundleContainsEveryCommonCommandButNoAdminCommand() throws Exception {
+    void manifestKeepsCompatibilityBundlesWithoutGrantingRestrictedPlayerCommands() throws Exception {
         File manifest = new File(System.getProperty("basedir"), "src/main/resources/plugin.yml");
         PluginDescriptionFile description;
         try (FileInputStream input = new FileInputStream(manifest)) {
@@ -27,13 +27,34 @@ class PermissionManifestTest {
                 .filter(permission -> permission.getName().equals("bw.command.*"))
                 .findFirst().orElseThrow();
         Set<String> common = Set.of("help", "cmds", "join", "leave", "lang", "gui", "stats", "team",
-                "invite", "teleporter", "upgradesmenu", "shout", "rejoin", "party");
+                "invite", "teleporter", "upgradesmenu", "party");
 
         for (String command : common) {
             assertTrue(player.getChildren().getOrDefault("bw.command." + command, false), command);
         }
         assertFalse(player.getChildren().getOrDefault("bw.command.reload", false));
         assertFalse(player.getChildren().getOrDefault("bw.command.setuparena", false));
-        assertTrue(allCommands.getChildren().getOrDefault("bw.command.start.debug", false));
+        assertFalse(player.getChildren().getOrDefault("bw.command.shout", false));
+        assertFalse(player.getChildren().getOrDefault("bw.command.rejoin", false));
+        assertFalse(allCommands.getChildren().getOrDefault("bw.command.start.debug", false));
+    }
+
+    @Test
+    void manifestDeclaresOfficialPermissionNodes() throws Exception {
+        File manifest = new File(System.getProperty("basedir"), "src/main/resources/plugin.yml");
+        PluginDescriptionFile description;
+        try (FileInputStream input = new FileInputStream(manifest)) {
+            description = new PluginDescriptionFile(input);
+        }
+        Set<String> permissions = description.getPermissions().stream()
+                .map(Permission::getName)
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertTrue(permissions.containsAll(Set.of(
+                "bw.*", "bw.rejoin", "bw.shout", "bw.forcestart", "bw.tp", "bw.groups",
+                "bw.build", "bw.clone", "bw.delete", "bw.disable", "bw.enable", "bw.npc",
+                "bw.reload", "bw.setup", "bw.level", "bw.vip", "bw.chatcolor",
+                "bw.cmd.bypass", "bw.shout.bypass")));
+        assertFalse(permissions.contains("bw.command.start.debug"));
     }
 }
