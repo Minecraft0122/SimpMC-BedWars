@@ -107,6 +107,19 @@ public class QuitAndTeleportListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onWorldChange(@NotNull PlayerChangedWorldEvent e) {
 
+        // Re-evaluate on the next tick: arena/setup mappings may be changed by
+        // other handlers during this world-change event. This also avoids
+        // announcing a player who is being moved while disconnecting.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!e.getPlayer().isOnline()) {
+                LobbyAnnouncements.playerLeftLobby(e.getPlayer());
+            } else if (LobbyAnnouncements.isLobbyPlayer(e.getPlayer())) {
+                LobbyAnnouncements.playerEntered(e.getPlayer());
+            } else {
+                LobbyAnnouncements.playerLeftLobby(e.getPlayer());
+            }
+        });
+
         // if player was teleported outside arena
         IArena arena = Arena.getArenaByPlayer(e.getPlayer());
 

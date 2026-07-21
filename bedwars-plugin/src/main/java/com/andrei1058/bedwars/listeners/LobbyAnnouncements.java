@@ -33,20 +33,33 @@ public final class LobbyAnnouncements {
     }
 
     public static void playerEntered(Player player) {
-        if (!isLobbyPlayer(player) || !PRESENT.add(player.getUniqueId())) return;
+        if (!isLobbyPlayer(player) || !beginLobbyPresence(player.getUniqueId())) return;
         broadcast("§e[BW] §f玩家 §b" + player.getName() + " §f加入了游戏", null);
     }
 
+    /** Remove stale lobby presence whenever a player enters an arena, setup world or another world. */
+    public static void playerLeftLobby(Player player) {
+        if (player != null) endLobbyPresence(player.getUniqueId());
+    }
+
     public static void playerEnteredArena(Player player) {
-        if (player != null) PRESENT.remove(player.getUniqueId());
+        playerLeftLobby(player);
     }
 
     public static void playerQuit(Player player, boolean wasInLobby) {
         if (player == null) return;
-        boolean wasTracked = PRESENT.remove(player.getUniqueId());
+        boolean wasTracked = endLobbyPresence(player.getUniqueId());
         if (wasInLobby || wasTracked) {
             broadcast("§e[BW] §f玩家 §b" + player.getName() + " §f离开了游戏", player);
         }
+    }
+
+    static boolean beginLobbyPresence(UUID playerId) {
+        return playerId != null && PRESENT.add(playerId);
+    }
+
+    static boolean endLobbyPresence(UUID playerId) {
+        return playerId != null && PRESENT.remove(playerId);
     }
 
     private static void broadcast(String message, Player excluded) {

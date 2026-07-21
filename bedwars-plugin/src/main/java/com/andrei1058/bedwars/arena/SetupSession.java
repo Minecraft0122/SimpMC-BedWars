@@ -30,6 +30,7 @@ import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.ArenaConfig;
+import com.andrei1058.bedwars.listeners.LobbyAnnouncements;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -69,6 +70,7 @@ public class SetupSession implements ISetupSession {
         this.player = player;
         this.worldName = worldName;
         getSetupSessions().add(this);
+        LobbyAnnouncements.playerLeftLobby(player);
         openGUI(player);
     }
 

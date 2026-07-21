@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LobbyReturnItemTest {
 
     @Test
-    void defaultLobbyBedUsesTheProxyLobbyAction() {
+    void multiArenaLobbyBedUsesTheProxyLobbyAction() {
         assertTrue(Interact.shouldConnectToProxyLobby("bw leave", true, "bw"));
         assertTrue(Interact.shouldConnectToProxyLobby(" BW LEAVE ", true, "bw"));
         assertFalse(Interact.shouldConnectToProxyLobby("bw leave", false, "bw"));
