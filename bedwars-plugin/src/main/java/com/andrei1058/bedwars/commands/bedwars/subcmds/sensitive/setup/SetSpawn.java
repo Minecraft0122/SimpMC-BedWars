@@ -84,11 +84,13 @@ public class SetSpawn extends SubCommand {
                 String teamm = ss.getTeamColor(args[0]) + args[0];
                 p.sendMessage(ChatColor.GOLD + " " + '▪' + " " + "已设置出生点：" + teamm);
                 com.andrei1058.bedwars.commands.Misc.createArmorStand(teamm + " " + ChatColor.GOLD + "出生点已设置", p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
-                Location bed = ss.autoDetectBed(args[0], true);
-                if (bed != null) {
-                    p.sendMessage(ss.getPrefix() + ChatColor.GREEN + "已自动识别床位：" + teamm);
-                } else {
-                    p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "在队伍岛屿半径内没有找到床。");
+                if (SetupSession.usesAutomaticAssistance(ss.getSetupType())) {
+                    Location bed = ss.autoDetectBed(args[0], true);
+                    if (bed != null) {
+                        p.sendMessage(ss.getPrefix() + ChatColor.GREEN + "已自动识别床位：" + teamm);
+                    } else {
+                        p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "在队伍岛屿半径内没有找到床。");
+                    }
                 }
                 if (ss.getConfig().getYml().get("Team") != null) {
                     StringBuilder remainging = new StringBuilder();

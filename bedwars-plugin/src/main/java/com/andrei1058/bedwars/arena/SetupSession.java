@@ -61,9 +61,6 @@ public class SetupSession implements ISetupSession {
     private SetupType setupType;
     private ArenaConfig cm;
     private boolean started = false;
-    private boolean autoCreatedEmerald = false;
-    private boolean autoCreatedDiamond = false;
-    private List<Location> skipAutoCreateGen = new ArrayList<>();
 
     public SetupSession(Player player, String worldName) {
         if (!WorldNameValidator.isSafe(worldName)) {
@@ -107,6 +104,10 @@ public class SetupSession implements ISetupSession {
 
     public SetupType getSetupType() {
         return setupType;
+    }
+
+    public static boolean usesAutomaticAssistance(SetupType setupType) {
+        return setupType == SetupType.ASSISTED;
     }
 
     public Player getPlayer() {
@@ -326,30 +327,6 @@ public class SetupSession implements ISetupSession {
         cancel();
     }
 
-    public List<Location> getSkipAutoCreateGen() {
-        return new ArrayList<>(skipAutoCreateGen);
-    }
-
-    public void addSkipAutoCreateGen(Location location) {
-        skipAutoCreateGen.add(location);
-    }
-
-    public void setAutoCreatedEmerald(boolean autoCreatedEmerald) {
-        this.autoCreatedEmerald = autoCreatedEmerald;
-    }
-
-    public boolean isAutoCreatedEmerald() {
-        return autoCreatedEmerald;
-    }
-
-    public void setAutoCreatedDiamond(boolean autoCreatedDiamond) {
-        this.autoCreatedDiamond = autoCreatedDiamond;
-    }
-
-    public boolean isAutoCreatedDiamond() {
-        return autoCreatedDiamond;
-    }
-
     public String getPrefix() {
         return ChatColor.GREEN + "[" + getWorldName() + ChatColor.GREEN + "] " + ChatColor.GOLD;
     }
@@ -474,5 +451,77 @@ public class SetupSession implements ISetupSession {
             getConfig().save();
         }
         return missing;
+    }
+
+    /**
+     * List teams whose configured bed is missing or no longer points to a bed.
+     * This method never changes configuration and is used by advanced setup.
+     */
+    public List<String> findTeamsWithoutValidBeds() {
+        List<String> missing = new ArrayList<>();
+        for (String team : getTeams()) {
+            String bedPath = "Team." + team + ".Bed";
+            Location configured = getConfig().getYml().isString(bedPath)
+                    ? getConfig().getArenaLoc(bedPath) : null;
+            if (configured == null || !BedWars.nms.isBed(configured.getBlock().getType())) {
+                missing.add(team);
+            }
+        }
+        return missing;
+    }
+
+    /**
+     * Detect strict diamond/emerald structures and merge their center-air blocks
+     * into global generator configuration. Assisted setup only.
+     */
+    public GeneratorStructureLocator.ScanResult autoDetectGlobalGenerators() {
+        if (!usesAutomaticAssistance(getSetupType())) {
+            return new GeneratorStructureLocator.ScanResult(List.of(), List.of());
+        }
+        World world = Bukkit.getWorld(getWorldName());
+        if (world == null) {
+            return new GeneratorStructureLocator.ScanResult(List.of(), List.of());
+        }
+
+        List<Location> teamSpawns = getTeams().stream()
+                .map(team -> "Team." + team + ".Spawn")
+                .filter(path -> getConfig().getYml().isString(path))
+                .map(getConfig()::getArenaLoc)
+                .filter(Objects::nonNull)
+                .toList();
+        if (teamSpawns.isEmpty()) {
+            return new GeneratorStructureLocator.ScanResult(List.of(), List.of());
+        }
+
+        int margin = Math.max(16, getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS));
+        int minX = teamSpawns.stream().mapToInt(Location::getBlockX).min().orElse(0) - margin;
+        int maxX = teamSpawns.stream().mapToInt(Location::getBlockX).max().orElse(0) + margin;
+        int minZ = teamSpawns.stream().mapToInt(Location::getBlockZ).min().orElse(0) - margin;
+        int maxZ = teamSpawns.stream().mapToInt(Location::getBlockZ).max().orElse(0) + margin;
+        int maxBaseY = getConfig().getInt(ConfigPath.ARENA_CONFIGURATION_MAX_BUILD_Y);
+        GeneratorStructureLocator.ScanResult result = GeneratorStructureLocator.findAll(
+                world, minX, maxX, Math.max(0, world.getMinHeight()), maxBaseY, minZ, maxZ);
+        boolean changed = mergeGeneratorLocations("Diamond", result.diamondGenerators());
+        changed |= mergeGeneratorLocations("Emerald", result.emeraldGenerators());
+        if (changed) getConfig().save();
+        return result;
+    }
+
+    private boolean mergeGeneratorLocations(String type, List<Location> detected) {
+        String path = "generator." + type;
+        List<Location> merged = new ArrayList<>(getConfig().getArenaLocations(path));
+        boolean changed = false;
+        for (Location candidate : detected) {
+            boolean duplicate = merged.stream().anyMatch(existing -> getConfig().compareArenaLoc(existing, candidate));
+            if (duplicate) continue;
+            merged.add(candidate);
+            changed = true;
+        }
+        if (changed) {
+            getConfig().getYml().set(path, merged.stream()
+                    .map(getConfig()::stringLocationArenaFormat)
+                    .toList());
+        }
+        return changed;
     }
 }
