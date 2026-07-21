@@ -176,6 +176,16 @@ public class Sidebar {
         });
     }
 
+    /** Remove a player's stale health scores without disabling health for everyone else. */
+    public void clearPlayerHealth(@NotNull Player player) {
+        scoreboards.values().forEach(scoreboard -> {
+            Objective belowName = scoreboard.getObjective(HEALTH_BELOW_OBJECTIVE);
+            if (belowName != null) belowName.getScore(player.getName()).resetScore();
+            Objective tab = scoreboard.getObjective(HEALTH_TAB_OBJECTIVE);
+            if (tab != null) tab.getScore(player.getName()).resetScore();
+        });
+    }
+
     public void removeTabs() {
         tabs.clear();
         scoreboards.values().forEach(Sidebar::removeTabTeams);

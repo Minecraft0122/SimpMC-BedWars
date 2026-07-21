@@ -131,6 +131,7 @@ public class Arena implements IArena {
     private World world;
     private String group = "Default", arenaName, worldName;
     private List<ITeam> teams = new ArrayList<>();
+    private final ArenaTeamParticipation teamParticipation = new ArenaTeamParticipation();
     private final PlacedBlockTracker placedBlocks = new PlacedBlockTracker();
     private List<String> nextEvents = new ArrayList<>();
     private List<Region> regionsList = new ArrayList<>();
@@ -921,7 +922,7 @@ public class Arena implements IArena {
                         BedWars.nms.spigotHidePlayer(on, p);
                     }
                 }
-                if (!disconnect) SidebarService.getInstance().giveSidebar(p, null, false);
+                if (!disconnect && p.isOnline()) SidebarService.getInstance().giveSidebar(p, null, false);
             }, 5L);
         }
 
@@ -1041,7 +1042,7 @@ public class Arena implements IArena {
                         BedWars.nms.spigotHidePlayer(on, p);
                     }
                 }
-                if (!disconnect) SidebarService.getInstance().giveSidebar(p, null, false);
+                if (!disconnect && p.isOnline()) SidebarService.getInstance().giveSidebar(p, null, false);
             });
         }
 
@@ -1319,6 +1320,11 @@ public class Arena implements IArena {
     }
 
     @Override
+    public List<ITeam> getActiveTeamsAtGameStart() {
+        return teamParticipation.activeTeams(teams);
+    }
+
+    @Override
     public ArenaConfig getConfig() {
         return cm;
     }
@@ -1439,6 +1445,7 @@ public class Arena implements IArena {
         if (this.status != GameState.playing && status == GameState.playing) {
             startTime = Instant.now();
         }
+        updateActiveTeamSnapshot(status);
         // if countdown cancelled
         if (this.status == GameState.starting && status == GameState.waiting) {
             for (Player player : getPlayers()) {
@@ -1462,6 +1469,7 @@ public class Arena implements IArena {
         if (this.status != GameState.playing && status == GameState.playing) {
             startTime = Instant.now();
         }
+        updateActiveTeamSnapshot(status);
         this.status = status;
         Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, status, status));
         refreshSigns();
@@ -2443,6 +2451,16 @@ public class Arena implements IArena {
         moneyperMinuteTask = null;
         leaving.clear();
         fireballCooldowns.clear();
+        teamParticipation.reset();
+    }
+
+    private void updateActiveTeamSnapshot(GameState nextStatus) {
+        if (nextStatus == GameState.waiting) {
+            teamParticipation.reset();
+            return;
+        }
+        if (nextStatus != GameState.playing || status == GameState.playing) return;
+        teamParticipation.capture(teams);
     }
 
     public boolean isDestroyed() {

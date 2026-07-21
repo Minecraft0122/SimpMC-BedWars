@@ -128,6 +128,9 @@ public class BwSidebar implements ISidebar {
         int teamCount = 0;
         Language language = Language.getPlayerLanguage(player);
         String genericTeamFormat = language.m(Messages.FORMATTING_SCOREBOARD_TEAM_GENERIC);
+        List<ITeam> displayedTeams = arena == null
+                ? Collections.emptyList()
+                : SidebarTeamPolicy.displayedTeams(arena);
 
         StatisticsOrdered.StringParser statParser = null == topStatistics ? null : topStatistics.newParser();
 
@@ -138,9 +141,12 @@ public class BwSidebar implements ISidebar {
 
             // generic team placeholder {team}
             if (null != arena) {
+                if (SidebarTeamPolicy.referencesHiddenTeam(line, arena.getTeams(), displayedTeams)) {
+                    continue;
+                }
                 if (line.trim().equals("{team}")) {
-                    if (arena.getTeams().size() > teamCount) {
-                        ITeam team = arena.getTeams().get(teamCount++);
+                    if (displayedTeams.size() > teamCount) {
+                        ITeam team = displayedTeams.get(teamCount++);
                         String teamName = team.getDisplayName(language);
                         String teamLetter = String.valueOf(!teamName.isEmpty() ? teamName.charAt(0) : "");
 
@@ -166,7 +172,7 @@ public class BwSidebar implements ISidebar {
                         .replace("{map_name}", arena.getArenaName())
                         .replace("{group}", arena.getDisplayGroup(player));
 
-                for (ITeam currentTeam : arena.getTeams()) {
+                for (ITeam currentTeam : displayedTeams) {
                     final ChatColor color = currentTeam.getColor().chat();
                     final String teamName = currentTeam.getDisplayName(language);
                     final String teamLetter = String.valueOf(!teamName.isEmpty() ? teamName.charAt(0) : "");
@@ -275,8 +281,7 @@ public class BwSidebar implements ISidebar {
             providers.add(new PlaceholderProvider("{on}", () ->
                     String.valueOf(Bukkit.getOnlinePlayers().size()))
             );
-            PlayerStats persistentStats = BedWars.getStatsManager().get(player.getUniqueId());
-            //noinspection ConstantConditions
+            PlayerStats persistentStats = BedWars.getStatsManager().getUnsafe(player.getUniqueId());
             if (null != persistentStats) {
                 providers.add(new PlaceholderProvider("{kills}", () ->
                         String.valueOf(persistentStats.getKills()))
@@ -374,7 +379,7 @@ public class BwSidebar implements ISidebar {
             }
 
             // Dynamic team placeholders
-            for (ITeam currentTeam : arena.getTeams()) {
+            for (ITeam currentTeam : SidebarTeamPolicy.displayedTeams(arena)) {
                 boolean isMember = currentTeam.isMember(player) || currentTeam.wasMember(player.getUniqueId());
 
                 providers.add(new PlaceholderProvider("{Team" + currentTeam.getName() + "Status}", () -> {

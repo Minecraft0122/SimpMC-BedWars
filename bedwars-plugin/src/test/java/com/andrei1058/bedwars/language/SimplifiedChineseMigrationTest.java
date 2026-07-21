@@ -140,6 +140,30 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
+    void migratesBuiltInEliminatedTabFormatAndPreservesCustomValues() {
+        YamlConfiguration builtIn = new YamlConfiguration();
+        builtIn.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, List.of(""));
+        builtIn.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, List.of(" &c[淘汰]"));
+
+        SimplifiedChinese.migrateEliminatedTabFormat(builtIn);
+
+        assertEquals(SimplifiedChinese.ELIMINATED_TAB_PREFIX,
+                builtIn.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX));
+        assertEquals(SimplifiedChinese.ELIMINATED_TAB_SUFFIX,
+                builtIn.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX));
+
+        YamlConfiguration custom = new YamlConfiguration();
+        custom.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, List.of("&dCUSTOM "));
+        custom.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, List.of(" &eCUSTOM"));
+        SimplifiedChinese.migrateEliminatedTabFormat(custom);
+
+        assertEquals(List.of("&dCUSTOM "),
+                custom.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX));
+        assertEquals(List.of(" &eCUSTOM"),
+                custom.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX));
+    }
+
+    @Test
     void addsArenaInviteToTheUnchangedBuiltInCommandHelp() {
         YamlConfiguration language = new YamlConfiguration();
         language.set(Messages.COMMAND_MAIN, List.of("", "&2▪ &7/bw stats", "&2▪ &7/bw join &o<游戏/模式>",

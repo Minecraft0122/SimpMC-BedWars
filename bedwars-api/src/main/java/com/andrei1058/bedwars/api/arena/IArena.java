@@ -239,6 +239,17 @@ public interface IArena {
     List<ITeam> getTeams();
 
     /**
+     * Get the teams that contained at least one player when the current game
+     * entered the playing state. The order matches {@link #getTeams()}.
+     *
+     * <p>Third-party arena implementations keep the legacy behavior by
+     * returning every configured team unless they override this method.</p>
+     */
+    default List<ITeam> getActiveTeamsAtGameStart() {
+        return getTeams();
+    }
+
+    /**
      * Add placed block to cache.
      * So players will be able to remove blocks placed by players only.
      */

@@ -156,10 +156,14 @@ public class BwTabList {
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (null != sidebar.getArena() && null != sidebar.getHandle()) {
-                sidebar.getArena().getPlayers().forEach(player -> sidebar.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth())));
-                if (sidebar.getArena().isSpectator(sidebar.getPlayer())) {
-                    sidebar.getArena().getSpectators().forEach(player -> sidebar.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth())));
-                }
+                sidebar.getArena().getPlayers().forEach(player -> {
+                    if (SidebarHealthPolicy.shouldDisplay(sidebar.getArena().getStatus(), false)) {
+                        sidebar.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
+                    } else {
+                        sidebar.getHandle().clearPlayerHealth(player);
+                    }
+                });
+                sidebar.getArena().getSpectators().forEach(sidebar.getHandle()::clearPlayerHealth);
             }
         }, 10L);
     }
@@ -250,6 +254,7 @@ public class BwTabList {
 
         // in-game tab has a special treatment
         if (arena.isSpectator(player) || (spectator != null && spectator)) {
+            handle.clearPlayerHealth(player);
 
             // if has been eliminated from a team
             ITeam exTeam = arena.getExTeam(player.getUniqueId());
@@ -268,7 +273,7 @@ public class BwTabList {
                         suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, player, replacements);
                     }
                 } else {
-                    prefix = TEAM_COLOR_ONLY_PREFIX;
+                    prefix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, player, replacements);
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, player, replacements);
                 }
 

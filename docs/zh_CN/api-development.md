@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.32</version>
+    <version>2.10.33</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -44,6 +44,15 @@ for (IArena arena : api.getArenaUtil().getArenasSnapshot()) {
 ```
 
 旧版 `getArenas()` 为兼容保留，但会暴露内部可变集合；新代码应使用 `getArenasSnapshot()`。
+
+游戏进入 `playing` 后，可以区分全部配置队伍与本局实际参战队伍：
+
+```java
+List<ITeam> configuredTeams = arena.getTeams();
+List<ITeam> participatingTeams = arena.getActiveTeamsAtGameStart();
+```
+
+`getActiveTeamsAtGameStart()` 是开局瞬间的快照，因此队伍后续被淘汰或玩家离线不会把它从列表移除。第三方 `IArena` 实现若不覆盖该方法，默认返回全部配置队伍，以保持二进制兼容。
 
 ## 开局邀请组队 API
 

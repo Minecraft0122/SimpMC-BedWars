@@ -120,7 +120,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay) {
-        if (sidebarHandler == null) return;
+        if (sidebarHandler == null || !player.isOnline()) return;
         BwSidebar sidebar = sidebars.getOrDefault(player.getUniqueId(), null);
         boolean sidebarEnabled = arena == null
                 ? config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR)
@@ -323,8 +323,13 @@ public class SidebarService implements ISidebarService {
             if (null != v.getArena() && Arena.getArenas().contains(v.getArena())) {
                 v.getHandle().playerHealthRefreshAnimation();
                 for (Player player : v.getArena().getPlayers()) {
-                    v.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
+                    if (SidebarHealthPolicy.shouldDisplay(v.getArena().getStatus(), false)) {
+                        v.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
+                    } else {
+                        v.getHandle().clearPlayerHealth(player);
+                    }
                 }
+                v.getArena().getSpectators().forEach(v.getHandle()::clearPlayerHealth);
             }
         });
     }
@@ -338,7 +343,11 @@ public class SidebarService implements ISidebarService {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
-                v.getHandle().setPlayerHealth(player, health);
+                if (SidebarHealthPolicy.shouldDisplay(arena.getStatus(), arena.isSpectator(player))) {
+                    v.getHandle().setPlayerHealth(player, health);
+                } else {
+                    v.getHandle().clearPlayerHealth(player);
+                }
             }
         });
     }

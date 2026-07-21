@@ -42,6 +42,8 @@ public class SimplifiedChinese extends Language {
     /** Wider lobby-only header; arena states keep the upstream width above. */
     static final int LOBBY_TAB_WIDTH = 128;
     static final String LOBBY_TAB_WIDTH_SPACER = " ".repeat(LOBBY_TAB_WIDTH);
+    static final List<String> ELIMINATED_TAB_PREFIX = List.of("&7[&c已淘汰&7] ");
+    static final List<String> ELIMINATED_TAB_SUFFIX = List.of("");
 
     public SimplifiedChinese() {
         super(BedWars.plugin, "zh_cn");
@@ -835,8 +837,8 @@ public class SimplifiedChinese extends Language {
                 "&f由 {poweredBy} 提供支持",
                 ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, List.of(""));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, List.of(" &c&o已淘汰 {teamColor}&o{teamName}", " {teamColor}&o已淘汰 {vPrefix}", "{teamColor}&o已淘汰 {level}"));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, ELIMINATED_TAB_PREFIX);
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, ELIMINATED_TAB_SUFFIX);
         // spectator - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER, List.of(
                 ORIGINAL_TAB_WIDTH_SPACER,
@@ -1110,7 +1112,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(9, SimplifiedChinese::migrateLegacyMessages);
+        updateToLatestVersion(10, SimplifiedChinese::migrateLegacyMessages);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
@@ -1130,6 +1132,7 @@ public class SimplifiedChinese extends Language {
         }
         widenBuiltInLobbyTabHeader(yml);
         migrateOriginalTabMessages(yml);
+        migrateEliminatedTabFormat(yml);
         migrateCurrentMessageDefaults(yml);
         migrateCommandHelp(yml, mainCmd);
     }
@@ -1148,6 +1151,29 @@ public class SimplifiedChinese extends Language {
                 List.of("", "&f你正在为 {teamColor}{teamName}队 &f而战", "&a{serverIp}", "&f由 {poweredBy} 提供支持", ""),
                 List.of("", "&f你属于 {teamColor}{teamName}队", "&a{serverIp}", "&f由 {poweredBy} 提供支持", ""));
         migrateBuiltInTeamNamePrefixes(yml);
+    }
+
+    static void migrateEliminatedTabFormat(YamlConfiguration yml) {
+        List<List<String>> oldPrefixes = List.of(
+                List.of(""),
+                List.of("&7[旁观] "),
+                List.of("&f&oSpectator ")
+        );
+        if (oldPrefixes.contains(yml.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX))) {
+            yml.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, ELIMINATED_TAB_PREFIX);
+        }
+
+        List<List<String>> oldSuffixes = List.of(
+                List.of(" &c[淘汰]"),
+                List.of(" &7[已淘汰]"),
+                List.of(" &c&o已淘汰"),
+                List.of(" &c&o已淘汰 {teamColor}&o{teamName}",
+                        " {teamColor}&o已淘汰 {vPrefix}",
+                        "{teamColor}&o已淘汰 {level}")
+        );
+        if (oldSuffixes.contains(yml.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX))) {
+            yml.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, ELIMINATED_TAB_SUFFIX);
+        }
     }
 
     static void migrateBuiltInTeamNamePrefixes(YamlConfiguration yml) {
@@ -1210,9 +1236,9 @@ public class SimplifiedChinese extends Language {
         if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_FOOTER_SPEC)) return List.of("&7你正在旁观", "&e等待更多玩家……", "&7人数：&f{on}&7/&f{max}");
         if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC)
                 || path.equals(Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC)
-                || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX)
                 || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX)
                 || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX)) return List.of("&7[旁观] ");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX)) return ELIMINATED_TAB_PREFIX;
         if (path.equals(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC)
                 || path.equals(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC)
                 || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX)
@@ -1229,7 +1255,7 @@ public class SimplifiedChinese extends Language {
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX)) return List.of("");
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER)) return List.of("&a&l{serverIp}", "&7{map} &8| &7{group}", "&f{nextEvent} &a{time}", "&c你已被淘汰");
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_FOOTER)) return List.of("&7继续观战", "&8{poweredBy}");
-        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX)) return List.of(" &c[淘汰]");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX)) return ELIMINATED_TAB_SUFFIX;
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_FOOTER)) return List.of("&7你正在旁观", "&8{poweredBy}");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_HEADER)
                 || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_HEADER)) return List.of("&6&l★ 你的队伍获胜！", "&7{map} &8| &7{group}");
