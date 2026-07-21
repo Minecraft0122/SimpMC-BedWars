@@ -18,6 +18,10 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 - 不要手动修改 `config-version`。
 - Material、Sound、Enchantment、PotionEffect 使用 Paper 1.21.11 名称。
 
+## 控制台出现大量 `DEBUG:` 日志
+
+确认 `plugins/SimpMC-BedWars/config.yml` 中为 `debug: false`，然后完整重启后端。`/bw start debug` 中的 `debug` 表示允许单队测试开局；2.10.35 起它不会再开启全局详细日志。竞技场和逐生成器初始化信息已经彻底移除，即使管理员主动开启详细日志也不会刷这些低价值内容。
+
 ## 已安装 Vault，但插件仍然没有经济功能
 
 先根据控制台信息区分两种情况：

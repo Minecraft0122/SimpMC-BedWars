@@ -30,7 +30,7 @@
 | 命令 | 官方权限 | 兼容的细粒度/旧权限 |
 | --- | --- | --- |
 | `/bw start`、`/bw forceStart` | `bw.forcestart` | `bw.command.start`、`bw.command.forcestart` |
-| `/bw start debug` | 仅 OP | 其他权限（包括 `bw.*`）不能代替 OP 状态 |
+| `/bw start debug` | 仅 OP | 允许本局以单支非空队伍开始；不启用详细日志。其他权限（包括 `bw.*`）不能代替 OP 状态 |
 | `/bw setLobby` | `bw.setup` | `bw.command.setlobby` |
 | `/bw setupArena <世界>` | `bw.setup` | `bw.command.setuparena` |
 | `/bw delArena <世界>` | `bw.delete` | `bw.command.delarena` |

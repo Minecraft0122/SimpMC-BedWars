@@ -20,12 +20,10 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
-import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
-import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
@@ -85,8 +83,8 @@ public class CmdStart extends SubCommand {
         }
         if (debugStart) {
             if (!(a.getStartingTask() instanceof GameStartingTask task)) return true;
+            // "debug" means a one-team test round; verbose logging remains controlled only by config.yml.
             task.enableSingleTeamDebugStart();
-            BedWars.debug = true;
         }
         if (a.getStartingTask().getCountdown() < 5) return true;
         a.getStartingTask().setCountdown(5);

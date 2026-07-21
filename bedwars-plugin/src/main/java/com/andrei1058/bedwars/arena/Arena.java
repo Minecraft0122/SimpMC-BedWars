@@ -308,7 +308,6 @@ public class Arena implements IArena {
             if (getArenaByName(arenaName) != null) return;
         }
         removeFromEnableQueue(this);
-        debug("Initialized arena " + getArenaName() + " with map " + world.getName());
         this.world = world;
         this.worldName = world.getName();
         getConfig().setName(worldName);

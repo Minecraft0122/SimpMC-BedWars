@@ -9,6 +9,7 @@
 主配置，包含：
 
 - `serverType`：MULTIARENA、SHARED 或 BUNGEE。
+- `debug`：详细故障日志开关，默认 `false`；生产环境保持关闭。`/bw start debug` 仅表示单队测试开局，不会修改此项或临时开启日志。
 - `lobbyServer`：BungeeCord/Velocity 代理 `[servers]` 中的大厅服务器键名，默认 `hub`；不是 IP、端口或 MotD。主大厅红床会先查询当前节点和代理服务器列表：目标有效且不是当前节点时才发送 `Connect`；名称不存在、玩家绕过代理直连或 Velocity 兼容通道未开启时会显示具体错误。
 - `language`、禁用语言列表：默认语言及玩家可选语言。
 - `chat`：全局聊天和插件聊天格式。
