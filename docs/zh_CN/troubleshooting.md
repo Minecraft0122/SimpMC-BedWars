@@ -68,6 +68,17 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 - 管理员若执行过 `/bw build`，再次执行退出建造会话。
 - 完整重启，避免热重载留下旧监听器。
 
+## “回到主大厅”红床没有切换服务器
+
+当前版本点击后会先检查代理通道，并直接提示是哪一项不正确：
+
+- `代理没有响应`：玩家很可能直接连接了 BedWars 后端 Paper 端口；也可能是 Velocity 的 `velocity.toml` 没有在 `[advanced]` 下设置 `bungee-plugin-message-channel = true`。修改后需要重启代理。
+- `代理中不存在服务器`：把插件 `config.yml` 的 `lobbyServer` 改成 BungeeCord/Velocity 服务器列表中的键名，例如 `hub`，不要填写 `127.0.0.1:25566`、MotD 或显示名称。
+- `你已经位于代理大厅`：`lobbyServer` 指向了玩家当前所在的 BedWars 后端，需改为真正的大厅节点名称。
+- 显示“正在连接”后仍断开：检查目标大厅后端是否在线、代理日志中的连接失败原因，以及后端是否正确配置代理转发。
+
+可直接照抄的 Velocity/BungeeCord 配置见[安装文档](installation.md#bungee)。不要用 `/reload` 测试插件消息通道；应完整重启代理和后端。
+
 ## 死亡或复活异常
 
 - 普通死亡：原地进入旁观模式。

@@ -271,8 +271,9 @@ public class MainConfig extends ConfigManager {
     private void addConfigurationComments() {
         setComments("serverType", "服务器运行模式：MULTIARENA、SHARED 或 BUNGEE。", "修改后需要完整重启服务器。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER,
-                "BungeeCord/Velocity 代理配置中的主大厅服务器名称。",
-                "大厅里的“回到主大厅”红床会向代理发送 Connect 请求并切换到该服务器；默认 hub。");
+                "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
+                "名称必须与代理配置一致；Velocity 还需在 velocity.toml 的 [advanced] 中启用 bungee-plugin-message-channel。",
+                "大厅里的“回到主大厅”红床会先验证代理通道和服务器名称，再发送 Connect 请求；默认 hub。");
         setComments("language", "服务器默认语言代码，例如 zh_cn。");
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");

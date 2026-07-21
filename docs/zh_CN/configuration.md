@@ -9,7 +9,7 @@
 主配置，包含：
 
 - `serverType`：MULTIARENA、SHARED 或 BUNGEE。
-- `lobbyServer`：BungeeCord/Velocity 代理配置中的大厅服务器名称，默认 `hub`；不是 IP 地址。主大厅红床点击后会向代理发送 `Connect` 请求切换到该服务器。
+- `lobbyServer`：BungeeCord/Velocity 代理 `[servers]` 中的大厅服务器键名，默认 `hub`；不是 IP、端口或 MotD。主大厅红床会先查询当前节点和代理服务器列表：目标有效且不是当前节点时才发送 `Connect`；名称不存在、玩家绕过代理直连或 Velocity 兼容通道未开启时会显示具体错误。
 - `language`、禁用语言列表：默认语言及玩家可选语言。
 - `chat`：全局聊天和插件聊天格式。
 - `scoreboard-settings`：大厅/游戏计分板、TAB、队伍颜色、血量和刷新周期。
@@ -20,7 +20,7 @@
 - `fireball`：火球速度、爆炸、击退、冷却和伤害。2.10.20 的平衡默认值为范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
-- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.30 起大厅红床固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会发送 `Connect`，不再传送到本服 `/bw setLobby` 坐标。等待区和观战区的离开红床仍返回本服 BedWars 大厅；手动 `/leave` 按官方规则无需权限。
+- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；大厅红床固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会执行代理切服，不传送到本服 `/bw setLobby` 坐标。等待区和观战区的离开红床仍返回本服 BedWars 大厅；手动 `/leave` 按官方规则无需权限。完整代理示例见[安装文档](installation.md#bungee)。
 - 大厅进入/离开提示只向同样位于 BedWars 大厅的玩家发送；竞技场、观战者和地图设置会话不会收到。
 - 竞技场加入通知只在目标竞技场处于等待或开局倒计时发送，接收者为该竞技场与大厅玩家；已开局和重置阶段不播报。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。

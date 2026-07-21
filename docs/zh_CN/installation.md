@@ -45,7 +45,35 @@ debug: false
 
 面向代理网络和自动扩容。竞技场节点、服务器 ID、大厅地址及重启策略在 `bungee-settings` 中配置，并需要匹配的代理端接入方案。
 
-如果 BedWars 服务器位于 BungeeCord 或兼容代理后方，无论使用 MULTIARENA 还是 BUNGEE 模式，都应把 `config.yml` 的 `lobbyServer` 设置为代理配置中的大厅服务器名称，例如 `hub`。该值不是地址或 MotD；大厅“回到主大厅”红床通过 `BungeeCord` 插件消息的 `Connect` 子通道使用它。Velocity 必须开启 BungeeCord 插件消息兼容。
+如果 BedWars 服务器位于 BungeeCord 或兼容代理后方，无论使用 MULTIARENA 还是 BUNGEE 模式，都应把 `config.yml` 的 `lobbyServer` 设置为代理配置中的大厅服务器名称，例如 `hub`。该值不是地址、端口或 MotD；必须对应代理服务器列表中的键：
+
+```yaml
+# plugins/SimpMC-BedWars/config.yml
+lobbyServer: hub
+```
+
+Velocity 的 `velocity.toml` 至少需要以下对应配置：
+
+```toml
+[servers]
+hub = "127.0.0.1:25566"
+bedwars = "127.0.0.1:25567"
+
+[advanced]
+bungee-plugin-message-channel = true
+```
+
+BungeeCord/Waterfall 的 `config.yml` 则应有同名服务器键：
+
+```yaml
+servers:
+  hub:
+    address: 127.0.0.1:25566
+  bedwars:
+    address: 127.0.0.1:25567
+```
+
+玩家必须连接 BungeeCord/Velocity 的监听地址，不能直接连接 BedWars 后端 Paper 端口；后端端口也应通过防火墙限制为只允许代理访问。大厅“回到主大厅”红床会先用官方 `GetServer` 和 `GetServers` 子通道检查代理连接及服务器名称，再通过 `Connect` 子通道切换。配置错误时玩家和控制台都会得到明确提示。
 
 ## 可选依赖
 

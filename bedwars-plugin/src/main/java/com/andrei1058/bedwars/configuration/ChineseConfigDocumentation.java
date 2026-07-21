@@ -19,7 +19,10 @@ public final class ChineseConfigDocumentation {
         comment(config, "language", "默认语言代码，例如 zh_cn；玩家仍可使用 /bw lang 单独选择语言。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "禁止玩家选择的语言代码列表。");
         comment(config, "storeLink", "服务器商店或官方网站地址，可用于消息占位符。");
-        comment(config, "lobbyServer", "BUNGEE 模式返回的大厅服务器名称。");
+        comment(config, "lobbyServer",
+                "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
+                "名称必须与代理配置一致；Velocity 需在 velocity.toml 的 [advanced] 中设置 bungee-plugin-message-channel = true。",
+                "MULTIARENA 和 BUNGEE 模式下的主大厅返回物品都会使用此名称。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ENABLE_HALLOWEEN, "是否启用万圣节季节效果。");
         comment(config, ConfigPath.GENERAL_CHAT_GLOBAL, "聊天设置：global 控制不同竞技场是否互通，format 控制是否使用插件聊天格式。");
         comment(config, "debug", "调试日志开关；排查问题时临时开启，正常运行建议关闭。");

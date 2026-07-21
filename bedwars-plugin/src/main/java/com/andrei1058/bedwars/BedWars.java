@@ -30,6 +30,7 @@ import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.server.VersionSupport;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ArenaManager;
+import com.andrei1058.bedwars.arena.ProxyLobbyConnector;
 import com.andrei1058.bedwars.arena.VoidChunkGenerator;
 import com.andrei1058.bedwars.arena.despawnables.TargetListener;
 import com.andrei1058.bedwars.arena.feature.SpoilPlayerTNTFeature;
@@ -132,6 +133,7 @@ public class BedWars extends JavaPlugin {
     private boolean serverSoftwareSupport = true;
     private boolean vaultSupportInitialized;
     private boolean vaultRetryListenerRegistered;
+    private ProxyLobbyConnector proxyLobbyConnector;
 
     private static com.andrei1058.bedwars.api.BedWars api;
 
@@ -216,8 +218,9 @@ public class BedWars extends JavaPlugin {
 
         this.registerDelayedCommands();
 
-        /* Setup plugin messaging channel */
-        Bukkit.getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+        /* Setup the BungeeCord-compatible proxy messaging channel. */
+        proxyLobbyConnector = new ProxyLobbyConnector(this);
+        proxyLobbyConnector.register();
 
         // define logger
         var out = plugin.getLogger();
@@ -495,6 +498,15 @@ public class BedWars extends JavaPlugin {
             remoteDatabase.close();
         }
 
+        if (proxyLobbyConnector != null) {
+            proxyLobbyConnector.close();
+            proxyLobbyConnector = null;
+        }
+
+    }
+
+    public ProxyLobbyConnector getProxyLobbyConnector() {
+        return proxyLobbyConnector;
     }
 
     private void loadArenasAndSigns() {

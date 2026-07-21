@@ -87,7 +87,13 @@ public class Interact implements Listener {
                     e.setCancelled(true);
                     String command = customData[1].trim();
                     if (shouldConnectToProxyLobby(command, LobbyProtection.isLobbyWorld(p), BedWars.mainCmd)) {
-                        Bukkit.getScheduler().runTask(plugin, () -> Misc.connectToProxyLobby(p));
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            if (plugin.getProxyLobbyConnector() == null) {
+                                Misc.connectToProxyLobby(p);
+                            } else {
+                                plugin.getProxyLobbyConnector().connectWithDiagnostics(p);
+                            }
+                        });
                     } else {
                         Bukkit.getScheduler().runTask(plugin, () -> Bukkit.dispatchCommand(p, command));
                     }
