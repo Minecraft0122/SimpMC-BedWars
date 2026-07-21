@@ -1651,6 +1651,8 @@ public class Arena implements IArena {
     }
 
     private void broadcastArenaJoin(Player joined) {
+        if (!ArenaAnnouncementPolicy.shouldBroadcastJoin(status)) return;
+
         Set<Player> audience = new LinkedHashSet<>(players);
         audience.addAll(spectators);
         for (Player viewer : Bukkit.getOnlinePlayers()) {

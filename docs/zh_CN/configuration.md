@@ -22,6 +22,7 @@
 - `performance-settings`：Paper 传送、资源旋转等优化。
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.30 起大厅红床固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会发送 `Connect`，不再传送到本服 `/bw setLobby` 坐标。等待区和观战区的离开红床仍返回本服 BedWars 大厅；手动 `/leave` 按官方规则无需权限。
 - 大厅进入/离开提示只向同样位于 BedWars 大厅的玩家发送；竞技场、观战者和地图设置会话不会收到。
+- 竞技场加入通知只在目标竞技场处于等待或开局倒计时发送，接收者为该竞技场与大厅玩家；已开局和重置阶段不播报。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
 - `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。该开关只影响商店，正式开局始终发放队伍色皮革四件套。
