@@ -9,6 +9,7 @@
 主配置，包含：
 
 - `serverType`：MULTIARENA、SHARED 或 BUNGEE。
+- `lobbyServer`：BungeeCord/Velocity 代理配置中的大厅服务器名称，默认 `hub`；不是 IP 地址。主大厅红床点击后会向代理发送 `Connect` 请求切换到该服务器。
 - `language`、禁用语言列表：默认语言及玩家可选语言。
 - `chat`：全局聊天和插件聊天格式。
 - `scoreboard-settings`：大厅/游戏计分板、TAB、队伍颜色、血量和刷新周期。
@@ -19,7 +20,7 @@
 - `fireball`：火球速度、爆炸、击退、冷却和伤害。2.10.20 的平衡默认值为范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
-- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.22 会自动补回缺失的 `lobby-items.leave`，但不覆盖已有自定义值。2.10.25 起点击默认返回红床会直接回到 `/bw setLobby` 保存的位置并重新发放大厅物品；2.10.28 起手动 `/leave` 也按照官方规则无需权限。
+- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；2.10.30 起大厅红床固定连接代理配置中的 `lobbyServer`，不再传送到本服 `/bw setLobby` 坐标。等待区和观战区的离开红床仍返回本服 BedWars 大厅；手动 `/leave` 按官方规则无需权限。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
 - `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。该开关只影响商店，正式开局始终发放队伍色皮革四件套。
@@ -52,7 +53,7 @@ TAB 相关常用项：
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
-- `game-rules`：`规则:值` 列表。
+- `game-rules`：`规则:值` 列表。插件会自动补入 `locatorBar:false`，并在所有世界加载和竞技场初始化时强制关闭 Locator Bar。
 - `waiting`、`spectator-loc`：等待和观战标点。
 - `Team`：所有队伍的颜色、出生点、床、NPC 和岛屿生成器。
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。

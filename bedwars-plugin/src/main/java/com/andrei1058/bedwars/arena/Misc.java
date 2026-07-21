@@ -105,13 +105,35 @@ public class Misc {
         forceKick(p, arena, notAbandon);
     }
 
-
+    /**
+     * Send a player to the proxy server registered under config.yml's lobbyServer name.
+     * This intentionally works in every BedWars server mode because MULTIARENA servers
+     * can also be connected behind BungeeCord or a compatible proxy.
+     */
     @SuppressWarnings("UnstableApiUsage")
-    private static void forceKick(Player p, @Nullable IArena arena, boolean notAbandon) {
+    public static boolean connectToProxyLobby(Player player) {
+        String lobbyServer = config.getYml().getString(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER, "hub");
+        if (lobbyServer == null || lobbyServer.isBlank()) {
+            plugin.getLogger().warning("Cannot connect player to the proxy lobby: config.yml lobbyServer is empty.");
+            player.sendMessage(ChatColor.RED + "代理大厅服务器名称未配置，请联系管理员。");
+            return false;
+        }
+
+        player.sendPluginMessage(plugin, "BungeeCord", proxyConnectPayload(lobbyServer));
+        return true;
+    }
+
+    static byte[] proxyConnectPayload(String serverName) {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("Connect");
-        out.writeUTF(config.getYml().getString("lobbyServer"));
-        p.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        out.writeUTF(serverName.trim());
+        return out.toByteArray();
+    }
+
+
+    private static void forceKick(Player p, @Nullable IArena arena, boolean notAbandon) {
+        connectToProxyLobby(p);
         if (arena != null && !notAbandon && arena.getStatus() == GameState.playing) {
             if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
                 arena.abandonGame(p);

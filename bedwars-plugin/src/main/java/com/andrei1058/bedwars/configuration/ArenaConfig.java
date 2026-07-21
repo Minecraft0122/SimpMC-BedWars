@@ -38,7 +38,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 9;
+    private static final int CONFIG_VERSION = 10;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -74,6 +74,7 @@ public class ArenaConfig extends ConfigManager {
         rules.add("doWeatherCycle:false");
         rules.add("doFireTick:false");
         rules.add("doMobSpawning:false");
+        rules.add("locatorBar:false");
         yml.addDefault(ConfigPath.ARENA_GAME_RULES, rules);
         yml.options().copyDefaults(true);
         setComments("group", "竞技场分组，用于菜单分类和匹配。");
@@ -82,7 +83,7 @@ public class ArenaConfig extends ConfigManager {
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
-        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "默认禁止昼夜变化、天气变化和生物自然生成。");
+        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "默认禁止昼夜变化、天气变化、生物自然生成和 Locator Bar。");
         ChineseConfigDocumentation.arena(this);
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 
@@ -107,6 +108,7 @@ public class ArenaConfig extends ConfigManager {
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
         addRuleIfMissing(gameRules, "doDaylightCycle", false);
         addRuleIfMissing(gameRules, "doMobSpawning", false);
+        forceBooleanRule(gameRules, "locatorBar", false);
         config.set(ConfigPath.ARENA_GAME_RULES, gameRules);
 
         migratePlayerFacing(plugin, config, "waiting.Loc", ConfigPath.ARENA_WAITING_FACING);
@@ -227,6 +229,21 @@ public class ArenaConfig extends ConfigManager {
         if (rules.stream().noneMatch(rule -> rule.regionMatches(true, 0, ruleName + ':', 0, ruleName.length() + 1))) {
             rules.add(ruleName + ':' + value);
         }
+    }
+
+    static void forceBooleanRule(List<String> rules, String ruleName, boolean value) {
+        String canonicalName = canonicalRuleName(ruleName);
+        rules.removeIf(rule -> {
+            int separator = rule.indexOf(':');
+            String name = separator < 0 ? rule : rule.substring(0, separator);
+            return canonicalRuleName(name).equals(canonicalName);
+        });
+        rules.add(ruleName + ':' + value);
+    }
+
+    private static String canonicalRuleName(String name) {
+        return name == null ? "" : name.replace("_", "")
+                .replace("-", "").replace(" ", "").toLowerCase(java.util.Locale.ROOT);
     }
 
     private static void normalizeLocation(Plugin plugin, YamlConfiguration config, String path) {

@@ -8,10 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LobbyReturnItemTest {
 
     @Test
-    void defaultLobbyBedUsesTheInternalReturnAction() {
-        assertTrue(Interact.isLobbyReturnCommand("bw leave", true, "bw"));
-        assertTrue(Interact.isLobbyReturnCommand(" BW LEAVE ", true, "bw"));
-        assertFalse(Interact.isLobbyReturnCommand("bw leave", false, "bw"));
-        assertFalse(Interact.isLobbyReturnCommand("bw gui", true, "bw"));
+    void defaultLobbyBedUsesTheProxyLobbyAction() {
+        assertTrue(Interact.shouldConnectToProxyLobby("bw leave", true, "bw"));
+        assertTrue(Interact.shouldConnectToProxyLobby(" BW LEAVE ", true, "bw"));
+        assertFalse(Interact.shouldConnectToProxyLobby("bw leave", false, "bw"));
+        assertFalse(Interact.shouldConnectToProxyLobby("bw gui", true, "bw"));
     }
 }

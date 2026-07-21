@@ -5,7 +5,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.World;
 
-final class GameRules {
+public final class GameRules {
 
     private GameRules() {
     }
@@ -34,6 +34,13 @@ final class GameRules {
         }
     }
 
+    /**
+     * Locator Bar reveals player positions and is never part of BedWars gameplay.
+     */
+    public static void disableLocatorBar(World world) {
+        setBoolean(world, "locatorBar", false);
+    }
+
     private static GameRule<?> get(String name) {
         return Registry.GAME_RULE.get(NamespacedKey.minecraft(toRegistryKey(name)));
     }
@@ -43,7 +50,7 @@ final class GameRules {
         world.setGameRule((GameRule<T>) rule, (T) value);
     }
 
-    private static String toRegistryKey(String name) {
+    static String toRegistryKey(String name) {
         String raw = name.trim();
         int namespace = raw.indexOf(':');
         if (namespace >= 0) {

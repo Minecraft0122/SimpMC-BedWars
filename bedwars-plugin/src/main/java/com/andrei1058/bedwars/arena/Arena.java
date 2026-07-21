@@ -318,6 +318,7 @@ public class Arena implements IArena {
             String[] rule = s.split(":");
             if (rule.length == 2) GameRules.set(world, rule[0], rule[1]);
         }
+        GameRules.disableLocatorBar(world);
         world.setAutoSave(false);
 
         /* Clear setup armor-stands */

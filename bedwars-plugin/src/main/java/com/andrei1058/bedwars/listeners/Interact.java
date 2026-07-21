@@ -86,8 +86,8 @@ public class Interact implements Listener {
                 if (customData[0].equals("RUNCOMMAND")) {
                     e.setCancelled(true);
                     String command = customData[1].trim();
-                    if (isLobbyReturnCommand(command, LobbyProtection.isLobbyWorld(p), BedWars.mainCmd)) {
-                        Bukkit.getScheduler().runTask(plugin, () -> Misc.moveToLobbyOrKick(p, null, true));
+                    if (shouldConnectToProxyLobby(command, LobbyProtection.isLobbyWorld(p), BedWars.mainCmd)) {
+                        Bukkit.getScheduler().runTask(plugin, () -> Misc.connectToProxyLobby(p));
                     } else {
                         Bukkit.getScheduler().runTask(plugin, () -> Bukkit.dispatchCommand(p, command));
                     }
@@ -96,7 +96,7 @@ public class Interact implements Listener {
         }
     }
 
-    static boolean isLobbyReturnCommand(String command, boolean lobbyPlayer, String mainCommand) {
+    static boolean shouldConnectToProxyLobby(String command, boolean lobbyPlayer, String mainCommand) {
         return lobbyPlayer && command != null && mainCommand != null
                 && command.trim().equalsIgnoreCase(mainCommand + " leave");
     }

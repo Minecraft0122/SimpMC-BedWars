@@ -282,6 +282,7 @@ public class SetupSession implements ISetupSession {
         w.setAutoSave(false);
         GameRules.setBoolean(w, "doMobSpawning", false);
         GameRules.setBoolean(w, "doDaylightCycle", false);
+        GameRules.disableLocatorBar(w);
         w.setTime(6000L);
         Bukkit.getPluginManager().callEvent(new SetupSessionStartEvent(this));
         setStarted(true);

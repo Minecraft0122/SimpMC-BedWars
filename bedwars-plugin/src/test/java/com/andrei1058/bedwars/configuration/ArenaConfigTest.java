@@ -4,9 +4,22 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ArenaConfigTest {
+
+    @Test
+    void forcesLocatorBarOffAcrossLegacyRuleSpellings() {
+        List<String> rules = new ArrayList<>(List.of(
+                "doDaylightCycle:false", "locator_bar:true", "LOCATORBAR:true"));
+
+        ArenaConfig.forceBooleanRule(rules, "locatorBar", false);
+
+        assertEquals(List.of("doDaylightCycle:false", "locatorBar:false"), rules);
+    }
 
     @Test
     void migratesLegacyAquaTeamsWithoutChangingOtherColors() {

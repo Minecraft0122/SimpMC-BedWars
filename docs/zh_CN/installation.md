@@ -45,6 +45,8 @@ debug: false
 
 面向代理网络和自动扩容。竞技场节点、服务器 ID、大厅地址及重启策略在 `bungee-settings` 中配置，并需要匹配的代理端接入方案。
 
+如果 BedWars 服务器位于 BungeeCord 或兼容代理后方，无论使用 MULTIARENA 还是 BUNGEE 模式，都应把 `config.yml` 的 `lobbyServer` 设置为代理配置中的大厅服务器名称，例如 `hub`。该值不是地址或 MotD；大厅“回到主大厅”红床通过 `BungeeCord` 插件消息的 `Connect` 子通道使用它。Velocity 必须开启 BungeeCord 插件消息兼容。
+
 ## 可选依赖
 
 - PlaceholderAPI：在消息、计分板等位置解析扩展占位符。
