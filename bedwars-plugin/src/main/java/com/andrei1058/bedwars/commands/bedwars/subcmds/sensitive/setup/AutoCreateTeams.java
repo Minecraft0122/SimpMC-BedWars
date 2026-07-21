@@ -30,7 +30,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
 import net.md_5.bungee.api.chat.ClickEvent;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -40,6 +40,8 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class AutoCreateTeams extends SubCommand {
 
@@ -49,93 +51,93 @@ public class AutoCreateTeams extends SubCommand {
         setPermission(Permissions.PERMISSION_SETUP_ARENA);
     }
 
-    private static final HashMap<Player, Long> timeOut = new HashMap<>();
-    private static final HashMap<Player, List<String>> teamsFound = new HashMap<>();
+    private static final long CONFIRMATION_TIMEOUT_MILLIS = 16_000L;
+    private static final Map<UUID, PendingDetection> pendingDetections = new HashMap<>();
 
     @Override
     public boolean execute(String[] args, CommandSender s) {
         if (s instanceof ConsoleCommandSender) return false;
         Player p = (Player) s;
-        SetupSession ss = SetupSession.getSession(p.getUniqueId());
+        UUID playerId = p.getUniqueId();
+        SetupSession ss = SetupSession.getSession(playerId);
         if (ss == null) {
             s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
-        if (ss.getSetupType() == SetupType.ASSISTED) {
-                if (timeOut.containsKey(p) && timeOut.get(p) >= System.currentTimeMillis() && teamsFound.containsKey(p)) {
-                    for (String tf : teamsFound.get(p)) {
-                        Bukkit.dispatchCommand(s, BedWars.mainCmd + " createTeam " + TeamColor.enName(tf) + " " + TeamColor.enName(tf));
-                    }
-                    if (ss.getConfig().getYml().get("waiting.Pos1") == null) {
-                        s.sendMessage("");
-                        s.sendMessage("§6§l移除等待大厅：");
-                        s.sendMessage("§f如果希望游戏开始时移除等待大厅，");
-                        s.sendMessage("§f请像 WorldEdit 选区一样设置下面两个位置。");
-                        p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 1", "§d设置位置 1", "/" + getParent().getName() + " waitingPos 1", ClickEvent.Action.RUN_COMMAND));
-                        p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 2", "§d设置位置 2", "/" + getParent().getName() + " waitingPos 2", ClickEvent.Action.RUN_COMMAND));
-                        s.sendMessage("");
-                        s.sendMessage("§7此步骤可选，如需跳过请输入 §6/" + BedWars.mainCmd);
-                    }
-                    return true;
-                }
-                List<String> found = new ArrayList<>();
-                World w = p.getWorld();
-                if (ss.getConfig().getYml().get("Team") == null) {
-                    p.sendMessage("§6 ▪ §7正在搜索队伍，期间可能出现短暂卡顿。");
-                    for (int x = -200; x < 200; x++) {
-                        for (int y = 50; y < 130; y++) {
-                            for (int z = -200; z < 200; z++) {
-                                Block b = new Location(w, x, y, z).getBlock();
-                                if (b.getType().toString().contains("_WOOL")) {
-                                    if (!found.contains(b.getType().toString())) {
-                                        int count = 0;
-                                        for (int x1 = -2; x1 < 2; x1++) {
-                                            for (int y1 = -2; y1 < 2; y1++) {
-                                                for (int z1 = -2; z1 < 2; z1++) {
-                                                    Block b2 = new Location(w, x, y, z).getBlock();
-                                                    if (b2.getType() == b.getType()) {
-                                                        count++;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (count >= 5) {
-                                            if (!TeamColor.enName(b.getType().toString()).isEmpty()) {
-                                                if (ss.getConfig().getYml().get("Team." + TeamColor.enName(b.getType().toString())) == null) {
-                                                    found.add(b.getType().toString());
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+        if (ss.getSetupType() != SetupType.ASSISTED) return false;
+
+        PendingDetection pending = pendingDetections.remove(playerId);
+        if (pending != null && pending.expiresAt() >= System.currentTimeMillis()) {
+            for (TeamColor color : pending.colors()) {
+                Bukkit.dispatchCommand(s, BedWars.mainCmd + " createTeam "
+                        + color.setupName() + " " + color.name());
+            }
+            if (ss.getConfig().getYml().get("waiting.Pos1") == null) {
+                s.sendMessage("");
+                s.sendMessage("§6§l移除等待大厅：");
+                s.sendMessage("§f如果希望游戏开始时移除等待大厅，");
+                s.sendMessage("§f请像 WorldEdit 选区一样设置下面两个位置。");
+                p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 1", "§d设置位置 1", "/" + getParent().getName() + " waitingPos 1", ClickEvent.Action.RUN_COMMAND));
+                p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 2", "§d设置位置 2", "/" + getParent().getName() + " waitingPos 2", ClickEvent.Action.RUN_COMMAND));
+                s.sendMessage("");
+                s.sendMessage("§7此步骤可选，如需跳过请输入 §6/" + BedWars.mainCmd);
+            }
+            return true;
+        }
+
+        List<TeamColor> found = new ArrayList<>();
+        World w = Bukkit.getWorld(ss.getWorldName());
+        if (w == null) {
+            p.sendMessage(ss.getPrefix() + "§c竞技场世界尚未加载，无法扫描队伍羊毛。");
+            return true;
+        }
+        if (ss.getConfig().getYml().get("Team") == null) {
+            p.sendMessage("§6 ▪ §7正在搜索队伍，期间可能出现短暂卡顿。");
+            for (int x = -200; x < 200; x++) {
+                for (int y = 50; y < 130; y++) {
+                    for (int z = -200; z < 200; z++) {
+                        Block block = w.getBlockAt(x, y, z);
+                        TeamColor color = TeamColor.fromWool(block.getType());
+                        if (color != null && !found.contains(color)
+                                && countNearbyWool(block, color.woolMaterial()) >= 5) {
+                            found.add(color);
                         }
                     }
                 }
-                if (found.isEmpty()) {
-                    p.sendMessage("§6 ▪ §7没有找到新队伍。\n§6 ▪ §7请手动创建队伍：§6/" + BedWars.mainCmd + " createTeam");
-                } else {
-                    if (timeOut.containsKey(p)) {
-                        p.sendMessage("§c ▪ §7搜索超时，请再次输入命令重试。");
-                        timeOut.remove(p);
-                        return true;
-                    } else {
-                        timeOut.put(p, System.currentTimeMillis() + 16000);
-                    }
-                    if (teamsFound.containsKey(p)) {
-                        teamsFound.replace(p, found);
-                    } else {
-                        teamsFound.put(p, found);
-                    }
-                    p.sendMessage("§6§l发现新队伍：");
-                    for (String tf : found) {
-                        String name = TeamColor.enName(tf);
-                        p.sendMessage("§f ▪ " + TeamColor.getChatColor(name) + name.replace("_", " "));
-                    }
-                    p.spigot().sendMessage(Misc.msgHoverClick("§6 ▪ §7§l点击创建已发现的队伍。", "§f点击创建这些队伍", "/" + getParent().getName() + " " + getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
-                }
-        } else return false;
+            }
+        }
+        if (found.isEmpty()) {
+            p.sendMessage("§6 ▪ §7没有找到新队伍。\n§6 ▪ §7请手动创建队伍：§6/" + BedWars.mainCmd + " createTeam");
+            return true;
+        }
+
+        PendingDetection detection = new PendingDetection(
+                System.currentTimeMillis() + CONFIRMATION_TIMEOUT_MILLIS, List.copyOf(found));
+        pendingDetections.put(playerId, detection);
+        Bukkit.getScheduler().runTaskLater(BedWars.plugin,
+                () -> pendingDetections.remove(playerId, detection),
+                CONFIRMATION_TIMEOUT_MILLIS / 50L);
+        p.sendMessage("§6§l发现新队伍：");
+        for (TeamColor color : found) {
+            p.sendMessage("§f ▪ " + color.chat() + color.setupName().replace("_", " "));
+        }
+        p.spigot().sendMessage(Misc.msgHoverClick("§6 ▪ §7§l点击创建已发现的队伍。", "§f点击创建这些队伍", "/" + getParent().getName() + " " + getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
         return true;
+    }
+
+    static int countNearbyWool(Block center, Material wool) {
+        int count = 0;
+        for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+                for (int z = -2; z <= 2; z++) {
+                    if (center.getRelative(x, y, z).getType() == wool) count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private record PendingDetection(long expiresAt, List<TeamColor> colors) {
     }
 
     @Override

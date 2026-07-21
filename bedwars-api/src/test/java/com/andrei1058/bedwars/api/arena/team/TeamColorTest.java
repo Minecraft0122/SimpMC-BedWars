@@ -9,6 +9,7 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TeamColorTest {
@@ -39,5 +40,26 @@ class TeamColorTest {
         assertEquals("Cyan", TeamColor.enName("CYAN_WOOL"));
         assertEquals("", TeamColor.enName("LIGHT_BLUE_WOOL"));
         assertEquals("Cyan", TeamColor.enName((byte) 9));
+    }
+
+    @Test
+    void automaticTeamDetectionStrictlyDistinguishesSimilarWoolColors() {
+        assertSame(TeamColor.GREEN, TeamColor.fromWool(Material.LIME_WOOL));
+        assertSame(TeamColor.DARK_GREEN, TeamColor.fromWool(Material.GREEN_WOOL));
+        assertSame(TeamColor.GRAY, TeamColor.fromWool(Material.LIGHT_GRAY_WOOL));
+        assertSame(TeamColor.DARK_GRAY, TeamColor.fromWool(Material.GRAY_WOOL));
+
+        assertEquals("Green", TeamColor.enName("LIME_WOOL"));
+        assertEquals("Dark_Green", TeamColor.enName("GREEN_WOOL"));
+        assertEquals("Gray", TeamColor.enName("LIGHT_GRAY_WOOL"));
+        assertEquals("Dark_Gray", TeamColor.enName("GRAY_WOOL"));
+        assertNull(TeamColor.fromWool(Material.LIGHT_BLUE_WOOL));
+    }
+
+    @Test
+    void everySelectableTeamColorHasAnExactWoolRoundTrip() {
+        for (TeamColor color : TeamColor.selectableValues()) {
+            assertSame(color, TeamColor.fromWool(color.woolMaterial()), color.name());
+        }
     }
 }

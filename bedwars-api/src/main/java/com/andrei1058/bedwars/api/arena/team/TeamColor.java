@@ -25,6 +25,7 @@ import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 
@@ -184,19 +185,48 @@ public enum TeamColor {
      * @return English color name, or an empty string when unsupported
      */
     public static @NotNull String enName(@NotNull String material) {
-        return switch (material.toUpperCase(Locale.ROOT)) {
-            case "PINK_WOOL" -> "Pink";
-            case "RED_WOOL" -> "Red";
-            case "LIGHT_GRAY_WOOL" -> "Gray";
-            case "BLUE_WOOL" -> "Blue";
-            case "WHITE_WOOL" -> "White";
-            case "CYAN_WOOL" -> "Cyan";
-            case "LIME_WOOL" -> "Green";
-            case "YELLOW_WOOL" -> "Yellow";
-            case "GRAY_WOOL" -> "Dark_Gray";
-            case "GREEN_WOOL" -> "Dark_Green";
-            default -> "";
+        try {
+            TeamColor color = fromWool(Material.valueOf(material.toUpperCase(Locale.ROOT)));
+            return color == null ? "" : color.setupName();
+        } catch (IllegalArgumentException exception) {
+            return "";
+        }
+    }
+
+    /**
+     * Resolve a modern wool block to exactly one canonical team color.
+     * Similar names are deliberately not matched by prefixes or substrings:
+     * lime/green and light-gray/gray represent different teams.
+     *
+     * @param material block material to inspect
+     * @return matching team color, or {@code null} for unsupported/non-wool materials
+     */
+    public static @Nullable TeamColor fromWool(@NotNull Material material) {
+        return switch (material) {
+            case RED_WOOL -> RED;
+            case BLUE_WOOL -> BLUE;
+            case LIME_WOOL -> GREEN;
+            case YELLOW_WOOL -> YELLOW;
+            case CYAN_WOOL -> CYAN;
+            case WHITE_WOOL -> WHITE;
+            case PINK_WOOL -> PINK;
+            case LIGHT_GRAY_WOOL -> GRAY;
+            case GREEN_WOOL -> DARK_GREEN;
+            case GRAY_WOOL -> DARK_GRAY;
+            default -> null;
         };
+    }
+
+    /**
+     * Name used for teams created by the assisted arena scanner.
+     */
+    public @NotNull String setupName() {
+        StringBuilder result = new StringBuilder();
+        for (String part : name().toLowerCase(Locale.ROOT).split("_")) {
+            if (!result.isEmpty()) result.append('_');
+            result.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return result.toString();
     }
 
     /**

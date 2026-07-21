@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.25</version>
+    <version>2.10.26</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -118,6 +118,8 @@ public void onState(GameStateChangeEvent event) {
 青色队伍使用 `TeamColor.CYAN`。读取管理员配置时建议调用 `TeamColor.fromName(value)`，它会把 2.10.11 以前的旧值 `AQUA` 安全规范为 `CYAN`。列出可创建颜色时使用 `TeamColor.selectableValues()`，避免展示为附属插件二进制兼容而保留的弃用别名 `AQUA`。
 
 `TeamColor.CYAN.woolMaterial()` 返回 `Material.CYAN_WOOL`；Minecraft 没有独立的青色聊天代码，因此 `chat()` 仍返回最接近的 `ChatColor.AQUA`。
+
+需要从地图方块识别队伍颜色时，使用 `TeamColor.fromWool(material)`。该方法只接受精确支持的羊毛材质，不做前缀、子字符串或近似颜色匹配；例如 `LIME_WOOL` 返回 `GREEN`，`GREEN_WOOL` 返回 `DARK_GREEN`，`LIGHT_GRAY_WOOL` 返回 `GRAY`，`GRAY_WOOL` 返回 `DARK_GRAY`。不支持的羊毛或非羊毛材质返回 `null`。`setupName()` 返回自动创建队伍时使用的稳定英文名称。
 
 ## 玩家放置方块 API
 

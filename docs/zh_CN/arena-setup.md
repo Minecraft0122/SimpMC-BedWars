@@ -68,6 +68,23 @@ MULTIARENA 首次使用时，在希望玩家出现的位置面向目标方向执
 
 青色队伍请使用 `CYAN`。插件会从 `CYAN_WOOL` 自动识别青色队伍，旧竞技场配置中的 `AQUA` 会在启动时自动迁移为 `CYAN`；`LIGHT_BLUE_WOOL` 不再被误认为青色。
 
+自动建队严格按羊毛材质一对一识别，并要求目标羊毛周围的 `5×5×5` 范围内至少存在 5 块同色羊毛，孤立的装饰羊毛不会创建队伍：
+
+| 羊毛材质 | 创建的队伍颜色 |
+| --- | --- |
+| `RED_WOOL` | `RED` |
+| `BLUE_WOOL` | `BLUE` |
+| `LIME_WOOL` | `GREEN` |
+| `GREEN_WOOL` | `DARK_GREEN` |
+| `YELLOW_WOOL` | `YELLOW` |
+| `CYAN_WOOL` | `CYAN` |
+| `WHITE_WOOL` | `WHITE` |
+| `PINK_WOOL` | `PINK` |
+| `LIGHT_GRAY_WOOL` | `GRAY` |
+| `GRAY_WOOL` | `DARK_GRAY` |
+
+这里不会使用名称包含判断，因此 `GREEN_WOOL` 与 `LIME_WOOL`、`GRAY_WOOL` 与 `LIGHT_GRAY_WOOL` 始终是不同队伍颜色。
+
 查看当前队伍：
 
 ```text
