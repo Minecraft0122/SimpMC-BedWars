@@ -35,8 +35,6 @@ import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.potion.PotionEffectType;
@@ -44,9 +42,11 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
@@ -57,6 +57,8 @@ public class GameRestartingTask implements Runnable, RestartingTask {
     private Arena arena;
     private int restarting = Math.max(0, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_RESTART));
     private final BukkitTask task;
+    private final Set<UUID> pendingEvacuations = new HashSet<>();
+    private boolean evacuationStarted;
 
     public GameRestartingTask(@NotNull Arena arena) {
         this.arena = arena;
@@ -126,9 +128,10 @@ public class GameRestartingTask implements Runnable, RestartingTask {
         if (restarting == 4) {
             prepareArenaReset();
         } else if (restarting == 0) {
-            finishArenaReset();
-            task.cancel();
-            arena = null;
+            if (finishArenaReset()) {
+                task.cancel();
+                arena = null;
+            }
             return;
         }
 
@@ -168,22 +171,79 @@ public class GameRestartingTask implements Runnable, RestartingTask {
         }
     }
 
-    private void finishArenaReset() {
+    private boolean finishArenaReset() {
         Arena currentArena = getArena();
-        for (Player player : new ArrayList<>(currentArena.getPlayers())) {
-            currentArena.removePlayer(player, BedWars.getServerType() == ServerType.BUNGEE);
+        if (!evacuationStarted) {
+            evacuationStarted = true;
+            for (Player player : new ArrayList<>(currentArena.getPlayers())) {
+                currentArena.removePlayer(player, BedWars.getServerType() == ServerType.BUNGEE);
+            }
+            for (Player spectator : new ArrayList<>(currentArena.getSpectators())) {
+                currentArena.removeSpectator(spectator, BedWars.getServerType() == ServerType.BUNGEE);
+            }
+            // removePlayer/removeSpectator may use Paper's asynchronous teleport.
+            // Keep the arena loaded until a later tick confirms everyone left.
+            return false;
         }
-        for (Player spectator : new ArrayList<>(currentArena.getSpectators())) {
-            currentArena.removeSpectator(spectator, BedWars.getServerType() == ServerType.BUNGEE);
+
+        ArrayList<Player> playersInWorld = new ArrayList<>(currentArena.getWorld().getPlayers());
+        if (!canUnloadArenaWorld(evacuationStarted, playersInWorld.size(), pendingEvacuations.size())) {
+            for (Player player : playersInWorld) {
+                evacuateRemainingPlayer(player, currentArena);
+            }
+            return false;
         }
-        for (Entity entity : currentArena.getWorld().getEntities()) {
-            if (entity.getType() != EntityType.PLAYER) continue;
-            Player player = (Player) entity;
-            Misc.moveToLobbyOrKick(player, currentArena, true);
-            if (currentArena.isSpectator(player)) currentArena.removeSpectator(player, false);
-            if (currentArena.isPlayer(player)) currentArena.removePlayer(player, false);
+
+        pendingEvacuations.clear();
+        return currentArena.restartIfEmpty();
+    }
+
+    static boolean canUnloadArenaWorld(boolean evacuationStarted, int playersInWorld, int pendingTeleports) {
+        return evacuationStarted && playersInWorld == 0 && pendingTeleports == 0;
+    }
+
+    private void evacuateRemainingPlayer(Player player, Arena currentArena) {
+        if (!player.isOnline() || !pendingEvacuations.add(player.getUniqueId())) return;
+
+        if (BedWars.getServerType() == ServerType.BUNGEE) {
+            Misc.connectToProxyLobby(player);
+            pendingEvacuations.remove(player.getUniqueId());
+            return;
         }
-        currentArena.restart();
+
+        Location destination = localEvacuationDestination(currentArena);
+        if (destination == null) {
+            pendingEvacuations.remove(player.getUniqueId());
+            BedWars.plugin.getLogger().warning("无法重置竞技场 " + currentArena.getArenaName()
+                    + "：没有可用的非竞技场大厅世界，玩家 " + player.getName() + " 将保留在线。等待下次重试。");
+            return;
+        }
+
+        TeleportManager.teleportC(player, destination, PlayerTeleportEvent.TeleportCause.PLUGIN)
+                .whenComplete((success, error) -> Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+                    pendingEvacuations.remove(player.getUniqueId());
+                    if (error != null || !Boolean.TRUE.equals(success)) {
+                        BedWars.plugin.getLogger().warning("竞技场重置时无法把玩家 " + player.getName()
+                                + " 传送到大厅，将在下一秒重试。");
+                        return;
+                    }
+                    if (BedWars.getServerType() == ServerType.MULTIARENA && player.isOnline()) {
+                        Arena.enterLobby(player);
+                    }
+                }));
+    }
+
+    private Location localEvacuationDestination(Arena currentArena) {
+        Location configuredLobby = BedWars.config.getConfigLoc("lobbyLoc");
+        if (configuredLobby != null && configuredLobby.getWorld() != null
+                && configuredLobby.getWorld() != currentArena.getWorld()) {
+            return configuredLobby;
+        }
+        return Bukkit.getWorlds().stream()
+                .filter(world -> world != currentArena.getWorld())
+                .findFirst()
+                .map(world -> world.getSpawnLocation().clone())
+                .orElse(null);
     }
 
 }

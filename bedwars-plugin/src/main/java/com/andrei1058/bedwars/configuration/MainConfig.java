@@ -287,7 +287,8 @@ public class MainConfig extends ConfigManager {
                 "空列表使用语言文件中的加宽大厅页首；自定义文字也会自动保留内置宽度行，页尾不受影响。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_RESTART,
                 "游戏结束后竞技场重置倒计时，单位为秒；默认 60 秒。",
-                "聊天栏只在 60、30、15、10、5、4、3、2、1、0 秒时广播，避免刷屏。");
+                "聊天栏只在 60、30、15、10、5、4、3、2、1、0 秒时广播，避免刷屏。",
+                "0 秒后先把所有玩家安全送回大厅；确认竞技场世界无人后才卸载，传送失败不会踢人。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
         setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");

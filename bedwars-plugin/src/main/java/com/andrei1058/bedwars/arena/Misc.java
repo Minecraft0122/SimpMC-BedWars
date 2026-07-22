@@ -142,14 +142,11 @@ public class Misc {
 
         if (getServerType() == ServerType.BUNGEE) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                // if lobby server is unreachable
+                // Do not kick a player merely because the proxy transfer is slow.
+                // Arena reset keeps the source world loaded and retries evacuation.
                 if (p.isOnline()) {
-                    p.kickPlayer(getMsg(p, Messages.ARENA_RESTART_PLAYER_KICK));
-                    if (arena != null && !notAbandon && arena.getStatus() == GameState.playing) {
-                        if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
-                            arena.abandonGame(p);
-                        }
-                    }
+                    p.sendMessage(ChatColor.RED + "暂时无法连接代理大厅，插件将继续重试，不会将你踢出服务器。");
+                    connectToProxyLobby(p);
                 }
             }, 30L);
         }

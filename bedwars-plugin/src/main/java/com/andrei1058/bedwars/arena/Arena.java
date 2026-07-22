@@ -1166,6 +1166,10 @@ public class Arena implements IArena {
      * Restart the arena.
      */
     public void restart() {
+        if (!getWorld().getPlayers().isEmpty()) {
+            plugin.getLogger().warning("竞技场 " + getArenaName() + " 中仍有玩家，已拒绝卸载世界以避免踢出玩家。");
+            return;
+        }
         if (getRestartingTask() != null) getRestartingTask().cancel();
         if (getStartingTask() != null) getStartingTask().cancel();
         if (getPlayingTask() != null) getPlayingTask().cancel();
@@ -1177,11 +1181,19 @@ public class Arena implements IArena {
         }
         plugin.getLogger().log(Level.FINE, "Restarting arena: " + getArenaName());
         Bukkit.getPluginManager().callEvent(new ArenaRestartEvent(getArenaName(), getWorldName()));
-        for (Player inWorld : getWorld().getPlayers()) {
-            inWorld.kickPlayer("You're not supposed to be here.");
-        }
         BedWars.getAPI().getRestoreAdapter().onRestart(this);
         destroyData();
+    }
+
+    /**
+     * Restart only after every player has left the arena world.
+     *
+     * @return true when restart was started, false while evacuation is incomplete
+     */
+    public boolean restartIfEmpty() {
+        if (!getWorld().getPlayers().isEmpty()) return false;
+        restart();
+        return true;
     }
 
     //GETTER METHODS
