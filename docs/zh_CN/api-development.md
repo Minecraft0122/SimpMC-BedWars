@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.40</version>
+    <version>2.10.41</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -50,9 +50,11 @@ for (IArena arena : api.getArenaUtil().getArenasSnapshot()) {
 ```java
 List<ITeam> configuredTeams = arena.getTeams();
 List<ITeam> participatingTeams = arena.getActiveTeamsAtGameStart();
+ITeam firstTeam = participatingTeams.getFirst();
+int playersAtStart = arena.getTeamSizeAtGameStart(firstTeam);
 ```
 
-`getActiveTeamsAtGameStart()` 是开局瞬间的快照，因此队伍后续被淘汰或玩家离线不会把它从列表移除。第三方 `IArena` 实现若不覆盖该方法，默认返回全部配置队伍，以保持二进制兼容。
+`getActiveTeamsAtGameStart()` 与 `getTeamSizeAtGameStart(ITeam)` 都是开局瞬间的快照，因此队伍后续被淘汰、玩家掉线或重连不会改变结果。第三方 `IArena` 实现若不覆盖这些方法，会分别返回全部配置队伍和队伍当前人数，以保持二进制兼容。
 
 ## 开局邀请组队 API
 

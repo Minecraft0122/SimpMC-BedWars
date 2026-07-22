@@ -118,13 +118,15 @@ public class ChatFormatting implements Listener {
                 return;
             }
 
-            // player team chat
-            if (a.getMaxInTeam() == 1) {
+            // A team that started alone has nobody to receive private chat.
+            // Use public arena chat without requiring /shout or applying its cooldown.
+            if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
                 setRecipients(e, a.getPlayers(), a.getSpectators());
+                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team));
             } else {
                 setRecipients(e, team.getMembers());
+                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             }
-            e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             return;
         }
 
@@ -177,6 +179,10 @@ public class ChatFormatting implements Listener {
 
     static boolean hasShoutPermission(CommandSender sender) {
         return Permissions.hasShoutPermission(sender);
+    }
+
+    static boolean usesPublicChannel(int teamSizeAtGameStart) {
+        return teamSizeAtGameStart <= 1;
     }
 
     private static String clearShout(String msg, Language lang) {

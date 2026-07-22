@@ -25,12 +25,16 @@ class ArenaTeamParticipationTest {
 
         participation.capture(List.of(red, blue));
         assertEquals(List.of(red), participation.activeTeams(List.of(red, blue)));
+        assertEquals(1, participation.gameStartSize(red));
+        assertEquals(0, participation.gameStartSize(blue));
 
         redMembers.clear();
         assertEquals(List.of(red), participation.activeTeams(List.of(red, blue)));
+        assertEquals(1, participation.gameStartSize(red));
 
         participation.reset();
         assertTrue(participation.activeTeams(List.of(red, blue)).isEmpty());
+        assertEquals(0, participation.gameStartSize(red));
     }
 
     private static ITeam team(String name, List<Object> members) {

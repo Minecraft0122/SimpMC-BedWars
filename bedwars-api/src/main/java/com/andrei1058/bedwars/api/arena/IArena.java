@@ -250,6 +250,21 @@ public interface IArena {
     }
 
     /**
+     * Get how many players belonged to a team when the current game entered
+     * the playing state. The value remains stable after eliminations,
+     * disconnects and rejoins.
+     *
+     * <p>Third-party arena implementations fall back to the team's current
+     * size unless they keep their own game-start snapshot.</p>
+     *
+     * @param team team from this arena
+     * @return player count at game start, or zero when team is null
+     */
+    default int getTeamSizeAtGameStart(ITeam team) {
+        return team == null ? 0 : team.getSize();
+    }
+
+    /**
      * Add placed block to cache.
      * So players will be able to remove blocks placed by players only.
      */

@@ -1337,6 +1337,11 @@ public class Arena implements IArena {
     }
 
     @Override
+    public int getTeamSizeAtGameStart(ITeam team) {
+        return teamParticipation.gameStartSize(team);
+    }
+
+    @Override
     public ArenaConfig getConfig() {
         return cm;
     }

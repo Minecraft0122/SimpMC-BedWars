@@ -40,6 +40,13 @@ class ChatFormattingTest {
         assertTrue(ChatFormatting.hasShoutPermission(sender("bw.command.shout")));
     }
 
+    @Test
+    void teamsThatStartedAloneUsePublicChat() {
+        assertTrue(ChatFormatting.usesPublicChannel(1));
+        assertFalse(ChatFormatting.usesPublicChannel(2));
+        assertFalse(ChatFormatting.usesPublicChannel(4));
+    }
+
     private static CommandSender sender(String... permissions) {
         Set<String> granted = Set.of(permissions);
         return (CommandSender) Proxy.newProxyInstance(CommandSender.class.getClassLoader(),
