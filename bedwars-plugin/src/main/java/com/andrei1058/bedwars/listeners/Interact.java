@@ -28,11 +28,13 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.CommandItemAction;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
 import com.andrei1058.bedwars.shop.listeners.InventoryListener;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -56,12 +58,17 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class Interact implements Listener {
+
+    private static final Set<UUID> pendingReturnActions = new HashSet<>();
 
     private final double fireballSpeedMultiplier;
     private final double fireballCooldown;
@@ -79,7 +86,20 @@ public class Interact implements Listener {
         if (e == null) return;
         Player p = e.getPlayer();
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR) {
-            ItemStack i = BedWars.nms.getItemInHand(p);
+            ItemStack i = e.getItem();
+            CommandItemAction.Target returnTarget = CommandItemAction.readTarget(i);
+            if (returnTarget != null) {
+                e.setCancelled(true);
+                if (!pendingReturnActions.add(p.getUniqueId())) return;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    try {
+                        executeReturnItem(p, returnTarget);
+                    } finally {
+                        pendingReturnActions.remove(p.getUniqueId());
+                    }
+                });
+                return;
+            }
             if (!nms.isCustomBedWarsItem(i)) return;
             final String[] customData = nms.getCustomData(i).split("_");
             if (customData.length >= 2) {
@@ -100,6 +120,25 @@ public class Interact implements Listener {
                 }
             }
         }
+    }
+
+    private static void executeReturnItem(Player player, CommandItemAction.Target target) {
+        if (!player.isOnline()) return;
+        if (target == CommandItemAction.Target.PROXY_LOBBY) {
+            if (plugin.getProxyLobbyConnector() == null) {
+                Misc.connectToProxyLobby(player);
+            } else {
+                plugin.getProxyLobbyConnector().connectWithDiagnostics(player);
+            }
+            return;
+        }
+
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null) {
+            player.sendMessage(ChatColor.RED + "你当前不在竞技场中，无法执行返回操作。");
+            return;
+        }
+        Misc.moveToLobbyOrKick(player, arena, arena.isSpectator(player.getUniqueId()));
     }
 
     static boolean shouldConnectToProxyLobby(String command, boolean lobbyPlayer, String mainCommand) {

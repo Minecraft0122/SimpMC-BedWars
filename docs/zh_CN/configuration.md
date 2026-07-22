@@ -21,7 +21,7 @@
 - `fireball`：火球速度、爆炸、击退、冷却和伤害。2.10.20 的平衡默认值为范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
-- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；大厅红床固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会执行代理切服，不传送到本服 `/bw setLobby` 坐标。等待区和观战区的离开红床仍返回本服 BedWars 大厅；手动 `/leave` 按官方规则无需权限。完整代理示例见[安装文档](installation.md#bungee)。
+- `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；大厅红床带有独立目标标记，固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会执行代理切服，不传送到本服 `/bw setLobby` 坐标。等待区和观战区红床使用另一目标标记，直接返回本服 BedWars 大厅，不经过命令权限。管理员可以修改显示材质和命令文本，内置 `leave` 项的返回语义仍由其配置节点名确定。完整代理示例见[安装文档](installation.md#bungee)。
 - 大厅进入/离开提示只向同样位于 BedWars 大厅的玩家发送；竞技场、观战者和地图设置会话不会收到。
 - 竞技场加入通知只在目标竞技场处于等待或开局倒计时发送，接收者为该竞技场与大厅玩家；已开局和重置阶段不播报。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。

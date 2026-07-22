@@ -299,7 +299,8 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
                 "多竞技场大厅固定物品。默认提供历史战绩、竞技场选择器和“回到主大厅”红床。",
-                "旧配置升级时只补齐缺失字段，不覆盖管理员已有的自定义材质、命令或槽位。");
+                "旧配置升级时只补齐缺失字段，不覆盖管理员已有的自定义材质、命令或槽位。",
+                "leave 节点会写入代理大厅目标标记；等待区和旁观区的 leave 节点则固定返回本服大厅。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR,
                 "商店永久护甲是否出售全身四件套。true=头盔、胸甲、护腿、靴子；false=仅护腿、靴子。",
                 "该开关作用于整个服务器，修改后需要完整重启服务器。");
