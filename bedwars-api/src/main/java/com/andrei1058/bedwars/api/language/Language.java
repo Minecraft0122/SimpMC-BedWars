@@ -50,6 +50,11 @@ public class Language extends ConfigManager {
     public Language(Plugin plugin, String iso) {
         super(plugin, "messages_" + iso, plugin.getDataFolder().getPath() + "/Languages");
         this.iso = iso;
+        migrateLegacyTowerShopItem(getYml());
+        addContentMessages(getYml(), "tower", ConfigPath.SHOP_PATH_CATEGORY_UTILITY,
+                "{color}Compact Pop-up Tower",
+                List.of("&7Cost: {cost} {currency}", "", "&7Place a compact pop-up",
+                        "&7tower defense!", "", "{quick_buy}", "{buy_status}"));
         getYml().addDefault(Messages.ARENA_RESTART_COUNTDOWN,
                 "&eArena resets in &c{time}&e seconds.");
 
@@ -108,7 +113,7 @@ public class Language extends ConfigManager {
         // after registering their defaults.
         addChineseDocumentation();
         if (getClass() == Language.class) {
-            updateToLatestVersion(1);
+            updateToLatestVersion(2, Language::migrateLegacyTowerShopItem);
             save();
         }
         languages.add(this);
@@ -459,6 +464,53 @@ public class Language extends ConfigManager {
                 path2 = Messages.SHOP_CONTENT_TIER_ITEM_LORE.replace("%category%", categoryName).replace("%content%", contentName);
         if (yml.getDefaults() == null || !yml.getDefaults().contains(path1)) yml.addDefault(path1, itemName);
         if (yml.getDefaults() == null || !yml.getDefaults().contains(path2)) yml.addDefault(path2, itemLore);
+    }
+
+    /**
+     * Move the historical pop-up tower translation from its display name to
+     * the stable shop content id used by shop.yml. Generated placeholders are
+     * discarded so corrected defaults can fill them, while explicit values at
+     * the correct path always win.
+     */
+    public static void migrateLegacyTowerShopItem(@NotNull YamlConfiguration yml) {
+        migrateShopContentKey(yml, ConfigPath.SHOP_PATH_CATEGORY_UTILITY,
+                "Compact Pop-up Tower", "tower");
+    }
+
+    static void migrateShopContentKey(YamlConfiguration yml, String category, String oldContent, String newContent) {
+        String oldName = Messages.SHOP_CONTENT_TIER_ITEM_NAME
+                .replace("%category%", category).replace("%content%", oldContent);
+        String oldLore = Messages.SHOP_CONTENT_TIER_ITEM_LORE
+                .replace("%category%", category).replace("%content%", oldContent);
+        String newName = Messages.SHOP_CONTENT_TIER_ITEM_NAME
+                .replace("%category%", category).replace("%content%", newContent);
+        String newLore = Messages.SHOP_CONTENT_TIER_ITEM_LORE
+                .replace("%category%", category).replace("%content%", newContent);
+
+        migrateShopValue(yml, oldName, newName, "name not set");
+        migrateShopValue(yml, oldLore, newLore, "lore not set");
+    }
+
+    private static void migrateShopValue(YamlConfiguration yml, String oldPath, String newPath,
+                                         String placeholder) {
+        Object current = yml.get(newPath);
+        Object legacy = yml.get(oldPath);
+        if (isGeneratedPlaceholder(current, placeholder)) {
+            yml.set(newPath, legacy == null || isGeneratedPlaceholder(legacy, placeholder) ? null : legacy);
+        }
+        yml.set(oldPath, null);
+    }
+
+    private static boolean isGeneratedPlaceholder(Object value, String placeholder) {
+        if (value == null) return true;
+        if (value instanceof String text) {
+            return ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', text))
+                    .trim().equalsIgnoreCase(placeholder);
+        }
+        if (value instanceof List<?> values && values.size() == 1 && values.get(0) instanceof String text) {
+            return isGeneratedPlaceholder(text, placeholder);
+        }
+        return false;
     }
 
     /**

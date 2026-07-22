@@ -135,6 +135,8 @@ blocks-category:
 
 例如 TNT 默认路径是 `utility-category.category-content.tnt.content-tiers.tier1.tier-settings.cost`。修改 `cost` 后完整重启服务器。
 
+袖珍弹出塔的商品 ID 是 `tower`，默认价格路径为 `utility-category.category-content.tower.content-tiers.tier1.tier-settings.cost`。它的显示名称和说明位于语言文件 `shop-items-messages.utility-category.content-item-tower-name` 与 `shop-items-messages.utility-category.content-item-tower-lore`。2.10.40 会自动删除错误的旧 `Compact Pop-up Tower` 语言节点，并把其中的文本迁移到 `tower`；系统生成的 `Name not set`/`Lore not set` 会被正确默认值替换，管理员已经写在正确路径的自定义文本保持不变。
+
 全服护甲售卖模式在 `config.yml` 中设置：
 
 ```yaml
@@ -198,6 +200,7 @@ Vault 金币奖励。没有 Vault 或没有向 Vault 注册的经济服务提供
 - `{player}`、`{message}`、`{TeamName}` 等占位符不能删除或改名。
 - 聊天运行时统一为 `&f> &7消息`。
 - `.bak` 是自动迁移备份，不会加载为语言。
+- 语言配置架构 2 会迁移袖珍弹出塔的旧商品文本键；简体中文使用架构 11，并显示完整中文名称、价格与用途说明。
 
 ## 配置修改原则
 
