@@ -6,6 +6,7 @@
 
 ## 文档
 
+- [玩家完整指南](docs/zh_CN/player-guide.md)
 - [完整中文教程](docs/zh_CN/README.md)
 - [安装、更新与服务器模式](docs/zh_CN/installation.md)
 - [从零创建竞技场](docs/zh_CN/arena-setup.md)
