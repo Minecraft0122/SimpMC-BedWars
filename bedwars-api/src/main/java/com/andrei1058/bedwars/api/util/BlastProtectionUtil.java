@@ -77,7 +77,7 @@ public class BlastProtectionUtil {
             while (ray.hasNext()) {
                 Block nextBlock = ray.next();
 
-                if (nextBlock.getType() == Material.AIR) {
+                if (isExplosionRayTransparent(nextBlock.getType())) {
                     continue;
                 }
 
@@ -95,5 +95,15 @@ public class BlastProtectionUtil {
         });
 
         return totalRays - protectedTimes.get() < 6;
+    }
+
+    /**
+     * Fire occupies a block position but has no blast resistance. Treating it
+     * as an untracked map block lets a single flame shield player-built blocks
+     * from BedWars explosions.
+     */
+    static boolean isExplosionRayTransparent(Material material) {
+        return material == Material.AIR || material == Material.CAVE_AIR || material == Material.VOID_AIR
+                || material == Material.FIRE || material == Material.SOUL_FIRE;
     }
 }

@@ -12,4 +12,10 @@ class GameRulesTest {
         assertEquals("locator_bar", GameRules.toRegistryKey("locator_bar"));
         assertEquals("locator_bar", GameRules.toRegistryKey("minecraft:locatorBar"));
     }
+
+    @Test
+    void resolvesModernFireSpreadRadiusRegistryKey() {
+        assertEquals("fire_spread_radius_around_player",
+                GameRules.toRegistryKey("fireSpreadRadiusAroundPlayer"));
+    }
 }

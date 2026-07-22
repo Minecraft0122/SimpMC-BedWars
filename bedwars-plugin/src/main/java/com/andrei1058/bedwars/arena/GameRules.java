@@ -41,6 +41,14 @@ public final class GameRules {
         setBoolean(world, "locatorBar", false);
     }
 
+    /**
+     * Minecraft 1.21.11 replaced doFireTick with an integer radius rule.
+     * A zero radius prevents arena fire from spreading around players.
+     */
+    public static void disableFireSpread(World world) {
+        set(world, "fireSpreadRadiusAroundPlayer", "0");
+    }
+
     private static GameRule<?> get(String name) {
         return Registry.GAME_RULE.get(NamespacedKey.minecraft(toRegistryKey(name)));
     }

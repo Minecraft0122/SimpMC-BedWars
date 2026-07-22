@@ -2,6 +2,7 @@ package com.andrei1058.bedwars.listeners;
 
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.event.block.BlockIgniteEvent;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
@@ -30,6 +31,13 @@ class BreakPlaceTest {
         assertFalse(BreakPlace.isWithinNpcProtection(new Location(arena, 8, 64, 20), npc, 1));
         assertFalse(BreakPlace.isWithinNpcProtection(new Location(arena, 10, 67, 20), npc, 1));
         assertFalse(BreakPlace.isWithinNpcProtection(new Location(world("lobby"), 10, 64, 20), npc, 1));
+    }
+
+    @Test
+    void preventsSpreadWithoutBlockingFireballIgnition() {
+        assertTrue(BreakPlace.isFireSpread(BlockIgniteEvent.IgniteCause.SPREAD));
+        assertFalse(BreakPlace.isFireSpread(BlockIgniteEvent.IgniteCause.FIREBALL));
+        assertFalse(BreakPlace.isFireSpread(BlockIgniteEvent.IgniteCause.EXPLOSION));
     }
 
     private static World world(String name) {

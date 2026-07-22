@@ -22,6 +22,17 @@ class ArenaConfigTest {
     }
 
     @Test
+    void migratesObsoleteFireRuleAndForcesSpreadRadiusToZero() {
+        List<String> rules = new ArrayList<>(List.of(
+                "doDaylightCycle:false", "doFireTick:true",
+                "fire_spread_radius_around_player:12"));
+
+        ArenaConfig.forceNoFireSpread(rules);
+
+        assertEquals(List.of("doDaylightCycle:false", "fireSpreadRadiusAroundPlayer:0"), rules);
+    }
+
+    @Test
     void migratesLegacyAquaTeamsWithoutChangingOtherColors() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("Team.Cyan.Color", "aqua");

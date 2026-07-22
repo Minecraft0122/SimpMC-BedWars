@@ -38,7 +38,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 10;
+    private static final int CONFIG_VERSION = 11;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -72,7 +72,7 @@ public class ArenaConfig extends ConfigManager {
         rules.add("doInsomnia:false");
         rules.add("doImmediateRespawn:true");
         rules.add("doWeatherCycle:false");
-        rules.add("doFireTick:false");
+        rules.add("fireSpreadRadiusAroundPlayer:0");
         rules.add("doMobSpawning:false");
         rules.add("locatorBar:false");
         yml.addDefault(ConfigPath.ARENA_GAME_RULES, rules);
@@ -83,7 +83,7 @@ public class ArenaConfig extends ConfigManager {
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
-        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "默认禁止昼夜变化、天气变化、生物自然生成和 Locator Bar。");
+        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "默认禁止昼夜变化、天气变化、火势蔓延、生物自然生成和 Locator Bar。", "Paper 1.21.11 使用 fireSpreadRadiusAroundPlayer:0；旧 doFireTick 项会自动删除。");
         ChineseConfigDocumentation.arena(this);
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 
@@ -108,6 +108,7 @@ public class ArenaConfig extends ConfigManager {
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
         addRuleIfMissing(gameRules, "doDaylightCycle", false);
         addRuleIfMissing(gameRules, "doMobSpawning", false);
+        forceNoFireSpread(gameRules);
         forceBooleanRule(gameRules, "locatorBar", false);
         config.set(ConfigPath.ARENA_GAME_RULES, gameRules);
 
@@ -239,6 +240,17 @@ public class ArenaConfig extends ConfigManager {
             return canonicalRuleName(name).equals(canonicalName);
         });
         rules.add(ruleName + ':' + value);
+    }
+
+    static void forceNoFireSpread(List<String> rules) {
+        rules.removeIf(rule -> {
+            int separator = rule.indexOf(':');
+            String name = separator < 0 ? rule : rule.substring(0, separator);
+            String canonicalName = canonicalRuleName(name);
+            return canonicalName.equals("dofiretick")
+                    || canonicalName.equals("firespreadradiusaroundplayer");
+        });
+        rules.add("fireSpreadRadiusAroundPlayer:0");
     }
 
     private static String canonicalRuleName(String name) {

@@ -47,7 +47,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
                 "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, "火球飞行速度倍率。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否点燃方块。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否在命中处生成火焰；竞技场始终禁止火势向周围蔓延。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.20 默认值略微降低为 1.15。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, "火球垂直击退强度；2.10.20 默认值略微降低为 0.75。");
         comment(config, ConfigPath.GENERAL_FIREBALL_COOLDOWN, "连续使用火球的冷却时间，单位为秒。");
@@ -95,7 +95,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.ARENA_NORMAL_DEATH_DROPS, "是否使用原版死亡掉落；关闭时由插件管理资源掉落。");
         comment(config, ConfigPath.ARENA_USE_BED_HOLO, "是否在床上方显示床状态全息文字。");
         comment(config, ConfigPath.ARENA_ALLOW_MAP_BREAK, "是否允许破坏地图原有方块；关闭时通常只能破坏玩家放置的方块。");
-        comment(config, ConfigPath.ARENA_GAME_RULES, "进入竞技场时应用的游戏规则，格式为 规则:值。", "默认阻止昼夜、天气、火焰、生物自然生成和 Locator Bar；Locator Bar 运行时始终强制关闭。");
+        comment(config, ConfigPath.ARENA_GAME_RULES, "进入竞技场时应用的游戏规则，格式为 规则:值。", "默认阻止昼夜、天气、火势蔓延、生物自然生成和 Locator Bar。", "Paper 1.21.11 使用 fireSpreadRadiusAroundPlayer:0；旧 doFireTick 会自动删除，火势蔓延与 Locator Bar 运行时始终强制关闭。");
         comment(config, "waiting.Loc", "等待大厅出生坐标，使用 x.5,y,z.5 的方块中心格式。");
         comment(config, ConfigPath.ARENA_WAITING_FACING, "进入等待大厅时使用的 yaw,pitch 朝向。");
         comment(config, ConfigPath.ARENA_WAITING_POS1, "开局后移除地图内等待大厅区域的第一个角点。");

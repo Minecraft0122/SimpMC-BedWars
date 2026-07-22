@@ -118,6 +118,18 @@ public class BreakPlace implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onFireSpread(@NotNull BlockIgniteEvent event) {
+        if (!isFireSpread(event.getCause())) return;
+        if (Arena.getArenaByIdentifier(event.getBlock().getWorld().getName()) != null) {
+            event.setCancelled(true);
+        }
+    }
+
+    static boolean isFireSpread(BlockIgniteEvent.IgniteCause cause) {
+        return cause == BlockIgniteEvent.IgniteCause.SPREAD;
+    }
+
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent e) {
         if (e.isCancelled()) return;
