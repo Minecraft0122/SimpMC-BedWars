@@ -4,7 +4,7 @@
 
 ## 文档导航
 
-1. [玩家完整指南](player-guide.md)
+1. [玩家使用说明](player-guide.md)
 2. [安装、更新与服务器模式](installation.md)
 3. [从零创建竞技场](arena-setup.md)
 4. [全部配置文件说明](configuration.md)
