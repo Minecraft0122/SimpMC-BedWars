@@ -80,6 +80,14 @@ class ConfigManagerTest {
     }
 
     @Test
+    void readsConfiguredWorldNameBeforeBukkitLoadsThatWorld() {
+        assertEquals("separate_lobby", ConfigManager.getWorldNameFromConfigLocation(
+                "12.25,64.0,-3.75,90.0,15.0,separate_lobby"));
+        assertEquals("legacy_lobby", ConfigManager.getWorldNameFromConfigLocation(
+                "12.25,64.0,-3.75,legacy_lobby"));
+    }
+
+    @Test
     void radiusCheckRejectsDifferentWorldsWithoutThrowing() {
         Location lobby = new Location(world("lobby"), 0, 64, 0);
         Location arena = new Location(world("arena"), 0, 64, 0);

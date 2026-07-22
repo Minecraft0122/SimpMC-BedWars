@@ -513,12 +513,12 @@ public class Arena implements IArena {
 
             p.closeInventory();
             players.add(p);
+            setArenaByPlayer(p, this);
             LobbyAnnouncements.playerEnteredArena(p);
             p.setFlying(false);
             p.setAllowFlight(false);
             p.setHealth(20);
             broadcastArenaJoin(p);
-            setArenaByPlayer(p, this);
 
             /* check if you can start the arena */
             boolean isStatusChange = false;

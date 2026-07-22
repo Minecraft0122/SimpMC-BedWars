@@ -264,6 +264,18 @@ public class ConfigManager {
         return x + ',' + y + ',' + z + ',' + yaw + ',' + pitch + ',' + world;
     }
 
+    /**
+     * Read the world name stored in a general configuration location without
+     * requiring that Bukkit has already loaded that world.
+     *
+     * @param value location in x,y,z,yaw,pitch,world format, including supported legacy forms
+     * @return configured world name
+     * @throws IllegalArgumentException if the location or world name is invalid
+     */
+    public static String getWorldNameFromConfigLocation(String value) {
+        return normalizeConfigLocationString(value, null).split(",", 6)[5];
+    }
+
     private static boolean isNumber(String value) {
         try {
             Double.parseDouble(value.trim());

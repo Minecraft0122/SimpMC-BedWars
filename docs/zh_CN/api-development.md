@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.36</version>
+    <version>2.10.37</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -83,6 +83,15 @@ ConfigManager sounds = api.getConfigs().getSoundsConfig();
 ```
 
 这些对象在 SimpMC-BedWars 完成 `onEnable` 后可用。写配置时使用 `set`/`save`，不要直接操作磁盘上的 YAML。
+
+需要在世界尚未加载时读取通用坐标中的世界名，可使用：
+
+```java
+String worldName = ConfigManager.getWorldNameFromConfigLocation(
+        main.getYml().getString("lobbyLoc"));
+```
+
+该方法只解析配置文本，不调用 `Bukkit#getWorld`，适合插件加载阶段和世界加载器使用；无效或缺少世界名时抛出 `IllegalArgumentException`。
 
 ## 大厅状态
 

@@ -470,8 +470,13 @@ public class MainConfig extends ConfigManager {
     }
 
     public String getLobbyWorldName() {
-        Location lobby = getConfigLoc("lobbyLoc");
-        return lobby == null || lobby.getWorld() == null ? "" : lobby.getWorld().getName();
+        String storedLobby = getYml().getString("lobbyLoc");
+        if (storedLobby == null || storedLobby.isBlank()) return "";
+        try {
+            return ConfigManager.getWorldNameFromConfigLocation(storedLobby);
+        } catch (IllegalArgumentException ignored) {
+            return "";
+        }
     }
 
     /**
