@@ -139,6 +139,14 @@ public interface IArena {
     int getMaxInTeam();
 
     /**
+     * Get the minimum number of players required in every active team for a
+     * normal round. Older third-party implementations default to one.
+     */
+    default int getMinInTeam() {
+        return 1;
+    }
+
+    /**
      * Get list of players in respawn screen.
      * Player is the actual player in re-spawn screen.
      * Integer is the remaining time.

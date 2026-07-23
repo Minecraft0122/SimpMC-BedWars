@@ -38,7 +38,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 11;
+    private static final int CONFIG_VERSION = 12;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -51,6 +51,7 @@ public class ArenaConfig extends ConfigManager {
         yml.addDefault("group", "Default");
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
         yml.addDefault("maxInTeam", 1);
+        yml.addDefault("minInTeam", 1);
         yml.addDefault("allowSpectate", true);
         yml.addDefault(ConfigPath.ARENA_SPAWN_PROTECTION, 5);
         yml.addDefault(ConfigPath.ARENA_SHOP_PROTECTION, 1);
@@ -80,6 +81,7 @@ public class ArenaConfig extends ConfigManager {
         setComments("group", "竞技场分组，用于菜单分类和匹配。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
         setComments("maxInTeam", "每支队伍的最大玩家数。");
+        setComments("minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "范围为 1 到 maxInTeam；/bw start debug 可临时绕过此限制。");
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
@@ -104,6 +106,7 @@ public class ArenaConfig extends ConfigManager {
         config.set("voidKill", null);
         config.set(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, null);
         config.set("minPlayers", null);
+        normalizeTeamLimits(config);
 
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
         addRuleIfMissing(gameRules, "doDaylightCycle", false);
@@ -165,6 +168,13 @@ public class ArenaConfig extends ConfigManager {
                 config.set(path, "CYAN");
             }
         }
+    }
+
+    static void normalizeTeamLimits(YamlConfiguration config) {
+        int maximum = Math.max(1, config.getInt("maxInTeam", 1));
+        int minimum = Math.max(1, Math.min(config.getInt("minInTeam", 1), maximum));
+        config.set("maxInTeam", maximum);
+        config.set("minInTeam", minimum);
     }
 
     private static void migratePlayerFacing(Plugin plugin, YamlConfiguration config, String locationPath,

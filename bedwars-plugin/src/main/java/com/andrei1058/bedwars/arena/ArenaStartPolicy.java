@@ -10,10 +10,12 @@
 
 package com.andrei1058.bedwars.arena;
 
+import java.util.Collection;
+
 /**
  * Central start requirements shared by the waiting and starting phases.
- * Arena configuration controls team capacity, but not the minimum number of
- * opponents: normal rounds always require at least two players and two teams.
+ * Arena configuration controls both team capacity and the minimum population
+ * of every active team. Normal rounds always require at least two teams.
  * A deliberate administrator debug start may use one active team, but never zero.
  */
 public final class ArenaStartPolicy {
@@ -27,6 +29,31 @@ public final class ArenaStartPolicy {
         return playerCount >= MINIMUM_PLAYERS;
     }
 
+    public static boolean hasEnoughPlayers(int playerCount, int configuredTeamCount,
+                                           int minimumInTeam, int maximumInTeam) {
+        return maximumFeasibleActiveTeams(playerCount, configuredTeamCount,
+                minimumInTeam, maximumInTeam) >= 2;
+    }
+
+    public static int maximumFeasibleActiveTeams(int playerCount, int configuredTeamCount,
+                                                  int minimumInTeam, int maximumInTeam) {
+        if (playerCount < 1 || configuredTeamCount < 1 || minimumInTeam < 1
+                || maximumInTeam < minimumInTeam) {
+            return 0;
+        }
+        int maximumByMinimum = playerCount / minimumInTeam;
+        int minimumByCapacity = divideRoundingUp(playerCount, maximumInTeam);
+        int maximum = Math.min(configuredTeamCount, maximumByMinimum);
+        return maximum >= Math.max(2, minimumByCapacity) ? maximum : 0;
+    }
+
+    public static boolean isFeasibleActiveTeamCount(int playerCount, int activeTeamCount,
+                                                     int minimumInTeam, int maximumInTeam) {
+        return activeTeamCount >= 2 && minimumInTeam >= 1 && maximumInTeam >= minimumInTeam
+                && playerCount >= (long) activeTeamCount * minimumInTeam
+                && playerCount <= (long) activeTeamCount * maximumInTeam;
+    }
+
     public static boolean hasEnoughActiveTeams(long activeTeamCount) {
         return activeTeamCount >= 2;
     }
@@ -34,5 +61,25 @@ public final class ArenaStartPolicy {
     public static boolean canStartWithActiveTeams(long activeTeamCount, boolean allowSingleTeamDebugStart) {
         return hasEnoughActiveTeams(activeTeamCount)
                 || (allowSingleTeamDebugStart && activeTeamCount == 1);
+    }
+
+    public static boolean canStartWithTeamSizes(Collection<Integer> teamSizes, int minimumInTeam,
+                                                boolean allowSingleTeamDebugStart) {
+        if (teamSizes == null) return false;
+        long activeTeams = teamSizes.stream().filter(size -> size != null && size > 0).count();
+        if (allowSingleTeamDebugStart) return activeTeams >= 1;
+        return activeTeams >= 2 && minimumInTeam >= 1 && teamSizes.stream()
+                .filter(size -> size != null && size > 0)
+                .allMatch(size -> size >= minimumInTeam);
+    }
+
+    public static int debugActiveTeamCount(int playerCount, int configuredTeamCount, int maximumInTeam) {
+        if (playerCount < 1 || configuredTeamCount < 1 || maximumInTeam < 1) return 0;
+        int required = divideRoundingUp(playerCount, maximumInTeam);
+        return required <= configuredTeamCount ? Math.max(1, required) : 0;
+    }
+
+    private static int divideRoundingUp(int value, int divisor) {
+        return value / divisor + (value % divisor == 0 ? 0 : 1);
     }
 }

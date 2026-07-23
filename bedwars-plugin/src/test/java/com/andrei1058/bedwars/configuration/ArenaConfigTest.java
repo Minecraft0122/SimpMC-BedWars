@@ -44,4 +44,28 @@ class ArenaConfigTest {
         assertEquals("CYAN", config.getString("Team.Cyan.Color"));
         assertEquals("BLUE", config.getString("Team.Blue.Color"));
     }
+
+    @Test
+    void clampsMinimumTeamSizeToTheConfiguredCapacity() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("maxInTeam", 3);
+        config.set("minInTeam", 8);
+
+        ArenaConfig.normalizeTeamLimits(config);
+
+        assertEquals(3, config.getInt("maxInTeam"));
+        assertEquals(3, config.getInt("minInTeam"));
+    }
+
+    @Test
+    void repairsNonPositiveTeamLimits() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("maxInTeam", 0);
+        config.set("minInTeam", -2);
+
+        ArenaConfig.normalizeTeamLimits(config);
+
+        assertEquals(1, config.getInt("maxInTeam"));
+        assertEquals(1, config.getInt("minInTeam"));
+    }
 }

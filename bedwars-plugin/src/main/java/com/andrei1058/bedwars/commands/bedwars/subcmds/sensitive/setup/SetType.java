@@ -80,6 +80,10 @@ public class SetType extends SubCommand {
             } else if (input.equalsIgnoreCase("4v4v4v4")) {
                 ss.getConfig().set("maxInTeam", 4);
             }
+            int maximum = ss.getConfig().getYml().getInt("maxInTeam", 1);
+            if (ss.getConfig().getYml().getInt("minInTeam", 1) > maximum) {
+                ss.getConfig().set("minInTeam", maximum);
+            }
             ss.getConfig().set("group", input);
             p.sendMessage("§6 ▪ §7竞技场分组已改为：§d" + input);
             if (ss.getSetupType() == SetupType.ASSISTED) {

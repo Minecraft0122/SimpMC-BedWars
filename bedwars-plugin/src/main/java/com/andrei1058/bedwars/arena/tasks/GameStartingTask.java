@@ -103,10 +103,11 @@ public class GameStartingTask implements Runnable, StartingTask {
     public void run() {
         if (countdown == 0) {
             getArena().getTeamAssigner().assignTeams(getArena());
-            long activeTeams = getArena().getTeams().stream()
-                    .filter(team -> !team.getMembers().isEmpty())
-                    .count();
-            if (!ArenaStartPolicy.canStartWithActiveTeams(activeTeams, singleTeamDebugStart)) {
+            java.util.List<Integer> teamSizes = getArena().getTeams().stream()
+                    .map(team -> team.getMembers().size())
+                    .toList();
+            if (!ArenaStartPolicy.canStartWithTeamSizes(teamSizes,
+                    getArena().getMinInTeam(), singleTeamDebugStart)) {
                 abortInvalidTeamAssignment();
                 return;
             }
@@ -215,7 +216,7 @@ public class GameStartingTask implements Runnable, StartingTask {
             }
         }
         BedWars.plugin.getLogger().warning("已停止竞技场 " + getArena().getArenaName()
-                + " 的开局：分队后少于两支非空队伍。");
+                + " 的开局：分队后少于两支非空队伍，或有队伍未达到每队最少人数。");
         for (Player player : getArena().getPlayers()) {
             player.sendMessage(getMsg(player, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
         }

@@ -130,4 +130,14 @@ class MainConfigTest {
         assertEquals(8, configuration.getInt(path + ".slot"));
         assertFalse(configuration.getBoolean(path + ".enchanted"));
     }
+
+    @Test
+    void removesRetiredFullArmorSaleOption() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR, true);
+
+        MainConfig.removeRetiredFullArmorSetting(configuration);
+
+        assertFalse(configuration.isSet(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR));
+    }
 }

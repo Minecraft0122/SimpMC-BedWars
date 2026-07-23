@@ -177,6 +177,13 @@ public class CategoryContent implements ICategoryContent {
             }
         }
 
+        // Unsupported upper-body armor entries are not loaded. Never charge
+        // for a tier that consequently has no item or command to deliver.
+        if (ct.getBuyItemsList().isEmpty()) {
+            Bukkit.getLogger().warning("Refused empty shop tier at: " + getIdentifier());
+            return;
+        }
+
         //check money
         int money = calculateMoney(player, ct.getCurrency());
         if (money < ct.getPrice()) {

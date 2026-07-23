@@ -60,6 +60,7 @@
 | `waitingPos` | `bw.command.waitingpos` |
 | `removeTeam` | `bw.command.removeteam` |
 | `setMaxInTeam` | `bw.command.setmaxinteam` |
+| `setMinInTeam` | `bw.command.setmininteam` |
 | `setMaxBuildHeight` | `bw.command.setmaxbuildheight` |
 | `setSpawn` | `bw.command.setspawn` |
 | `setBed` | `bw.command.setbed` |

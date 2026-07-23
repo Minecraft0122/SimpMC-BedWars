@@ -51,18 +51,20 @@ public class SetMaxInTeam extends SubCommand {
             s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
-        if (args.length == 0) {
-            p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
-        } else {
-            try {
-                Integer.parseInt(args[0]);
-            } catch (Exception ex) {
-                p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
-                return true;
-            }
-            ss.getConfig().set("maxInTeam", Integer.valueOf(args[0]));
-            p.sendMessage("§6 ▪ §7已设置每队最大人数！");
+        int maximum;
+        try {
+            maximum = args.length == 0 ? 0 : Integer.parseInt(args[0]);
+        } catch (NumberFormatException exception) {
+            maximum = 0;
         }
+        int minimum = Math.max(1, ss.getConfig().getYml().getInt("minInTeam", 1));
+        if (maximum < minimum) {
+            p.sendMessage("§c▪ §7每队最大人数必须是不小于当前最少人数 " + minimum + " 的整数。");
+            p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
+            return true;
+        }
+        ss.getConfig().set("maxInTeam", maximum);
+        p.sendMessage("§6 ▪ §7已设置每队最大人数为 §e" + maximum + "§7！");
         return true;
     }
 

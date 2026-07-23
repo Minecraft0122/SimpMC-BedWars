@@ -56,6 +56,8 @@ int playersAtStart = arena.getTeamSizeAtGameStart(firstTeam);
 
 `getActiveTeamsAtGameStart()` 与 `getTeamSizeAtGameStart(ITeam)` 都是开局瞬间的快照，因此队伍后续被淘汰、玩家掉线或重连不会改变结果。第三方 `IArena` 实现若不覆盖这些方法，会分别返回全部配置队伍和队伍当前人数，以保持二进制兼容。
 
+`IArena#getMinInTeam()` 返回当前竞技场正常开局时每支参赛队伍的最少人数。第三方旧实现无需立即修改，接口默认返回 `1`。
+
 ## 开局邀请组队 API
 
 ```java

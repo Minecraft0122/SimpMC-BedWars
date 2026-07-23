@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 19;
+    private static final int CONFIG_VERSION = 20;
     private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
     private static final double FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT = 1.15;
     private static final double FIREBALL_VERTICAL_KNOCKBACK_DEFAULT = 0.75;
@@ -203,7 +203,6 @@ public class MainConfig extends ConfigManager {
         }
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DEFAULT_ITEMS + ".Default", Collections.singletonList("WOODEN_SWORD"));
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR, true);
         yml.addDefault(ConfigPath.CENERAL_CONFIGURATION_ALLOWED_COMMANDS, Arrays.asList("shout", "bw", "leave"));
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, true);
 
@@ -302,15 +301,13 @@ public class MainConfig extends ConfigManager {
                 "多竞技场大厅固定物品。默认提供历史战绩、竞技场选择器和“回到主大厅”红床。",
                 "旧配置升级时只补齐缺失字段，不覆盖管理员已有的自定义材质、命令或槽位。",
                 "leave 节点会写入代理大厅目标标记；等待区和旁观区的 leave 节点则固定返回本服大厅。");
-        setComments(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR,
-                "商店永久护甲是否出售全身四件套。true=头盔、胸甲、护腿、靴子；false=仅护腿、靴子。",
-                "该开关作用于整个服务器，修改后需要完整重启服务器。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置，大小必须是 9 的倍数。");
         setComments(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅掉入虚空时是否传送回大厅出生点。");
     }
 
     private static void migrateLegacyConfig(YamlConfiguration yml) {
         migrateFireballDefaults(yml, yml.getInt(CONFIG_VERSION_PATH, 0));
+        removeRetiredFullArmorSetting(yml);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 45.0, 60.0);
         if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300) == 300) {
             yml.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
@@ -383,6 +380,10 @@ public class MainConfig extends ConfigManager {
                 FIREBALL_VERTICAL_KNOCKBACK_DEFAULT);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 4.0,
                 FIREBALL_ENEMY_DAMAGE_DEFAULT);
+    }
+
+    static void removeRetiredFullArmorSetting(YamlConfiguration yml) {
+        yml.set(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR, null);
     }
 
     static void migrateTabDisplayDefaults(YamlConfiguration yml) {

@@ -37,6 +37,12 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class TeamAssigner implements ITeamAssigner {
 
+    public static boolean canFormValidTeams(IArena arena) {
+        List<List<Player>> groups = PreGameSquadManager.getInstance().getAssignmentGroups(arena);
+        return !TeamAllocationPlanner.allocateWithMinimum(groups, arena.getTeams().size(),
+                arena.getMinInTeam(), arena.getMaxInTeam(), ThreadLocalRandom.current()).isEmpty();
+    }
+
     @Override
     public void assignTeams(IArena arena) {
         PreGameSquadManager squads = PreGameSquadManager.getInstance();
@@ -44,17 +50,23 @@ public class TeamAssigner implements ITeamAssigner {
             List<List<Player>> groups = squads.getAssignmentGroups(arena);
             List<ITeam> arenaTeams = new ArrayList<>(arena.getTeams());
             Collections.shuffle(arenaTeams);
-            List<List<Player>> allocation = TeamAllocationPlanner.allocate(
-                    groups,
-                    arenaTeams.size(),
-                    arena.getMaxInTeam(),
-                    ThreadLocalRandom.current()
-            );
-            List<List<Player>> approvedAllocation = new ArrayList<>(arenaTeams.size());
-            for (int index = 0; index < arenaTeams.size(); index++) approvedAllocation.add(new ArrayList<>());
+            StartingTask startingTask = arena.getStartingTask();
+            boolean debugStart = startingTask != null && startingTask.isSingleTeamDebugStart();
+            AllocationPlan plan = findAllocation(groups, arenaTeams, arena.getMinInTeam(),
+                    arena.getMaxInTeam(), debugStart);
+            if (plan == null) {
+                BedWars.plugin.getLogger().warning("竞技场 " + arena.getArenaName()
+                        + " 无法按每队最少 " + arena.getMinInTeam() + " 人完成分队，已停止开局。");
+                return;
+            }
 
-            for (int teamIndex = 0; teamIndex < arenaTeams.size(); teamIndex++) {
-                ITeam team = arenaTeams.get(teamIndex);
+            List<ITeam> selectedTeams = plan.teams();
+            List<List<Player>> allocation = plan.allocation();
+            List<List<Player>> approvedAllocation = new ArrayList<>(selectedTeams.size());
+            for (int index = 0; index < selectedTeams.size(); index++) approvedAllocation.add(new ArrayList<>());
+
+            for (int teamIndex = 0; teamIndex < selectedTeams.size(); teamIndex++) {
+                ITeam team = selectedTeams.get(teamIndex);
                 for (Player player : allocation.get(teamIndex)) {
                     TeamAssignEvent event = new TeamAssignEvent(player, team, arena);
                     Bukkit.getPluginManager().callEvent(event);
@@ -63,15 +75,15 @@ public class TeamAssigner implements ITeamAssigner {
                 }
             }
 
-            long activeTeams = approvedAllocation.stream().filter(team -> !team.isEmpty()).count();
-            if (!canApplyAllocation(activeTeams, arena.getStartingTask())) {
+            List<Integer> approvedTeamSizes = approvedAllocation.stream().map(List::size).toList();
+            if (!canApplyAllocation(approvedTeamSizes, arena.getMinInTeam(), startingTask)) {
                 BedWars.plugin.getLogger().warning("竞技场 " + arena.getArenaName()
-                        + " 的分队事件被取消后少于两支非空队伍，已停止开局。");
+                        + " 的分队事件被取消后不再满足队伍数量或每队最少人数，已停止开局。");
                 return;
             }
 
-            for (int teamIndex = 0; teamIndex < arenaTeams.size(); teamIndex++) {
-                ITeam team = arenaTeams.get(teamIndex);
+            for (int teamIndex = 0; teamIndex < selectedTeams.size(); teamIndex++) {
+                ITeam team = selectedTeams.get(teamIndex);
                 for (Player player : approvedAllocation.get(teamIndex)) {
                     player.closeInventory();
                     team.addPlayers(player);
@@ -82,8 +94,28 @@ public class TeamAssigner implements ITeamAssigner {
         }
     }
 
-    static boolean canApplyAllocation(long activeTeams, StartingTask startingTask) {
-        return ArenaStartPolicy.canStartWithActiveTeams(activeTeams,
+    private static AllocationPlan findAllocation(List<List<Player>> groups, List<ITeam> arenaTeams,
+                                                 int minimumInTeam, int maximumInTeam,
+                                                 boolean debugStart) {
+        int playerCount = groups.stream().mapToInt(List::size).sum();
+        List<List<Player>> allocation = TeamAllocationPlanner.allocateWithMinimum(groups, arenaTeams.size(),
+                minimumInTeam, maximumInTeam, ThreadLocalRandom.current());
+        if (!allocation.isEmpty()) {
+            return new AllocationPlan(new ArrayList<>(arenaTeams.subList(0, allocation.size())), allocation);
+        }
+
+        if (!debugStart) return null;
+        int teamCount = ArenaStartPolicy.debugActiveTeamCount(playerCount, arenaTeams.size(), maximumInTeam);
+        if (teamCount == 0) return null;
+        allocation = TeamAllocationPlanner.allocate(groups, teamCount, maximumInTeam, ThreadLocalRandom.current());
+        return new AllocationPlan(new ArrayList<>(arenaTeams.subList(0, teamCount)), allocation);
+    }
+
+    static boolean canApplyAllocation(List<Integer> teamSizes, int minimumInTeam, StartingTask startingTask) {
+        return ArenaStartPolicy.canStartWithTeamSizes(teamSizes, minimumInTeam,
                 startingTask != null && startingTask.isSingleTeamDebugStart());
+    }
+
+    private record AllocationPlan(List<ITeam> teams, List<List<Player>> allocation) {
     }
 }

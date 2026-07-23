@@ -31,6 +31,7 @@ import com.andrei1058.bedwars.shop.main.ShopCategory;
 import com.andrei1058.bedwars.shop.main.ShopIndex;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
@@ -41,7 +42,7 @@ import org.bukkit.plugin.PluginManager;
 @SuppressWarnings("WeakerAccess")
 public class ShopManager extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 4;
+    private static final int CONFIG_VERSION = 5;
 
     public static ShopIndex shop;
 
@@ -199,10 +200,6 @@ public class ShopManager extends ConfigManager {
                     0, 1, "", "", "", true);
             addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "chainmail", "tier1", "leggings", "CHAINMAIL_LEGGINGS",
                     0, 1, "", "", "", true);
-            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "chainmail", "tier1", "chestplate", "CHAINMAIL_CHESTPLATE",
-                    0, 1, "", "", "", true);
-            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "chainmail", "tier1", "helmet", "CHAINMAIL_HELMET",
-                    0, 1, "", "", "", true);
 
             adCategoryContentTier(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "iron-armor", 20, "tier1",
                     "IRON_BOOTS", 0, 1, false, 12, "gold", true, false);
@@ -210,20 +207,12 @@ public class ShopManager extends ConfigManager {
                     0, 1, "", "", "", true);
             addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "iron-armor", "tier1", "leggings", "IRON_LEGGINGS",
                     0, 1, "", "", "", true);
-            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "iron-armor", "tier1", "chestplate", "IRON_CHESTPLATE",
-                    0, 1, "", "", "", true);
-            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "iron-armor", "tier1", "helmet", "IRON_HELMET",
-                    0, 1, "", "", "", true);
 
             adCategoryContentTier(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "diamond-armor", 21, "tier1",
                     "DIAMOND_BOOTS", 0, 1, false, 6, "emerald", true, false);
             addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "diamond-armor", "tier1", "boots", "DIAMOND_BOOTS",
                     0, 1, "", "", "", true);
             addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "diamond-armor", "tier1", "leggings", "DIAMOND_LEGGINGS",
-                    0, 1, "", "", "", true);
-            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "diamond-armor", "tier1", "chestplate", "DIAMOND_CHESTPLATE",
-                    0, 1, "", "", "", true);
-            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_ARMOR, "diamond-armor", "tier1", "helmet", "DIAMOND_HELMET",
                     0, 1, "", "", "", true);
 
             //TOOLS CATEGORY
@@ -400,44 +389,32 @@ public class ShopManager extends ConfigManager {
         setComments(ConfigPath.SHOP_QUICK_DEFAULTS_PATH, "新玩家默认快捷购买栏的物品路径与槽位。");
         setComments(ConfigPath.SHOP_PATH_CATEGORY_BLOCKS, "商店分类及商品；可自定义价格、货币、数量和购买效果。");
         ChineseConfigDocumentation.shop(this);
-        updateToLatestVersion(CONFIG_VERSION, ShopManager::migrateFullArmorSets);
+        updateToLatestVersion(CONFIG_VERSION, ShopManager::migrateLowerBodyArmorOnly);
     }
 
-    static void migrateFullArmorSets(YamlConfiguration config) {
-        migrateArmorSet(config, "chainmail", "CHAINMAIL");
-        migrateArmorSet(config, "iron-armor", "IRON");
-        migrateArmorSet(config, "diamond-armor", "DIAMOND");
-    }
+    static void migrateLowerBodyArmorOnly(YamlConfiguration config) {
+        String contentRoot = ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH;
+        ConfigurationSection contents = config.getConfigurationSection(contentRoot);
+        if (contents == null) return;
 
-    private static void migrateArmorSet(YamlConfiguration config, String content, String materialPrefix) {
-        String tierPath = ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
-                + '.' + content + '.' + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + ".tier1";
-        String buyItemsPath = tierPath + '.' + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH;
-        if (!config.contains(tierPath, true)
-                || !matchesMaterial(config, buyItemsPath + ".boots.material", materialPrefix + "_BOOTS")
-                || !matchesMaterial(config, buyItemsPath + ".leggings.material", materialPrefix + "_LEGGINGS")) {
-            return;
+        for (String content : contents.getKeys(false)) {
+            String tiersRoot = contentRoot + '.' + content + '.' + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS;
+            ConfigurationSection tiers = config.getConfigurationSection(tiersRoot);
+            if (tiers == null) continue;
+            for (String tier : tiers.getKeys(false)) {
+                String itemsRoot = tiersRoot + '.' + tier + '.' + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH;
+                ConfigurationSection items = config.getConfigurationSection(itemsRoot);
+                if (items == null) continue;
+                for (String item : new java.util.ArrayList<>(items.getKeys(false))) {
+                    String itemPath = itemsRoot + '.' + item;
+                    String material = config.getString(itemPath + ".material", "").toUpperCase(java.util.Locale.ROOT);
+                    if (material.endsWith("_HELMET") || material.endsWith("_CHESTPLATE")
+                            || material.equals("ELYTRA")) {
+                        config.set(itemPath, null);
+                    }
+                }
+            }
         }
-
-        addArmorPieceIfMissing(config, tierPath, "chestplate", materialPrefix + "_CHESTPLATE");
-        addArmorPieceIfMissing(config, tierPath, "helmet", materialPrefix + "_HELMET");
-    }
-
-    private static boolean matchesMaterial(YamlConfiguration config, String path, String expected) {
-        return config.contains(path, true) && expected.equalsIgnoreCase(config.getString(path, ""));
-    }
-
-    private static void addArmorPieceIfMissing(YamlConfiguration config, String tierPath, String piece,
-                                                String material) {
-        String itemPath = tierPath + '.' + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH + '.' + piece + '.';
-        setIfMissing(config, itemPath + "material", material);
-        setIfMissing(config, itemPath + "data", 0);
-        setIfMissing(config, itemPath + "amount", 1);
-        setIfMissing(config, itemPath + "auto-equip", true);
-    }
-
-    private static void setIfMissing(YamlConfiguration config, String path, Object value) {
-        if (!config.contains(path, true)) config.set(path, value);
     }
 
     private void loadShop() {

@@ -89,6 +89,9 @@ public class CreateTeam extends SubCommand {
                     max = 2;
                 }
                 ss.getConfig().set("maxInTeam", max);
+                if (ss.getConfig().getYml().getInt("minInTeam", 1) > max) {
+                    ss.getConfig().set("minInTeam", max);
+                }
             }
         }
         return true;

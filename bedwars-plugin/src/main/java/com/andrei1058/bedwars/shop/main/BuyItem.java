@@ -66,6 +66,9 @@ public class BuyItem implements IBuyItem {
         itemStack = nms.createItemStack(yml.getString(path + ".material"),
                 yml.get(path + ".amount") == null ? 1 : yml.getInt(path + ".amount"),
                 (short) (yml.get(path + ".data") == null ? 1 : yml.getInt(path + ".data")));
+        if (!shouldSellArmorPiece(itemStack.getType())) {
+            return;
+        }
 
         if (yml.get(path + ".name") != null) {
             ItemMeta im = itemStack.getItemMeta();
@@ -189,8 +192,7 @@ public class BuyItem implements IBuyItem {
     void give(Player player, IArena arena, int purchases, boolean synchronizeInventory) {
         if (purchases <= 0) return;
 
-        if (autoEquip && nms.isArmor(itemStack)
-                && !shouldSellArmorPiece(itemStack.getType(), isFullArmorSaleEnabled())) {
+        if (!shouldSellArmorPiece(itemStack.getType())) {
             return;
         }
 
@@ -287,13 +289,7 @@ public class BuyItem implements IBuyItem {
         if (synchronizeInventory) player.updateInventory();
     }
 
-    private static boolean isFullArmorSaleEnabled() {
-        return BedWars.config == null
-                || BedWars.config.getYml().getBoolean(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR, true);
-    }
-
-    static boolean shouldSellArmorPiece(Material material, boolean fullArmorSaleEnabled) {
-        if (fullArmorSaleEnabled) return true;
+    static boolean shouldSellArmorPiece(Material material) {
         String materialName = material.name();
         return !materialName.endsWith("_HELMET")
                 && !materialName.endsWith("_CHESTPLATE")

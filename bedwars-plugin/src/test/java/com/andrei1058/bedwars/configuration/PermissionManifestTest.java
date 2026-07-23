@@ -38,6 +38,7 @@ class PermissionManifestTest {
         assertFalse(player.getChildren().getOrDefault("bw.command.rejoin", false));
         assertFalse(allCommands.getChildren().getOrDefault("bw.command.start.debug", false));
         assertTrue(allCommands.getChildren().getOrDefault("bw.command.autodetectgenerators", false));
+        assertTrue(allCommands.getChildren().getOrDefault("bw.command.setmininteam", false));
     }
 
     @Test

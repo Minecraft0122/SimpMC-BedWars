@@ -138,6 +138,8 @@ public class ConfigPath {
 
     public static final String GENERAL_CONFIGURATION_NPC_LOC_STORAGE = "join-npc-locations";
     public static final String GENERAL_CONFIGURATION_DEFAULT_ITEMS = "start-items-per-group";
+    /** @deprecated Armor shops always sell leggings and boots only. */
+    @Deprecated
     public static final String GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR = "shop-settings.sell-full-armor";
 
     public static final String CENERAL_CONFIGURATION_ALLOWED_COMMANDS = "allowed-commands";

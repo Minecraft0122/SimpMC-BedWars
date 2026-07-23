@@ -101,6 +101,7 @@ public final class PreGameSquadManager implements Listener, PreGameSquad {
         squad.members.add(target.getUniqueId());
         squadsByMember.put(target.getUniqueId(), squad);
         removeInvitesFor(target.getUniqueId());
+        reevaluateArena(arena);
         return Result.SUCCESS;
     }
 
@@ -118,7 +119,9 @@ public final class PreGameSquadManager implements Listener, PreGameSquad {
     @Override
     public Result leave(@NotNull Player player) {
         if (!squadsByMember.containsKey(player.getUniqueId())) return Result.NOT_IN_SQUAD;
+        IArena arena = preGameArena(player);
         removePlayer(player.getUniqueId());
+        reevaluateArena(arena);
         return Result.SUCCESS;
     }
 
@@ -268,6 +271,10 @@ public final class PreGameSquadManager implements Listener, PreGameSquad {
     private void purgeExpiredInvites() {
         long now = System.currentTimeMillis();
         invites.entrySet().removeIf(entry -> entry.getValue().expiresAt < now);
+    }
+
+    private static void reevaluateArena(IArena arena) {
+        if (arena instanceof Arena concreteArena) concreteArena.reevaluateStartEligibility();
     }
 
     private record InviteKey(UUID inviter, UUID target) {

@@ -18,6 +18,7 @@
 
 package com.andrei1058.bedwars.arena.team;
 
+import com.andrei1058.bedwars.arena.ArenaStartPolicy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -34,6 +35,22 @@ import java.util.Random;
 final class TeamAllocationPlanner {
 
     private TeamAllocationPlanner() {
+    }
+
+    static <T> List<List<T>> allocateWithMinimum(@NotNull List<List<T>> sourceGroups,
+                                                  int configuredTeamCount, int minimumInTeam,
+                                                  int capacity, @NotNull Random random) {
+        int players = sourceGroups.stream().filter(group -> group != null).mapToInt(List::size).sum();
+        int maximumTeams = ArenaStartPolicy.maximumFeasibleActiveTeams(players, configuredTeamCount,
+                minimumInTeam, capacity);
+        for (int teamCount = maximumTeams; teamCount >= 2; teamCount--) {
+            if (!ArenaStartPolicy.isFeasibleActiveTeamCount(players, teamCount, minimumInTeam, capacity)) {
+                continue;
+            }
+            List<List<T>> allocation = allocate(sourceGroups, teamCount, capacity, random);
+            if (allocation.stream().allMatch(team -> team.size() >= minimumInTeam)) return allocation;
+        }
+        return List.of();
     }
 
     static <T> List<List<T>> allocate(@NotNull List<List<T>> sourceGroups, int teamCount,

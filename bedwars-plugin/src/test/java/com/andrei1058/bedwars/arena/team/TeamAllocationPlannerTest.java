@@ -82,6 +82,34 @@ class TeamAllocationPlannerTest {
         ));
     }
 
+    @Test
+    void minimumAwareAllocationUsesOnlyTeamsItCanFill() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                List.of(List.of("A", "B", "C", "D"), List.of("E"), List.of("F")),
+                4,
+                2,
+                4,
+                new Random(13)
+        );
+
+        assertEquals(2, allocation.size());
+        assertTrue(allocation.stream().allMatch(team -> team.size() >= 2));
+        assertEquals(Set.of("A", "B", "C", "D", "E", "F"), flatten(allocation));
+    }
+
+    @Test
+    void minimumAwareAllocationRejectsAnUnfillableOpponentTeam() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                List.of(List.of("A", "B", "C"), List.of("D")),
+                4,
+                2,
+                4,
+                new Random(17)
+        );
+
+        assertTrue(allocation.isEmpty());
+    }
+
     private static Set<String> flatten(List<List<String>> allocation) {
         Set<String> players = new HashSet<>();
         allocation.forEach(players::addAll);

@@ -26,7 +26,6 @@
 - 竞技场加入通知只在目标竞技场处于等待或开局倒计时发送，接收者为该竞技场与大厅玩家；已开局和重置阶段不播报。玩家在广播前即从大厅受众移除，不会因异步传送时序重复收到大厅身份消息。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
-- `shop-settings.sell-full-armor`：全服护甲售卖模式；`true` 为全身四件套，`false` 为仅护腿和靴子。该开关只影响商店，正式开局始终发放队伍色皮革四件套。
 - `allowed-commands`：游戏内允许的命令。
 - `game-end`：淘汰玩家和最佳数据展示。
 
@@ -57,7 +56,7 @@ TAB 相关常用项：
 
 每张地图一份。主要节点：
 
-- `group`、`display-name`、`maxInTeam`。
+- `group`、`display-name`、`maxInTeam`、`minInTeam`。
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
@@ -76,7 +75,7 @@ TAB 相关常用项：
 
 坐标由插件生成，建议使用设置命令，不要手写。方向字段与坐标分开，避免破坏方块中心格式。
 
-`minPlayers` 已被删除并会从旧竞技场配置中自动清理。竞技场固定在至少两名玩家时开始倒计时，正式开局前还会再次确认至少有两支非空队伍。
+`minInTeam` 设置正常开局时每支实际参赛队伍的最少人数，默认 `1`，必须介于 `1` 和 `maxInTeam` 之间。插件只启用当前玩家能够填满的队伍数；倒计时结束和 `TeamAssignEvent` 执行后还会再次确认至少两支队伍全部达标。`/bw start debug` 可用于管理员单队测试并绕过此限制。旧版总人数节点 `minPlayers` 仍会自动清理。
 
 ## generators.yml
 
@@ -139,15 +138,7 @@ blocks-category:
 
 袖珍弹出塔的商品 ID 是 `tower`，默认价格路径为 `utility-category.category-content.tower.content-tiers.tier1.tier-settings.cost`。它的显示名称和说明位于语言文件 `shop-items-messages.utility-category.content-item-tower-name` 与 `shop-items-messages.utility-category.content-item-tower-lore`。2.10.40 会自动删除错误的旧 `Compact Pop-up Tower` 语言节点，并把其中的文本迁移到 `tower`；系统生成的 `Name not set`/`Lore not set` 会被正确默认值替换，管理员已经写在正确路径的自定义文本保持不变。
 
-全服护甲售卖模式在 `config.yml` 中设置：
-
-```yaml
-shop-settings:
-  # true：头盔、胸甲、护腿、靴子；false：仅护腿、靴子
-  sell-full-armor: true
-```
-
-修改后需要完整重启服务器。该开关只决定商店购买永久护甲时实际发放哪些槽位，不影响开局的队伍色皮革四件套，也不会覆盖 `shop.yml` 的价格或自定义商品。`shop.yml` 的 `config-version` 会自动升级到 4：只有仍使用内置护腿与靴子材质的旧商品会补齐上装；已删除的商品、自定义下装材质和已有自定义上装不会被覆盖。旧 `config.yml` 也会自动备份并升级到架构 16，补入默认值和中文注释。
+商店永久护甲固定只发放护腿和靴子。玩家开局时仍穿戴完整的本队颜色皮革套装，购买链甲、铁甲或钻石甲后，队伍色皮革头盔与胸甲会继续保留。旧 `config.yml` 中的 `shop-settings.sell-full-armor` 会自动删除；`shop.yml` 升级到架构 5 时会清理所有护甲分类中的头盔、胸甲和鞘翅商品，价格与下半身自定义商品保持不变。
 
 货币支持 `iron`、`gold`、`diamond`、`emerald`；同时安装 Vault 和实际经济服务提供者后，可按现有格式使用经济货币。只安装 Vault 不会创建余额。Material、附魔和药水名称必须适用于 Paper 1.21.11。
 

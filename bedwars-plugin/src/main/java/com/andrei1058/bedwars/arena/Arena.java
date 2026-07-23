@@ -125,7 +125,7 @@ public class Arena implements IArena {
     private GameState status = GameState.restarting;
     private YamlConfiguration yml;
     private ArenaConfig cm;
-    private int maxPlayers = 10, maxInTeam = 1, islandRadius = 10;
+    private int maxPlayers = 10, maxInTeam = 1, minInTeam = 1, islandRadius = 10;
     public int upgradeDiamondsCount = 0, upgradeEmeraldsCount = 0;
     public boolean allowSpectate = true;
     private World world;
@@ -237,7 +237,8 @@ public class Arena implements IArena {
             clearRestoring(name);
             return;
         }
-        maxInTeam = yml.getInt("maxInTeam");
+        maxInTeam = Math.max(1, yml.getInt("maxInTeam", 1));
+        minInTeam = Math.max(1, Math.min(yml.getInt("minInTeam", 1), maxInTeam));
         maxPlayers = yml.getConfigurationSection("Team").getKeys(false).size() * maxInTeam;
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
@@ -522,11 +523,7 @@ public class Arena implements IArena {
             broadcastArenaJoin(p);
 
             /* check if you can start the arena */
-            boolean isStatusChange = false;
-            if (status == GameState.waiting && ArenaStartPolicy.hasEnoughPlayers(players.size())) {
-                changeStatus(GameState.starting);
-                isStatusChange = true;
-            }
+            boolean isStatusChange = reevaluateStartEligibility();
 
             //half full arena time shorten
             if (players.size() >= getMaxPlayers() / 2
@@ -798,13 +795,10 @@ public class Arena implements IArena {
         if (p.getPassenger() != null && p.getPassenger().getType() == EntityType.ARMOR_STAND) p.getPassenger().remove();
 
         boolean singleTeamDebugStart = startingTask != null && startingTask.isSingleTeamDebugStart();
-        if (status == GameState.starting && !singleTeamDebugStart
-                && !ArenaStartPolicy.hasEnoughPlayers(players.size())) {
-            changeStatus(GameState.waiting);
-            for (Player on : players) {
-                on.sendMessage(getMsg(on, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
-            }
-        } else if (status == GameState.playing) {
+        if (status == GameState.starting && !singleTeamDebugStart) {
+            reevaluateStartEligibility();
+        }
+        if (status == GameState.playing) {
             BedWars.debug("removePlayer debug1");
             int alive_teams = 0;
             for (ITeam t : getTeams()) {
@@ -1213,6 +1207,31 @@ public class Arena implements IArena {
     @Override
     public int getMaxInTeam() {
         return maxInTeam;
+    }
+
+    @Override
+    public int getMinInTeam() {
+        return minInTeam;
+    }
+
+    /** Re-check normal start eligibility after players or pre-game squads change. */
+    public boolean reevaluateStartEligibility() {
+        if (status != GameState.waiting && status != GameState.starting) return false;
+        if (startingTask != null && startingTask.isSingleTeamDebugStart()) return false;
+
+        boolean eligible = TeamAssigner.canFormValidTeams(this);
+        if (status == GameState.waiting && eligible) {
+            changeStatus(GameState.starting);
+            return true;
+        }
+        if (status == GameState.starting && !eligible) {
+            changeStatus(GameState.waiting);
+            for (Player player : players) {
+                player.sendMessage(getMsg(player, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
+            }
+            return true;
+        }
+        return false;
     }
 
     /**

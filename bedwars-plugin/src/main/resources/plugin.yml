@@ -58,6 +58,7 @@ permissions:
       bw.command.waitingpos: true
       bw.command.removeteam: true
       bw.command.setmaxinteam: true
+      bw.command.setmininteam: true
       bw.command.setmaxbuildheight: true
       bw.command.setspawn: true
       bw.command.setbed: true

@@ -4,6 +4,7 @@ import com.andrei1058.bedwars.api.tasks.StartingTask;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,11 +13,12 @@ class TeamAssignerTest {
 
     @Test
     void appliesOneTeamAllocationOnlyForTheCurrentDebugTask() {
-        assertFalse(TeamAssigner.canApplyAllocation(0, debugTask(true)));
-        assertFalse(TeamAssigner.canApplyAllocation(1, null));
-        assertFalse(TeamAssigner.canApplyAllocation(1, debugTask(false)));
-        assertTrue(TeamAssigner.canApplyAllocation(1, debugTask(true)));
-        assertTrue(TeamAssigner.canApplyAllocation(2, null));
+        assertFalse(TeamAssigner.canApplyAllocation(List.of(), 1, debugTask(true)));
+        assertFalse(TeamAssigner.canApplyAllocation(List.of(1), 1, null));
+        assertFalse(TeamAssigner.canApplyAllocation(List.of(1), 1, debugTask(false)));
+        assertTrue(TeamAssigner.canApplyAllocation(List.of(1), 4, debugTask(true)));
+        assertTrue(TeamAssigner.canApplyAllocation(List.of(2, 2), 2, null));
+        assertFalse(TeamAssigner.canApplyAllocation(List.of(3, 1), 2, null));
     }
 
     private static StartingTask debugTask(boolean debugStart) {
