@@ -70,7 +70,7 @@ public class SetMaxInTeam extends SubCommand {
 
     @Override
     public List<String> getTabComplete() {
-        return Arrays.asList("1", "2", "4");
+        return Arrays.asList("1", "2", "3", "4", "8", "16");
     }
 
     @Override

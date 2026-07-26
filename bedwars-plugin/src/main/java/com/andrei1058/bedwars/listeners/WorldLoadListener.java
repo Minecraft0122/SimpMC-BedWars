@@ -28,6 +28,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.TimeSkipEvent;
+import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 
 import java.util.LinkedList;
@@ -36,6 +37,11 @@ public class WorldLoadListener implements Listener {
 
     public WorldLoadListener() {
         Bukkit.getWorlds().forEach(GameRules::disableLocatorBar);
+    }
+
+    @EventHandler
+    public void onInit(WorldInitEvent event) {
+        GameRules.disableLocatorBar(event.getWorld());
     }
 
     @EventHandler

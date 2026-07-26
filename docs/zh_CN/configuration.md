@@ -22,7 +22,7 @@
 - `database`：MySQL；关闭时使用 SQLite。
 - `performance-settings`：Paper 传送、资源旋转等优化。
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；大厅红床带有独立目标标记，固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会执行代理切服，不传送到本服 `/bw setLobby` 坐标。等待区和观战区红床使用另一目标标记，直接返回本服 BedWars 大厅，不经过命令权限。管理员可以修改显示材质和命令文本，内置 `leave` 项的返回语义仍由其配置节点名确定。完整代理示例见[安装文档](installation.md#bungee)。
-- 大厅进入/离开提示只向同样位于 BedWars 大厅的玩家发送；竞技场、观战者和地图设置会话不会收到。大厅世界名直接从 `lobbyLoc` 文本读取，即使该世界在插件加载时尚未加载也能正确识别。
+- 大厅进入/离开提示只向同样位于 BedWars 大厅的玩家发送；竞技场、观战者和地图设置会话不会收到。大厅世界名直接从 `lobbyLoc` 文本读取，即使该世界在插件加载时尚未加载也能正确识别。大厅和加入 NPC 的旧朝向会自动迁移为最近的 90 度 yaw，pitch 固定为 0。
 - 竞技场加入通知只在目标竞技场处于等待或开局倒计时发送，接收者为该竞技场与大厅玩家；已开局和重置阶段不播报。玩家在广播前即从大厅受众移除，不会因异步传送时序重复收到大厅身份消息。
 - `arena-gui`、`stats-gui`：竞技场选择和历史战绩菜单。
 - `start-items-per-group`：每个竞技场分组的默认开局物品。
@@ -60,7 +60,7 @@ TAB 相关常用项：
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
-- `game-rules`：`规则:值` 列表。插件会强制使用 `doDaylightCycle:false` 和 `locatorBar:false`；竞技场载入及设置时会把时间校准为白天 1000 tick，并阻止睡眠、命令等跳时事件。
+- `game-rules`：`规则:值` 列表。插件会强制使用 `doDaylightCycle:false` 和 `locatorBar:false`；竞技场载入及设置时会把时间校准为白天 1000 tick，并阻止睡眠、命令等跳时事件。Locator Bar 还会在插件启动、任意世界初始化和加载时对全部地图关闭。
 - `waiting`、`spectator-loc`：等待和观战标点。
 - `Team`：所有队伍的颜色、出生点、床、NPC 和岛屿生成器。
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。
@@ -73,9 +73,9 @@ TAB 相关常用项：
 
 队伍名称直接取 `Team.<队伍>` 的节点名并保持原大小写，不经过语言翻译。旧语言文件中可能存在的 `team-name-<竞技场>-<队伍>` 不再参与显示。
 
-坐标由插件生成，建议使用设置命令，不要手写。方向字段与坐标分开，避免破坏方块中心格式。
+坐标由插件生成，建议使用设置命令，不要手写。方向字段与坐标分开，避免破坏方块中心格式。2.10.44 起所有玩家、NPC 和大厅传送朝向的 yaw 自动取最近的 90 度倍数，pitch 固定为 `0.0`；竞技场配置架构 14 和主配置架构 21 会自动迁移旧值。
 
-`minInTeam` 设置正常开局时每支实际参赛队伍的最少人数，默认 `1`，必须介于 `1` 和 `maxInTeam` 之间。插件只启用当前玩家能够填满的队伍数；倒计时结束和 `TeamAssignEvent` 执行后还会再次确认至少两支队伍全部达标。`/bw start debug` 可用于管理员单队测试并绕过此限制。旧版总人数节点 `minPlayers` 仍会自动清理。
+`maxInTeam` 可在高级或引导式设置中用 `/bw setMaxInTeam` 修改，创建队伍不再自动覆盖它。`minInTeam` 设置正常开局时每支实际参赛队伍的最少人数，默认 `1`，必须介于 `1` 和 `maxInTeam` 之间；Tab 补全按当前最大人数生成。插件只启用当前玩家能够填满的队伍数；倒计时结束和 `TeamAssignEvent` 执行后还会再次确认至少两支队伍全部达标。`/bw start debug` 可用于管理员单队测试并绕过此限制。旧版总人数节点 `minPlayers` 仍会自动清理。
 
 ## generators.yml
 

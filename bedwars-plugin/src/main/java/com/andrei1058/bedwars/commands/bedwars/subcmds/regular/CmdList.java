@@ -167,11 +167,11 @@ public class CmdList extends SubCommand {
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "removeGenerator", genHover, "/" + getParent().getName() + " removeGenerator", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
 
             if (ss.getSetupType() == SetupType.ADVANCED) {
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMaxInTeam <int>（当前为 " + maxInTeam + "）", ChatColor.WHITE + "设置每队最大人数。", "/" + mainCmd + " setMaxInTeam ", ClickEvent.Action.SUGGEST_COMMAND));
                 p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "arenaGroup " + group, ChatColor.WHITE + "设置竞技场组。", "/" + mainCmd + " arenaGroup ", ClickEvent.Action.SUGGEST_COMMAND));
             } else {
                 p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setType <type> " + group, ChatColor.WHITE + "将竞技场加入一个组。", "/" + getParent().getName() + " setType", ClickEvent.Action.RUN_COMMAND));
             }
+            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMaxInTeam <int>（当前为 " + maxInTeam + "）", ChatColor.WHITE + "设置每队最大人数。", "/" + mainCmd + " setMaxInTeam ", ClickEvent.Action.SUGGEST_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMinInTeam <int>（当前为 " + minInTeam + "）",
                     ChatColor.WHITE + "设置正常开局时每支参赛队伍的最少人数。",
                     "/" + mainCmd + " setMinInTeam ", ClickEvent.Action.SUGGEST_COMMAND));

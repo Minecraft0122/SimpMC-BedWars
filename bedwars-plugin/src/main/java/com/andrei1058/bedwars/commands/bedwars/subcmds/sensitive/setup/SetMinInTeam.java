@@ -20,6 +20,7 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static com.andrei1058.bedwars.BedWars.mainCmd;
 
@@ -61,6 +62,21 @@ public final class SetMinInTeam extends SubCommand {
     @Override
     public List<String> getTabComplete() {
         return List.of("1", "2", "3", "4");
+    }
+
+    @Override
+    public List<String> getTabComplete(CommandSender sender) {
+        if (!(sender instanceof Player player)) return getTabComplete();
+        SetupSession session = SetupSession.getSession(player.getUniqueId());
+        if (session == null) return getTabComplete();
+        int maximum = Math.max(1, session.getConfig().getYml().getInt("maxInTeam", 1));
+        return suggestionsFor(maximum);
+    }
+
+    static List<String> suggestionsFor(int maximum) {
+        return IntStream.rangeClosed(1, Math.min(Math.max(1, maximum), 64))
+                .mapToObj(Integer::toString)
+                .toList();
     }
 
     @Override

@@ -38,7 +38,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 13;
+    private static final int CONFIG_VERSION = 14;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -80,8 +80,8 @@ public class ArenaConfig extends ConfigManager {
         yml.options().copyDefaults(true);
         setComments("group", "竞技场分组，用于菜单分类和匹配。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
-        setComments("maxInTeam", "每支队伍的最大玩家数。");
-        setComments("minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "范围为 1 到 maxInTeam；/bw start debug 可临时绕过此限制。");
+        setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "创建队伍不会自动覆盖此值；setType 会写入所选类型的标准容量。");
+        setComments("minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "范围为 1 到 maxInTeam，命令补全会按当前最大人数生成；/bw start debug 可临时绕过此限制。");
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
@@ -118,9 +118,9 @@ public class ArenaConfig extends ConfigManager {
         migratePlayerFacing(plugin, config, "waiting.Loc", ConfigPath.ARENA_WAITING_FACING);
         migratePlayerFacing(plugin, config, ConfigPath.ARENA_SPEC_LOC, ConfigPath.ARENA_SPEC_FACING);
         config.setComments(ConfigPath.ARENA_WAITING_FACING,
-                List.of("玩家进入竞技场等待区时的 yaw,pitch；坐标仍单独固定在方块中心。"));
+                List.of("玩家进入竞技场等待区时的朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
         config.setComments(ConfigPath.ARENA_SPEC_FACING,
-                List.of("玩家进入观战点时的 yaw,pitch；坐标仍单独固定在方块中心。"));
+                List.of("玩家进入观战点时的朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
         for (String path : List.of("waiting.Loc", ConfigPath.ARENA_WAITING_POS1,
                 ConfigPath.ARENA_WAITING_POS2, ConfigPath.ARENA_SPEC_LOC)) {
             normalizeLocation(plugin, config, path);
@@ -145,11 +145,11 @@ public class ArenaConfig extends ConfigManager {
                 normalizeLocation(plugin, config, root + path);
             }
             config.setComments(root + ConfigPath.ARENA_TEAM_SHOP_FACING,
-                    List.of("商店村民的水平朝向（yaw），坐标本身仍固定在方块中心。"));
+                    List.of("商店村民的水平朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
             config.setComments(root + ConfigPath.ARENA_TEAM_UPGRADE_FACING,
-                    List.of("升级村民的水平朝向（yaw），坐标本身仍固定在方块中心。"));
+                    List.of("升级村民的水平朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
             config.setComments(root + ConfigPath.ARENA_TEAM_SPAWN_FACING,
-                    List.of("玩家出生和复活时的 yaw,pitch；坐标仍单独固定在方块中心。"));
+                    List.of("玩家出生和复活时的朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
             for (String generator : List.of("Iron", "Gold", "Emerald")) {
                 normalizeLocationList(plugin, config, root + generator);
             }
@@ -179,16 +179,25 @@ public class ArenaConfig extends ConfigManager {
 
     private static void migratePlayerFacing(Plugin plugin, YamlConfiguration config, String locationPath,
                                             String facingPath) {
-        if (config.isSet(facingPath) || !config.isString(locationPath)) return;
-
-        try {
-            String[] location = locationParts(config.getString(locationPath));
-            float yaw = location.length >= 5 ? Float.parseFloat(location[3].trim()) : 0.0F;
-            float pitch = location.length >= 5 ? Float.parseFloat(location[4].trim()) : 0.0F;
-            config.set(facingPath, PlayerFacing.serialize(yaw, pitch));
-        } catch (IllegalArgumentException exception) {
-            plugin.getLogger().warning("Could not migrate player facing at " + locationPath + ": "
-                    + exception.getMessage());
+        if (!config.isSet(facingPath) && config.isString(locationPath)) {
+            try {
+                String[] location = locationParts(config.getString(locationPath));
+                float yaw = location.length >= 5 ? Float.parseFloat(location[3].trim()) : 0.0F;
+                float pitch = location.length >= 5 ? Float.parseFloat(location[4].trim()) : 0.0F;
+                config.set(facingPath, PlayerFacing.serialize(yaw, pitch));
+            } catch (IllegalArgumentException exception) {
+                plugin.getLogger().warning("Could not migrate player facing at " + locationPath + ": "
+                        + exception.getMessage());
+            }
+        }
+        if (config.isString(facingPath)) {
+            try {
+                String[] facing = config.getString(facingPath).replace("[", "").replace("]", "").split(",");
+                config.set(facingPath, PlayerFacing.serialize(Float.parseFloat(facing[0].trim()), 0.0F));
+            } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException exception) {
+                plugin.getLogger().warning("Could not normalize player facing at " + facingPath + ": "
+                        + exception.getMessage());
+            }
         }
     }
 
@@ -196,13 +205,22 @@ public class ArenaConfig extends ConfigManager {
         getYml().set(locationPath, stringLocationArenaFormat(location));
         getYml().set(facingPath, PlayerFacing.serialize(location));
         getYml().setComments(facingPath,
-                List.of("玩家传送到此位置时使用的 yaw,pitch；坐标仍单独固定在方块中心。"));
+                List.of("玩家传送到此位置时使用的朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
         save();
     }
 
     private static void migrateNpcFacing(Plugin plugin, YamlConfiguration config, String locationPath,
                                          String facingPath, String fallbackTargetPath) {
-        if (config.isSet(facingPath) || !config.isString(locationPath)) return;
+        if (config.isSet(facingPath)) {
+            try {
+                config.set(facingPath, NpcFacing.normalize(Float.parseFloat(config.get(facingPath).toString())));
+            } catch (IllegalArgumentException exception) {
+                plugin.getLogger().warning("Could not normalize NPC facing at " + facingPath + ": "
+                        + exception.getMessage());
+            }
+            return;
+        }
+        if (!config.isString(locationPath)) return;
 
         try {
             String[] npc = locationParts(config.getString(locationPath));

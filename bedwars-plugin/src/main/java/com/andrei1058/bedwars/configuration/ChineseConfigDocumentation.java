@@ -77,8 +77,8 @@ public final class ChineseConfigDocumentation {
     public static void arena(ConfigManager config) {
         comment(config, "group", "竞技场分组，用于匹配、菜单、生成器和升级配置。");
         comment(config, ConfigPath.ARENA_DISPLAY_NAME, "玩家可见名称；留空时使用竞技场世界名。");
-        comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数。");
-        comment(config, "minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "必须介于 1 和 maxInTeam 之间；调试开局不受此限制。");
+        comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数；所有设置模式均可使用 /bw setMaxInTeam 修改。", "创建队伍不会自动覆盖此值；setType 会写入所选类型的标准容量。");
+        comment(config, "minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "必须介于 1 和 maxInTeam 之间，Tab 补全按当前最大人数生成；调试开局不受此限制。");
         comment(config, "allowSpectate", "是否允许玩家在游戏开始后进入观战。");
         comment(config, ConfigPath.ARENA_SPAWN_PROTECTION, "队伍出生点保护半径，单位为方块。");
         comment(config, ConfigPath.ARENA_SHOP_PROTECTION, "商店 NPC 周围保护半径，最小为 1 格；按方块坐标对称保护。");
@@ -95,11 +95,11 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.ARENA_ALLOW_MAP_BREAK, "是否允许破坏地图原有方块；关闭时通常只能破坏玩家放置的方块。");
         comment(config, ConfigPath.ARENA_GAME_RULES, "进入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场固定为 1000 tick 的白天，并阻止昼夜、天气、火势蔓延、生物自然生成和 Locator Bar。", "Paper 1.21.11 使用 fireSpreadRadiusAroundPlayer:0；旧 doFireTick 会自动删除，昼夜变化、火势蔓延与 Locator Bar 运行时始终强制关闭。");
         comment(config, "waiting.Loc", "等待大厅出生坐标，使用 x.5,y,z.5 的方块中心格式。");
-        comment(config, ConfigPath.ARENA_WAITING_FACING, "进入等待大厅时使用的 yaw,pitch 朝向。");
+        comment(config, ConfigPath.ARENA_WAITING_FACING, "进入等待大厅时使用的朝向；yaw 自动取最近的 90 度倍数，pitch 固定为 0。");
         comment(config, ConfigPath.ARENA_WAITING_POS1, "开局后移除地图内等待大厅区域的第一个角点。");
         comment(config, ConfigPath.ARENA_WAITING_POS2, "开局后移除地图内等待大厅区域的第二个角点。");
         comment(config, ConfigPath.ARENA_SPEC_LOC, "观战与虚空死亡回退位置。");
-        comment(config, ConfigPath.ARENA_SPEC_FACING, "进入观战位置时使用的 yaw,pitch 朝向。");
+        comment(config, ConfigPath.ARENA_SPEC_FACING, "进入观战位置时使用的朝向；yaw 自动取最近的 90 度倍数，pitch 固定为 0。");
         comment(config, "generator.Diamond", "地图中央钻石生成器坐标列表。");
         comment(config, "generator.Emerald", "地图中央绿宝石生成器坐标列表。");
         comment(config, "Team", "队伍配置；每队包含颜色、出生点、床、NPC 和岛屿生成器。");
@@ -110,12 +110,12 @@ public final class ChineseConfigDocumentation {
             String root = "Team." + team + '.';
             comment(config, root + "Color", "队伍颜色，填写 TeamColor 枚举名称；青色使用 CYAN。", "旧值 AQUA 会自动迁移为 CYAN。");
             comment(config, root + "Spawn", "队伍出生和复活坐标。");
-            comment(config, root + ConfigPath.ARENA_TEAM_SPAWN_FACING, "出生和复活时使用的 yaw,pitch 朝向。");
+            comment(config, root + ConfigPath.ARENA_TEAM_SPAWN_FACING, "出生和复活时使用的朝向；yaw 自动取最近的 90 度倍数，pitch 固定为 0。");
             comment(config, root + "Bed", "队伍床的坐标；插件也可在设置出生点时自动识别。");
             comment(config, root + "Shop", "商店村民坐标。");
-            comment(config, root + ConfigPath.ARENA_TEAM_SHOP_FACING, "商店村民的水平 yaw 朝向。");
+            comment(config, root + ConfigPath.ARENA_TEAM_SHOP_FACING, "商店村民朝向；yaw 自动取最近的 90 度倍数，pitch 固定为 0。");
             comment(config, root + "Upgrade", "升级村民坐标。");
-            comment(config, root + ConfigPath.ARENA_TEAM_UPGRADE_FACING, "升级村民的水平 yaw 朝向。");
+            comment(config, root + ConfigPath.ARENA_TEAM_UPGRADE_FACING, "升级村民朝向；yaw 自动取最近的 90 度倍数，pitch 固定为 0。");
             comment(config, root + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC, "队员最终死亡时资源掉落的位置。");
             comment(config, root + "Iron", "队伍岛屿铁生成器坐标列表。");
             comment(config, root + "Gold", "队伍岛屿金生成器坐标列表。");

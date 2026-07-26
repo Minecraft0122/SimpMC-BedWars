@@ -215,7 +215,7 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         } else if (args.length == 2) {
             if (hasSubCommand(args[0])) {
                 if (getSubCommand(args[0]).canSee(s, BedWars.getAPI()))
-                    return getSubCommand(args[0]).getTabComplete();
+                    return getSubCommand(args[0]).getTabComplete(s);
             }
         }
         return null;

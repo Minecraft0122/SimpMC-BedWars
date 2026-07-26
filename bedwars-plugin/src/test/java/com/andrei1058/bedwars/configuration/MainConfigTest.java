@@ -140,4 +140,11 @@ class MainConfigTest {
 
         assertFalse(configuration.isSet(ConfigPath.GENERAL_CONFIGURATION_SHOP_SELL_FULL_ARMOR));
     }
+
+    @Test
+    void normalizesStoredJoinNpcDirectionWithoutChangingMetadata() {
+        assertEquals("1.5,64.0,2.5,-90.0,0.0,lobby,skin,名称,Default,42",
+                MainConfig.normalizeNpcLocationEntry(
+                        "1.5,64.0,2.5,-88.328,35.0,lobby,skin,名称,Default,42", "world"));
+    }
 }

@@ -144,6 +144,20 @@ public class ConfigManager {
     }
 
     /**
+     * Snap an arbitrary yaw to the nearest cardinal 90-degree direction.
+     * The result is kept in the inclusive range -180..180 and preserves
+     * the negative -180 boundary so legacy values migrate predictably.
+     */
+    public static float snapYawToCardinal(double yaw) {
+        if (!Double.isFinite(yaw)) return 0.0F;
+        double wrapped = yaw % 360.0D;
+        if (wrapped < -180.0D) wrapped += 360.0D;
+        if (wrapped > 180.0D) wrapped -= 360.0D;
+        float snapped = (float) (Math.round(wrapped / 90.0D) * 90.0D);
+        return snapped == 0.0F ? 0.0F : snapped;
+    }
+
+    /**
      * Apply a migration only when the stored configuration schema is older.
      * The operation is idempotent and never downgrades a newer configuration.
      */
@@ -212,11 +226,23 @@ public class ConfigManager {
      * Use {@link #stringLocationArenaFormat(Location)} for arena locations
      */
     public String stringLocationConfigFormat(Location loc) {
-        return loc.getX() + "," + loc.getY() + "," + loc.getZ() + "," + (double) loc.getYaw() + "," + (double) loc.getPitch() + "," + loc.getWorld().getName();
+        return serializeConfigLocation(loc);
     }
 
     /**
-     * Upgrade a general location to x,y,z,yaw,pitch,world. Older releases
+     * Serialize a general location with cardinal yaw and a flat pitch.
+     */
+    public static String serializeConfigLocation(Location loc) {
+        if (loc == null || loc.getWorld() == null) {
+            throw new IllegalArgumentException("Configuration location and world cannot be null");
+        }
+        return loc.getX() + "," + loc.getY() + "," + loc.getZ() + ","
+                + (double) snapYawToCardinal(loc.getYaw()) + ",0.0," + loc.getWorld().getName();
+    }
+
+    /**
+     * Upgrade a general location to x,y,z,yaw,pitch,world. Yaw is snapped to
+     * the nearest 90 degrees and pitch is fixed at zero. Older releases
      * sometimes stored lobby locations without pitch or without a world.
      */
     public static String normalizeConfigLocationString(String value, String fallbackWorld) {
@@ -236,7 +262,6 @@ public class ConfigManager {
         Double.parseDouble(z);
 
         String yaw = "0.0";
-        String pitch = "0.0";
         String world = null;
         if (raw.length >= 4) {
             if (isNumber(raw[3])) {
@@ -246,9 +271,7 @@ public class ConfigManager {
             }
         }
         if (raw.length >= 5) {
-            if (isNumber(raw[4])) {
-                pitch = raw[4].trim();
-            } else {
+            if (!isNumber(raw[4])) {
                 world = raw[4].trim();
             }
         }
@@ -261,7 +284,8 @@ public class ConfigManager {
         if (world == null || world.isBlank()) {
             throw new IllegalArgumentException("Invalid configuration location: world is missing");
         }
-        return x + ',' + y + ',' + z + ',' + yaw + ',' + pitch + ',' + world;
+        float snappedYaw = snapYawToCardinal(Double.parseDouble(yaw));
+        return x + ',' + y + ',' + z + ',' + snappedYaw + ",0.0," + world;
     }
 
     /**
@@ -290,8 +314,7 @@ public class ConfigManager {
      * Use {@link #saveArenaLoc(String, Location)} for arena locations
      */
     public void saveConfigLoc(String path, Location loc) {
-        String data = loc.getX() + "," + loc.getY() + "," + loc.getZ() + "," + (double) loc.getYaw() + "," + (double) loc.getPitch() + "," + loc.getWorld().getName();
-        yml.set(path, data);
+        yml.set(path, stringLocationConfigFormat(loc));
         save();
     }
 

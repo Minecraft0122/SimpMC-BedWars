@@ -24,7 +24,6 @@ import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
-import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
 import org.bukkit.ChatColor;
@@ -81,18 +80,6 @@ public class CreateTeam extends SubCommand {
             }
             ss.getConfig().set("Team." + args[0] + ".Color", selectedColor.name());
             p.sendMessage("§6 ▪ §7已创建队伍 " + selectedColor.chat() + args[0] + "§7！");
-            if (ss.getSetupType() == SetupType.ASSISTED) {
-                ss.getConfig().reload();
-                int teams = ss.getConfig().getYml().getConfigurationSection("Team").getKeys(false).size();
-                int max = 1;
-                if (teams == 4) {
-                    max = 2;
-                }
-                ss.getConfig().set("maxInTeam", max);
-                if (ss.getConfig().getYml().getInt("minInTeam", 1) > max) {
-                    ss.getConfig().set("minInTeam", max);
-                }
-            }
         }
         return true;
     }

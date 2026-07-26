@@ -39,7 +39,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 20;
+    private static final int CONFIG_VERSION = 21;
     private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
     private static final double FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT = 1.15;
     private static final double FIREBALL_VERTICAL_KNOCKBACK_DEFAULT = 0.75;
@@ -356,6 +356,7 @@ public class MainConfig extends ConfigManager {
             yml.set(obsoletePath, null);
         }
         migrateLobbyLocation(yml);
+        migrateNpcLocations(yml);
     }
 
     static void migrateFireballDefaults(YamlConfiguration yml, int storedConfigVersion) {
@@ -479,6 +480,31 @@ public class MainConfig extends ConfigManager {
         } catch (IllegalArgumentException ignored) {
             return "";
         }
+    }
+
+    private static void migrateNpcLocations(YamlConfiguration yml) {
+        if (!yml.isList(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE)) return;
+        String fallbackWorld = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().getFirst().getName();
+        List<String> normalized = new ArrayList<>();
+        for (String entry : yml.getStringList(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE)) {
+            try {
+                normalized.add(normalizeNpcLocationEntry(entry, fallbackWorld));
+            } catch (IllegalArgumentException exception) {
+                BedWars.plugin.getLogger().warning("Could not migrate join NPC location: "
+                        + exception.getMessage());
+                normalized.add(entry);
+            }
+        }
+        yml.set(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE, normalized);
+    }
+
+    static String normalizeNpcLocationEntry(String entry, String fallbackWorld) {
+        if (entry == null) throw new IllegalArgumentException("NPC location cannot be null");
+        String[] fields = entry.split(",");
+        if (fields.length < 10) throw new IllegalArgumentException("expected 10 NPC fields");
+        String location = ConfigManager.normalizeConfigLocationString(
+                String.join(",", Arrays.copyOfRange(fields, 0, 6)), fallbackWorld);
+        return location + ',' + String.join(",", Arrays.copyOfRange(fields, 6, fields.length));
     }
 
     /**

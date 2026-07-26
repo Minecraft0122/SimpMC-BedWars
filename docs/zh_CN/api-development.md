@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.41</version>
+    <version>2.10.44</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -96,6 +96,15 @@ String worldName = ConfigManager.getWorldNameFromConfigLocation(
 ```
 
 该方法只解析配置文本，不调用 `Bukkit#getWorld`，适合插件加载阶段和世界加载器使用；无效或缺少世界名时抛出 `IllegalArgumentException`。
+
+2.10.44 起可通过以下 API 使用与插件一致的方向规则：
+
+```java
+float yaw = ConfigManager.snapYawToCardinal(-88.328); // -90.0
+String stored = ConfigManager.serializeConfigLocation(location);
+```
+
+`serializeConfigLocation` 会保留坐标和世界，把 yaw 吸附到最近的 90 度倍数，并把 pitch 固定为 0。`SubCommand#getTabComplete(CommandSender)` 可生成与发送者或设置会话相关的动态补全；旧扩展只实现无参方法仍保持兼容。
 
 ## 大厅状态
 

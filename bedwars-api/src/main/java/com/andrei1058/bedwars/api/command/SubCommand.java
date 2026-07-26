@@ -215,4 +215,12 @@ public abstract class SubCommand {
      * Manage sub-command tab complete
      */
     public abstract List<String> getTabComplete();
+
+    /**
+     * Get sender-aware tab suggestions. Existing extensions that only
+     * implement {@link #getTabComplete()} remain source and binary compatible.
+     */
+    public List<String> getTabComplete(CommandSender sender) {
+        return getTabComplete();
+    }
 }

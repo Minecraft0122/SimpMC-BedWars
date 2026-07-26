@@ -69,14 +69,30 @@ class ConfigManagerTest {
 
     @Test
     void generalLocationMigrationAddsMissingWorld() {
-        assertEquals("12.25,64.0,-3.75,90.0,15.0,world",
-                ConfigManager.normalizeConfigLocationString("12.25,64.0,-3.75,90.0,15.0", "world"));
+        assertEquals("12.25,64.0,-3.75,90.0,0.0,world",
+                ConfigManager.normalizeConfigLocationString("12.25,64.0,-3.75,83.4312,15.0", "world"));
     }
 
     @Test
     void generalLocationMigrationSupportsWorldWithoutPitch() {
-        assertEquals("12.25,64.0,-3.75,90.0,0.0,lobby",
-                ConfigManager.normalizeConfigLocationString("12.25,64.0,-3.75,90.0,lobby", "world"));
+        assertEquals("12.25,64.0,-3.75,-180.0,0.0,lobby",
+                ConfigManager.normalizeConfigLocationString("12.25,64.0,-3.75,-179.231,lobby", "world"));
+    }
+
+    @Test
+    void snapsYawExamplesToNearestCardinalDirection() {
+        assertEquals(-90.0F, ConfigManager.snapYawToCardinal(-88.328));
+        assertEquals(-180.0F, ConfigManager.snapYawToCardinal(-179.231));
+        assertEquals(90.0F, ConfigManager.snapYawToCardinal(83.4312));
+        assertEquals(-90.0F, ConfigManager.snapYawToCardinal(270.0));
+    }
+
+    @Test
+    void serializesGeneralLocationWithCardinalYawAndFlatPitch() {
+        Location source = new Location(world("lobby"), 1.25, 64.0, -2.75, -88.328F, 34.5F);
+
+        assertEquals("1.25,64.0,-2.75,-90.0,0.0,lobby",
+                ConfigManager.serializeConfigLocation(source));
     }
 
     @Test
@@ -115,4 +131,5 @@ class ConfigManagerTest {
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
     }
+
 }
