@@ -22,6 +22,16 @@ class ArenaConfigTest {
     }
 
     @Test
+    void forcesDaylightCycleOffAcrossLegacyRuleSpellings() {
+        List<String> rules = new ArrayList<>(List.of(
+                "doDaylightCycle:true", "do_daylight_cycle:true"));
+
+        ArenaConfig.forceBooleanRule(rules, "doDaylightCycle", false);
+
+        assertEquals(List.of("doDaylightCycle:false"), rules);
+    }
+
+    @Test
     void migratesObsoleteFireRuleAndForcesSpreadRadiusToZero() {
         List<String> rules = new ArrayList<>(List.of(
                 "doDaylightCycle:false", "doFireTick:true",

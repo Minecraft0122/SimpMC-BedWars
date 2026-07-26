@@ -60,7 +60,7 @@ TAB 相关常用项：
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
-- `game-rules`：`规则:值` 列表。插件会自动补入 `locatorBar:false`，并在所有世界加载和竞技场初始化时强制关闭 Locator Bar。
+- `game-rules`：`规则:值` 列表。插件会强制使用 `doDaylightCycle:false` 和 `locatorBar:false`；竞技场载入及设置时会把时间校准为白天 1000 tick，并阻止睡眠、命令等跳时事件。
 - `waiting`、`spectator-loc`：等待和观战标点。
 - `Team`：所有队伍的颜色、出生点、床、NPC 和岛屿生成器。
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。
@@ -69,7 +69,7 @@ TAB 相关常用项：
 
 2.10.26 起 `/bw autoCreateTeams` 直接使用羊毛的完整 `Material` 做精确映射，不使用模糊名称匹配。亮绿/深绿分别是 `LIME_WOOL → GREEN`、`GREEN_WOOL → DARK_GREEN`；亮灰/深灰分别是 `LIGHT_GRAY_WOOL → GRAY`、`GRAY_WOOL → DARK_GRAY`。
 
-2.10.29 起只有引导式快速设置中的 `/bw autoDetectGenerators` 会扫描并写入 `generator.Diamond`、`generator.Emerald`，`/bw save` 不再隐式扫描。底层可为 `3×3` 同种资源块实心层，或只有中心一格为对应资源块；中层必须是楼梯环和中心空气，顶层必须全为空气。识别结果只追加缺失点位，不覆盖已有列表。队伍床位仍会在引导式设置中自动识别。
+2.10.43 起不再提供钻石/绿宝石生成点的结构扫描。`generator.Diamond`、`generator.Emerald` 仅由 `/bw addGenerator` 和 `/bw removeGenerator` 明确维护，`/bw save` 不会隐式扫描或改写；队伍床位的自动识别保持不变。
 
 队伍名称直接取 `Team.<队伍>` 的节点名并保持原大小写，不经过语言翻译。旧语言文件中可能存在的 `team-name-<竞技场>-<队伍>` 不再参与显示。
 

@@ -7,6 +7,8 @@ import org.bukkit.World;
 
 public final class GameRules {
 
+    static final long BEDWARS_DAY_TIME = 1000L;
+
     private GameRules() {
     }
 
@@ -39,6 +41,15 @@ public final class GameRules {
      */
     public static void disableLocatorBar(World world) {
         setBoolean(world, "locatorBar", false);
+    }
+
+    /**
+     * Keep setup and live arena worlds at the fixed BedWars daytime.
+     */
+    public static void enforceDaytime(World world) {
+        if (world == null) return;
+        setBoolean(world, "doDaylightCycle", false);
+        world.setTime(BEDWARS_DAY_TIME);
     }
 
     /**

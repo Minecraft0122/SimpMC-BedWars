@@ -138,9 +138,6 @@ public class CmdList extends SubCommand {
             String setKillDrops = ss.dot() + ((killDropsNotSet.toString().length() == 0) ? ChatColor.STRIKETHROUGH : "") + "setKillDrops" + ChatColor.RESET + " " + ((killDropsNotSet.length() == 0) ? ChatColor.GREEN + "（全部已设置）" : ChatColor.RED + "（剩余：" + killDropsNotSet + ChatColor.RED + "）");
             String setUpgrade = ss.dot() + ((upgradeNotSet.toString().length() == 0) ? ChatColor.STRIKETHROUGH : "") + "setUpgrade" + ChatColor.RESET + " " + ((upgradeNotSet.length() == 0) ? ChatColor.GREEN + "（全部已设置）" : ChatColor.RED + "（剩余：" + upgradeNotSet + ChatColor.RED + "）");
             String addGenerator = ss.dot() + "addGenerator " + ((generatorNotSet.toString().length() == 0) ? "" : ChatColor.RED + "（剩余：" + generatorNotSet + ChatColor.RED + "） ") + ChatColor.YELLOW + "(" + ChatColor.DARK_GREEN + "E" + emGen + " " + ChatColor.AQUA + "D" + dmGen + ChatColor.YELLOW + ")";
-            String autoDetectGenerators = ss.dot() + "autoDetectGenerators " + ChatColor.YELLOW
-                    + "（当前：" + ChatColor.AQUA + "D" + dmGen + " "
-                    + ChatColor.DARK_GREEN + "E" + emGen + ChatColor.YELLOW + "）";
             String setSpectatorSpawn = ss.dot() + (ss.getConfig().getYml().get(ConfigPath.ARENA_SPEC_LOC) == null ? "" : ChatColor.STRIKETHROUGH) + "setSpectSpawn" + ChatColor.RESET + " " + (ss.getConfig().getYml().get(ConfigPath.ARENA_SPEC_LOC) == null ? ChatColor.RED + "（未设置）" : ChatColor.GRAY + "（已设置）");
 
             s.sendMessage("");
@@ -166,11 +163,6 @@ public class CmdList extends SubCommand {
             String genHover = (ss.getSetupType() == SetupType.ADVANCED ? ChatColor.WHITE + "添加资源生成点。\n" + ChatColor.YELLOW + "/" + getParent().getName() + " addGenerator <Iron/Gold/Emerald/Diamond>" :
                     ChatColor.WHITE + "添加资源生成点。\n" + ChatColor.YELLOW + "站在队伍岛屿上设置队伍生成点") + "\n" + ChatColor.WHITE + "站在钻石块上设置钻石生成点。\n" + ChatColor.WHITE + "站在绿宝石块上设置绿宝石生成点。";
 
-            if (ss.getSetupType() == SetupType.ASSISTED) {
-                p.spigot().sendMessage(Misc.msgHoverClick(autoDetectGenerators,
-                        ChatColor.WHITE + "扫描严格的 3×3×3 钻石/绿宝石结构并立即保存全局生成点。",
-                        "/" + getParent().getName() + " autoDetectGenerators", ClickEvent.Action.RUN_COMMAND));
-            }
             p.spigot().sendMessage(Misc.msgHoverClick(addGenerator, genHover, "/" + getParent().getName() + " addGenerator ", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "removeGenerator", genHover, "/" + getParent().getName() + " removeGenerator", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
 

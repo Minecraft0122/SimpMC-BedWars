@@ -283,10 +283,9 @@ public class SetupSession implements ISetupSession {
                 .filter(e -> e.getType() != EntityType.ITEM_FRAME).forEach(Entity::remove), 30L);
         w.setAutoSave(false);
         GameRules.setBoolean(w, "doMobSpawning", false);
-        GameRules.setBoolean(w, "doDaylightCycle", false);
+        GameRules.enforceDaytime(w);
         GameRules.disableFireSpread(w);
         GameRules.disableLocatorBar(w);
-        w.setTime(6000L);
         Bukkit.getPluginManager().callEvent(new SetupSessionStartEvent(this));
         setStarted(true);
 
@@ -474,58 +473,4 @@ public class SetupSession implements ISetupSession {
         return missing;
     }
 
-    /**
-     * Detect strict diamond/emerald structures and merge their center-air blocks
-     * into global generator configuration when explicitly requested by the assisted setup command.
-     */
-    public GeneratorStructureLocator.ScanResult autoDetectGlobalGenerators() {
-        if (!usesAutomaticAssistance(getSetupType())) {
-            return new GeneratorStructureLocator.ScanResult(List.of(), List.of());
-        }
-        World world = Bukkit.getWorld(getWorldName());
-        if (world == null) {
-            return new GeneratorStructureLocator.ScanResult(List.of(), List.of());
-        }
-
-        List<Location> teamSpawns = getTeams().stream()
-                .map(team -> "Team." + team + ".Spawn")
-                .filter(path -> getConfig().getYml().isString(path))
-                .map(getConfig()::getArenaLoc)
-                .filter(Objects::nonNull)
-                .toList();
-        if (teamSpawns.isEmpty()) {
-            return new GeneratorStructureLocator.ScanResult(List.of(), List.of());
-        }
-
-        int margin = Math.max(16, getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS));
-        int minX = teamSpawns.stream().mapToInt(Location::getBlockX).min().orElse(0) - margin;
-        int maxX = teamSpawns.stream().mapToInt(Location::getBlockX).max().orElse(0) + margin;
-        int minZ = teamSpawns.stream().mapToInt(Location::getBlockZ).min().orElse(0) - margin;
-        int maxZ = teamSpawns.stream().mapToInt(Location::getBlockZ).max().orElse(0) + margin;
-        int maxBaseY = getConfig().getInt(ConfigPath.ARENA_CONFIGURATION_MAX_BUILD_Y);
-        GeneratorStructureLocator.ScanResult result = GeneratorStructureLocator.findAll(
-                world, minX, maxX, Math.max(0, world.getMinHeight()), maxBaseY, minZ, maxZ);
-        boolean changed = mergeGeneratorLocations("Diamond", result.diamondGenerators());
-        changed |= mergeGeneratorLocations("Emerald", result.emeraldGenerators());
-        if (changed) getConfig().save();
-        return result;
-    }
-
-    private boolean mergeGeneratorLocations(String type, List<Location> detected) {
-        String path = "generator." + type;
-        List<Location> merged = new ArrayList<>(getConfig().getArenaLocations(path));
-        boolean changed = false;
-        for (Location candidate : detected) {
-            boolean duplicate = merged.stream().anyMatch(existing -> getConfig().compareArenaLoc(existing, candidate));
-            if (duplicate) continue;
-            merged.add(candidate);
-            changed = true;
-        }
-        if (changed) {
-            getConfig().getYml().set(path, merged.stream()
-                    .map(getConfig()::stringLocationArenaFormat)
-                    .toList());
-        }
-        return changed;
-    }
 }

@@ -23,9 +23,11 @@ package com.andrei1058.bedwars.listeners;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.GameRules;
+import com.andrei1058.bedwars.arena.SetupSession;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.world.TimeSkipEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 
 import java.util.LinkedList;
@@ -44,6 +46,14 @@ public class WorldLoadListener implements Listener {
                 a.init(e.getWorld());
                 return;
             }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onTimeSkip(TimeSkipEvent event) {
+        String worldName = event.getWorld().getName();
+        if (Arena.getArenaByIdentifier(worldName) != null || SetupSession.isSetupWorld(worldName)) {
+            event.setCancelled(true);
         }
     }
 }

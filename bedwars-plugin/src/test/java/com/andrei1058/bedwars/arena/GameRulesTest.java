@@ -7,6 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class GameRulesTest {
 
     @Test
+    void usesTheRequestedFixedDaytime() {
+        assertEquals(1000L, GameRules.BEDWARS_DAY_TIME);
+    }
+
+    @Test
     void resolvesModernLocatorBarRegistryKey() {
         assertEquals("locator_bar", GameRules.toRegistryKey("locatorBar"));
         assertEquals("locator_bar", GameRules.toRegistryKey("locator_bar"));
