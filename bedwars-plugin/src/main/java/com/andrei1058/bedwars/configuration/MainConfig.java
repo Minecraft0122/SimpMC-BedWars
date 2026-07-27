@@ -276,6 +276,9 @@ public class MainConfig extends ConfigManager {
         setComments("language", "服务器默认语言代码，例如 zh_cn。");
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
+                "可用于匹配和竞技场选择器的全局分组名称。Default 是内置组，无需填写。",
+                "每张地图在 Arenas/<地图>.yml 的 groups 列表中引用一个或多个名称。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY,
                 "是否在大厅 TAB 中显示玩家前后缀；默认开启，且不依赖右侧大厅计分板。");

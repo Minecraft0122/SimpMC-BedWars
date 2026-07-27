@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.ArenaGroupMembership;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -120,11 +121,10 @@ public class CmdList extends SubCommand {
                 posMsg = ChatColor.GRAY + "（未设置）" + ChatColor.ITALIC + "可选";
             }
 
-            String g2 = ss.getConfig().getYml().getString("group");
-            if (g2 != null) {
-                if (!g2.equalsIgnoreCase("default")) {
-                    group = ChatColor.GREEN + "(" + g2 + ")";
-                }
+            List<String> arenaGroups = ArenaGroupMembership.read(ss.getConfig().getYml());
+            if (!(arenaGroups.size() == 1
+                    && arenaGroups.get(0).equalsIgnoreCase(ArenaGroupMembership.DEFAULT_GROUP))) {
+                group = ChatColor.GREEN + "(" + String.join("、", arenaGroups) + ")";
             }
 
             int maxInTeam = ss.getConfig().getInt("maxInTeam");
@@ -167,9 +167,9 @@ public class CmdList extends SubCommand {
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "removeGenerator", genHover, "/" + getParent().getName() + " removeGenerator", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
 
             if (ss.getSetupType() == SetupType.ADVANCED) {
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "arenaGroup " + group, ChatColor.WHITE + "设置竞技场组。", "/" + mainCmd + " arenaGroup ", ClickEvent.Action.SUGGEST_COMMAND));
+                p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "arenaGroup " + group, ChatColor.WHITE + "设置竞技场的主组和其他成员组。", "/" + mainCmd + " arenaGroup ", ClickEvent.Action.SUGGEST_COMMAND));
             } else {
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setType <type> " + group, ChatColor.WHITE + "将竞技场加入一个组。", "/" + getParent().getName() + " setType", ClickEvent.Action.RUN_COMMAND));
+                p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setType <type> " + group, ChatColor.WHITE + "设置竞技场主组，并保留其他成员组。", "/" + getParent().getName() + " setType", ClickEvent.Action.RUN_COMMAND));
             }
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMaxInTeam <int>（当前为 " + maxInTeam + "）", ChatColor.WHITE + "设置每队最大人数。", "/" + mainCmd + " setMaxInTeam ", ClickEvent.Action.SUGGEST_COMMAND));
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMinInTeam <int>（当前为 " + minInTeam + "）",

@@ -11,6 +11,7 @@
 - `serverType`：MULTIARENA、SHARED 或 BUNGEE。
 - `debug`：详细故障日志开关，默认 `false`；生产环境保持关闭。`/bw start debug` 仅表示单队测试开局，不会修改此项或临时开启日志。
 - `lobbyServer`：BungeeCord/Velocity 代理 `[servers]` 中的大厅服务器键名，默认 `hub`；不是 IP、端口或 MotD。主大厅红床会立即静默发送 `Connect`，不查询或向玩家展示代理节点、服务器列表和故障信息；配置问题只通过后端及代理日志排查。
+- `arenaGroups`：全局可用的匹配组名称；`Default` 是内置组，无需写入。竞技场自己的 `groups` 列表可以同时引用多个这里声明的组。
 - `language`、禁用语言列表：默认语言及玩家可选语言。
 - `chat`：全局聊天和插件聊天格式。
 - `scoreboard-settings`：大厅/游戏计分板、TAB、队伍颜色、血量和刷新周期。
@@ -56,7 +57,7 @@ TAB 相关常用项：
 
 每张地图一份。主要节点：
 
-- `group`、`display-name`、`maxInTeam`、`minInTeam`。
+- `groups`、`display-name`、`maxInTeam`、`minInTeam`。`groups` 是有序列表，同一竞技场可以同时属于多个匹配组；第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。旧版单值 `group` 会自动迁移并删除。
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
@@ -64,6 +65,17 @@ TAB 相关常用项：
 - `waiting`、`spectator-loc`：等待和观战标点。
 - `Team`：所有队伍的颜色、出生点、床、NPC 和岛屿生成器。
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。
+
+多分组示例：
+
+```yaml
+groups:
+  - Solo       # 主组：读取 Solo 的玩法配置
+  - Featured   # 额外匹配组
+  - Daily      # 额外匹配组
+```
+
+玩家通过 `/bw join Featured`、`/bw join Daily` 或对应竞技场选择器时都能匹配到这张地图。同一次 `Featured+Daily` 查询只会列出和统计一次。
 
 `Team.<队伍>.Color` 的青色填写 `CYAN`。2.10.11 起旧值 `AQUA` 会自动迁移为 `CYAN`，对应床、羊毛、玻璃和陶瓦均使用原版 `CYAN_*` 材质。
 
@@ -103,7 +115,7 @@ Default:
 
 `delay` 就是真实刷新间隔秒数，越小刷新越快；0 或负数会被安全限制为 1 秒。`amount` 越大，每次产出越多。修改后需要完整重启服务器。提高产量后建议把根节点的 `stack-items` 设为 `true`，减少地面物品实体合并前的压力。
 
-复制 `Default` 并改为竞技场 `group` 名称，可为不同模式设置独立速度。如果已经存在与竞技场 `group` 同名的配置节，游戏会优先读取该节，而不是 `Default`。
+复制 `Default` 并改为竞技场 `groups` 第一项的主组名称，可为不同模式设置独立速度。如果已经存在与竞技场主组同名的配置节，游戏会优先读取该节，而不是 `Default`；其他成员组只参与匹配和菜单筛选，不改变玩法参数。
 
 旧版仍使用内置默认值时会自动把铁间隔从 2 秒迁移为 1 秒、金间隔从 6 秒迁移为 4 秒；自定义值及自定义分组不会被覆盖。
 

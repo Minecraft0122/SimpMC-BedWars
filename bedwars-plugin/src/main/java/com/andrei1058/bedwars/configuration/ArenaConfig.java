@@ -24,6 +24,7 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.configuration.GameMainOverridable;
+import com.andrei1058.bedwars.arena.ArenaGroupMembership;
 import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.PlayerFacing;
 import org.bukkit.Location;
@@ -38,7 +39,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 14;
+    private static final int CONFIG_VERSION = 15;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -48,7 +49,7 @@ public class ArenaConfig extends ConfigManager {
 
         YamlConfiguration yml = getYml();
         yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 服务器。");
-        yml.addDefault("group", "Default");
+        yml.addDefault(ArenaGroupMembership.GROUPS_PATH, List.of(ArenaGroupMembership.DEFAULT_GROUP));
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
         yml.addDefault("maxInTeam", 1);
         yml.addDefault("minInTeam", 1);
@@ -78,7 +79,9 @@ public class ArenaConfig extends ConfigManager {
         rules.add("locatorBar:false");
         yml.addDefault(ConfigPath.ARENA_GAME_RULES, rules);
         yml.options().copyDefaults(true);
-        setComments("group", "竞技场分组，用于菜单分类和匹配。");
+        setComments(ArenaGroupMembership.GROUPS_PATH,
+                "竞技场所属的全部匹配分组；同一竞技场可以同时出现在多个组中。",
+                "列表第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
         setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "创建队伍不会自动覆盖此值；setType 会写入所选类型的标准容量。");
         setComments("minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "范围为 1 到 maxInTeam，命令补全会按当前最大人数生成；/bw start debug 可临时绕过此限制。");
@@ -107,6 +110,7 @@ public class ArenaConfig extends ConfigManager {
         config.set(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, null);
         config.set("minPlayers", null);
         normalizeTeamLimits(config);
+        migrateArenaGroups(config);
 
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
         forceBooleanRule(gameRules, "doDaylightCycle", false);
@@ -175,6 +179,11 @@ public class ArenaConfig extends ConfigManager {
         int minimum = Math.max(1, Math.min(config.getInt("minInTeam", 1), maximum));
         config.set("maxInTeam", maximum);
         config.set("minInTeam", minimum);
+    }
+
+    static void migrateArenaGroups(YamlConfiguration config) {
+        config.set(ArenaGroupMembership.GROUPS_PATH, ArenaGroupMembership.read(config));
+        config.set(ArenaGroupMembership.LEGACY_GROUP_PATH, null);
     }
 
     private static void migratePlayerFacing(Plugin plugin, YamlConfiguration config, String locationPath,

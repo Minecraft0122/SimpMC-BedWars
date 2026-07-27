@@ -129,7 +129,8 @@ public class Arena implements IArena {
     public int upgradeDiamondsCount = 0, upgradeEmeraldsCount = 0;
     public boolean allowSpectate = true;
     private World world;
-    private String group = "Default", arenaName, worldName;
+    private String group = ArenaGroupMembership.DEFAULT_GROUP, arenaName, worldName;
+    private List<String> groups = List.of(ArenaGroupMembership.DEFAULT_GROUP);
     private List<ITeam> teams = new ArrayList<>();
     private final ArenaTeamParticipation teamParticipation = new ArenaTeamParticipation();
     private final PlacedBlockTracker placedBlocks = new PlacedBlockTracker();
@@ -243,11 +244,9 @@ public class Arena implements IArena {
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
         allowMapBreak = yml.getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK);
-        if (config.getYml().get("arenaGroups") != null) {
-            if (config.getYml().getStringList("arenaGroups").contains(yml.getString("group"))) {
-                group = yml.getString("group");
-            }
-        }
+        setGroups(ArenaGroupMembership.resolveConfigured(
+                ArenaGroupMembership.read(yml),
+                config.getYml().getStringList(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS)));
 
 
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(name)) {
@@ -599,7 +598,7 @@ public class Arena implements IArena {
         }
 
         refreshSigns();
-        JoinNPC.updateNPCs(getGroup());
+        getGroups().forEach(JoinNPC::updateNPCs);
         return true;
     }
 
@@ -730,7 +729,7 @@ public class Arena implements IArena {
 
         showTime.remove(p);
         refreshSigns();
-        JoinNPC.updateNPCs(getGroup());
+        getGroups().forEach(JoinNPC::updateNPCs);
         return true;
     }
 
@@ -960,7 +959,7 @@ public class Arena implements IArena {
         showTime.remove(p);
 
         refreshSigns();
-        JoinNPC.updateNPCs(getGroup());
+        getGroups().forEach(JoinNPC::updateNPCs);
 
         // fix #340
         // remove player from party if leaves and the owner is still in the arena while waiting or starting
@@ -1076,7 +1075,7 @@ public class Arena implements IArena {
         }
 
         refreshSigns();
-        JoinNPC.updateNPCs(getGroup());
+        getGroups().forEach(JoinNPC::updateNPCs);
     }
 
     /**
@@ -1342,6 +1341,16 @@ public class Arena implements IArena {
     }
 
     @Override
+    public List<String> getGroups() {
+        return groups;
+    }
+
+    @Override
+    public boolean isInGroup(String group) {
+        return ArenaGroupMembership.contains(groups, group);
+    }
+
+    @Override
     public String getArenaName() {
         return arenaName;
     }
@@ -1451,14 +1460,21 @@ public class Arena implements IArena {
     }
 
     //SETTER METHODS
+    @Override
     public void setGroup(String group) {
-        this.group = group;
+        setGroups(List.of(group));
+    }
+
+    @Override
+    public void setGroups(List<String> groups) {
+        this.groups = List.copyOf(ArenaGroupMembership.normalize(groups));
+        this.group = this.groups.get(0);
     }
 
     public static void setArenaByPlayer(Player p, IArena arena) {
         arenaByPlayer.put(p, arena);
         arena.refreshSigns();
-        JoinNPC.updateNPCs(arena.getGroup());
+        arena.getGroups().forEach(JoinNPC::updateNPCs);
     }
 
     public static void setArenaByName(IArena arena) {
@@ -1472,7 +1488,7 @@ public class Arena implements IArena {
     public static void removeArenaByPlayer(Player p, @NotNull IArena arena) {
         arenaByPlayer.remove(p);
         arena.refreshSigns();
-        JoinNPC.updateNPCs(arena.getGroup());
+        arena.getGroups().forEach(JoinNPC::updateNPCs);
     }
 
     /**
@@ -2173,10 +2189,9 @@ public class Arena implements IArena {
     public static int getPlayers(@NotNull String group) {
         int i = 0;
 
-        String[] groups = group.split("\\+");
-        for (String g : groups) {
-            for (IArena a : getArenas()) {
-                if (a.getGroup().equalsIgnoreCase(g)) i += a.getPlayers().size();
+        for (IArena arena : getArenas()) {
+            if (ArenaGroupMembership.matchesAny(arena.getGroups(), group)) {
+                i += arena.getPlayers().size();
             }
         }
 
@@ -2341,17 +2356,11 @@ public class Arena implements IArena {
             return arena.isSpectator(member);
         }).count() : 1;
 
-        String[] groups = group.split("\\+");
         for (IArena a : arenas) {
             if (a.getPlayers().size() == a.getMaxPlayers()) continue;
-            for (String g : groups) {
-                if (a.getGroup().equalsIgnoreCase(g)) {
-                    if (a.getMaxPlayers() - a.getPlayers().size() >= amount) {
-                        if (a.addPlayer(p, false)) {
-                            return true;
-                        }
-                    }
-                }
+            if (!ArenaGroupMembership.matchesAny(a.getGroups(), group)) continue;
+            if (a.getMaxPlayers() - a.getPlayers().size() >= amount && a.addPlayer(p, false)) {
+                return true;
             }
         }
 

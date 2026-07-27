@@ -176,10 +176,10 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
     }
 
     public static boolean isArenaGroup(String var) {
-        if (config.getYml().get("arenaGroups") != null) {
-            return config.getYml().getStringList("arenaGroups").contains(var);
-        }
-        return var.equalsIgnoreCase("default");
+        if (var == null) return false;
+        if (var.equalsIgnoreCase("default")) return true;
+        return config.getYml().getStringList("arenaGroups").stream()
+                .anyMatch(group -> group.equalsIgnoreCase(var.trim()));
     }
 
     public static TextComponent createTC(String text, String suggest, String shot_text) {

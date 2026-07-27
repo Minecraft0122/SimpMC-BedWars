@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.Misc;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
@@ -42,6 +43,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -111,7 +113,10 @@ public class ArenaSocket {
         js.addProperty("arena_current_players", a.getPlayers().size());
         js.addProperty("arena_max_players", a.getMaxPlayers());
         js.addProperty("arena_max_in_team", a.getMaxInTeam());
-        js.addProperty("arena_group", a.getGroup().toUpperCase());
+        js.addProperty("arena_group", a.getGroup().toUpperCase(Locale.ROOT));
+        JsonArray arenaGroups = new JsonArray();
+        a.getGroups().forEach(group -> arenaGroups.add(group.toUpperCase(Locale.ROOT)));
+        js.add("arena_groups", arenaGroups);
         js.addProperty("spectate", a.isAllowSpectate());
         return js.toString();
     }

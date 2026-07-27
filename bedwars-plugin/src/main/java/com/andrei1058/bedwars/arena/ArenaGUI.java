@@ -66,7 +66,7 @@ public class ArenaGUI {
         } else {
             arenas = new ArrayList<>();
             for (IArena a : Arena.getArenas()) {
-                if (a.getGroup().equalsIgnoreCase(ash.getGroup())) arenas.add(a);
+                if (ArenaGroupMembership.matchesAny(a.getGroups(), ash.getGroup())) arenas.add(a);
             }
         }
 

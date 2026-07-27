@@ -18,6 +18,9 @@ public final class ChineseConfigDocumentation {
         comment(config, "serverType", "服务器模式：MULTIARENA（多竞技场）、SHARED（共享服务器）或 BUNGEE（代理网络）。", "修改后必须完整重启服务器。");
         comment(config, "language", "默认语言代码，例如 zh_cn；玩家仍可使用 /bw lang 单独选择语言。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "禁止玩家选择的语言代码列表。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
+                "可用于匹配和竞技场选择器的全局分组名称；Default 是内置组，无需填写。",
+                "竞技场 groups 列表可以同时引用多个这里声明的组。");
         comment(config, "storeLink", "服务器商店或官方网站地址，可用于消息占位符。");
         comment(config, "lobbyServer",
                 "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
@@ -75,7 +78,7 @@ public final class ChineseConfigDocumentation {
     }
 
     public static void arena(ConfigManager config) {
-        comment(config, "group", "竞技场分组，用于匹配、菜单、生成器和升级配置。");
+        comment(config, "groups", "竞技场所属的全部匹配分组；可以同时填写多个。", "第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。", "旧版 group 字段会自动迁移并删除。");
         comment(config, ConfigPath.ARENA_DISPLAY_NAME, "玩家可见名称；留空时使用竞技场世界名。");
         comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数；所有设置模式均可使用 /bw setMaxInTeam 修改。", "创建队伍不会自动覆盖此值；setType 会写入所选类型的标准容量。");
         comment(config, "minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "必须介于 1 和 maxInTeam 之间，Tab 补全按当前最大人数生成；调试开局不受此限制。");

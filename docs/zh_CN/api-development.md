@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.46</version>
+    <version>2.10.47</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -57,6 +57,17 @@ int playersAtStart = arena.getTeamSizeAtGameStart(firstTeam);
 `getActiveTeamsAtGameStart()` 与 `getTeamSizeAtGameStart(ITeam)` 都是开局瞬间的快照，因此队伍后续被淘汰、玩家掉线或重连不会改变结果。第三方 `IArena` 实现若不覆盖这些方法，会分别返回全部配置队伍和队伍当前人数，以保持二进制兼容。
 
 `IArena#getMinInTeam()` 返回当前竞技场正常开局时每支参赛队伍的最少人数。第三方旧实现无需立即修改，接口默认返回 `1`。
+
+2.10.47 起竞技场可以属于多个匹配分组：
+
+```java
+String primaryGroup = arena.getGroup();       // 主组，用于组专属玩法配置
+List<String> groups = arena.getGroups();      // 全部分组的不可变快照
+boolean featured = arena.isInGroup("Featured");
+arena.setGroups(List.of("Solo", "Featured"));
+```
+
+列表第一项是主组。旧版第三方 `IArena` 实现无需修改：默认 `getGroups()` 会返回只包含 `getGroup()` 的列表，默认 `setGroups()` 会把第一项交给旧 `setGroup()`。PlaceholderAPI 的 `%bw1058_arena_groups_<竞技场>%` 和 `%bw1058_current_arena_groups%` 使用英文逗号连接全部组；原单数占位符继续只返回主组。
 
 ## 开局邀请组队 API
 

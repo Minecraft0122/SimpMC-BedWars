@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class ArenaConfigTest {
 
@@ -77,5 +78,28 @@ class ArenaConfigTest {
 
         assertEquals(1, config.getInt("maxInTeam"));
         assertEquals(1, config.getInt("minInTeam"));
+    }
+
+    @Test
+    void migratesLegacySingleGroupToOrderedGroupList() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("group", "Solo");
+
+        ArenaConfig.migrateArenaGroups(config);
+
+        assertEquals(List.of("Solo"), config.getStringList("groups"));
+        assertFalse(config.contains("group", true));
+    }
+
+    @Test
+    void normalizesExistingMultipleGroupsDuringMigration() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("groups", List.of("Solo", "solo", " Featured "));
+        config.set("group", "Doubles");
+
+        ArenaConfig.migrateArenaGroups(config);
+
+        assertEquals(List.of("Solo", "Featured"), config.getStringList("groups"));
+        assertFalse(config.contains("group", true));
     }
 }

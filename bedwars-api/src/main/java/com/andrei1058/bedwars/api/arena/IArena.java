@@ -128,10 +128,22 @@ public interface IArena {
      */
     int getMaxPlayers();
 
-    /**
-     * Get arena group.
-     */
+    /** 获取竞技场主组。组专属玩法配置读取此值；全部匹配组请使用 {@link #getGroups()}。 */
     String getGroup();
+
+    /**
+     * 获取竞技场所属的全部匹配组，第一项是 {@link #getGroup()} 返回的主组。
+     * 默认实现保证旧版第三方竞技场实现与原单组 API 保持源码和二进制兼容。
+     */
+    default List<String> getGroups() {
+        return Collections.singletonList(getGroup());
+    }
+
+    /** 检查竞技场是否属于指定匹配组。 */
+    default boolean isInGroup(String group) {
+        if (group == null) return false;
+        return getGroups().stream().anyMatch(value -> value.equalsIgnoreCase(group.trim()));
+    }
 
     /**
      * Get maximum players allowed in a team.
@@ -329,6 +341,14 @@ public interface IArena {
     int getIslandRadius();
 
     void setGroup(String group);
+
+    /**
+     * 替换全部竞技场组成员关系，第一项成为主组。
+     * 旧版实现会通过 {@link #setGroup(String)} 保留第一项。
+     */
+    default void setGroups(List<String> groups) {
+        setGroup(groups == null || groups.isEmpty() ? "Default" : groups.get(0));
+    }
 
     /**
      * Set game status without starting stats.
