@@ -13,9 +13,14 @@ package com.andrei1058.bedwars.listeners;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.arena.Arena;
+import io.papermc.paper.math.Position;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.FallingBlock;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -30,8 +35,14 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static com.andrei1058.bedwars.BedWars.plugin;
 
@@ -43,6 +54,7 @@ import static com.andrei1058.bedwars.BedWars.plugin;
 public final class PlacedBlockListener implements Listener {
 
     private static final String PLAYER_PLACED_FALLING_BLOCK = "bw-player-placed-falling-block";
+    private final BlockPlacementResyncBuffer resyncBuffer = new BlockPlacementResyncBuffer();
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -50,10 +62,19 @@ public final class PlacedBlockListener implements Listener {
         if (arena == null || arena.getStatus() != GameState.playing) return;
 
         if (event instanceof BlockMultiPlaceEvent multiPlaceEvent) {
-            multiPlaceEvent.getReplacedBlockStates().forEach(state -> trackCurrentBlock(arena, state.getBlock()));
+            multiPlaceEvent.getReplacedBlockStates().forEach(state -> {
+                trackCurrentBlock(arena, state.getBlock());
+                queueClientResync(event.getPlayer(), state.getBlock());
+            });
             return;
         }
         trackCurrentBlock(arena, event.getBlockPlaced());
+        queueClientResync(event.getPlayer(), event.getBlockPlaced());
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        resyncBuffer.discard(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -116,6 +137,35 @@ public final class PlacedBlockListener implements Listener {
 
     private static void trackCurrentBlock(IArena arena, Block block) {
         if (block.getType() != Material.AIR) arena.addPlacedBlock(block);
+    }
+
+    private void queueClientResync(Player player, Block block) {
+        UUID playerId = player.getUniqueId();
+        boolean shouldSchedule = resyncBuffer.queue(playerId, block.getWorld().getUID(),
+                block.getX(), block.getY(), block.getZ());
+        if (shouldSchedule) {
+            Bukkit.getScheduler().runTask(plugin, () -> flushClientResync(playerId));
+        }
+    }
+
+    private void flushClientResync(UUID playerId) {
+        List<BlockPlacementResyncBuffer.BlockPosition> positions = resyncBuffer.drain(playerId);
+        if (positions.isEmpty()) return;
+
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null || !player.isOnline()) return;
+
+        World world = player.getWorld();
+        UUID worldId = world.getUID();
+        Map<Position, BlockData> currentStates = HashMap.newHashMap(positions.size());
+        for (BlockPlacementResyncBuffer.BlockPosition position : positions) {
+            if (!worldId.equals(position.worldId())) continue;
+            Block block = world.getBlockAt(position.x(), position.y(), position.z());
+            currentStates.put(Position.block(position.x(), position.y(), position.z()), block.getBlockData());
+        }
+        if (!currentStates.isEmpty()) {
+            player.sendMultiBlockChange(currentStates);
+        }
     }
 
     private static void removeTrackedBlock(Block block) {
