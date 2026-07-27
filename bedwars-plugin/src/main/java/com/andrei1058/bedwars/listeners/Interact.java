@@ -111,7 +111,7 @@ public class Interact implements Listener {
                             if (plugin.getProxyLobbyConnector() == null) {
                                 Misc.connectToProxyLobby(p);
                             } else {
-                                plugin.getProxyLobbyConnector().connectWithDiagnostics(p);
+                                plugin.getProxyLobbyConnector().connect(p);
                             }
                         });
                     } else {
@@ -128,7 +128,7 @@ public class Interact implements Listener {
             if (plugin.getProxyLobbyConnector() == null) {
                 Misc.connectToProxyLobby(player);
             } else {
-                plugin.getProxyLobbyConnector().connectWithDiagnostics(player);
+                plugin.getProxyLobbyConnector().connect(player);
             }
             return;
         }

@@ -73,7 +73,7 @@ servers:
     address: 127.0.0.1:25567
 ```
 
-玩家必须连接 BungeeCord/Velocity 的监听地址，不能直接连接 BedWars 后端 Paper 端口；后端端口也应通过防火墙限制为只允许代理访问。大厅“回到主大厅”红床会先用官方 `GetServer` 和 `GetServers` 子通道检查代理连接及服务器名称，再通过 `Connect` 子通道切换。配置错误时玩家和控制台都会得到明确提示。
+玩家必须连接 BungeeCord/Velocity 的监听地址，不能直接连接 BedWars 后端 Paper 端口；后端端口也应通过防火墙限制为只允许代理访问。大厅“回到主大厅”红床只会立即、静默地发送 `Connect <lobbyServer>`，不会先查询代理节点或把代理配置、服务器列表和连接诊断显示给玩家。若没有切服，请检查 BedWars 后端控制台和代理日志。
 
 ## 可选依赖
 

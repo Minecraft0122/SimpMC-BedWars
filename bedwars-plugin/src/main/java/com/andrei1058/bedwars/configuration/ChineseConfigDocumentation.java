@@ -22,7 +22,7 @@ public final class ChineseConfigDocumentation {
         comment(config, "lobbyServer",
                 "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
                 "名称必须与代理配置一致；Velocity 需在 velocity.toml 的 [advanced] 中设置 bungee-plugin-message-channel = true。",
-                "MULTIARENA 和 BUNGEE 模式下的主大厅返回物品都会使用此名称。");
+                "MULTIARENA 和 BUNGEE 模式下的主大厅返回物品都会静默直接连接此服务器。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ENABLE_HALLOWEEN, "是否启用万圣节季节效果。");
         comment(config, ConfigPath.GENERAL_CHAT_GLOBAL, "聊天设置：global 控制不同竞技场是否互通，format 控制是否使用插件聊天格式。");
         comment(config, "debug", "调试日志开关；排查问题时临时开启，正常运行建议关闭。");

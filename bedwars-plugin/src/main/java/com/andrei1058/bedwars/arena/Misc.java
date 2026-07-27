@@ -115,13 +115,18 @@ public class Misc {
         String lobbyServer = config.getYml().getString(
                 ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER, "hub");
         if (lobbyServer == null || lobbyServer.isBlank()) {
-            plugin.getLogger().warning("Cannot connect player to the proxy lobby: config.yml lobbyServer is empty.");
-            player.sendMessage(ChatColor.RED + "代理大厅服务器名称未配置，请联系管理员。");
+            plugin.getLogger().warning("无法发送玩家到代理大厅：config.yml 的 lobbyServer 为空。");
             return false;
         }
 
-        player.sendPluginMessage(plugin, "BungeeCord", proxyConnectPayload(lobbyServer));
-        return true;
+        try {
+            player.sendPluginMessage(plugin, ProxyLobbyConnector.CHANNEL, proxyConnectPayload(lobbyServer));
+            return true;
+        } catch (RuntimeException exception) {
+            plugin.getLogger().log(Level.WARNING,
+                    "无法发送玩家 " + player.getName() + " 到代理大厅 " + lobbyServer + '。', exception);
+            return false;
+        }
     }
 
     static byte[] proxyConnectPayload(String serverName) {
@@ -142,10 +147,8 @@ public class Misc {
 
         if (getServerType() == ServerType.BUNGEE) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                // Do not kick a player merely because the proxy transfer is slow.
-                // Arena reset keeps the source world loaded and retries evacuation.
+                // 静默重试；代理要么完成切服，要么让玩家留在当前服，不在聊天中暴露基础设施信息。
                 if (p.isOnline()) {
-                    p.sendMessage(ChatColor.RED + "暂时无法连接代理大厅，插件将继续重试，不会将你踢出服务器。");
                     connectToProxyLobby(p);
                 }
             }, 30L);

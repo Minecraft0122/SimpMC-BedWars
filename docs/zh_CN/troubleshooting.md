@@ -78,14 +78,14 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 
 ## “回到主大厅”红床没有切换服务器
 
-2.10.36 起必须先完整重启并重新进入大厅，让插件发放带有新目标标记的红床；重启前已经留在背包中的旧物品没有此标记。新物品点击后一定会显示“正在检查代理大厅”或具体错误，如果完全没有文字，请确认实际安装的 JAR 版本确实为 2.10.36。
+2.10.36 起必须先完整重启并重新进入大厅，让插件发放带有目标标记的红床；重启前已经留在背包中的旧物品没有此标记。2.10.46 起点击红床不会向玩家发送任何代理查询、节点名称、服务器列表、连接进度或失败诊断，而是立即静默发送 `Connect <lobbyServer>`。
 
-当前版本点击后会先检查代理通道，并直接提示是哪一项不正确：
+如果点击后仍留在当前服务器，请由管理员检查：
 
-- `代理没有响应`：玩家很可能直接连接了 BedWars 后端 Paper 端口；也可能是 Velocity 的 `velocity.toml` 没有在 `[advanced]` 下设置 `bungee-plugin-message-channel = true`。修改后需要重启代理。
-- `代理中不存在服务器`：把插件 `config.yml` 的 `lobbyServer` 改成 BungeeCord/Velocity 服务器列表中的键名，例如 `hub`，不要填写 `127.0.0.1:25566`、MotD 或显示名称。
-- `你已经位于代理大厅`：`lobbyServer` 指向了玩家当前所在的 BedWars 后端，需改为真正的大厅节点名称。
-- 显示“正在连接”后仍断开：检查目标大厅后端是否在线、代理日志中的连接失败原因，以及后端是否正确配置代理转发。
+- 玩家是否通过 BungeeCord/Velocity 的监听地址进入，而不是直连 BedWars 后端 Paper 端口。
+- Velocity 的 `velocity.toml` 是否在 `[advanced]` 下设置 `bungee-plugin-message-channel = true`，修改后是否完整重启代理。
+- 插件 `config.yml` 的 `lobbyServer` 是否与代理 `[servers]` 中的键名完全一致，例如 `hub`；不要填写地址、端口、MotD 或显示名称。
+- 目标大厅后端是否在线，以及代理日志是否记录拒绝连接、转发配置错误或目标不存在。
 
 可直接照抄的 Velocity/BungeeCord 配置见[安装文档](installation.md#bungee)。不要用 `/reload` 测试插件消息通道；应完整重启代理和后端。
 
