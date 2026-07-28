@@ -25,23 +25,33 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.GameRules;
 import com.andrei1058.bedwars.arena.SetupSession;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockFadeEvent;
+import org.bukkit.event.block.BlockFormEvent;
+import org.bukkit.event.block.BlockGrowEvent;
+import org.bukkit.event.block.BlockSpreadEvent;
+import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.world.TimeSkipEvent;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 
 import java.util.LinkedList;
 
+import static com.andrei1058.bedwars.BedWars.plugin;
+
 public class WorldLoadListener implements Listener {
 
     public WorldLoadListener() {
         Bukkit.getWorlds().forEach(GameRules::disableLocatorBar);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::enforceManagedWorlds, 20L, 20L);
     }
 
     @EventHandler
     public void onInit(WorldInitEvent event) {
         GameRules.disableLocatorBar(event.getWorld());
+        if (isManagedWorld(event.getWorld())) GameRules.enforceArenaEnvironment(event.getWorld());
     }
 
     @EventHandler
@@ -49,9 +59,13 @@ public class WorldLoadListener implements Listener {
         GameRules.disableLocatorBar(e.getWorld());
         for (IArena a : new LinkedList<>(Arena.getEnableQueue())) {
             if (a.getWorldName().equalsIgnoreCase(e.getWorld().getName())) {
+                GameRules.enforceArenaEnvironment(e.getWorld());
                 a.init(e.getWorld());
                 return;
             }
+        }
+        if (SetupSession.isSetupWorld(e.getWorld().getName())) {
+            GameRules.enforceArenaEnvironment(e.getWorld());
         }
     }
 
@@ -60,6 +74,47 @@ public class WorldLoadListener implements Listener {
         String worldName = event.getWorld().getName();
         if (Arena.getArenaByIdentifier(worldName) != null || SetupSession.isSetupWorld(worldName)) {
             event.setCancelled(true);
+            GameRules.enforceArenaEnvironment(event.getWorld());
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onLeavesDecay(LeavesDecayEvent event) {
+        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockGrow(BlockGrowEvent event) {
+        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockSpread(BlockSpreadEvent event) {
+        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockFade(BlockFadeEvent event) {
+        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockForm(BlockFormEvent event) {
+        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+    }
+
+    private void enforceManagedWorlds() {
+        Arena.getArenas().stream().map(IArena::getWorld).forEach(GameRules::enforceArenaEnvironment);
+        SetupSession.getSetupSessions().stream()
+                .map(session -> Bukkit.getWorld(session.getWorldName()))
+                .forEach(GameRules::enforceArenaEnvironment);
+    }
+
+    private static boolean isManagedWorld(World world) {
+        if (world == null) return false;
+        String worldName = world.getName();
+        return Arena.getArenaByIdentifier(worldName) != null
+                || Arena.getEnableQueue().stream().anyMatch(arena -> arena.getWorldName().equalsIgnoreCase(worldName))
+                || SetupSession.isSetupWorld(worldName);
     }
 }

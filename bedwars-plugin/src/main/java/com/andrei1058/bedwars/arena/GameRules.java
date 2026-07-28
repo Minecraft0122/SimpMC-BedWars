@@ -5,9 +5,11 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.World;
 
+import java.util.Objects;
+
 public final class GameRules {
 
-    static final long BEDWARS_DAY_TIME = 1000L;
+    static final long BEDWARS_DAY_TIME = 6000L;
 
     private GameRules() {
     }
@@ -49,7 +51,31 @@ public final class GameRules {
     public static void enforceDaytime(World world) {
         if (world == null) return;
         setBoolean(world, "doDaylightCycle", false);
-        world.setTime(BEDWARS_DAY_TIME);
+        if (world.getTime() != BEDWARS_DAY_TIME) world.setTime(BEDWARS_DAY_TIME);
+    }
+
+    /**
+     * Disable vanilla random block ticks such as leaf decay, crop growth and
+     * grass or mushroom spread. Player-driven block mechanics remain enabled.
+     */
+    public static void disableNaturalBlockTicks(World world) {
+        set(world, "randomTickSpeed", "0");
+    }
+
+    /**
+     * Re-apply the non-negotiable BedWars world environment. This method is
+     * intentionally idempotent so it can also be used by the periodic guard.
+     */
+    public static void enforceArenaEnvironment(World world) {
+        if (world == null) return;
+        setBoolean(world, "doMobSpawning", false);
+        setBoolean(world, "doWeatherCycle", false);
+        disableNaturalBlockTicks(world);
+        enforceDaytime(world);
+        disableFireSpread(world);
+        disableLocatorBar(world);
+        if (world.hasStorm()) world.setStorm(false);
+        if (world.isThundering()) world.setThundering(false);
     }
 
     /**
@@ -66,7 +92,11 @@ public final class GameRules {
 
     @SuppressWarnings("unchecked")
     private static <T> void setTyped(World world, GameRule<?> rule, Object value) {
-        world.setGameRule((GameRule<T>) rule, (T) value);
+        GameRule<T> typedRule = (GameRule<T>) rule;
+        T typedValue = (T) value;
+        if (!Objects.equals(world.getGameRuleValue(typedRule), typedValue)) {
+            world.setGameRule(typedRule, typedValue);
+        }
     }
 
     static String toRegistryKey(String name) {

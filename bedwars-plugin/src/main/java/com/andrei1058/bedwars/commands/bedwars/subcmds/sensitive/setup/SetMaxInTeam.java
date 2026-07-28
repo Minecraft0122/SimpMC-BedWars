@@ -57,14 +57,16 @@ public class SetMaxInTeam extends SubCommand {
         } catch (NumberFormatException exception) {
             maximum = 0;
         }
-        int minimum = Math.max(1, ss.getConfig().getYml().getInt("minInTeam", 1));
-        if (maximum < minimum) {
-            p.sendMessage("§c▪ §7每队最大人数必须是不小于当前最少人数 " + minimum + " 的整数。");
+        if (maximum < 1) {
+            p.sendMessage("§c▪ §7每队人数必须是大于 0 的整数。");
             p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
             return true;
         }
-        ss.getConfig().set("maxInTeam", maximum);
-        p.sendMessage("§6 ▪ §7已设置每队最大人数为 §e" + maximum + "§7！");
+        ss.getConfig().getYml().set("maxInTeam", maximum);
+        ss.getConfig().getYml().set("minInTeam", maximum);
+        ss.getConfig().save();
+        p.sendMessage("§6 ▪ §7已设置每队人数为 §e" + maximum
+                + "§7；正常游戏将在竞技场满员后开始。");
         return true;
     }
 

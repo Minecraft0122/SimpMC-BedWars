@@ -61,13 +61,21 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.logging.Level;
 
 @SuppressWarnings("unused")
 public class v1_21_R3 extends VersionSupport {
+
+    private static final double NPC_POSITION_EPSILON_SQUARED = 1.0E-6D;
+    private static final float NPC_ROTATION_EPSILON = 0.01F;
+    private final Map<UUID, LockedShopkeeper> lockedShopkeepers = new HashMap<>();
 
     public v1_21_R3(Plugin plugin, String name) {
         super(plugin, minecraftVersionName(name));
@@ -86,6 +94,7 @@ public class v1_21_R3 extends VersionSupport {
     public void registerVersionListeners() {
         new VersionCommon(this);
         Bukkit.getScheduler().runTaskTimer(getPlugin(), this::refreshDespawnableTargets, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(getPlugin(), this::refreshLockedShopkeepers, 1L, 1L);
     }
 
     @Override
@@ -193,14 +202,18 @@ public class v1_21_R3 extends VersionSupport {
         if (world == null) return;
 
         Villager villager = (Villager) world.spawnEntity(location, EntityType.VILLAGER);
-        villager.setRotation(location.getYaw(), 0.0F);
         villager.setAI(false);
+        villager.setAware(false);
+        villager.setGravity(false);
+        villager.setRotation(location.getYaw(), 0.0F);
+        villager.setBodyYaw(location.getYaw());
         villager.setRemoveWhenFarAway(false);
         villager.setCollidable(false);
         villager.setInvulnerable(true);
         villager.setSilent(true);
         villager.setCustomName(null);
         villager.setCustomNameVisible(false);
+        lockedShopkeepers.put(villager.getUniqueId(), new LockedShopkeeper(villager, location));
 
         for (Player player : players) {
             String[] name = Language.getMsg(player, name1).split(",");
@@ -739,6 +752,57 @@ public class v1_21_R3 extends VersionSupport {
 
             mob.setTarget(target);
             mob.setAggressive(target != null);
+        }
+    }
+
+    /**
+     * Keep shop and upgrade villagers at their configured position and cardinal
+     * facing. The task compares first, so stationary NPCs do not generate a
+     * teleport or rotation packet every tick.
+     */
+    private void refreshLockedShopkeepers() {
+        Iterator<LockedShopkeeper> iterator = lockedShopkeepers.values().iterator();
+        while (iterator.hasNext()) {
+            LockedShopkeeper locked = iterator.next();
+            Villager villager = locked.villager();
+            if (!villager.isValid() || villager.isDead()) {
+                iterator.remove();
+                continue;
+            }
+
+            Location fixed = locked.location();
+            Location current = villager.getLocation();
+            boolean wrongWorld = current.getWorld() == null || fixed.getWorld() == null
+                    || !current.getWorld().equals(fixed.getWorld());
+            if (wrongWorld || (!wrongWorld && current.distanceSquared(fixed) > NPC_POSITION_EPSILON_SQUARED)) {
+                villager.teleport(fixed);
+                current = villager.getLocation();
+            }
+
+            if (angleDifference(current.getYaw(), fixed.getYaw()) > NPC_ROTATION_EPSILON
+                    || Math.abs(current.getPitch()) > NPC_ROTATION_EPSILON) {
+                villager.setRotation(fixed.getYaw(), 0.0F);
+            }
+            if (angleDifference(villager.getBodyYaw(), fixed.getYaw()) > NPC_ROTATION_EPSILON) {
+                villager.setBodyYaw(fixed.getYaw());
+            }
+            if (villager.getVelocity().lengthSquared() > NPC_POSITION_EPSILON_SQUARED) {
+                villager.setVelocity(new Vector());
+            }
+            if (villager.hasAI()) villager.setAI(false);
+            if (villager.isAware()) villager.setAware(false);
+            if (villager.hasGravity()) villager.setGravity(false);
+        }
+    }
+
+    static float angleDifference(float first, float second) {
+        return Math.abs((float) Math.IEEEremainder(first - second, 360.0D));
+    }
+
+    private record LockedShopkeeper(Villager villager, Location location) {
+        private LockedShopkeeper {
+            location = location.clone();
+            location.setPitch(0.0F);
         }
     }
 

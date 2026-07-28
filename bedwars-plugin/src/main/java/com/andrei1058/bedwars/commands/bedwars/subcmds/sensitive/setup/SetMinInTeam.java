@@ -20,9 +20,6 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
-import java.util.stream.IntStream;
-
-import static com.andrei1058.bedwars.BedWars.mainCmd;
 
 public final class SetMinInTeam extends SubCommand {
 
@@ -42,41 +39,16 @@ public final class SetMinInTeam extends SubCommand {
             return true;
         }
 
-        int minimum;
-        try {
-            minimum = args.length == 0 ? 0 : Integer.parseInt(args[0]);
-        } catch (NumberFormatException exception) {
-            minimum = 0;
-        }
         int maximum = Math.max(1, session.getConfig().getYml().getInt("maxInTeam", 1));
-        if (minimum < 1 || minimum > maximum) {
-            player.sendMessage("§c▪ §7用法：/" + mainCmd + " setMinInTeam <1-" + maximum + ">");
-            return true;
-        }
-
-        session.getConfig().set("minInTeam", minimum);
-        player.sendMessage("§6 ▪ §7已设置正常开局时每队最少人数为 §e" + minimum + "§7！");
+        session.getConfig().set("minInTeam", maximum);
+        player.sendMessage("§6 ▪ §7最少人数现已自动等于竞技场最大人数 §e"
+                + (maximum * session.getTeams().size()) + "§7；请使用 /bw setMaxInTeam 修改容量。");
         return true;
     }
 
     @Override
     public List<String> getTabComplete() {
-        return List.of("1", "2", "3", "4");
-    }
-
-    @Override
-    public List<String> getTabComplete(CommandSender sender) {
-        if (!(sender instanceof Player player)) return getTabComplete();
-        SetupSession session = SetupSession.getSession(player.getUniqueId());
-        if (session == null) return getTabComplete();
-        int maximum = Math.max(1, session.getConfig().getYml().getInt("maxInTeam", 1));
-        return suggestionsFor(maximum);
-    }
-
-    static List<String> suggestionsFor(int maximum) {
-        return IntStream.rangeClosed(1, Math.min(Math.max(1, maximum), 64))
-                .mapToObj(Integer::toString)
-                .toList();
+        return List.of();
     }
 
     @Override

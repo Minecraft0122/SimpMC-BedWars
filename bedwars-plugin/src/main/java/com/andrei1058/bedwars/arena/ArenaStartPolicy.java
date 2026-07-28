@@ -29,6 +29,11 @@ public final class ArenaStartPolicy {
         return playerCount >= MINIMUM_PLAYERS;
     }
 
+    /** Normal matchmaking starts only when every configured arena slot is occupied. */
+    public static boolean hasReachedMaximumPlayerCount(int playerCount, int maximumPlayers) {
+        return maximumPlayers >= MINIMUM_PLAYERS && playerCount >= maximumPlayers;
+    }
+
     public static boolean hasEnoughPlayers(int playerCount, int configuredTeamCount,
                                            int minimumInTeam, int maximumInTeam) {
         return maximumFeasibleActiveTeams(playerCount, configuredTeamCount,
@@ -68,9 +73,8 @@ public final class ArenaStartPolicy {
         if (teamSizes == null) return false;
         long activeTeams = teamSizes.stream().filter(size -> size != null && size > 0).count();
         if (allowSingleTeamDebugStart) return activeTeams >= 1;
-        return activeTeams >= 2 && minimumInTeam >= 1 && teamSizes.stream()
-                .filter(size -> size != null && size > 0)
-                .allMatch(size -> size >= minimumInTeam);
+        return teamSizes.size() >= 2 && minimumInTeam >= 1 && teamSizes.stream()
+                .allMatch(size -> size != null && size >= minimumInTeam);
     }
 
     public static int debugActiveTeamCount(int playerCount, int configuredTeamCount, int maximumInTeam) {

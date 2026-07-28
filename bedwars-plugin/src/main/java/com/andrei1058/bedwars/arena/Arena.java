@@ -239,7 +239,7 @@ public class Arena implements IArena {
             return;
         }
         maxInTeam = Math.max(1, yml.getInt("maxInTeam", 1));
-        minInTeam = Math.max(1, Math.min(yml.getInt("minInTeam", 1), maxInTeam));
+        minInTeam = maxInTeam;
         maxPlayers = yml.getConfigurationSection("Team").getKeys(false).size() * maxInTeam;
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
@@ -318,9 +318,7 @@ public class Arena implements IArena {
             String[] rule = s.split(":");
             if (rule.length == 2) GameRules.set(world, rule[0], rule[1]);
         }
-        GameRules.enforceDaytime(world);
-        GameRules.disableFireSpread(world);
-        GameRules.disableLocatorBar(world);
+        GameRules.enforceArenaEnvironment(world);
         world.setAutoSave(false);
 
         /* Clear setup armor-stands */

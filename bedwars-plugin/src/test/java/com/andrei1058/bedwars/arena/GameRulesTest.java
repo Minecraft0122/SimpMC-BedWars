@@ -8,7 +8,7 @@ class GameRulesTest {
 
     @Test
     void usesTheRequestedFixedDaytime() {
-        assertEquals(1000L, GameRules.BEDWARS_DAY_TIME);
+        assertEquals(6000L, GameRules.BEDWARS_DAY_TIME);
     }
 
     @Test
@@ -22,5 +22,10 @@ class GameRulesTest {
     void resolvesModernFireSpreadRadiusRegistryKey() {
         assertEquals("fire_spread_radius_around_player",
                 GameRules.toRegistryKey("fireSpreadRadiusAroundPlayer"));
+    }
+
+    @Test
+    void resolvesRandomTickSpeedRegistryKey() {
+        assertEquals("random_tick_speed", GameRules.toRegistryKey("randomTickSpeed"));
     }
 }

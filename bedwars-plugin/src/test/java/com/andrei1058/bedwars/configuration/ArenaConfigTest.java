@@ -81,6 +81,28 @@ class ArenaConfigTest {
     }
 
     @Test
+    void synchronizesMinimumTeamSizeToCapacity() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("maxInTeam", 4);
+        config.set("minInTeam", 1);
+
+        ArenaConfig.normalizeTeamLimits(config);
+
+        assertEquals(4, config.getInt("maxInTeam"));
+        assertEquals(4, config.getInt("minInTeam"));
+    }
+
+    @Test
+    void forcesRandomTicksOffAcrossLegacyRuleSpellings() {
+        List<String> rules = new ArrayList<>(List.of(
+                "randomTickSpeed:3", "random_tick_speed:12"));
+
+        ArenaConfig.forceIntegerRule(rules, "randomTickSpeed", 0);
+
+        assertEquals(List.of("randomTickSpeed:0"), rules);
+    }
+
+    @Test
     void migratesLegacySingleGroupToOrderedGroupList() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("group", "Solo");

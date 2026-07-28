@@ -151,8 +151,10 @@ public interface IArena {
     int getMaxInTeam();
 
     /**
-     * Get the minimum number of players required in every active team for a
-     * normal round. Older third-party implementations default to one.
+     * Get the minimum number of players required in every configured team for
+     * a normal round. Built-in arenas keep this equal to {@link #getMaxInTeam()}
+     * and wait until {@link #getMaxPlayers()} is reached. Older third-party
+     * implementations default to one.
      */
     default int getMinInTeam() {
         return 1;

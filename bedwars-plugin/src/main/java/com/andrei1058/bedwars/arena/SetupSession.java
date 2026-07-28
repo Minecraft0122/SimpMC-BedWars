@@ -282,10 +282,7 @@ public class SetupSession implements ISetupSession {
                 .filter(e -> e.getType() != EntityType.PLAYER).filter(e -> e.getType() != EntityType.PAINTING)
                 .filter(e -> e.getType() != EntityType.ITEM_FRAME).forEach(Entity::remove), 30L);
         w.setAutoSave(false);
-        GameRules.setBoolean(w, "doMobSpawning", false);
-        GameRules.enforceDaytime(w);
-        GameRules.disableFireSpread(w);
-        GameRules.disableLocatorBar(w);
+        GameRules.enforceArenaEnvironment(w);
         Bukkit.getPluginManager().callEvent(new SetupSessionStartEvent(this));
         setStarted(true);
 

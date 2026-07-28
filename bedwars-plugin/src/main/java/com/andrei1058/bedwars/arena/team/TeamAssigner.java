@@ -38,6 +38,9 @@ import java.util.concurrent.ThreadLocalRandom;
 public class TeamAssigner implements ITeamAssigner {
 
     public static boolean canFormValidTeams(IArena arena) {
+        if (!ArenaStartPolicy.hasReachedMaximumPlayerCount(arena.getPlayers().size(), arena.getMaxPlayers())) {
+            return false;
+        }
         List<List<Player>> groups = PreGameSquadManager.getInstance().getAssignmentGroups(arena);
         return !TeamAllocationPlanner.allocateWithMinimum(groups, arena.getTeams().size(),
                 arena.getMinInTeam(), arena.getMaxInTeam(), ThreadLocalRandom.current()).isEmpty();

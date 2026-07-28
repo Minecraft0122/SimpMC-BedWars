@@ -62,7 +62,7 @@ TAB 相关常用项：
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
-- `game-rules`：`规则:值` 列表。插件会强制使用 `doDaylightCycle:false` 和 `locatorBar:false`；竞技场载入及设置时会把时间校准为白天 1000 tick，并阻止睡眠、命令等跳时事件。Locator Bar 还会在插件启动、任意世界初始化和加载时对全部地图关闭。
+- `game-rules`：`规则:值` 列表。竞技场会持续锁定正午 `6000 tick`、晴天、`doDaylightCycle:false`、`doWeatherCycle:false`、`doMobSpawning:false` 和 `randomTickSpeed:0`。树叶腐烂、作物生长、草地/蘑菇蔓延、结冰融化等自然方块变化会被阻止；运行时每秒校正被其他插件改动的规则。Locator Bar 仍在插件启动及所有世界初始化、加载时强制关闭。
 - `waiting`、`spectator-loc`：等待和观战标点。
 - `Team`：所有队伍的颜色、出生点、床、NPC 和岛屿生成器。
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。
@@ -86,9 +86,9 @@ groups:
 
 队伍名称直接取 `Team.<队伍>` 的节点名并保持原大小写，不经过语言翻译。旧语言文件中可能存在的 `team-name-<竞技场>-<队伍>` 不再参与显示。
 
-坐标由插件生成，建议使用设置命令，不要手写。方向字段与坐标分开，避免破坏方块中心格式。2.10.44 起所有玩家、NPC 和大厅传送朝向的 yaw 自动取最近的 90 度倍数，pitch 固定为 `0.0`；竞技场配置架构 14 和主配置架构 21 会自动迁移旧值。
+坐标由插件生成，建议使用设置命令，不要手写。方向字段与坐标分开，避免破坏方块中心格式。所有玩家、NPC 和大厅传送朝向的 yaw 自动取最近的 90 度倍数，pitch 固定为 `0.0`。商店和升级村民关闭 AI、感知与重力，并逐 tick 只在发生偏移时恢复位置、身体和视线方向，不会自行移动或扭头。
 
-`maxInTeam` 可在高级或引导式设置中用 `/bw setMaxInTeam` 修改，创建队伍不再自动覆盖它。`minInTeam` 设置正常开局时每支实际参赛队伍的最少人数，默认 `1`，必须介于 `1` 和 `maxInTeam` 之间；Tab 补全按当前最大人数生成。插件只启用当前玩家能够填满的队伍数；倒计时结束和 `TeamAssignEvent` 执行后还会再次确认至少两支队伍全部达标。`/bw start debug` 可用于管理员单队测试并绕过此限制。旧版总人数节点 `minPlayers` 仍会自动清理。
+`maxInTeam` 可在高级或引导式设置中用 `/bw setMaxInTeam` 修改，创建队伍不再自动覆盖它。正常匹配的最少总人数自动等于 `getMaxPlayers()`（队伍数 × `maxInTeam`），竞技场必须满员才开始；兼容字段 `minInTeam` 会自动同步为 `maxInTeam`，手动填写会在迁移时被纠正。倒计时结束和 `TeamAssignEvent` 后还会再次确认所有配置队伍均达到容量，避免产生空队或缺人队。`/bw start debug` 继续允许 OP 进行非满员、单队地图测试。
 
 ## generators.yml
 

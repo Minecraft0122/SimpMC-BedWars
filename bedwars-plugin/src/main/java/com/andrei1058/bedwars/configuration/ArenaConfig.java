@@ -39,7 +39,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 15;
+    private static final int CONFIG_VERSION = 16;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -76,6 +76,7 @@ public class ArenaConfig extends ConfigManager {
         rules.add("doWeatherCycle:false");
         rules.add("fireSpreadRadiusAroundPlayer:0");
         rules.add("doMobSpawning:false");
+        rules.add("randomTickSpeed:0");
         rules.add("locatorBar:false");
         yml.addDefault(ConfigPath.ARENA_GAME_RULES, rules);
         yml.options().copyDefaults(true);
@@ -83,12 +84,12 @@ public class ArenaConfig extends ConfigManager {
                 "竞技场所属的全部匹配分组；同一竞技场可以同时出现在多个组中。",
                 "列表第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
-        setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "创建队伍不会自动覆盖此值；setType 会写入所选类型的标准容量。");
-        setComments("minInTeam", "正常开局时每支实际参赛队伍的最少玩家数。", "范围为 1 到 maxInTeam，命令补全会按当前最大人数生成；/bw start debug 可临时绕过此限制。");
+        setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "正常游戏的最少总人数自动等于竞技场最大人数，必须满员才开始；/bw start debug 不受此限制。");
+        setComments("minInTeam", "兼容旧配置的自动值；插件始终将它同步为 maxInTeam，请勿手动修改。");
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
-        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场时间固定为 1000 tick，并强制禁止昼夜变化、天气变化、火势蔓延、生物自然生成和 Locator Bar。", "Paper 1.21.11 使用 fireSpreadRadiusAroundPlayer:0；旧 doFireTick 项会自动删除。");
+        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场始终固定为正午 6000 tick，并强制禁止昼夜、天气、随机方块刻、火势蔓延、生物自然生成和 Locator Bar。", "randomTickSpeed 固定为 0，可阻止树叶腐烂、作物生长等自然变化；旧配置会自动迁移。");
         ChineseConfigDocumentation.arena(this);
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 
@@ -115,6 +116,7 @@ public class ArenaConfig extends ConfigManager {
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
         forceBooleanRule(gameRules, "doDaylightCycle", false);
         addRuleIfMissing(gameRules, "doMobSpawning", false);
+        forceIntegerRule(gameRules, "randomTickSpeed", 0);
         forceNoFireSpread(gameRules);
         forceBooleanRule(gameRules, "locatorBar", false);
         config.set(ConfigPath.ARENA_GAME_RULES, gameRules);
@@ -149,9 +151,9 @@ public class ArenaConfig extends ConfigManager {
                 normalizeLocation(plugin, config, root + path);
             }
             config.setComments(root + ConfigPath.ARENA_TEAM_SHOP_FACING,
-                    List.of("商店村民的水平朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
+                    List.of("商店村民的水平朝向；yaw 取最近的 90 度倍数，pitch 固定为 0；游戏中位置和视线均锁定。"));
             config.setComments(root + ConfigPath.ARENA_TEAM_UPGRADE_FACING,
-                    List.of("升级村民的水平朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
+                    List.of("升级村民的水平朝向；yaw 取最近的 90 度倍数，pitch 固定为 0；游戏中位置和视线均锁定。"));
             config.setComments(root + ConfigPath.ARENA_TEAM_SPAWN_FACING,
                     List.of("玩家出生和复活时的朝向；yaw 取最近的 90 度倍数，pitch 固定为 0。"));
             for (String generator : List.of("Iron", "Gold", "Emerald")) {
@@ -176,9 +178,8 @@ public class ArenaConfig extends ConfigManager {
 
     static void normalizeTeamLimits(YamlConfiguration config) {
         int maximum = Math.max(1, config.getInt("maxInTeam", 1));
-        int minimum = Math.max(1, Math.min(config.getInt("minInTeam", 1), maximum));
         config.set("maxInTeam", maximum);
-        config.set("minInTeam", minimum);
+        config.set("minInTeam", maximum);
     }
 
     static void migrateArenaGroups(YamlConfiguration config) {
@@ -270,6 +271,16 @@ public class ArenaConfig extends ConfigManager {
     }
 
     static void forceBooleanRule(List<String> rules, String ruleName, boolean value) {
+        String canonicalName = canonicalRuleName(ruleName);
+        rules.removeIf(rule -> {
+            int separator = rule.indexOf(':');
+            String name = separator < 0 ? rule : rule.substring(0, separator);
+            return canonicalRuleName(name).equals(canonicalName);
+        });
+        rules.add(ruleName + ':' + value);
+    }
+
+    static void forceIntegerRule(List<String> rules, String ruleName, int value) {
         String canonicalName = canonicalRuleName(ruleName);
         rules.removeIf(rule -> {
             int separator = rule.indexOf(':');

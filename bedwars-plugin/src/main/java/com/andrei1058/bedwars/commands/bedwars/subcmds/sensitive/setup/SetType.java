@@ -73,18 +73,16 @@ public class SetType extends SubCommand {
                 BedWars.config.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS, groups);
             }
             if (input.equals("Solo")) {
-                ss.getConfig().set("maxInTeam", 1);
+                ss.getConfig().getYml().set("maxInTeam", 1);
             } else if (input.equalsIgnoreCase("Doubles")) {
-                ss.getConfig().set("maxInTeam", 2);
+                ss.getConfig().getYml().set("maxInTeam", 2);
             } else if (input.equalsIgnoreCase("3v3v3v3")) {
-                ss.getConfig().set("maxInTeam", 3);
+                ss.getConfig().getYml().set("maxInTeam", 3);
             } else if (input.equalsIgnoreCase("4v4v4v4")) {
-                ss.getConfig().set("maxInTeam", 4);
+                ss.getConfig().getYml().set("maxInTeam", 4);
             }
             int maximum = ss.getConfig().getYml().getInt("maxInTeam", 1);
-            if (ss.getConfig().getYml().getInt("minInTeam", 1) > maximum) {
-                ss.getConfig().set("minInTeam", maximum);
-            }
+            ss.getConfig().getYml().set("minInTeam", maximum);
             List<String> arenaGroups = ArenaGroupMembership.withPrimary(
                     ArenaGroupMembership.read(ss.getConfig().getYml()), input);
             ss.getConfig().getYml().set(ArenaGroupMembership.GROUPS_PATH, arenaGroups);
