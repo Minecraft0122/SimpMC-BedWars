@@ -71,10 +71,11 @@ public class WorldLoadListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onTimeSkip(TimeSkipEvent event) {
-        String worldName = event.getWorld().getName();
-        if (Arena.getArenaByIdentifier(worldName) != null || SetupSession.isSetupWorld(worldName)) {
-            event.setCancelled(true);
-            GameRules.enforceArenaEnvironment(event.getWorld());
+        if (isManagedWorld(event.getWorld())) {
+            // Paper fires this before applying World#setTime. Calling the
+            // environment guard here would publish the same event recursively.
+            event.setCancelled(!GameRules.reachesBedWarsDayTime(
+                    event.getWorld().getFullTime(), event.getSkipAmount()));
         }
     }
 

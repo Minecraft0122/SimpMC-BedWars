@@ -10,6 +10,7 @@ import java.util.Objects;
 public final class GameRules {
 
     static final long BEDWARS_DAY_TIME = 6000L;
+    private static final long TICKS_PER_DAY = 24000L;
 
     private GameRules() {
     }
@@ -52,6 +53,17 @@ public final class GameRules {
         if (world == null) return;
         setBoolean(world, "doDaylightCycle", false);
         if (world.getTime() != BEDWARS_DAY_TIME) world.setTime(BEDWARS_DAY_TIME);
+    }
+
+    /**
+     * Return whether a proposed time skip ends at the fixed BedWars daytime.
+     * Both operands are reduced before addition so corrupt extreme values
+     * cannot overflow and accidentally bypass the time lock.
+     */
+    public static boolean reachesBedWarsDayTime(long currentFullTime, long skipAmount) {
+        long currentDayTime = Math.floorMod(currentFullTime, TICKS_PER_DAY);
+        long skipWithinDay = Math.floorMod(skipAmount, TICKS_PER_DAY);
+        return (currentDayTime + skipWithinDay) % TICKS_PER_DAY == BEDWARS_DAY_TIME;
     }
 
     /**
