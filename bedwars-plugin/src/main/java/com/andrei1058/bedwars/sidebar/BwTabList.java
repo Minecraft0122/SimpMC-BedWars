@@ -47,8 +47,6 @@ import static com.andrei1058.bedwars.BedWars.*;
 
 public class BwTabList {
 
-    private static final char SPECTATOR_PREFIX = 'z';
-    private static final char ELIMINATED_FROM_TEAM_PREFIX = 'z';
     private static final SidebarLine TEAM_COLOR_ONLY_PREFIX = new SidebarLine();
     private static final Comparator<Player> PLAYER_NAME_ORDER = Comparator
             .comparing(Player::getName, String.CASE_INSENSITIVE_ORDER)
@@ -59,17 +57,6 @@ public class BwTabList {
     // Player list container. Used to manipulate deployed player tab: lines ecc.
     // Key is player uuid.
     private final HashMap<UUID, PlayerTab> deployedPerPlayerTabList = new HashMap<>();
-    // playing-restarting team order prefix for tab
-    // this is concatenated to player identifier to keep tab-list ordered
-    // and still let players have individual placeholders
-    private final HashMap<UUID, String> teamOrderPrefix = new HashMap<>();
-    private int teamOrderIndex = 0;
-    // unique string used for tab ordering. Does not track team here.
-    private final HashMap<UUID, String> playerTabIdentifier = new HashMap<>();
-    // used to prevent tab identifier duplication. Keeps an index of concurrent identifiers
-    // concatenated later to playerTabIdentifier
-    private final HashMap<String, Integer> playerTabIdentifierDuplication = new HashMap<>();
-
     private final BwSidebar sidebar;
 
     public BwTabList(BwSidebar sidebar) {
@@ -82,19 +69,15 @@ public class BwTabList {
      */
     void handlePlayerList() {
 
-        // clear existing formatted player tab-lists
-        if (null != sidebar.getHandle()) {
-            deployedPerPlayerTabList.clear();
-            sidebar.getHandle().removeTabs();
-        }
-
         handleHealthIcon();
         requestPlayerListOrderUpdate();
 
         if (this.isTabFormattingDisabled()) {
+            clearDeployedTabs();
             return;
         }
 
+        LinkedHashMap<UUID, Player> desiredPlayers = new LinkedHashMap<>();
         if (null == sidebar.getArena()) {
             // if tab formatting is enabled in lobby world
             if (config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY) &&
@@ -102,19 +85,20 @@ public class BwTabList {
 
                 World lobby = Bukkit.getWorld(config.getLobbyWorldName());
                 if (null == lobby) {
+                    clearDeployedTabs();
                     return;
                 }
-                lobby.getPlayers().forEach(inLobby -> giveUpdateTabFormat(inLobby, true, null));
+                lobby.getPlayers().forEach(inLobby -> desiredPlayers.put(inLobby.getUniqueId(), inLobby));
             }
             // sometimes due to timing issues player is not listed yet in lobby players
-            giveUpdateTabFormat(sidebar.getPlayer(), true, null);
+            desiredPlayers.put(sidebar.getPlayer().getUniqueId(), sidebar.getPlayer());
+            synchronizeTabs(desiredPlayers);
             return;
         }
 
-        handleHealthIcon();
-
-        sidebar.getArena().getPlayers().forEach(playing -> giveUpdateTabFormat(playing, true, null));
-        sidebar.getArena().getSpectators().forEach(spectating -> giveUpdateTabFormat(spectating, true, null));
+        sidebar.getArena().getPlayers().forEach(playing -> desiredPlayers.put(playing.getUniqueId(), playing));
+        sidebar.getArena().getSpectators().forEach(spectating -> desiredPlayers.put(spectating.getUniqueId(), spectating));
+        synchronizeTabs(desiredPlayers);
     }
 
     public void handleHealthIcon() {
@@ -220,17 +204,11 @@ public class BwTabList {
         }
 
         // unique tab list name
-        String playerTabId = getCreatePlayerTabIdentifier(player);
-
-        // clear existing tab formatting for given player
-        PlayerTab playerTab = deployedPerPlayerTabList.getOrDefault(player.getUniqueId(), null);
-        if (null != playerTab) {
-            sidebar.getHandle().removeTab(playerTab.getIdentifier());
-            deployedPerPlayerTabList.remove(player.getUniqueId());
-        }
+        String playerTabId = player.getUniqueId().toString();
 
         if (!skipStateCheck) {
             if (this.isTabFormattingDisabled()) {
+                removeDeployedTab(player.getUniqueId());
                 return;
             }
         }
@@ -278,7 +256,7 @@ public class BwTabList {
                 }
 
                 PlayerTab tab = handle.playerTabCreate(
-                        getPlayerTabIdentifierEliminatedInTeam(exTeam, playerTabId),
+                        playerTabId,
                         player, prefix, suffix, PlayerTab.PushingRule.NEVER,
                         this.sidebar.getPlaceholders(player), getPlayerListColor(exTeam)
                 );
@@ -308,7 +286,7 @@ public class BwTabList {
             }
 
             PlayerTab tab = handle.playerTabCreate(
-                    getPlayerTabIdentifierSpectator(null, playerTabId),
+                    playerTabId,
                     player, prefix, suffix, PlayerTab.PushingRule.NEVER,
                     this.sidebar.getPlaceholders(player)
             );
@@ -320,7 +298,6 @@ public class BwTabList {
         GameState status = arena.getStatus();
         if (status != GameState.playing) {
 
-            String currentTabId = playerTabId;
             ITeam team = arena.getTeam(player);
 
             switch (status) {
@@ -333,8 +310,6 @@ public class BwTabList {
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX, player, null);
                     break;
                 case restarting:
-                    currentTabId = getPlayerTabIdentifierAliveInTeam(team, playerTabId);
-
                     HashMap<String, String> replacements = getTeamReplacements(team);
 
                     prefix = TEAM_COLOR_ONLY_PREFIX;
@@ -344,7 +319,7 @@ public class BwTabList {
                     throw new IllegalStateException("Unhandled game status!");
             }
             PlayerTab t = handle.playerTabCreate(
-                    currentTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
+                    playerTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
                     this.sidebar.getPlaceholders(player), getPlayerListColor(team)
             );
             deployedPerPlayerTabList.put(player.getUniqueId(), t);
@@ -361,13 +336,38 @@ public class BwTabList {
         suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, player, replacements);
 
         PlayerTab teamTab = handle.playerTabCreate(
-                getPlayerTabIdentifierAliveInTeam(team, playerTabId),
+                playerTabId,
                 player, prefix, suffix, PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
-                this.sidebar.getPlaceholders(player), getPlayerListColor(team)
+                this.sidebar.getPlaceholders(player), getPlayerListColor(team),
+                player.hasPotionEffect(PotionEffectType.INVISIBILITY)
+                        ? PlayerTab.NameTagVisibility.NEVER
+                        : PlayerTab.NameTagVisibility.ALWAYS
         );
         deployedPerPlayerTabList.put(player.getUniqueId(), teamTab);
-        if (player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-            teamTab.setNameTagVisibility(PlayerTab.NameTagVisibility.NEVER);
+    }
+
+    private void synchronizeTabs(@NotNull Map<UUID, Player> desiredPlayers) {
+        Set<UUID> onlinePlayers = new HashSet<>();
+        desiredPlayers.forEach((uuid, player) -> {
+            if (player.isOnline()) onlinePlayers.add(uuid);
+        });
+        List<UUID> stale = deployedPerPlayerTabList.keySet().stream()
+                .filter(uuid -> !onlinePlayers.contains(uuid))
+                .toList();
+        stale.forEach(this::removeDeployedTab);
+        desiredPlayers.values().stream()
+                .filter(Player::isOnline)
+                .forEach(player -> giveUpdateTabFormat(player, true, null));
+    }
+
+    private void clearDeployedTabs() {
+        new ArrayList<>(deployedPerPlayerTabList.keySet()).forEach(this::removeDeployedTab);
+    }
+
+    private void removeDeployedTab(@NotNull UUID playerId) {
+        PlayerTab playerTab = deployedPerPlayerTabList.remove(playerId);
+        if (playerTab != null && sidebar.getHandle() != null) {
+            sidebar.getHandle().removeTab(playerTab.getIdentifier());
         }
     }
 
@@ -414,97 +414,6 @@ public class BwTabList {
             lines[i] = strings.get(i);
         }
         return new SidebarLineAnimated(lines);
-    }
-
-    /**
-     * Gets/generates a prefix string to be concatenated to the player tab-list identifier, it keeps tab-list ordered by team.
-     *
-     * @param team target.
-     * @return prefix string.
-     */
-    private String getCreateTeamTabOrderPrefix(@NotNull ITeam team) {
-        String prefix = teamOrderPrefix.getOrDefault(team.getIdentity(), null);
-        if (null == prefix) {
-            teamOrderIndex++;
-            prefix = teamOrderIndex + "";
-            teamOrderPrefix.put(team.getIdentity(), prefix);
-            if (prefix.length() > 3) {
-                throw new RuntimeException("Could not generate new order prefixes. Char limit exceeded. Max value is 999.");
-            }
-
-            // todo how do we clean up index? when arena became null?
-        }
-        return prefix;
-    }
-
-    /**
-     * Get existing or create player unique identifier for tab ordering
-     *
-     * @param player target.
-     * @return unique tab identifier for given player.
-     */
-    private String getCreatePlayerTabIdentifier(@NotNull Player player) {
-        String id = playerTabIdentifier.getOrDefault(player.getUniqueId(), null);
-        if (null == id) {
-            id = player.getName().substring(0, Math.min(player.getName().length(), 9));
-
-            if (hasPlayerIdentifier(id)) {
-                Integer lastDuplicationIndex = playerTabIdentifierDuplication.getOrDefault(id, 0);
-
-                lastDuplicationIndex++;
-                id += lastDuplicationIndex.toString();
-                playerTabIdentifierDuplication.put(id, lastDuplicationIndex);
-            }
-
-            playerTabIdentifier.put(player.getUniqueId(), id);
-        }
-        return id;
-    }
-
-
-    private boolean hasPlayerIdentifier(@NotNull String id) {
-        for (String string : playerTabIdentifier.values()) {
-            if (string.equals(id)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @SuppressWarnings("unused")
-    private @NotNull String getPlayerTabIdentifierAliveInTeam(@Nullable ITeam team, Player player) {
-        return getPlayerTabIdentifierAliveInTeam(team, getCreatePlayerTabIdentifier(player));
-    }
-
-    private @NotNull String getPlayerTabIdentifierAliveInTeam(@Nullable ITeam team, String playerId) {
-        if (team == null) {
-            return getPlayerTabIdentifierSpectator(null, playerId);
-        }
-        return getCreateTeamTabOrderPrefix(team) + playerId;
-    }
-
-    @SuppressWarnings("unused")
-    private @NotNull String getPlayerTabIdentifierEliminatedInTeam(@Nullable ITeam team, Player player) {
-        return getPlayerTabIdentifierEliminatedInTeam(team, getCreatePlayerTabIdentifier(player));
-    }
-
-    private @NotNull String getPlayerTabIdentifierEliminatedInTeam(@Nullable ITeam team, String playerId) {
-        if (team == null) {
-            return SPECTATOR_PREFIX + playerId;
-        }
-        return ELIMINATED_FROM_TEAM_PREFIX + getCreateTeamTabOrderPrefix(team) + playerId;
-    }
-
-    @SuppressWarnings("unused")
-    private @NotNull String getPlayerTabIdentifierSpectator(@Nullable ITeam team, Player player) {
-        return getPlayerTabIdentifierSpectator(team, getCreatePlayerTabIdentifier(player));
-    }
-
-    private @NotNull String getPlayerTabIdentifierSpectator(@Nullable ITeam team, String playerId) {
-        if (null == team) {
-            return SPECTATOR_PREFIX + playerId;
-        }
-        return getPlayerTabIdentifierEliminatedInTeam(team, playerId);
     }
 
     @NotNull HashMap<String, String> getTeamReplacements(@Nullable ITeam team) {
@@ -613,9 +522,5 @@ public class BwTabList {
     public void onSidebarRemoval() {
         sidebar.getHandle().clearLines();
         deployedPerPlayerTabList.clear();
-        playerTabIdentifier.clear();
-        playerTabIdentifierDuplication.clear();
-        teamOrderPrefix.clear();
-        teamOrderIndex = 0;
     }
 }

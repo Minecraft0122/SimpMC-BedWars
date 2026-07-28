@@ -282,6 +282,9 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY,
                 "是否在大厅 TAB 中显示玩家前后缀；默认开启，且不依赖右侧大厅计分板。");
+        setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH,
+                "TAB 动态文字刷新周期，单位为 tick；1200 tick 等于 60 秒，小于 1 时关闭。",
+                "刷新只写入真正变化的文字、颜色或名称可见性；静态内容不会重复发送队伍数据包。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB,
                 "是否在 TAB 玩家列表中额外显示生命值数字。默认关闭，只保留原版网络延迟图标，避免被误认为两个 ping。");
         setComments(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER,

@@ -38,12 +38,22 @@ public class PlayerTab {
     public PlayerTab(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
                      @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
                      @NotNull Collection<PlaceholderProvider> placeholders) {
+        this(identifier, player, prefix, suffix, pushingRule, placeholders,
+                ChatColor.WHITE, NameTagVisibility.ALWAYS);
+    }
+
+    public PlayerTab(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
+                     @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
+                     @NotNull Collection<PlaceholderProvider> placeholders, @NotNull ChatColor color,
+                     @NotNull NameTagVisibility nameTagVisibility) {
         this.identifier = identifier;
         this.player = player;
         this.prefix = prefix;
         this.suffix = suffix;
         this.pushingRule = pushingRule;
         this.placeholders.addAll(placeholders);
+        this.color = color;
+        this.nameTagVisibility = nameTagVisibility;
     }
 
     @NotNull

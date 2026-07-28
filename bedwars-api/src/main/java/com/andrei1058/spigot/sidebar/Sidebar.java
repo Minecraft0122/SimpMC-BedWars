@@ -55,6 +55,8 @@ public class Sidebar {
     private final Map<UUID, Scoreboard> scoreboards = new HashMap<>();
     private final Map<UUID, Scoreboard> previousScoreboards = new HashMap<>();
     private final Map<String, PlayerTab> tabs = new HashMap<>();
+    private final Map<String, String> tabTeamNames = new HashMap<>();
+    private int nextTabTeamId;
     private SidebarLine healthLine = new SidebarLine();
     private boolean healthEnabled = false;
     private boolean healthInTab = false;
@@ -187,6 +189,7 @@ public class Sidebar {
     }
 
     public void removeTabs() {
+        tabs.values().forEach(Sidebar::detachTab);
         tabs.clear();
         scoreboards.values().forEach(Sidebar::removeTabTeams);
     }
@@ -218,10 +221,22 @@ public class Sidebar {
                                      @NotNull SidebarLine suffix, @NotNull PlayerTab.PushingRule pushingRule,
                                      @NotNull ConcurrentLinkedQueue<PlaceholderProvider> placeholders,
                                      @NotNull ChatColor color) {
-        PlayerTab tab = new PlayerTab(identifier, player, prefix, suffix, pushingRule, placeholders);
-        tab.setColor(color);
+        return playerTabCreate(identifier, player, prefix, suffix, pushingRule, placeholders, color,
+                PlayerTab.NameTagVisibility.ALWAYS);
+    }
+
+    @NotNull
+    public PlayerTab playerTabCreate(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
+                                     @NotNull SidebarLine suffix, @NotNull PlayerTab.PushingRule pushingRule,
+                                     @NotNull ConcurrentLinkedQueue<PlaceholderProvider> placeholders,
+                                     @NotNull ChatColor color,
+                                     @NotNull PlayerTab.NameTagVisibility nameTagVisibility) {
+        PlayerTab tab = new PlayerTab(identifier, player, prefix, suffix, pushingRule, placeholders,
+                color, nameTagVisibility);
         tab.setUpdateCallback(this::applyTabToAll);
-        tabs.put(identifier, tab);
+        PlayerTab previous = tabs.put(identifier, tab);
+        if (previous != null) previous.setUpdateCallback(ignored -> {
+        });
         applyTabToAll(tab);
         return tab;
     }
@@ -231,6 +246,7 @@ public class Sidebar {
         if (tab == null) {
             return;
         }
+        detachTab(tab);
         String teamName = teamName(identifier);
         scoreboards.values().forEach(scoreboard -> {
             Team team = scoreboard.getTeam(teamName);
@@ -325,21 +341,26 @@ public class Sidebar {
         scoreboards.values().forEach(scoreboard -> applyTab(scoreboard, tab));
     }
 
-    private void applyTab(@NotNull Scoreboard scoreboard, @NotNull PlayerTab tab) {
+    void applyTab(@NotNull Scoreboard scoreboard, @NotNull PlayerTab tab) {
         Team team = scoreboard.getTeam(teamName(tab.getIdentifier()));
         if (team == null) {
             team = scoreboard.registerNewTeam(teamName(tab.getIdentifier()));
         }
 
-        team.prefix(component(renderText(tab.getPrefix(), tab.getPlaceholders())));
-        team.suffix(component(renderText(tab.getSuffix(), tab.getPlaceholders())));
-        team.setColor(tab.getColor());
-        team.setOption(
-                Team.Option.NAME_TAG_VISIBILITY,
-                tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER
-                        ? Team.OptionStatus.NEVER
-                        : Team.OptionStatus.ALWAYS
-        );
+        Component prefix = component(renderText(tab.getPrefix(), tab.getPlaceholders()));
+        if (!team.prefix().equals(prefix)) team.prefix(prefix);
+
+        Component suffix = component(renderText(tab.getSuffix(), tab.getPlaceholders()));
+        if (!team.suffix().equals(suffix)) team.suffix(suffix);
+
+        if (team.getColor() != tab.getColor()) team.setColor(tab.getColor());
+
+        Team.OptionStatus visibility = tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER
+                ? Team.OptionStatus.NEVER
+                : Team.OptionStatus.ALWAYS;
+        if (team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
+            team.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
+        }
         if (!team.hasEntry(tab.getPlayer().getName())) {
             team.addEntry(tab.getPlayer().getName());
         }
@@ -369,8 +390,16 @@ public class Sidebar {
         }
     }
 
-    private static String teamName(@NotNull String identifier) {
-        return TAB_TEAM_PREFIX + Integer.toHexString(identifier.hashCode());
+    String teamName(@NotNull String identifier) {
+        // A per-sidebar monotonic id is stable and cannot collide. String.hashCode based names
+        // could merge two unrelated players into one scoreboard team and corrupt client state.
+        return tabTeamNames.computeIfAbsent(identifier,
+                ignored -> TAB_TEAM_PREFIX + Integer.toString(nextTabTeamId++, Character.MAX_RADIX));
+    }
+
+    private static void detachTab(@NotNull PlayerTab tab) {
+        tab.setUpdateCallback(ignored -> {
+        });
     }
 
     static String renderText(@NotNull SidebarLine line, @NotNull Collection<PlaceholderProvider> placeholders) {

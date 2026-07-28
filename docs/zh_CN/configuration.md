@@ -43,6 +43,7 @@ TAB 相关常用项：
 - `scoreboard-settings.tab-header-footer.enable`：显示 TAB 顶部和底部内容，默认开启，且不依赖右侧大厅计分板。
 - `scoreboard-settings.tab-header-footer.lobby-header`：仅配置大厅 TAB 顶部文字。空列表沿用语言文件中的默认 128 空格宽度模板；非空时逐行填写，系统仍会自动保留内置宽度行。支持 `&` 颜色代码和 `{serverIp}`、`{on}` 等占位符，大厅页尾及竞技场各状态不会被覆盖。
 - `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，默认开启。
+- `scoreboard-settings.player-list.names-refresh-interval`：TAB 动态文字刷新周期，默认 `1200` tick（60 秒），小于 1 时关闭。2.10.48 起刷新只写入真正发生变化的前后缀、颜色或名称可见性；静态 TAB 保持开启时不会再周期发送重复队伍数据包。
 - 游戏进行时，玩家列表和玩家头顶名字只使用其所属队伍颜色渲染玩家名本身，名字前不再添加队伍名称或队伍字母；同队玩家连续显示并按玩家名字典序排列，淘汰玩家仍留在原队伍分组，格式为 `&7[&c已淘汰&7] <队伍颜色><玩家名>`；旧 `teammate-color` 配置会自动删除。简体中文语言配置架构 10 会自动迁移仍等于插件旧默认值的 TAB 前后缀，其他自定义文本保持不变。
 - `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制；旁观玩家在两处都不显示生命值。
 - 正式开局时就为空的队伍不会出现在游戏中或重置阶段的侧边栏；参战后被淘汰的队伍仍保留。这同时适用于通用 `{team}` 行和显式 `{Team<队伍>...}` 占位符行。
