@@ -64,7 +64,7 @@ TAB 相关常用项：
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
-- `game-rules`：`规则:值` 列表。竞技场会持续锁定正午 `6000 tick`、晴天、`doDaylightCycle:false`、`doWeatherCycle:false`、`doMobSpawning:false` 和 `randomTickSpeed:0`。树叶腐烂、作物生长、草地/蘑菇蔓延、结冰融化等自然方块变化会被阻止；运行时每秒校正被其他插件改动的规则。插件只放行最终到达 6000 tick 的时间跳跃，其余跳跃会被取消且不会递归触发时间事件。Locator Bar 仍在插件启动及所有世界初始化、加载时强制关闭。
+- `game-rules`：`规则:值` 列表。竞技场初始化时一次性设置固定时间 `12000 tick`、晴天、`doDaylightCycle:false`、`doWeatherCycle:false`、`doMobSpawning:false` 和 `randomTickSpeed:0`。不再每秒遍历竞技场或反复读写游戏规则；后续偏离 12000 tick 的时间跳跃、开始下雨和开始打雷均由对应事件直接取消，清除天气的事件允许通过。树叶腐烂、作物生长、草地/蘑菇蔓延、结冰融化等自然方块变化仍会被阻止。Locator Bar 仍在插件启动及所有世界初始化、加载时强制关闭。
 - `waiting`、`spectator-loc`：等待和观战标点。
 - `Team`：所有队伍的颜色、出生点、床、NPC 和岛屿生成器。
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。

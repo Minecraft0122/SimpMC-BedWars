@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -35,6 +36,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
+import org.bukkit.event.weather.ThunderChangeEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 
 import static com.andrei1058.bedwars.BedWars.*;
@@ -84,15 +86,22 @@ public class HungerWeatherSpawn implements Listener {
 
     @EventHandler
     public void onWeatherChange(WeatherChangeEvent e) {
-        if (e.toWeatherState()) {
-            if (getServerType() == ServerType.SHARED) {
-                if (Arena.getArenaByIdentifier(e.getWorld().getName()) != null) {
-                    e.setCancelled(true);
-                }
-            } else {
-                e.setCancelled(true);
-            }
-        }
+        if (e.toWeatherState() && isWeatherLocked(e.getWorld())) e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onThunderChange(ThunderChangeEvent e) {
+        if (e.toThunderState() && isWeatherLocked(e.getWorld())) e.setCancelled(true);
+    }
+
+    private static boolean isWeatherLocked(World world) {
+        String worldName = world.getName();
+        return shouldLockWeather(getServerType(), Arena.getArenaByIdentifier(worldName) != null,
+                SetupSession.isSetupWorld(worldName));
+    }
+
+    static boolean shouldLockWeather(ServerType serverType, boolean arenaWorld, boolean setupWorld) {
+        return serverType != ServerType.SHARED || arenaWorld || setupWorld;
     }
 
     @EventHandler

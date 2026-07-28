@@ -9,7 +9,7 @@ import java.util.Objects;
 
 public final class GameRules {
 
-    static final long BEDWARS_DAY_TIME = 6000L;
+    static final long BEDWARS_FIXED_TIME = 12000L;
     private static final long TICKS_PER_DAY = 24000L;
 
     private GameRules() {
@@ -47,23 +47,23 @@ public final class GameRules {
     }
 
     /**
-     * Keep setup and live arena worlds at the fixed BedWars daytime.
+     * Set the requested fixed time once and disable vanilla time progression.
      */
-    public static void enforceDaytime(World world) {
+    public static void enforceFixedTime(World world) {
         if (world == null) return;
         setBoolean(world, "doDaylightCycle", false);
-        if (world.getTime() != BEDWARS_DAY_TIME) world.setTime(BEDWARS_DAY_TIME);
+        if (world.getTime() != BEDWARS_FIXED_TIME) world.setTime(BEDWARS_FIXED_TIME);
     }
 
     /**
-     * Return whether a proposed time skip ends at the fixed BedWars daytime.
+     * Return whether a proposed time skip ends at the fixed BedWars time.
      * Both operands are reduced before addition so corrupt extreme values
      * cannot overflow and accidentally bypass the time lock.
      */
-    public static boolean reachesBedWarsDayTime(long currentFullTime, long skipAmount) {
+    public static boolean reachesBedWarsFixedTime(long currentFullTime, long skipAmount) {
         long currentDayTime = Math.floorMod(currentFullTime, TICKS_PER_DAY);
         long skipWithinDay = Math.floorMod(skipAmount, TICKS_PER_DAY);
-        return (currentDayTime + skipWithinDay) % TICKS_PER_DAY == BEDWARS_DAY_TIME;
+        return (currentDayTime + skipWithinDay) % TICKS_PER_DAY == BEDWARS_FIXED_TIME;
     }
 
     /**
@@ -75,15 +75,14 @@ public final class GameRules {
     }
 
     /**
-     * Re-apply the non-negotiable BedWars world environment. This method is
-     * intentionally idempotent so it can also be used by the periodic guard.
+     * Apply the non-negotiable BedWars environment when a world or arena is initialized.
      */
     public static void enforceArenaEnvironment(World world) {
         if (world == null) return;
         setBoolean(world, "doMobSpawning", false);
         setBoolean(world, "doWeatherCycle", false);
         disableNaturalBlockTicks(world);
-        enforceDaytime(world);
+        enforceFixedTime(world);
         disableFireSpread(world);
         disableLocatorBar(world);
         if (world.hasStorm()) world.setStorm(false);

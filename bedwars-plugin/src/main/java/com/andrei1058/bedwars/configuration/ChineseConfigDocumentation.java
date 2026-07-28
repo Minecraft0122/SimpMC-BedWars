@@ -99,7 +99,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.ARENA_NORMAL_DEATH_DROPS, "是否使用原版死亡掉落；关闭时由插件管理资源掉落。");
         comment(config, ConfigPath.ARENA_USE_BED_HOLO, "是否在床上方显示床状态全息文字。");
         comment(config, ConfigPath.ARENA_ALLOW_MAP_BREAK, "是否允许破坏地图原有方块；关闭时通常只能破坏玩家放置的方块。");
-        comment(config, ConfigPath.ARENA_GAME_RULES, "进入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场始终固定为正午 6000 tick，并阻止昼夜、天气、随机方块刻、火势蔓延、生物自然生成和 Locator Bar。", "randomTickSpeed 固定为 0，可阻止树叶腐烂、作物生长等自然变化；这些规则由运行时守卫持续校正。");
+        comment(config, ConfigPath.ARENA_GAME_RULES, "进入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场初始化时把时间固定为 12000 tick，并阻止昼夜、天气、随机方块刻、火势蔓延、生物自然生成和 Locator Bar。", "后续时间、下雨和雷暴变化由事件直接取消，不使用周期扫描；randomTickSpeed 固定为 0。");
         comment(config, "waiting.Loc", "等待大厅出生坐标，使用 x.5,y,z.5 的方块中心格式。");
         comment(config, ConfigPath.ARENA_WAITING_FACING, "进入等待大厅时使用的朝向；yaw 自动取最近的 90 度倍数，pitch 固定为 0。");
         comment(config, ConfigPath.ARENA_WAITING_POS1, "开局后移除地图内等待大厅区域的第一个角点。");

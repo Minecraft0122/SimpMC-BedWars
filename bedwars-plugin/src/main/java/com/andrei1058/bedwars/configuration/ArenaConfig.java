@@ -39,7 +39,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 17;
+    private static final int CONFIG_VERSION = 18;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -89,7 +89,7 @@ public class ArenaConfig extends ConfigManager {
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
-        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场始终固定为正午 6000 tick，并强制禁止昼夜、天气、随机方块刻、火势蔓延、生物自然生成和 Locator Bar。", "randomTickSpeed 固定为 0，可阻止树叶腐烂、作物生长等自然变化；旧配置会自动迁移。");
+        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场初始化时把时间固定为 12000 tick，并禁止昼夜、天气、随机方块刻、火势蔓延、生物自然生成和 Locator Bar。", "后续时间、下雨和雷暴变化由事件直接取消，不使用周期扫描；randomTickSpeed 固定为 0。");
         ChineseConfigDocumentation.arena(this);
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 

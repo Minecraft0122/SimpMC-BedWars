@@ -39,13 +39,13 @@ import org.bukkit.event.world.WorldLoadEvent;
 
 import java.util.LinkedList;
 
-import static com.andrei1058.bedwars.BedWars.plugin;
-
 public class WorldLoadListener implements Listener {
 
     public WorldLoadListener() {
-        Bukkit.getWorlds().forEach(GameRules::disableLocatorBar);
-        Bukkit.getScheduler().runTaskTimer(plugin, this::enforceManagedWorlds, 20L, 20L);
+        for (World world : Bukkit.getWorlds()) {
+            GameRules.disableLocatorBar(world);
+            if (isManagedWorld(world)) GameRules.enforceArenaEnvironment(world);
+        }
     }
 
     @EventHandler
@@ -74,7 +74,7 @@ public class WorldLoadListener implements Listener {
         if (isManagedWorld(event.getWorld())) {
             // Paper fires this before applying World#setTime. Calling the
             // environment guard here would publish the same event recursively.
-            event.setCancelled(!GameRules.reachesBedWarsDayTime(
+            event.setCancelled(!GameRules.reachesBedWarsFixedTime(
                     event.getWorld().getFullTime(), event.getSkipAmount()));
         }
     }
@@ -102,13 +102,6 @@ public class WorldLoadListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBlockForm(BlockFormEvent event) {
         if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
-    }
-
-    private void enforceManagedWorlds() {
-        Arena.getArenas().stream().map(IArena::getWorld).forEach(GameRules::enforceArenaEnvironment);
-        SetupSession.getSetupSessions().stream()
-                .map(session -> Bukkit.getWorld(session.getWorldName()))
-                .forEach(GameRules::enforceArenaEnvironment);
     }
 
     private static boolean isManagedWorld(World world) {
