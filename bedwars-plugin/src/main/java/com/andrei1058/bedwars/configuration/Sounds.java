@@ -93,7 +93,7 @@ public class Sounds {
         sounds.setComments("game-end", "声音配置：sound 为 Bukkit 声音名称，volume 为音量，pitch 为音调。", "如需关闭某个提示音，可将调用该声音的配置设为 none。");
         ChineseConfigDocumentation.sounds(sounds);
 
-        sounds.updateToLatestVersion(3, config -> {
+        sounds.updateToLatestVersion(4, config -> {
             config.set("bought", null);
             config.set("insufficient-money", null);
             config.set("player-kill", null);

@@ -75,7 +75,7 @@ public class LevelsConfig extends ConfigManager {
         levels.setComments("xp-rewards", "各类游戏行为奖励的经验值。");
         levels.setComments("progress-bar", "经验进度条的字符、颜色与显示格式。");
         ChineseConfigDocumentation.levels(levels);
-        levels.updateToLatestVersion(3);
+        levels.updateToLatestVersion(4);
     }
 
     @NotNull

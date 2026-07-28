@@ -148,7 +148,7 @@ public class UpgradesConfig extends ConfigManager {
         setComments("upgrade-swords", "升级项由价格、货币、显示物品和 receive 动作组成。");
         setComments("category-traps", "陷阱分类菜单内容及槽位。");
         ChineseConfigDocumentation.upgrades(this);
-        updateToLatestVersion(4, UpgradesConfig::migrateLegacyForgeDefaults);
+        updateToLatestVersion(5, UpgradesConfig::migrateLegacyForgeDefaults);
     }
 
     static void migrateLegacyForgeDefaults(YamlConfiguration yml) {

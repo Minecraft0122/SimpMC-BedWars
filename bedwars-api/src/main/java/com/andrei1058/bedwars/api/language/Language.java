@@ -113,7 +113,7 @@ public class Language extends ConfigManager {
         // after registering their defaults.
         addChineseDocumentation();
         if (getClass() == Language.class) {
-            updateToLatestVersion(2, Language::migrateLegacyTowerShopItem);
+            updateToLatestVersion(3, Language::migrateLegacyTowerShopItem);
             save();
         }
         languages.add(this);

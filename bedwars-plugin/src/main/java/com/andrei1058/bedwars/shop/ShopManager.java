@@ -42,7 +42,7 @@ import org.bukkit.plugin.PluginManager;
 @SuppressWarnings("WeakerAccess")
 public class ShopManager extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 5;
+    private static final int CONFIG_VERSION = 6;
 
     public static ShopIndex shop;
 

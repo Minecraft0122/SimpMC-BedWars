@@ -22,6 +22,7 @@ package com.andrei1058.bedwars.api.configuration;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
@@ -30,7 +31,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -174,7 +179,94 @@ public class ConfigManager {
         configuration.options().copyDefaults(true);
         configuration.set(CONFIG_VERSION_PATH, latestVersion);
         configuration.setComments(CONFIG_VERSION_PATH, List.of("配置文件架构版本，请勿手动修改。"));
+        reorderToDefaultStructure(configuration);
         return true;
+    }
+
+    /**
+     * Rebuild a migrated YAML tree in the order of the current defaults. New
+     * keys are therefore placed beside their related settings instead of at
+     * the end of the file. Unknown administrator or add-on keys are preserved
+     * after the known keys in their original section and order.
+     */
+    static void reorderToDefaultStructure(YamlConfiguration configuration) {
+        if (configuration == null) return;
+
+        Set<String> documentedPaths = new LinkedHashSet<>(configuration.getKeys(true));
+        documentedPaths.add(CONFIG_VERSION_PATH);
+        Map<String, Comments> comments = new LinkedHashMap<>();
+        for (String path : documentedPaths) {
+            List<String> block = List.copyOf(configuration.getComments(path));
+            List<String> inline = List.copyOf(configuration.getInlineComments(path));
+            if (!block.isEmpty() || !inline.isEmpty()) comments.put(path, new Comments(block, inline));
+        }
+
+        LinkedHashMap<String, Object> current = snapshot(configuration);
+        LinkedHashMap<String, Object> defaults = configuration.getDefaults() == null
+                ? new LinkedHashMap<>()
+                : snapshot(configuration.getDefaults());
+        LinkedHashMap<String, Object> ordered = order(current, defaults, true);
+
+        for (String key : new ArrayList<>(configuration.getKeys(false))) {
+            configuration.set(key, null);
+        }
+        write(configuration, ordered);
+
+        comments.forEach((path, value) -> {
+            if (!configuration.contains(path, true)) return;
+            if (!value.block().isEmpty()) configuration.setComments(path, value.block());
+            if (!value.inline().isEmpty()) configuration.setInlineComments(path, value.inline());
+        });
+    }
+
+    private static LinkedHashMap<String, Object> snapshot(ConfigurationSection section) {
+        LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+        for (String key : section.getKeys(false)) {
+            ConfigurationSection child = section.getConfigurationSection(key);
+            values.put(key, child == null ? section.get(key) : snapshot(child));
+        }
+        return values;
+    }
+
+    private static LinkedHashMap<String, Object> order(Map<String, Object> current,
+                                                        Map<String, Object> defaults, boolean root) {
+        LinkedHashMap<String, Object> ordered = new LinkedHashMap<>();
+        if (root && current.containsKey(CONFIG_VERSION_PATH)) {
+            ordered.put(CONFIG_VERSION_PATH, current.get(CONFIG_VERSION_PATH));
+        }
+
+        defaults.forEach((key, defaultValue) -> {
+            if (root && key.equals(CONFIG_VERSION_PATH)) return;
+            Object currentValue = current.getOrDefault(key, defaultValue);
+            ordered.put(key, orderNested(currentValue, defaultValue));
+        });
+        current.forEach((key, value) -> {
+            if ((root && key.equals(CONFIG_VERSION_PATH)) || ordered.containsKey(key)) return;
+            ordered.put(key, value);
+        });
+        return ordered;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object orderNested(Object current, Object defaults) {
+        if (current instanceof Map<?, ?> currentMap && defaults instanceof Map<?, ?> defaultMap) {
+            return order((Map<String, Object>) currentMap, (Map<String, Object>) defaultMap, false);
+        }
+        return current;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void write(ConfigurationSection target, Map<String, Object> values) {
+        values.forEach((key, value) -> {
+            if (value instanceof Map<?, ?> map) {
+                write(target.createSection(key), (Map<String, Object>) map);
+            } else {
+                target.set(key, value);
+            }
+        });
+    }
+
+    private record Comments(List<String> block, List<String> inline) {
     }
 
     /**

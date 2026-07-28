@@ -26,6 +26,6 @@ public class MoneyConfig extends ConfigManager {
         money.getYml ().addDefault ( "money-rewards.regular-kill", 10 );
         money.setComments("money-rewards", "Vault 桥接层与经济服务提供者均可用时，各类游戏行为奖励的金币数量。");
         ChineseConfigDocumentation.rewards(money);
-        money.updateToLatestVersion(3);
+        money.updateToLatestVersion(4);
     }
 }

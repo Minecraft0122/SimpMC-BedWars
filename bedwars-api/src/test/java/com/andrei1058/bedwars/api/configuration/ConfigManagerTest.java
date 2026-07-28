@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,6 +66,43 @@ class ConfigManagerTest {
                 yml -> yml.set("must-not-run", true)));
         assertFalse(configuration.contains("must-not-run"));
         assertTrue(configuration.saveToString().contains("配置文件架构版本"));
+    }
+
+    @Test
+    void migrationPlacesNewKeysWithTheirDefaultSectionInsteadOfAtTheEnd() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set("database.host", "custom-host");
+        configuration.set("database.port", 3306);
+        configuration.set("database.addon-option", "keep-me");
+        configuration.set("unrelated-custom", true);
+        configuration.setComments("database.addon-option", List.of("管理员自定义项"));
+
+        configuration.addDefault("database.host", "localhost");
+        configuration.addDefault("database.pool-size", 10);
+        configuration.addDefault("database.port", 3306);
+        configuration.addDefault("game.enabled", true);
+
+        assertTrue(ConfigManager.applyVersionedMigration(configuration, 3, ignored -> {
+        }));
+
+        String saved = configuration.saveToString();
+        assertOrdered(saved, "config-version:", "database:", "  host:", "  pool-size:",
+                "  port:", "  addon-option:", "game:", "unrelated-custom:");
+        assertEquals("custom-host", configuration.getString("database.host"));
+        assertEquals("keep-me", configuration.getString("database.addon-option"));
+        assertEquals(List.of("管理员自定义项"), configuration.getComments("database.addon-option"));
+    }
+
+    @Test
+    void migrationKeepsVersionFirstWhenNoDefaultTemplateExists() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set("custom.first", 1);
+        configuration.set("custom.second", 2);
+
+        assertTrue(ConfigManager.applyVersionedMigration(configuration, 2, ignored -> {
+        }));
+
+        assertOrdered(configuration.saveToString(), "config-version:", "custom:", "  first:", "  second:");
     }
 
     @Test
@@ -130,6 +168,16 @@ class ConfigManagerTest {
                     case "hashCode" -> System.identityHashCode(proxy);
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
+    }
+
+    private static void assertOrdered(String text, String... fragments) {
+        int previous = -1;
+        for (String fragment : fragments) {
+            int current = text.indexOf(fragment);
+            assertTrue(current > previous, "Expected '" + fragment + "' after index " + previous
+                    + " in:\n" + text);
+            previous = current;
+        }
     }
 
 }
