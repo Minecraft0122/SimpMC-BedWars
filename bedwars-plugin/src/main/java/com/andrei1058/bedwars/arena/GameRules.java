@@ -9,7 +9,8 @@ import java.util.Objects;
 
 public final class GameRules {
 
-    static final long BEDWARS_FIXED_TIME = 12000L;
+    /** Equivalent to the vanilla command {@code /time set noon}. */
+    static final long VANILLA_NOON_TIME = 6000L;
     private static final long TICKS_PER_DAY = 24000L;
 
     private GameRules() {
@@ -52,7 +53,7 @@ public final class GameRules {
     public static void enforceFixedTime(World world) {
         if (world == null) return;
         setBoolean(world, "doDaylightCycle", false);
-        if (world.getTime() != BEDWARS_FIXED_TIME) world.setTime(BEDWARS_FIXED_TIME);
+        if (world.getTime() != VANILLA_NOON_TIME) world.setTime(VANILLA_NOON_TIME);
     }
 
     /**
@@ -63,7 +64,7 @@ public final class GameRules {
     public static boolean reachesBedWarsFixedTime(long currentFullTime, long skipAmount) {
         long currentDayTime = Math.floorMod(currentFullTime, TICKS_PER_DAY);
         long skipWithinDay = Math.floorMod(skipAmount, TICKS_PER_DAY);
-        return (currentDayTime + skipWithinDay) % TICKS_PER_DAY == BEDWARS_FIXED_TIME;
+        return (currentDayTime + skipWithinDay) % TICKS_PER_DAY == VANILLA_NOON_TIME;
     }
 
     /**
