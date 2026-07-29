@@ -33,17 +33,22 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class TeamAssigner implements ITeamAssigner {
 
     public static boolean canFormValidTeams(IArena arena) {
-        if (!ArenaStartPolicy.hasReachedMaximumPlayerCount(arena.getPlayers().size(), arena.getMaxPlayers())) {
-            return false;
-        }
         List<List<Player>> groups = PreGameSquadManager.getInstance().getAssignmentGroups(arena);
-        return !TeamAllocationPlanner.allocateWithMinimum(groups, arena.getTeams().size(),
-                arena.getMinInTeam(), arena.getMaxInTeam(), ThreadLocalRandom.current()).isEmpty();
+        return canFormValidGroups(groups, arena.getTeams().size(), arena.getMinInTeam(),
+                arena.getMaxInTeam(), ThreadLocalRandom.current());
+    }
+
+    static <T> boolean canFormValidGroups(List<List<T>> groups, int configuredTeamCount,
+                                          int minimumInTeam, int maximumInTeam,
+                                          Random random) {
+        return !TeamAllocationPlanner.allocateWithMinimum(groups, configuredTeamCount,
+                minimumInTeam, maximumInTeam, random).isEmpty();
     }
 
     @Override

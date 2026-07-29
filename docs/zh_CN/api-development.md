@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.10.53</version>
+    <version>2.10.54</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -56,7 +56,7 @@ int playersAtStart = arena.getTeamSizeAtGameStart(firstTeam);
 
 `getActiveTeamsAtGameStart()` 与 `getTeamSizeAtGameStart(ITeam)` 都是开局瞬间的快照，因此队伍后续被淘汰、玩家掉线或重连不会改变结果。第三方 `IArena` 实现若不覆盖这些方法，会分别返回全部配置队伍和队伍当前人数，以保持二进制兼容。
 
-`IArena#getMinInTeam()` 返回当前竞技场每队容量对应的自动下限。内置竞技场中该值始终等于 `getMaxInTeam()`，正常匹配只有达到 `getMaxPlayers()` 才开始；`/bw start debug` 仍可绕过满员和双队限制。第三方旧实现无需立即修改，接口默认返回 `1`。
+`IArena#getMinInTeam()` 返回每支启用队伍正常开局所需的最少人数，`getMaxInTeam()` 返回容量。只要分配器能够组成至少两支人数位于该范围内的队伍即可开局，不要求达到 `getMaxPlayers()`；未被本局选中的配置队伍可以为空。`/bw start debug` 仍可绕过双队限制。第三方旧实现无需立即修改，接口默认返回 `1`。
 
 2.10.47 起竞技场可以属于多个匹配分组：
 

@@ -110,6 +110,21 @@ class TeamAllocationPlannerTest {
         assertTrue(allocation.isEmpty());
     }
 
+    @Test
+    void startsTwoSoloTeamsBeforeTheArenaIsFull() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                List.of(List.of("A"), List.of("B")),
+                4,
+                1,
+                2,
+                new Random(19)
+        );
+
+        assertEquals(2, allocation.size());
+        assertTrue(allocation.stream().allMatch(team -> team.size() == 1));
+        assertEquals(Set.of("A", "B"), flatten(allocation));
+    }
+
     private static Set<String> flatten(List<List<String>> allocation) {
         Set<String> players = new HashSet<>();
         allocation.forEach(players::addAll);

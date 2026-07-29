@@ -52,7 +52,9 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_TNT_AUTO_IGNITE, "TNT 放置后是否自动点燃，以及引信持续 tick 数。");
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
                 "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, "火球飞行速度倍率。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, "普通投掷的火球飞行速度；默认 11，比旧默认值 10 飞得稍远。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, "潜行投掷的额外速度倍率；默认 1.25。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, "潜行投掷时给予发射者的水平后坐速度；默认 0.05，插件硬限制最大 0.08。", "按原版空气阻力的低摩擦情况估算，单次后坐约半格且不足一格；不创建逐 tick 跟踪任务。");
         comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否在命中处生成火焰；竞技场始终禁止火势向周围蔓延。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.20 默认值略微降低为 1.15。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, "火球垂直击退强度；2.10.20 默认值略微降低为 0.75。");
@@ -83,8 +85,8 @@ public final class ChineseConfigDocumentation {
     public static void arena(ConfigManager config) {
         comment(config, "groups", "竞技场所属的全部匹配分组；可以同时填写多个。", "第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。", "旧版 group 字段会自动迁移并删除。");
         comment(config, ConfigPath.ARENA_DISPLAY_NAME, "玩家可见名称；留空时使用竞技场世界名。");
-        comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数；所有设置模式均可使用 /bw setMaxInTeam 修改。", "正常游戏的最少总人数自动等于竞技场最大人数，满员后才开始；调试开局不受此限制。");
-        comment(config, "minInTeam", "兼容旧配置的自动值；每次迁移及设置容量时都会同步为 maxInTeam，请勿手动修改。");
+        comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数；所有设置模式均可使用 /bw setMaxInTeam 修改。", "在设置会话中修改容量时，minInTeam 会先自动同步为相同值；随后可用 /bw setMinInTeam 单独调整。");
+        comment(config, "minInTeam", "每支启用队伍正常开局所需的最少人数，范围为 1..maxInTeam。", "已有竞技场载入和配置迁移不会覆盖此值；至少两支队伍达标即可开始，无需竞技场满员。");
         comment(config, "allowSpectate", "是否允许玩家在游戏开始后进入观战。");
         comment(config, ConfigPath.ARENA_SPAWN_PROTECTION, "队伍出生点保护半径，单位为方块。");
         comment(config, ConfigPath.ARENA_SHOP_PROTECTION, "商店 NPC 周围保护半径，最小为 1 格；按方块坐标对称保护。");

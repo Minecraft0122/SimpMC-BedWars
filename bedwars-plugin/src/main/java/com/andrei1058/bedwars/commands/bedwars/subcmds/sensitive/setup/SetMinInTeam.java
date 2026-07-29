@@ -20,6 +20,7 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 public final class SetMinInTeam extends SubCommand {
 
@@ -40,15 +41,26 @@ public final class SetMinInTeam extends SubCommand {
         }
 
         int maximum = Math.max(1, session.getConfig().getYml().getInt("maxInTeam", 1));
-        session.getConfig().set("minInTeam", maximum);
-        player.sendMessage("§6 ▪ §7最少人数现已自动等于竞技场最大人数 §e"
-                + (maximum * session.getTeams().size()) + "§7；请使用 /bw setMaxInTeam 修改容量。");
+        int minimum;
+        try {
+            minimum = args.length == 0 ? 0 : Integer.parseInt(args[0]);
+        } catch (NumberFormatException exception) {
+            minimum = 0;
+        }
+        if (minimum < 1 || minimum > maximum) {
+            player.sendMessage("§c▪ §7每队最少人数必须在 §e1§7 到 §e" + maximum + "§7 之间。");
+            player.sendMessage("§c▪ §7用法：/" + getParent().getName() + " setMinInTeam <整数>");
+            return true;
+        }
+        session.getConfig().set("minInTeam", minimum);
+        player.sendMessage("§6 ▪ §7已设置每支启用队伍最少需要 §e" + minimum
+                + "§7 人；至少两支队伍达标后即可开始匹配。");
         return true;
     }
 
     @Override
     public List<String> getTabComplete() {
-        return List.of();
+        return IntStream.rangeClosed(1, 16).mapToObj(String::valueOf).toList();
     }
 
     @Override

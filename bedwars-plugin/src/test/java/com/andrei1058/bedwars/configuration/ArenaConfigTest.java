@@ -57,39 +57,15 @@ class ArenaConfigTest {
     }
 
     @Test
-    void clampsMinimumTeamSizeToTheConfiguredCapacity() {
+    void migrationPreservesExistingTeamLimits() {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("maxInTeam", 3);
-        config.set("minInTeam", 8);
-
-        ArenaConfig.normalizeTeamLimits(config);
-
-        assertEquals(3, config.getInt("maxInTeam"));
-        assertEquals(3, config.getInt("minInTeam"));
-    }
-
-    @Test
-    void repairsNonPositiveTeamLimits() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("maxInTeam", 0);
-        config.set("minInTeam", -2);
-
-        ArenaConfig.normalizeTeamLimits(config);
-
-        assertEquals(1, config.getInt("maxInTeam"));
-        assertEquals(1, config.getInt("minInTeam"));
-    }
-
-    @Test
-    void synchronizesMinimumTeamSizeToCapacity() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("maxInTeam", 4);
+        config.set("maxInTeam", 2);
         config.set("minInTeam", 1);
 
-        ArenaConfig.normalizeTeamLimits(config);
+        ArenaConfig.migrateLegacyConfig(null, config);
 
-        assertEquals(4, config.getInt("maxInTeam"));
-        assertEquals(4, config.getInt("minInTeam"));
+        assertEquals(2, config.getInt("maxInTeam"));
+        assertEquals(1, config.getInt("minInTeam"));
     }
 
     @Test

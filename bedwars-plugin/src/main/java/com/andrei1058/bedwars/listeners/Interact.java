@@ -71,11 +71,16 @@ public class Interact implements Listener {
     private static final Set<UUID> pendingReturnActions = new HashSet<>();
 
     private final double fireballSpeedMultiplier;
+    private final double fireballSneakSpeedMultiplier;
+    private final double fireballSneakRecoil;
     private final double fireballCooldown;
     private final float fireballExplosionSize;
 
     public Interact() {
         this.fireballSpeedMultiplier = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER);
+        this.fireballSneakSpeedMultiplier = config.getYml().getDouble(
+                ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER);
+        this.fireballSneakRecoil = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL);
         this.fireballCooldown = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_COOLDOWN);
         this.fireballExplosionSize = (float) config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE);
     }
@@ -305,7 +310,14 @@ public class Interact implements Listener {
                             Fireball fb = p.launchProjectile(Fireball.class);
                             Vector direction = p.getEyeLocation().getDirection();
                             fb = nms.setFireballDirection(fb, direction);
-                            fb.setVelocity(fb.getDirection().multiply(fireballSpeedMultiplier));
+                            boolean sneaking = p.isSneaking();
+                            double launchSpeed = FireballLaunchPhysics.launchSpeed(
+                                    fireballSpeedMultiplier, sneaking, fireballSneakSpeedMultiplier);
+                            fb.setVelocity(fb.getDirection().multiply(launchSpeed));
+                            if (sneaking) {
+                                p.setVelocity(p.getVelocity().add(
+                                        FireballLaunchPhysics.sneakRecoil(direction, fireballSneakRecoil)));
+                            }
                             //fb.setIsIncendiary(false); // apparently this on <12 makes the fireball not explode on hit. wtf bukkit?
                             fb.setYield(fireballExplosionSize);
                             fb.setMetadata("bw1058", new FixedMetadataValue(plugin, "ceva"));

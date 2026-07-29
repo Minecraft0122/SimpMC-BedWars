@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,6 +20,14 @@ class TeamAssignerTest {
         assertTrue(TeamAssigner.canApplyAllocation(List.of(1), 4, debugTask(true)));
         assertTrue(TeamAssigner.canApplyAllocation(List.of(2, 2), 2, null));
         assertFalse(TeamAssigner.canApplyAllocation(List.of(3, 1), 2, null));
+    }
+
+    @Test
+    void canStartAsSoonAsTwoMinimumTeamsCanBeFormed() {
+        assertTrue(TeamAssigner.canFormValidGroups(
+                List.of(List.of("A"), List.of("B")), 4, 1, 2, new Random(3)));
+        assertFalse(TeamAssigner.canFormValidGroups(
+                List.of(List.of("A")), 4, 1, 2, new Random(3)));
     }
 
     private static StartingTask debugTask(boolean debugStart) {

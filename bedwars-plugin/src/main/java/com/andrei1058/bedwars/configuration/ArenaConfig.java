@@ -39,7 +39,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 19;
+    private static final int CONFIG_VERSION = 20;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -84,8 +84,8 @@ public class ArenaConfig extends ConfigManager {
                 "竞技场所属的全部匹配分组；同一竞技场可以同时出现在多个组中。",
                 "列表第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
-        setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "正常游戏的最少总人数自动等于竞技场最大人数，必须满员才开始；/bw start debug 不受此限制。");
-        setComments("minInTeam", "兼容旧配置的自动值；插件始终将它同步为 maxInTeam，请勿手动修改。");
+        setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "设置容量时会把 minInTeam 一并重置为相同值，之后可用 /bw setMinInTeam 单独降低开局下限。");
+        setComments("minInTeam", "正常开局时每支启用队伍至少需要的人数，范围为 1..maxInTeam。", "插件载入和迁移已有竞技场时不会覆盖此值；达到至少两支达标队伍即可开始匹配，无需竞技场满员。");
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
@@ -102,7 +102,7 @@ public class ArenaConfig extends ConfigManager {
         super.save();
     }
 
-    private static void migrateLegacyConfig(Plugin plugin, YamlConfiguration config) {
+    static void migrateLegacyConfig(Plugin plugin, YamlConfiguration config) {
         moveIfAbsent(config, "spawnProtection", ConfigPath.ARENA_SPAWN_PROTECTION);
         moveIfAbsent(config, "shopProtection", ConfigPath.ARENA_SHOP_PROTECTION);
         moveIfAbsent(config, "upgradesProtection", ConfigPath.ARENA_UPGRADES_PROTECTION);
@@ -110,7 +110,6 @@ public class ArenaConfig extends ConfigManager {
         config.set("voidKill", null);
         config.set(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, null);
         config.set("minPlayers", null);
-        normalizeTeamLimits(config);
         migrateArenaGroups(config);
 
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));
@@ -174,12 +173,6 @@ public class ArenaConfig extends ConfigManager {
                 config.set(path, "CYAN");
             }
         }
-    }
-
-    static void normalizeTeamLimits(YamlConfiguration config) {
-        int maximum = Math.max(1, config.getInt("maxInTeam", 1));
-        config.set("maxInTeam", maximum);
-        config.set("minInTeam", maximum);
     }
 
     static void migrateArenaGroups(YamlConfiguration config) {

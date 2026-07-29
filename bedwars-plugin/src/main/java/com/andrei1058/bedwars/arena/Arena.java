@@ -239,7 +239,7 @@ public class Arena implements IArena {
             return;
         }
         maxInTeam = Math.max(1, yml.getInt("maxInTeam", 1));
-        minInTeam = maxInTeam;
+        minInTeam = Math.max(1, Math.min(yml.getInt("minInTeam", 1), maxInTeam));
         maxPlayers = yml.getConfigurationSection("Team").getKeys(false).size() * maxInTeam;
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);

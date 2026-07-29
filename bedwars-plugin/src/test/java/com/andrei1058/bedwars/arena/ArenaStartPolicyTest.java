@@ -18,13 +18,6 @@ class ArenaStartPolicyTest {
     }
 
     @Test
-    void normalMatchmakingWaitsForEveryArenaSlot() {
-        assertFalse(ArenaStartPolicy.hasReachedMaximumPlayerCount(7, 8));
-        assertTrue(ArenaStartPolicy.hasReachedMaximumPlayerCount(8, 8));
-        assertFalse(ArenaStartPolicy.hasReachedMaximumPlayerCount(1, 1));
-    }
-
-    @Test
     void requiresEnoughPlayersToFillTwoTeamsToTheArenaMinimum() {
         assertFalse(ArenaStartPolicy.hasEnoughPlayers(3, 8, 2, 4));
         assertTrue(ArenaStartPolicy.hasEnoughPlayers(4, 8, 2, 4));
@@ -55,9 +48,10 @@ class ArenaStartPolicyTest {
 
     @Test
     void validatesEveryActiveTeamPopulationAfterAssignment() {
-        assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(2, 3, 0), 2, false));
+        assertTrue(ArenaStartPolicy.canStartWithTeamSizes(List.of(2, 3, 0), 2, false));
         assertTrue(ArenaStartPolicy.canStartWithTeamSizes(List.of(2, 2, 2), 2, false));
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(3, 1), 2, false));
+        assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(2, 0, 0), 2, false));
         assertTrue(ArenaStartPolicy.canStartWithTeamSizes(List.of(1), 4, true));
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(), 1, true));
     }

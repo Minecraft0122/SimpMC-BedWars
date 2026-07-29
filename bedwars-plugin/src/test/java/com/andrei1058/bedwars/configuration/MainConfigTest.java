@@ -60,6 +60,30 @@ class MainConfigTest {
     }
 
     @Test
+    void extendsOnlyTheUnchangedFireballFlightSpeed() {
+        YamlConfiguration defaults = new YamlConfiguration();
+        defaults.set(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 10.0);
+        YamlConfiguration customized = new YamlConfiguration();
+        customized.set(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 9.5);
+
+        MainConfig.migrateFireballDefaults(defaults, 22);
+        MainConfig.migrateFireballDefaults(customized, 22);
+
+        assertEquals(11.0, defaults.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+        assertEquals(9.5, customized.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+    }
+
+    @Test
+    void doesNotRepeatFireballSpeedMigration() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 10.0);
+
+        MainConfig.migrateFireballDefaults(configuration, 23);
+
+        assertEquals(10.0, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+    }
+
+    @Test
     void migratesPreEnhancementDefaultsForOldConfigs() {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.set(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0);
