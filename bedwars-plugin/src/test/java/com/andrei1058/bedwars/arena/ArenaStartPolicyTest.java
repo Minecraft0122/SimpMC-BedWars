@@ -33,6 +33,13 @@ class ArenaStartPolicyTest {
     }
 
     @Test
+    void requiresSixPlayersWhenTeamSizeRangeIsThreeToFour() {
+        assertFalse(ArenaStartPolicy.hasEnoughPlayers(5, 8, 3, 4));
+        assertTrue(ArenaStartPolicy.hasEnoughPlayers(6, 8, 3, 4));
+        assertEquals(2, ArenaStartPolicy.maximumFeasibleActiveTeams(6, 8, 3, 4));
+    }
+
+    @Test
     void rejectsAStartedRoundWithOnlyOneActiveTeam() {
         assertFalse(ArenaStartPolicy.hasEnoughActiveTeams(1));
         assertTrue(ArenaStartPolicy.hasEnoughActiveTeams(2));

@@ -125,6 +125,26 @@ class TeamAllocationPlannerTest {
         assertEquals(Set.of("A", "B"), flatten(allocation));
     }
 
+    @Test
+    void fillsTwoThreePlayerTeamsWhenRangeIsThreeToFour() {
+        List<List<String>> groups = List.of(
+                List.of("A"), List.of("B"), List.of("C"),
+                List.of("D"), List.of("E"), List.of("F")
+        );
+
+        assertTrue(TeamAllocationPlanner.allocateWithMinimum(
+                groups.subList(0, 5), 8, 3, 4, new Random(23)
+        ).isEmpty());
+
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                groups, 8, 3, 4, new Random(23)
+        );
+
+        assertEquals(2, allocation.size());
+        assertTrue(allocation.stream().allMatch(team -> team.size() == 3));
+        assertEquals(Set.of("A", "B", "C", "D", "E", "F"), flatten(allocation));
+    }
+
     private static Set<String> flatten(List<List<String>> allocation) {
         Set<String> players = new HashSet<>();
         allocation.forEach(players::addAll);
