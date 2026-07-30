@@ -41,10 +41,18 @@ public final class ArenaStartPolicy {
                 || maximumInTeam < minimumInTeam) {
             return 0;
         }
-        int maximumByMinimum = playerCount / minimumInTeam;
-        int minimumByCapacity = divideRoundingUp(playerCount, maximumInTeam);
-        int maximum = Math.min(configuredTeamCount, maximumByMinimum);
-        return maximum >= Math.max(2, minimumByCapacity) ? maximum : 0;
+        int minimumRequired = minimumRequiredActiveTeams(playerCount, maximumInTeam);
+        int maximumAllowed = Math.min(configuredTeamCount, playerCount / minimumInTeam);
+        return maximumAllowed >= minimumRequired ? maximumAllowed : 0;
+    }
+
+    /**
+     * Calculate the fewest active teams required to hold every player without
+     * exceeding {@code maximumInTeam}. Normal games always require two teams.
+     */
+    public static int minimumRequiredActiveTeams(int playerCount, int maximumInTeam) {
+        if (playerCount < 1 || maximumInTeam < 1) return 0;
+        return Math.max(2, divideRoundingUp(playerCount, maximumInTeam));
     }
 
     public static boolean isFeasibleActiveTeamCount(int playerCount, int activeTeamCount,

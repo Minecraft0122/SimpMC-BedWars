@@ -25,10 +25,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 /**
  * Capacity-aware randomized allocator used by the arena team assigner.
@@ -104,14 +102,10 @@ final class TeamAllocationPlanner {
         int[] loads = new int[teamCount];
         int[] partyTeams = new int[parties.size()];
         Arrays.fill(partyTeams, -1);
-        int[] remainingPartyPlayers = new int[parties.size() + 1];
-        for (int index = parties.size() - 1; index >= 0; index--) {
-            remainingPartyPlayers[index] = remainingPartyPlayers[index + 1] + parties.get(index).size();
-        }
+        int remainingPartyPlayers = parties.stream().mapToInt(List::size).sum();
 
-        Set<SearchState> failedStates = new HashSet<>();
-        if (!placeParties(parties, 0, minimumInTeam, capacity, soloPlayers.size(),
-                remainingPartyPlayers, loads, partyTeams, random, failedStates)) {
+        if (!calculatePartyPlacement(parties, 0, minimumInTeam, capacity, soloPlayers.size(),
+                remainingPartyPlayers, loads, partyTeams, random)) {
             return null;
         }
 
@@ -132,18 +126,13 @@ final class TeamAllocationPlanner {
         return teams;
     }
 
-    private static <T> boolean placeParties(List<List<T>> parties, int partyIndex,
-                                             int minimumInTeam, int capacity, int soloPlayers,
-                                             int[] remainingPartyPlayers, int[] loads, int[] partyTeams,
-                                             Random random, Set<SearchState> failedStates) {
+    private static <T> boolean calculatePartyPlacement(List<List<T>> parties, int partyIndex,
+                                                        int minimumInTeam, int capacity, int soloPlayers,
+                                                        int remainingPartyPlayers, int[] loads,
+                                                        int[] partyTeams, Random random) {
         int deficit = Arrays.stream(loads).map(load -> Math.max(0, minimumInTeam - load)).sum();
-        if (remainingPartyPlayers[partyIndex] + soloPlayers < deficit) return false;
+        if (remainingPartyPlayers + soloPlayers < deficit) return false;
         if (partyIndex == parties.size()) return soloPlayers >= deficit;
-
-        int[] normalizedLoads = loads.clone();
-        Arrays.sort(normalizedLoads);
-        SearchState state = new SearchState(partyIndex, normalizedLoads);
-        if (failedStates.contains(state)) return false;
 
         int partySize = parties.get(partyIndex).size();
         List<Integer> candidates = new ArrayList<>();
@@ -153,19 +142,21 @@ final class TeamAllocationPlanner {
         Collections.shuffle(candidates, random);
         candidates.sort(Comparator.comparingInt(teamIndex -> loads[teamIndex]));
 
-        Set<Integer> triedLoads = new HashSet<>();
+        Integer previousLoad = null;
         for (int teamIndex : candidates) {
-            if (!triedLoads.add(loads[teamIndex])) continue;
+            int currentLoad = loads[teamIndex];
+            // Equal-load teams are interchangeable for capacity calculation.
+            if (previousLoad != null && previousLoad == currentLoad) continue;
+            previousLoad = currentLoad;
             loads[teamIndex] += partySize;
             partyTeams[partyIndex] = teamIndex;
-            if (placeParties(parties, partyIndex + 1, minimumInTeam, capacity, soloPlayers,
-                    remainingPartyPlayers, loads, partyTeams, random, failedStates)) {
+            if (calculatePartyPlacement(parties, partyIndex + 1, minimumInTeam, capacity, soloPlayers,
+                    remainingPartyPlayers - partySize, loads, partyTeams, random)) {
                 return true;
             }
             partyTeams[partyIndex] = -1;
             loads[teamIndex] -= partySize;
         }
-        failedStates.add(state);
         return false;
     }
 
@@ -184,12 +175,5 @@ final class TeamAllocationPlanner {
                 .filter(index -> teams.get(index).size() == minimum)
                 .toList();
         return leastFilled.get(random.nextInt(leastFilled.size()));
-    }
-
-    private record SearchState(int partyIndex, List<Integer> loads) {
-
-        private SearchState(int partyIndex, int[] loads) {
-            this(partyIndex, Arrays.stream(loads).boxed().toList());
-        }
     }
 }

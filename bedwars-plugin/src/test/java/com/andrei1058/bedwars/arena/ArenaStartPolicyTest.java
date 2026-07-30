@@ -29,6 +29,8 @@ class ArenaStartPolicyTest {
     void selectsTheMostTeamsThatCanAllReachTheMinimum() {
         assertTrue(ArenaStartPolicy.isFeasibleActiveTeamCount(5, 2, 2, 4));
         assertFalse(ArenaStartPolicy.isFeasibleActiveTeamCount(5, 3, 2, 4));
+        assertEquals(2, ArenaStartPolicy.minimumRequiredActiveTeams(6, 4));
+        assertEquals(3, ArenaStartPolicy.minimumRequiredActiveTeams(9, 4));
         assertEquals(3, ArenaStartPolicy.maximumFeasibleActiveTeams(6, 8, 2, 4));
     }
 
