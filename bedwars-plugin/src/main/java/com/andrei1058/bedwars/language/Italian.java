@@ -1029,9 +1029,11 @@ public class Italian extends Language {
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "forge").replace("{tier}", "tier-4"), "{color}Forgia Finale");
         yml.addDefault(Messages.UPGRADES_CATEGORY_ITEM_NAME_PATH + "traps", "&eCompra una trappola");
         yml.addDefault(Messages.UPGRADES_CATEGORY_ITEM_LORE_PATH + "traps", Arrays.asList("&7Le trappole acquistate saranno", "&7messe in coda sulla destra.", "", "&eClick per sfogliare!"));
-        yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "swords").replace("{tier}", "tier-1"), "{color}Spade Affilate");
-        yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_LORE.replace("{name}", "swords"),
-                Arrays.asList("&7Il tuo team otterrà Affilatezza I", "&7permanentemente su tutte le spade", "&7e ascie!", "", "{tier_1_color}Costo: &b{tier_1_cost} {tier_1_currency}", ""));
+        Language.addSharpnessUpgradeMessages(yml, "{color}Spade Affilate",
+                Arrays.asList("&7Il tuo team otterrà Affilatezza I", "&7permanentemente su tutte le spade", "&7e ascie!", "", "{tier_1_color}Costo: &b{tier_1_cost} {tier_1_currency}", ""),
+                Arrays.asList("&7Il tuo team ottiene Affilatezza", "&7su tutte le spade e asce!", "",
+                        "{tier_1_color}I: &b{tier_1_cost} {tier_1_currency}", "{tier_2_color}II: &b{tier_2_cost} {tier_2_currency}",
+                        "{tier_3_color}III: &b{tier_3_cost} {tier_3_currency}", "{tier_4_color}IV: &b{tier_4_cost} {tier_4_currency}", ""));
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "armor").replace("{tier}", "tier-1"), "{color}Armatura Rinforzata I");
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_LORE.replace("{name}", "armor"),
                 Arrays.asList("&7Il tuo team ottiene Protezione", "&7permanentemente su tutti i pezzi d'armatura!", "", "{tier_1_color}Tier 1: Protezione I, &b{tier_1_cost} {tier_1_currency}",
@@ -1084,7 +1086,7 @@ public class Italian extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&lAllarme attivata da &7&l{player} &c&ldel team {color}&l{team} &c&l!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&lALLARME!!!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "&fAllarme attivata dal team {color}{team}&f!");
-        updateToLatestVersion(3, Language::migrateLegacyTowerShopItem);
+        updateToLatestVersion(4, Language::migrateLegacyTowerShopItem);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }

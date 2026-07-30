@@ -1058,9 +1058,11 @@ public class Persian extends Language {
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "forge").replace("{tier}", "tier-4"), "{color}Forge Molten");
         yml.addDefault(Messages.UPGRADES_CATEGORY_ITEM_NAME_PATH + "traps", "&eKharid Tale");
         yml.addDefault(Messages.UPGRADES_CATEGORY_ITEM_LORE_PATH + "traps", Arrays.asList("&7Tale haye kharide shode", "&7dar saf samte rast gharar migiran.", "", "&eClick to browse!"));
-        yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "swords").replace("{tier}", "tier-1"), "{color}Sharpened Swords");
-        yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_LORE.replace("{name}", "swords"),
-                Arrays.asList("&7Team shoma daeman", "&7Sharpness I rooye hame sword va", "&7axe ha migiran!", "", "{tier_1_color}Gheimat: &b{tier_1_cost} {tier_1_currency}", ""));
+        Language.addSharpnessUpgradeMessages(yml, "{color}Sharpened Swords",
+                Arrays.asList("&7Team shoma daeman", "&7Sharpness I rooye hame sword va", "&7axe ha migiran!", "", "{tier_1_color}Gheimat: &b{tier_1_cost} {tier_1_currency}", ""),
+                Arrays.asList("&7Team shoma Sharpness rooye", "&7hame sword va axe ha migiran!", "",
+                        "{tier_1_color}I: &b{tier_1_cost} {tier_1_currency}", "{tier_2_color}II: &b{tier_2_cost} {tier_2_currency}",
+                        "{tier_3_color}III: &b{tier_3_cost} {tier_3_currency}", "{tier_4_color}IV: &b{tier_4_cost} {tier_4_currency}", ""));
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "armor").replace("{tier}", "tier-1"), "{color}Reinforced Armor I");
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_LORE.replace("{name}", "armor"),
                 Arrays.asList("&7Team shoma daeman", "&7Protection rooye tamam armor ha migiran!", "", "{tier_1_color}Tier 1: Protection I, &b{tier_1_cost} {tier_1_currency}",
@@ -1113,7 +1115,7 @@ public class Persian extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&lHoshdar Tale Tavasote &7&l{player} &c&laz team {color}&l{team} &c&lGheyre Faal Shod!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&lHOSHDAR!!!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "&fAlarm Tale Tavasote Team {color}{team} &fGheyre Faal Shod!");
-        updateToLatestVersion(3, Language::migrateLegacyTowerShopItem);
+        updateToLatestVersion(4, Language::migrateLegacyTowerShopItem);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }

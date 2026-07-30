@@ -1057,9 +1057,13 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "forge").replace("{tier}", "tier-4"), "{color}无尽熔炉");
         yml.addDefault(Messages.UPGRADES_CATEGORY_ITEM_NAME_PATH + "traps", "&e购买陷阱");
         yml.addDefault(Messages.UPGRADES_CATEGORY_ITEM_LORE_PATH + "traps", Arrays.asList("&7已购买的陷阱将从右边进入队列", "", "&e点击查看！"));
-        yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "swords").replace("{tier}", "tier-1"), "{color}锋利附魔");
-        yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_LORE.replace("{name}", "swords"),
-                Arrays.asList("&7队伍的所有剑和斧获得锋利 I！", "", "{tier_1_color}花费：&b{tier_1_cost} {tier_1_currency}", ""));
+        Language.addSharpnessUpgradeMessages(yml, "{color}锋利附魔",
+                Arrays.asList("&7队伍的所有剑和斧获得锋利 I！", "", "{tier_1_color}花费：&b{tier_1_cost} {tier_1_currency}", ""),
+                Arrays.asList("&7队伍的所有剑和斧获得锋利附魔！", "",
+                        "{tier_1_color}锋利 I：&b{tier_1_cost} {tier_1_currency}",
+                        "{tier_2_color}锋利 II：&b{tier_2_cost} {tier_2_currency}",
+                        "{tier_3_color}锋利 III：&b{tier_3_cost} {tier_3_currency}",
+                        "{tier_4_color}锋利 IV：&b{tier_4_cost} {tier_4_currency}", ""));
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "armor").replace("{tier}", "tier-1"), "{color}护甲强化 I");
         yml.addDefault(Messages.UPGRADES_UPGRADE_TIER_ITEM_LORE.replace("{name}", "armor"),
                 Arrays.asList("&7队伍的所有护甲获得保护附魔！", "", "{tier_1_color}等级 1：保护 I， &b{tier_1_cost} {tier_1_currency}",
@@ -1112,7 +1116,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(12, SimplifiedChinese::migrateLegacyMessages);
+        updateToLatestVersion(13, SimplifiedChinese::migrateLegacyMessages);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }

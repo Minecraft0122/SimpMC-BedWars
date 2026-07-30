@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
+import com.andrei1058.bedwars.arena.team.PreGameSquadGUI;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -41,6 +42,7 @@ public class CmdTeam extends SubCommand {
 
     private static final String PREFIX = ChatColor.GOLD + "[组队] " + ChatColor.RESET;
     private final PreGameSquadManager squads = PreGameSquadManager.getInstance();
+    private final PreGameSquadGUI gui = PreGameSquadGUI.getInstance();
 
     public CmdTeam(ParentCommand parent, String name) {
         super(parent, name);
@@ -60,7 +62,7 @@ public class CmdTeam extends SubCommand {
             return true;
         }
         if (args.length == 0 || args[0].equalsIgnoreCase("list")) {
-            showSquad(player, arena);
+            gui.open(player);
             return true;
         }
 
@@ -77,7 +79,8 @@ public class CmdTeam extends SubCommand {
 
     private void invite(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/bw team invite <玩家>");
+            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
+                    + " team invite <玩家>");
             return;
         }
         Player target = Bukkit.getPlayerExact(args[1]);
@@ -96,9 +99,11 @@ public class CmdTeam extends SubCommand {
         TextComponent message = new TextComponent(PREFIX + ChatColor.AQUA + player.getName()
                 + ChatColor.YELLOW + " 邀请你在本局成为队友。 ");
         TextComponent accept = new TextComponent(ChatColor.GREEN + "[接受]");
-        accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/bw team accept " + player.getName()));
+        accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/"
+                + com.andrei1058.bedwars.BedWars.mainCmd + " team accept " + player.getName()));
         TextComponent decline = new TextComponent(ChatColor.RED + " [拒绝]");
-        decline.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/bw team decline " + player.getName()));
+        decline.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/"
+                + com.andrei1058.bedwars.BedWars.mainCmd + " team decline " + player.getName()));
         message.addExtra(accept);
         message.addExtra(decline);
         target.spigot().sendMessage(message);
@@ -106,7 +111,8 @@ public class CmdTeam extends SubCommand {
 
     private void accept(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/bw team accept <邀请者>");
+            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
+                    + " team accept <邀请者>");
             return;
         }
         Player inviter = Bukkit.getPlayerExact(args[1]);
@@ -126,7 +132,8 @@ public class CmdTeam extends SubCommand {
 
     private void decline(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/bw team decline <邀请者>");
+            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
+                    + " team decline <邀请者>");
             return;
         }
         Player inviter = Bukkit.getPlayerExact(args[1]);
@@ -155,38 +162,14 @@ public class CmdTeam extends SubCommand {
                 member.sendMessage(PREFIX + ChatColor.YELLOW + player.getName() + " 已退出开局队伍。"));
     }
 
-    private void showSquad(Player player, IArena arena) {
-        List<Player> members = squads.getMembers(player);
-        Player leader = squads.getLeader(player);
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "当前开局队伍（" + members.size() + "/"
-                + arena.getMaxInTeam() + "）：");
-        for (Player member : members) {
-            String leaderMark = leader != null && leader.equals(member) ? ChatColor.GOLD + " [队长]" : "";
-            player.sendMessage(ChatColor.GRAY + " - " + ChatColor.AQUA + member.getName() + leaderMark);
-        }
-
-        if (!squads.isLeader(player) || members.size() >= arena.getMaxInTeam()) return;
-        List<Player> available = squads.getAvailableTargets(player);
-        if (available.isEmpty()) {
-            player.sendMessage(PREFIX + ChatColor.GRAY + "当前没有可邀请的玩家。");
-            return;
-        }
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "点击玩家发送邀请：");
-        for (Player target : available) {
-            TextComponent invite = new TextComponent(ChatColor.GRAY + " - " + ChatColor.GREEN + target.getName());
-            invite.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
-                    "/bw team invite " + target.getName()));
-            player.spigot().sendMessage(invite);
-        }
-    }
-
     private void showHelp(Player player) {
         player.sendMessage(PREFIX + ChatColor.YELLOW + "开局组队命令：");
-        player.sendMessage(ChatColor.GRAY + "/bw team list " + ChatColor.WHITE + "查看队伍和可邀请玩家");
-        player.sendMessage(ChatColor.GRAY + "/bw team invite <玩家> " + ChatColor.WHITE + "邀请队友");
-        player.sendMessage(ChatColor.GRAY + "/bw team accept <玩家> " + ChatColor.WHITE + "接受邀请");
-        player.sendMessage(ChatColor.GRAY + "/bw team decline <玩家> " + ChatColor.WHITE + "拒绝邀请");
-        player.sendMessage(ChatColor.GRAY + "/bw team leave " + ChatColor.WHITE + "退出队伍");
+        String command = "/" + com.andrei1058.bedwars.BedWars.mainCmd + " team";
+        player.sendMessage(ChatColor.GRAY + command + ChatColor.WHITE + " 打开开局组队 GUI");
+        player.sendMessage(ChatColor.GRAY + command + " invite <玩家> " + ChatColor.WHITE + "邀请队友");
+        player.sendMessage(ChatColor.GRAY + command + " accept <玩家> " + ChatColor.WHITE + "接受邀请");
+        player.sendMessage(ChatColor.GRAY + command + " decline <玩家> " + ChatColor.WHITE + "拒绝邀请");
+        player.sendMessage(ChatColor.GRAY + command + " leave " + ChatColor.WHITE + "退出队伍");
     }
 
     private void sendFailure(Player player, PreGameSquad.Result result) {

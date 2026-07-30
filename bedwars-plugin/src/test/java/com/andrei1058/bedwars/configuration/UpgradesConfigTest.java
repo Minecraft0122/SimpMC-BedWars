@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class UpgradesConfigTest {
 
@@ -23,5 +24,22 @@ class UpgradesConfigTest {
         assertEquals(Arrays.asList("generator-edit: iron,1,3,41", "generator-edit: gold,4,3,14"),
                 configuration.getStringList("upgrade-forge.tier-1.receive"));
         assertEquals(customTier, configuration.getStringList("upgrade-forge.tier-2.receive"));
+    }
+
+    @Test
+    void suppliesFourSharpnessTiersWithoutOverwritingCustomValues() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        UpgradesConfig.addDefaultSwordTiers(configuration);
+        configuration.set("upgrade-swords.tier-2.cost", 99);
+        configuration.options().copyDefaults(true);
+
+        assertEquals(4, configuration.getInt("upgrade-swords.tier-1.cost"));
+        assertEquals(99, configuration.getInt("upgrade-swords.tier-2.cost"));
+        assertEquals(16, configuration.getInt("upgrade-swords.tier-3.cost"));
+        assertEquals(32, configuration.getInt("upgrade-swords.tier-4.cost"));
+        assertEquals(List.of("enchant-item: DAMAGE_ALL,4,sword"),
+                configuration.getStringList("upgrade-swords.tier-4.receive"));
+        assertEquals(4, configuration.getInt("upgrade-swords.tier-4.display-item.amount"));
+        assertFalse(configuration.getBoolean("upgrade-swords.tier-4.display-item.enchanted"));
     }
 }

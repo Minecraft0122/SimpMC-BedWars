@@ -80,7 +80,7 @@ permissions:
     default: false
   bw.shout:
     description: 使用 /shout 或 !消息进行全场喊话
-    default: false
+    default: true
   bw.forcestart:
     description: 强制开始当前竞技场
     default: false

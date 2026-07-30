@@ -1,6 +1,7 @@
 package com.andrei1058.bedwars.configuration;
 
 import org.bukkit.permissions.Permission;
+import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.junit.jupiter.api.Test;
 
@@ -58,5 +59,20 @@ class PermissionManifestTest {
                 "bw.reload", "bw.setup", "bw.level", "bw.vip", "bw.chatcolor",
                 "bw.cmd.bypass", "bw.shout.bypass")));
         assertFalse(permissions.contains("bw.command.start.debug"));
+    }
+
+    @Test
+    void shoutIsGrantedToOrdinaryPlayersByDefault() throws Exception {
+        File manifest = new File(System.getProperty("basedir"), "src/main/resources/plugin.yml");
+        PluginDescriptionFile description;
+        try (FileInputStream input = new FileInputStream(manifest)) {
+            description = new PluginDescriptionFile(input);
+        }
+
+        Permission shout = description.getPermissions().stream()
+                .filter(permission -> permission.getName().equals("bw.shout"))
+                .findFirst().orElseThrow();
+        assertTrue(shout.getDefault() == PermissionDefault.TRUE,
+                "ordinary players should be able to use /shout without an extra grant");
     }
 }

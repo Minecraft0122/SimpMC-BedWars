@@ -467,6 +467,33 @@ public class Language extends ConfigManager {
     }
 
     /**
+     * Add the four built-in sharpness upgrade labels and migrate an unchanged
+     * one-tier lore template. Exact-value matching keeps administrator wording
+     * intact while fresh and still-default language files describe every tier.
+     */
+    public static void addSharpnessUpgradeMessages(@NotNull YamlConfiguration yml,
+                                                   @NotNull String baseName,
+                                                   @NotNull List<String> legacyLore,
+                                                   @NotNull List<String> expandedLore) {
+        String namePath = Messages.UPGRADES_UPGRADE_TIER_ITEM_NAME.replace("{name}", "swords");
+        String[] numerals = {"I", "II", "III", "IV"};
+        for (int tier = 1; tier <= numerals.length; tier++) {
+            yml.addDefault(namePath.replace("{tier}", "tier-" + tier), baseName + " " + numerals[tier - 1]);
+        }
+
+        String lorePath = Messages.UPGRADES_UPGRADE_TIER_ITEM_LORE.replace("{name}", "swords");
+        yml.addDefault(lorePath, expandedLore);
+        if (yml.getStringList(lorePath).equals(legacyLore)) {
+            yml.set(lorePath, expandedLore);
+        }
+
+        String tierOnePath = namePath.replace("{tier}", "tier-1");
+        if (baseName.equals(yml.getString(tierOnePath))) {
+            yml.set(tierOnePath, baseName + " I");
+        }
+    }
+
+    /**
      * Move the historical pop-up tower translation from its display name to
      * the stable shop content id used by shop.yml. Generated placeholders are
      * discarded so corrected defaults can fill them, while explicit values at

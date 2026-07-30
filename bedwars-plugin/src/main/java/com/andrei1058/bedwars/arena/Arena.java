@@ -548,7 +548,7 @@ public class Arena implements IArena {
             sendPreGameCommandItems(p);
             if (getMaxInTeam() > 1) {
                 p.sendMessage(ChatColor.GOLD + "[组队] " + ChatColor.YELLOW
-                        + "使用 /" + mainCmd + " team 查看可邀请的队友；未组队玩家将按单人队随机分配。");
+                        + "使用 /" + mainCmd + " team 打开开局组队 GUI；未组队玩家将按单人队随机分配。");
             }
             for (PotionEffect pf : p.getActivePotionEffects()) {
                 p.removePotionEffect(pf.getType());

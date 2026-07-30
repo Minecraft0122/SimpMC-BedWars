@@ -189,7 +189,10 @@ public class Sidebar {
     }
 
     public void removeTabs() {
-        tabs.values().forEach(Sidebar::detachTab);
+        tabs.values().forEach(tab -> {
+            detachTab(tab);
+            PlayerListNameState.release(tab.getPlayer());
+        });
         tabs.clear();
         scoreboards.values().forEach(Sidebar::removeTabTeams);
     }
@@ -235,8 +238,16 @@ public class Sidebar {
                 color, nameTagVisibility);
         tab.setUpdateCallback(this::applyTabToAll);
         PlayerTab previous = tabs.put(identifier, tab);
-        if (previous != null) previous.setUpdateCallback(ignored -> {
-        });
+        if (previous == null) {
+            PlayerListNameState.acquire(player);
+        } else {
+            previous.setUpdateCallback(ignored -> {
+            });
+            if (previous.getPlayer() != player) {
+                PlayerListNameState.release(previous.getPlayer());
+                PlayerListNameState.acquire(player);
+            }
+        }
         applyTabToAll(tab);
         return tab;
     }
@@ -247,6 +258,7 @@ public class Sidebar {
             return;
         }
         detachTab(tab);
+        PlayerListNameState.release(tab.getPlayer());
         String teamName = teamName(identifier);
         scoreboards.values().forEach(scoreboard -> {
             Team team = scoreboard.getTeam(teamName);

@@ -470,4 +470,12 @@ public class SetupSession implements ISetupSession {
         return missing;
     }
 
+    /**
+     * List every team missing an iron or gold generator. Both resources are
+     * mandatory because team upgrades and the normal shop economy assume them.
+     */
+    public Map<String, List<String>> findTeamsWithoutRequiredGenerators() {
+        return RequiredTeamGeneratorValidator.findMissing(getConfig().getYml(), getTeams());
+    }
+
 }

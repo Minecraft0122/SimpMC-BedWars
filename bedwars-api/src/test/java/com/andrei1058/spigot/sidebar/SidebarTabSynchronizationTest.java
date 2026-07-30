@@ -60,6 +60,28 @@ class SidebarTabSynchronizationTest {
         assertEquals(3, state.writeCount, "repeating the same refresh must not send more team updates");
     }
 
+    @Test
+    void clearsAndRestoresCustomPlayerListNameAcrossViewers() {
+        Component customName = Component.text("大厅称号 Alice");
+        PlayerNameState playerState = new PlayerNameState(customName);
+        Player player = player("Alice", playerState);
+        Sidebar firstViewer = sidebar();
+        Sidebar secondViewer = sidebar();
+
+        firstViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        assertEquals(null, playerState.playerListName,
+                "a custom tab component prevents the client from applying scoreboard team color");
+
+        secondViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        firstViewer.removeTab("alice");
+        assertEquals(null, playerState.playerListName, "another viewer still needs scoreboard formatting");
+
+        secondViewer.removeTab("alice");
+        assertEquals(customName, playerState.playerListName);
+    }
+
     private static Sidebar sidebar() {
         return new Sidebar(new SidebarLine(), List.of(), new ConcurrentLinkedQueue<>());
     }
@@ -71,10 +93,19 @@ class SidebarTabSynchronizationTest {
     }
 
     private static Player player(String name) {
+        return player(name, new PlayerNameState(null));
+    }
+
+    private static Player player(String name, PlayerNameState state) {
         return (Player) Proxy.newProxyInstance(Player.class.getClassLoader(), new Class<?>[]{Player.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getName" -> name;
                     case "getUniqueId" -> java.util.UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+                    case "playerListName" -> {
+                        if (args == null || args.length == 0) yield state.playerListName;
+                        state.playerListName = (Component) args[0];
+                        yield null;
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
     }
@@ -135,6 +166,14 @@ class SidebarTabSynchronizationTest {
 
         private TeamState(String entry) {
             entries.add(entry);
+        }
+    }
+
+    private static final class PlayerNameState {
+        private Component playerListName;
+
+        private PlayerNameState(Component playerListName) {
+            this.playerListName = playerListName;
         }
     }
 }

@@ -44,12 +44,9 @@ public class UpgradesConfig extends ConfigManager {
         yml.addDefault("default-upgrades-settings.trap-currency", "diamond");
         yml.addDefault("default-upgrades-settings.trap-queue-limit", 3);
 
-        if (isFirstTime()) {
-            yml.addDefault("upgrade-swords.tier-1.cost", 4);
-            yml.addDefault("upgrade-swords.tier-1.currency", "diamond");
-            addDefaultDisplayItem("upgrade-swords.tier-1", "IRON_SWORD", 0, 1, false);
-            yml.addDefault("upgrade-swords.tier-1.receive", Collections.singletonList("enchant-item: DAMAGE_ALL,1,sword"));
+        addDefaultSwordTiers(yml);
 
+        if (isFirstTime()) {
             yml.addDefault("upgrade-armor.tier-1.currency", "diamond");
             yml.addDefault("upgrade-armor.tier-1.cost", 2);
             addDefaultDisplayItem("upgrade-armor.tier-1", "IRON_CHESTPLATE", 0, 1, false);
@@ -148,7 +145,21 @@ public class UpgradesConfig extends ConfigManager {
         setComments("upgrade-swords", "升级项由价格、货币、显示物品和 receive 动作组成。");
         setComments("category-traps", "陷阱分类菜单内容及槽位。");
         ChineseConfigDocumentation.upgrades(this);
-        updateToLatestVersion(5, UpgradesConfig::migrateLegacyForgeDefaults);
+        updateToLatestVersion(6, UpgradesConfig::migrateLegacyForgeDefaults);
+    }
+
+    static void addDefaultSwordTiers(YamlConfiguration yml) {
+        for (int tier = 1; tier <= 4; tier++) {
+            String path = "upgrade-swords.tier-" + tier;
+            yml.addDefault(path + ".cost", 1 << (tier + 1));
+            yml.addDefault(path + ".currency", "diamond");
+            yml.addDefault(path + ".display-item.material", "IRON_SWORD");
+            yml.addDefault(path + ".display-item.data", 0);
+            yml.addDefault(path + ".display-item.amount", tier);
+            yml.addDefault(path + ".display-item.enchanted", false);
+            yml.addDefault(path + ".receive",
+                    Collections.singletonList("enchant-item: DAMAGE_ALL," + tier + ",sword"));
+        }
     }
 
     static void migrateLegacyForgeDefaults(YamlConfiguration yml) {

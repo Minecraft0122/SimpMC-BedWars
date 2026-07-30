@@ -36,6 +36,7 @@ import com.andrei1058.bedwars.arena.despawnables.TargetListener;
 import com.andrei1058.bedwars.arena.feature.SpoilPlayerTNTFeature;
 import com.andrei1058.bedwars.arena.spectator.SpectatorListeners;
 import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
+import com.andrei1058.bedwars.arena.team.PreGameSquadGUI;
 import com.andrei1058.bedwars.arena.stats.DefaultStatsHandler;
 import com.andrei1058.bedwars.arena.tasks.OneTick;
 import com.andrei1058.bedwars.arena.tasks.Refresh;
@@ -265,7 +266,7 @@ public class BedWars extends JavaPlugin {
                 new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(),
                 new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),
-                PreGameSquadManager.getInstance()
+                PreGameSquadManager.getInstance(), PreGameSquadGUI.getInstance()
         );
 
         if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE)) {

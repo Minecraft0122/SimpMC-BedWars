@@ -522,5 +522,6 @@ public class BwTabList {
     public void onSidebarRemoval() {
         sidebar.getHandle().clearLines();
         deployedPerPlayerTabList.clear();
+        sidebar.getHandle().removeTabs();
     }
 }

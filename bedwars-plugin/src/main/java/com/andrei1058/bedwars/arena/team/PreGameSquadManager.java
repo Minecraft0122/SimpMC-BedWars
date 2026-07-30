@@ -159,6 +159,21 @@ public final class PreGameSquadManager implements Listener, PreGameSquad {
                 .toList();
     }
 
+    /** Get online players whose valid invitations are waiting for this target. */
+    public List<Player> getPendingInviters(@NotNull Player target) {
+        purgeExpiredInvites();
+        IArena arena = preGameArena(target);
+        if (arena == null) return List.of();
+        return invites.entrySet().stream()
+                .filter(entry -> entry.getKey().target.equals(target.getUniqueId()))
+                .filter(entry -> entry.getValue().arena == arena)
+                .map(entry -> Bukkit.getPlayer(entry.getKey().inviter))
+                .filter(java.util.Objects::nonNull)
+                .filter(inviter -> preGameArena(inviter) == arena)
+                .sorted(java.util.Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
     /**
      * Build unique groups. Arena squads take priority, existing global Party
      * integrations are kept compatible, and everybody else becomes a solo group.

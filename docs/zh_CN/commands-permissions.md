@@ -14,16 +14,16 @@
 | `/bw gui [分组+分组]` | 无 | 打开竞技场选择菜单 |
 | `/bw stats` | 无 | 查看历史战绩 |
 | `/bw lang <语言代码>` | 无 | 切换个人语言 |
-| `/bw team ...` | 无 | 管理开局前的固定队友邀请 |
+| `/bw team ...` | 无 | 打开 GUI 并管理开局前的固定队友邀请 |
 | `/bw invite ...` | 无 | 邀请大厅玩家加入等待中的竞技场 |
 | `/bw teleporter` | 无 | 打开旁观传送菜单 |
 | `/bw upgradesmenu` | 无 | 打开本队升级菜单；主要由 NPC 调用 |
 | `/bw arenaList` | 无 | 查看竞技场列表 |
 | `/party ...` | 无 | 使用插件内置组队命令 |
-| `/shout <消息>`、`!消息` | `bw.shout` | 游戏内全体喊话；两种入口使用相同权限检查 |
+| `/shout <消息>`、`!消息` | `bw.shout`（默认授予） | 游戏内全体喊话；普通玩家默认可用，两种入口使用相同权限检查 |
 | `/rejoin` | `bw.rejoin` | 在有效窗口内重连 |
 
-`bw.player` 不再是普通玩家使用基础命令的前置条件，也不会授予 `bw.shout` 或 `bw.rejoin`。
+`bw.player` 不再是普通玩家使用基础命令的前置条件。`bw.shout` 自 2.11.0 起默认授予所有玩家，权限插件仍可显式设为 `false`；`bw.rejoin` 仍需单独授予。
 
 ## 管理命令
 
@@ -92,4 +92,4 @@
 | `bw.cmd.bypass` | 绕过游戏内命令限制 |
 | `bw.shout.bypass` | 绕过喊话冷却；仍然必须拥有 `bw.shout` 或兼容命令权限 |
 
-不要把 `bw.*` 或 `bw.command.*` 授予普通玩家。通常只需按需授予 `bw.shout`、`bw.rejoin` 等官方节点。
+不要把 `bw.*` 或 `bw.command.*` 授予普通玩家。`bw.shout` 已默认开放；通常只需按需授予 `bw.rejoin` 等受限节点。

@@ -35,6 +35,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 
 public class Save extends SubCommand {
@@ -67,6 +68,17 @@ public class Save extends SubCommand {
                 p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "高级模式不会自动设置床位，请使用 /"
                         + getParent().getName() + " setBed <队伍> 手动设置。");
             }
+            return true;
+        }
+
+        Map<String, List<String>> missingGenerators = ss.findTeamsWithoutRequiredGenerators();
+        if (!missingGenerators.isEmpty()) {
+            p.sendMessage(ss.getPrefix() + ChatColor.RED + "无法保存：以下队伍缺少必要的铁或金生成器：");
+            missingGenerators.forEach((team, types) -> p.sendMessage(
+                    ChatColor.GRAY + " - " + ss.getTeamColor(team) + team + ChatColor.GRAY
+                            + "：缺少" + String.join("、", types) + "生成器"));
+            p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "请站在资源点使用 /" + getParent().getName()
+                    + " addGenerator；高级模式可使用 addGenerator <iron/gold> <队伍>。");
             return true;
         }
 
