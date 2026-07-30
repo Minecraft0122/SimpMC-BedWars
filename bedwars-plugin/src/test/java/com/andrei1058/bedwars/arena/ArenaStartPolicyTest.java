@@ -61,5 +61,8 @@ class ArenaStartPolicyTest {
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(2, 0, 0), 2, false));
         assertTrue(ArenaStartPolicy.canStartWithTeamSizes(List.of(1), 4, true));
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(), 1, true));
+        assertTrue(ArenaStartPolicy.canStartWithTeamSizes(List.of(3, 4), 3, 4, false));
+        assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(3, 5), 3, 4, false));
+        assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(5), 3, 4, true));
     }
 }

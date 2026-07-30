@@ -1,6 +1,7 @@
 package com.andrei1058.bedwars.configuration;
 
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
+import com.andrei1058.bedwars.arena.ArenaSelectorPagination;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,28 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MainConfigTest {
+
+    @Test
+    void expandsOnlyTheUnchangedArenaSelectorLayout() {
+        YamlConfiguration defaults = new YamlConfiguration();
+        defaults.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, 27);
+        defaults.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS,
+                "10,11,12,13,14,15,16");
+        YamlConfiguration customized = new YamlConfiguration();
+        customized.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, 36);
+        customized.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS, "0,1,2");
+
+        MainConfig.migrateArenaSelectorDefaults(defaults, 23);
+        MainConfig.migrateArenaSelectorDefaults(customized, 23);
+
+        assertEquals(ArenaSelectorPagination.DEFAULT_SIZE,
+                defaults.getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE));
+        assertEquals(ArenaSelectorPagination.DEFAULT_CONTENT_SLOTS,
+                defaults.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS));
+        assertEquals(36, customized.getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE));
+        assertEquals("0,1,2",
+                customized.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS));
+    }
 
     @Test
     void upgradesOnlyAnUnchangedLegacyFireballDefault() {

@@ -60,16 +60,16 @@ class TeamAllocationPlannerTest {
     }
 
     @Test
-    void splitsAFullPartyRatherThanStartingWithOneTeam() {
-        List<List<String>> allocation = TeamAllocationPlanner.allocate(
+    void doesNotSplitAFullSquadJustToInventAnOpponent() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
                 List.of(List.of("A", "B")),
                 4,
+                1,
                 2,
                 new Random(5)
         );
 
-        assertEquals(2, allocation.stream().filter(team -> !team.isEmpty()).count());
-        assertEquals(Set.of("A", "B"), flatten(allocation));
+        assertTrue(allocation.isEmpty());
     }
 
     @Test
@@ -95,6 +95,48 @@ class TeamAllocationPlannerTest {
         assertEquals(2, allocation.size());
         assertTrue(allocation.stream().allMatch(team -> team.size() >= 2));
         assertEquals(Set.of("A", "B", "C", "D", "E", "F"), flatten(allocation));
+    }
+
+    @Test
+    void keepsSquadsAtomicWhenGreedyPlacementWouldSplitOne() {
+        List<List<String>> groups = List.of(
+                List.of("A", "B", "C"),
+                List.of("D", "E", "F"),
+                List.of("G", "H"),
+                List.of("I", "J"),
+                List.of("K", "L")
+        );
+
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                groups, 2, 1, 6, new Random(29));
+
+        assertEquals(2, allocation.size());
+        assertTrue(allocation.stream().allMatch(team -> team.size() == 6));
+        for (List<String> group : groups) {
+            assertTrue(allocation.stream().anyMatch(team -> team.containsAll(group)));
+        }
+    }
+
+    @Test
+    void enablesTheMostTeamsAllowedBySquadBoundaries() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                List.of(List.of("A", "B"), List.of("C", "D"), List.of("E"), List.of("F")),
+                4, 1, 4, new Random(31));
+
+        assertEquals(4, allocation.size());
+        assertEquals(List.of(1, 1, 2, 2), allocation.stream().map(List::size).sorted().toList());
+        assertTrue(allocation.stream().anyMatch(team -> team.containsAll(List.of("A", "B"))));
+        assertTrue(allocation.stream().anyMatch(team -> team.containsAll(List.of("C", "D"))));
+    }
+
+    @Test
+    void fallsBackToFewerTeamsInsteadOfBreakingSquads() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                List.of(List.of("A", "B"), List.of("C", "D")),
+                4, 1, 4, new Random(37));
+
+        assertEquals(2, allocation.size());
+        assertTrue(allocation.stream().allMatch(team -> team.size() == 2));
     }
 
     @Test
@@ -143,6 +185,17 @@ class TeamAllocationPlannerTest {
         assertEquals(2, allocation.size());
         assertTrue(allocation.stream().allMatch(team -> team.size() == 3));
         assertEquals(Set.of("A", "B", "C", "D", "E", "F"), flatten(allocation));
+    }
+
+    @Test
+    void spreadsNineSoloPlayersAcrossThreeMinimumTeams() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                List.of(List.of("A"), List.of("B"), List.of("C"), List.of("D"), List.of("E"),
+                        List.of("F"), List.of("G"), List.of("H"), List.of("I")),
+                8, 3, 4, new Random(41));
+
+        assertEquals(3, allocation.size());
+        assertTrue(allocation.stream().allMatch(team -> team.size() == 3));
     }
 
     private static Set<String> flatten(List<List<String>> allocation) {

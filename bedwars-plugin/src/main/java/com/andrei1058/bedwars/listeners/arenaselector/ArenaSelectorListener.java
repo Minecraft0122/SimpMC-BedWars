@@ -44,7 +44,7 @@ public class ArenaSelectorListener implements Listener {
     @EventHandler
     public void onArenaSelectorClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        if (!(player.getOpenInventory().getTopInventory().getHolder() instanceof ArenaGUI.ArenaSelectorHolder)) return;
+        if (!(player.getOpenInventory().getTopInventory().getHolder() instanceof ArenaGUI.ArenaSelectorHolder holder)) return;
 
         event.setCancelled(true);
 
@@ -54,6 +54,14 @@ public class ArenaSelectorListener implements Listener {
         if (!BedWars.nms.isCustomBedWarsItem(item)) return;
 
         String data = BedWars.nms.getCustomData(item);
+        if (data.startsWith(ArenaGUI.PAGE_GUI_IDENTIFIER)) {
+            try {
+                int page = Integer.parseInt(data.substring(ArenaGUI.PAGE_GUI_IDENTIFIER.length()));
+                ArenaGUI.openPage(player, holder.getGroup(), page);
+            } catch (NumberFormatException ignored) {
+            }
+            return;
+        }
         if (data.startsWith("RUNCOMMAND")) {
             Bukkit.dispatchCommand(player, data.split("_")[1]);
         }

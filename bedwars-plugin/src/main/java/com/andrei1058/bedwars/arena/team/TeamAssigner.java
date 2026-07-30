@@ -84,9 +84,10 @@ public class TeamAssigner implements ITeamAssigner {
             }
 
             List<Integer> approvedTeamSizes = approvedAllocation.stream().map(List::size).toList();
-            if (!canApplyAllocation(approvedTeamSizes, arena.getMinInTeam(), startingTask)) {
+            if (!canApplyAllocation(approvedTeamSizes, arena.getMinInTeam(),
+                    arena.getMaxInTeam(), startingTask)) {
                 BedWars.plugin.getLogger().warning("竞技场 " + arena.getArenaName()
-                        + " 的分队事件被取消后不再满足队伍数量或每队最少人数，已停止开局。");
+                        + " 的分队事件执行后不再满足队伍数量或每队人数范围，已停止开局。");
                 return;
             }
 
@@ -119,8 +120,9 @@ public class TeamAssigner implements ITeamAssigner {
         return new AllocationPlan(new ArrayList<>(arenaTeams.subList(0, teamCount)), allocation);
     }
 
-    static boolean canApplyAllocation(List<Integer> teamSizes, int minimumInTeam, StartingTask startingTask) {
-        return ArenaStartPolicy.canStartWithTeamSizes(teamSizes, minimumInTeam,
+    static boolean canApplyAllocation(List<Integer> teamSizes, int minimumInTeam,
+                                      int maximumInTeam, StartingTask startingTask) {
+        return ArenaStartPolicy.canStartWithTeamSizes(teamSizes, minimumInTeam, maximumInTeam,
                 startingTask != null && startingTask.isSingleTeamDebugStart());
     }
 

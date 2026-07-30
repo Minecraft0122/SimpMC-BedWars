@@ -26,6 +26,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.arena.ArenaSelectorPagination;
 import com.andrei1058.bedwars.arena.Misc;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -39,7 +40,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 23;
+    private static final int CONFIG_VERSION = 24;
     private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
     private static final double FIREBALL_SPEED_MULTIPLIER_DEFAULT = 11.0;
     private static final double FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT = 1.15;
@@ -174,9 +175,11 @@ public class MainConfig extends ConfigManager {
         saveSpectatorCommandItem("teleporter", "bw teleporter", false, "PLAYER_HEAD", 3, 0);
         saveSpectatorCommandItem("leave", "bw leave", false, "RED_BED", 0, 8);
 
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, 27);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE,
+                ArenaSelectorPagination.DEFAULT_SIZE);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SHOW_PLAYING, true);
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS, "10,11,12,13,14,15,16");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS,
+                ArenaSelectorPagination.DEFAULT_CONTENT_SLOTS);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_MATERIAL.replace("%path%", "waiting"), "LIME_CONCRETE");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_DATA.replace("%path%", "waiting"), 5);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_ENCHANTED.replace("%path%", "waiting"), false);
@@ -310,7 +313,9 @@ public class MainConfig extends ConfigManager {
                 "多竞技场大厅固定物品。默认提供历史战绩、竞技场选择器和“回到主大厅”红床。",
                 "旧配置升级时只补齐缺失字段，不覆盖管理员已有的自定义材质、命令或槽位。",
                 "leave 节点会写入代理大厅目标标记；等待区和旁观区的 leave 节点则固定返回本服大厅。");
-        setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置，大小必须是 9 的倍数。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE,
+                "竞技场选择菜单设置；默认 54 格、每页显示 45 个竞技场，竞技场更多时自动分页。",
+                "大小必须是 9 的倍数；自定义 use-slots 时翻页按钮固定使用底行左、中、右三个槽位。");
         setComments(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅掉入虚空时是否传送回大厅出生点。");
     }
 
@@ -328,6 +333,7 @@ public class MainConfig extends ConfigManager {
         moveIfAbsent(yml, "arenaGui.settings.showPlaying", ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SHOW_PLAYING);
         moveIfAbsent(yml, "arenaGui.settings.size", ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE);
         moveIfAbsent(yml, "arenaGui.settings.useSlots", ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS);
+        migrateArenaSelectorDefaults(yml, yml.getInt(CONFIG_VERSION_PATH, 0));
 
         if (yml.isConfigurationSection("arenaGui")) {
             for (String path : Objects.requireNonNull(yml.getConfigurationSection("arenaGui")).getKeys(false)) {
@@ -366,6 +372,19 @@ public class MainConfig extends ConfigManager {
         }
         migrateLobbyLocation(yml);
         migrateNpcLocations(yml);
+    }
+
+    static void migrateArenaSelectorDefaults(YamlConfiguration yml, int storedConfigVersion) {
+        if (storedConfigVersion >= 24) return;
+        String oldSlots = "10,11,12,13,14,15,16";
+        if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, 27) == 27
+                && oldSlots.equals(yml.getString(
+                ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS, oldSlots))) {
+            yml.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE,
+                    ArenaSelectorPagination.DEFAULT_SIZE);
+            yml.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS,
+                    ArenaSelectorPagination.DEFAULT_CONTENT_SLOTS);
+        }
     }
 
     static void migrateFireballDefaults(YamlConfiguration yml, int storedConfigVersion) {

@@ -65,12 +65,19 @@ public final class ArenaStartPolicy {
 
     public static boolean canStartWithTeamSizes(Collection<Integer> teamSizes, int minimumInTeam,
                                                 boolean allowSingleTeamDebugStart) {
+        return canStartWithTeamSizes(teamSizes, minimumInTeam, Integer.MAX_VALUE,
+                allowSingleTeamDebugStart);
+    }
+
+    public static boolean canStartWithTeamSizes(Collection<Integer> teamSizes, int minimumInTeam,
+                                                int maximumInTeam, boolean allowSingleTeamDebugStart) {
         if (teamSizes == null) return false;
         long activeTeams = teamSizes.stream().filter(size -> size != null && size > 0).count();
-        if (allowSingleTeamDebugStart) return activeTeams >= 1;
-        return activeTeams >= 2 && minimumInTeam >= 1 && teamSizes.stream()
+        if (maximumInTeam < 1 || !canStartWithActiveTeams(activeTeams, allowSingleTeamDebugStart)) return false;
+        return (allowSingleTeamDebugStart || minimumInTeam >= 1) && teamSizes.stream()
                 .filter(size -> size != null && size > 0)
-                .allMatch(size -> size >= minimumInTeam);
+                .allMatch(size -> size <= maximumInTeam
+                        && (allowSingleTeamDebugStart || size >= minimumInTeam));
     }
 
     public static int debugActiveTeamCount(int playerCount, int configuredTeamCount, int maximumInTeam) {

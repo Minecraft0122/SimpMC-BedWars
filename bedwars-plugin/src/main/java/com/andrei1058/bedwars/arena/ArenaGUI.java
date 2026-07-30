@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.arena;
 
 import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
@@ -43,6 +44,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class ArenaGUI {
@@ -51,7 +53,9 @@ public class ArenaGUI {
     //private static HashMap<Player, Object[]> refresh = new HashMap<>();
     private static YamlConfiguration yml = BedWars.config.getYml();
 
-    private static HashMap<UUID, Long> antiCalledTwice = new HashMap<>();
+    public static final String PAGE_GUI_IDENTIFIER = "arena-page=";
+
+    private static final Map<UUID, Long> antiCalledTwice = new HashMap<>();
 
     //Object[0] = inventory, Object[1] = group
     public static void refreshInv(Player p, IArena arena, int players) {
@@ -70,12 +74,23 @@ public class ArenaGUI {
             }
         }
 
+        boolean showPlaying = BedWars.config.getBoolean(
+                ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SHOW_PLAYING);
+        arenas.removeIf(candidate -> candidate.getStatus() != GameState.waiting
+                && candidate.getStatus() != GameState.starting
+                && (!showPlaying || candidate.getStatus() != GameState.playing));
         arenas = Arena.getSorted(arenas);
 
-        int arenaKey = 0;
-        for (Integer slot : getUsedSlots()) {
+        Inventory inventory = p.getOpenInventory().getTopInventory();
+        List<Integer> usedSlots = ArenaSelectorPagination.contentSlots(
+                BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS),
+                inventory.getSize());
+        int page = ArenaSelectorPagination.clampPage(ash.getPage(), arenas.size(), usedSlots.size());
+        ash.setPage(page);
+        int arenaKey = page * usedSlots.size();
+        for (Integer slot : usedSlots) {
             ItemStack i;
-            p.getOpenInventory().getTopInventory().setItem(slot, new ItemStack(Material.AIR));
+            inventory.setItem(slot, new ItemStack(Material.AIR));
             if (arenaKey >= arenas.size()) {
                 continue;
             }
@@ -118,19 +133,29 @@ public class ArenaGUI {
             im.setLore(lore);
             i.setItemMeta(im);
             i = BedWars.nms.addCustomData(i, ArenaSelectorListener.ARENA_SELECTOR_GUI_IDENTIFIER + arenas.get(arenaKey).getArenaName());
-            p.getOpenInventory().getTopInventory().setItem(slot, i);
+            inventory.setItem(slot, i);
             arenaKey++;
         }
+        renderPagination(inventory, page,
+                ArenaSelectorPagination.pageCount(arenas.size(), usedSlots.size()));
         p.updateInventory();
     }
 
     public static void openGui(Player p, String group) {
-        if (preventCalledTwice(p)) return;
-        updateCalledTwice(p);
-        int size = BedWars.config.getYml().getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE);
-        if (size % 9 != 0) size = 27;
-        if (size > 54) size = 54;
-        ArenaSelectorHolder ash = new ArenaSelectorHolder(group);
+        openGui(p, group, 0, true);
+    }
+
+    /** Open another selector page without triggering the command double-call guard. */
+    public static void openPage(Player player, String group, int page) {
+        openGui(player, group, page, false);
+    }
+
+    private static void openGui(Player p, String group, int page, boolean guardDoubleCall) {
+        if (guardDoubleCall && preventCalledTwice(p)) return;
+        if (guardDoubleCall) updateCalledTwice(p);
+        int size = ArenaSelectorPagination.normalizeSize(BedWars.config.getYml()
+                .getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE));
+        ArenaSelectorHolder ash = new ArenaSelectorHolder(group, Math.max(0, page));
         Inventory inv = Bukkit.createInventory(ash, size, Language.getMsg(p, Messages.ARENA_GUI_INV_NAME));
         //ash.setInv(inv);
 
@@ -172,7 +197,9 @@ public class ArenaGUI {
             im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             i.setItemMeta(im);
 
-            List<Integer> used = getUsedSlots();
+            List<Integer> used = ArenaSelectorPagination.contentSlots(
+                    BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS),
+                    inv.getSize());
             for (int x = 0; x < inv.getSize(); x++) {
                 if (used.contains(x)) continue;
                 inv.setItem(x, i);
@@ -185,15 +212,54 @@ public class ArenaGUI {
         Sounds.playSound("arena-selector-open", p);
     }
 
+    private static void renderPagination(Inventory inventory, int page, int pageCount) {
+        int previousSlot = ArenaSelectorPagination.previousSlot(inventory.getSize());
+        int indicatorSlot = ArenaSelectorPagination.indicatorSlot(inventory.getSize());
+        int nextSlot = ArenaSelectorPagination.nextSlot(inventory.getSize());
+        inventory.setItem(previousSlot, page > 0
+                ? pageItem(Material.ARROW, "§e上一页", page - 1) : new ItemStack(Material.AIR));
+        inventory.setItem(nextSlot, page + 1 < pageCount
+                ? pageItem(Material.ARROW, "§e下一页", page + 1) : new ItemStack(Material.AIR));
+
+        ItemStack indicator = new ItemStack(Material.PAPER);
+        ItemMeta meta = indicator.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§f第 §e" + (page + 1) + "§f/§e" + pageCount + " §f页");
+            indicator.setItemMeta(meta);
+        }
+        inventory.setItem(indicatorSlot, indicator);
+    }
+
+    private static ItemStack pageItem(Material material, String name, int page) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            item.setItemMeta(meta);
+        }
+        return BedWars.nms.addCustomData(item, PAGE_GUI_IDENTIFIER + page);
+    }
+
     public static class ArenaSelectorHolder implements InventoryHolder {
 
-        private String group;
-        public ArenaSelectorHolder(String group) {
+        private final String group;
+        private int page;
+
+        public ArenaSelectorHolder(String group, int page) {
             this.group = group;
+            this.page = page;
         }
 
         public String getGroup() {
             return group;
+        }
+
+        public int getPage() {
+            return page;
+        }
+
+        private void setPage(int page) {
+            this.page = page;
         }
 
         @Override
@@ -201,19 +267,6 @@ public class ArenaGUI {
             return null;
         }
 
-    }
-
-    @NotNull
-    private static List<Integer> getUsedSlots() {
-        List<Integer> ls = new ArrayList<>();
-        for (String useSlot : BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS).split(",")) {
-            try {
-                int slot = Integer.parseInt(useSlot);
-                ls.add(slot);
-            } catch (Exception ignored) {
-            }
-        }
-        return ls;
     }
 
     private static boolean preventCalledTwice(@NotNull Player player) {

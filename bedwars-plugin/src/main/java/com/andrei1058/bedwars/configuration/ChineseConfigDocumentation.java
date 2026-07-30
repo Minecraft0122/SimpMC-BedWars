@@ -73,7 +73,9 @@ public final class ChineseConfigDocumentation {
                 "leave 节点固定标记为代理大厅；等待区和旁观区的 leave 节点固定返回本服 BedWars 大厅。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_PRE_GAME_ITEMS_PATH, "竞技场等待阶段物品；格式与大厅物品相同。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_SPECTATOR_ITEMS_PATH, "观战状态物品；格式与大厅物品相同。");
-        comment(config, ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, "竞技场选择菜单设置；菜单大小必须是 9 的倍数，槽位使用英文逗号分隔。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE,
+                "竞技场选择菜单设置；默认 54 格、每页 45 张地图，更多地图自动分页。",
+                "菜单大小必须是 9 的倍数，槽位使用英文逗号分隔；底行左、中、右保留给翻页控件。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_STATS_GUI_SIZE, "历史战绩菜单大小和每个统计项的材质、槽位。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DEFAULT_ITEMS, "按竞技场分组配置开局默认物品，填写 Bukkit Material 名称。");
         comment(config, ConfigPath.CENERAL_CONFIGURATION_ALLOWED_COMMANDS, "游戏中允许玩家使用的命令名称，不要填写开头的斜杠。");

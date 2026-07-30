@@ -22,15 +22,20 @@ import com.andrei1058.bedwars.arena.ArenaStartPolicy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Capacity-aware randomized allocator used by the arena team assigner.
- * Groups that fit are never split; oversized or otherwise unplaceable groups
- * fall back to randomized single-player placement.
+ * Normal-sized squads are atomic: matchmaking either finds a valid placement
+ * for the whole squad or waits for more players. Only an external party that
+ * already exceeds one team's capacity is split because keeping it intact is
+ * impossible in every legal allocation.
  */
 final class TeamAllocationPlanner {
 
@@ -40,6 +45,9 @@ final class TeamAllocationPlanner {
     static <T> List<List<T>> allocateWithMinimum(@NotNull List<List<T>> sourceGroups,
                                                   int configuredTeamCount, int minimumInTeam,
                                                   int capacity, @NotNull Random random) {
+        if (configuredTeamCount < 1 || minimumInTeam < 1 || capacity < minimumInTeam) {
+            return List.of();
+        }
         int players = sourceGroups.stream().filter(group -> group != null).mapToInt(List::size).sum();
         int maximumTeams = ArenaStartPolicy.maximumFeasibleActiveTeams(players, configuredTeamCount,
                 minimumInTeam, capacity);
@@ -47,8 +55,9 @@ final class TeamAllocationPlanner {
             if (!ArenaStartPolicy.isFeasibleActiveTeamCount(players, teamCount, minimumInTeam, capacity)) {
                 continue;
             }
-            List<List<T>> allocation = allocate(sourceGroups, teamCount, capacity, random);
-            if (allocation.stream().allMatch(team -> team.size() >= minimumInTeam)) return allocation;
+            List<List<T>> allocation = findAtomicAllocation(sourceGroups, teamCount, minimumInTeam,
+                    capacity, random, false);
+            if (allocation != null) return allocation;
         }
         return List.of();
     }
@@ -63,55 +72,101 @@ final class TeamAllocationPlanner {
         if (players > teamCount * capacity) {
             throw new IllegalArgumentException("Players exceed total team capacity");
         }
+        List<List<T>> allocation = findAtomicAllocation(sourceGroups, teamCount, 0, capacity, random, false);
+        if (allocation != null) return allocation;
 
-        List<List<T>> groups = new ArrayList<>();
-        for (List<T> group : sourceGroups) {
-            if (group != null && !group.isEmpty()) groups.add(new ArrayList<>(group));
+        // Debug/custom assignment still has to fit every player. If atomic
+        // parties make the requested fixed team count impossible, split them
+        // only in this non-matchmaking fallback.
+        allocation = findAtomicAllocation(sourceGroups, teamCount, 0, capacity, random, true);
+        if (allocation == null) throw new IllegalStateException("No team allocation could be created");
+        return allocation;
+    }
+
+    private static <T> List<List<T>> findAtomicAllocation(List<List<T>> sourceGroups, int teamCount,
+                                                           int minimumInTeam, int capacity, Random random,
+                                                           boolean splitEveryGroup) {
+        List<List<T>> parties = new ArrayList<>();
+        List<T> soloPlayers = new ArrayList<>();
+        for (List<T> sourceGroup : sourceGroups) {
+            if (sourceGroup == null || sourceGroup.isEmpty()) continue;
+            if (splitEveryGroup || sourceGroup.size() == 1 || sourceGroup.size() > capacity) {
+                soloPlayers.addAll(sourceGroup);
+            } else {
+                parties.add(new ArrayList<>(sourceGroup));
+            }
         }
-        Collections.shuffle(groups, random);
-        groups.sort(Comparator.comparingInt((List<T> group) -> group.size()).reversed());
+
+        Collections.shuffle(parties, random);
+        parties.sort(Comparator.comparingInt((List<T> group) -> group.size()).reversed());
+        Collections.shuffle(soloPlayers, random);
+
+        int[] loads = new int[teamCount];
+        int[] partyTeams = new int[parties.size()];
+        Arrays.fill(partyTeams, -1);
+        int[] remainingPartyPlayers = new int[parties.size() + 1];
+        for (int index = parties.size() - 1; index >= 0; index--) {
+            remainingPartyPlayers[index] = remainingPartyPlayers[index + 1] + parties.get(index).size();
+        }
+
+        Set<SearchState> failedStates = new HashSet<>();
+        if (!placeParties(parties, 0, minimumInTeam, capacity, soloPlayers.size(),
+                remainingPartyPlayers, loads, partyTeams, random, failedStates)) {
+            return null;
+        }
 
         List<List<T>> teams = new ArrayList<>(teamCount);
         for (int index = 0; index < teamCount; index++) teams.add(new ArrayList<>());
-
-        for (List<T> group : groups) {
-            List<Integer> fitting = fittingTeams(teams, capacity, group.size());
-            if (!fitting.isEmpty()) {
-                teams.get(randomLeastFilled(teams, fitting, random)).addAll(group);
-                continue;
-            }
-
-            // This only happens for an oversized external party or fragmented
-            // capacity. Keep assignment valid and distribute those players.
-            List<T> shuffled = new ArrayList<>(group);
-            Collections.shuffle(shuffled, random);
-            for (T player : shuffled) {
-                List<Integer> available = fittingTeams(teams, capacity, 1);
-                teams.get(randomLeastFilled(teams, available, random)).add(player);
-            }
+        for (int index = 0; index < parties.size(); index++) {
+            teams.get(partyTeams[index]).addAll(parties.get(index));
         }
-        ensureAtLeastTwoActiveTeams(teams, players, random);
+
+        int soloIndex = 0;
+        for (List<T> team : teams) {
+            while (team.size() < minimumInTeam) team.add(soloPlayers.get(soloIndex++));
+        }
+        while (soloIndex < soloPlayers.size()) {
+            List<Integer> available = fittingTeams(teams, capacity, 1);
+            teams.get(randomLeastFilled(teams, available, random)).add(soloPlayers.get(soloIndex++));
+        }
         return teams;
     }
 
-    /**
-     * A party may fill one team exactly, but a BedWars round must still have
-     * an opponent. Split one player only when keeping the party intact would
-     * otherwise create a one-team game.
-     */
-    private static <T> void ensureAtLeastTwoActiveTeams(List<List<T>> teams, int playerCount, Random random) {
-        if (playerCount < 2 || teams.size() < 2
-                || teams.stream().filter(team -> !team.isEmpty()).count() >= 2) {
-            return;
-        }
+    private static <T> boolean placeParties(List<List<T>> parties, int partyIndex,
+                                             int minimumInTeam, int capacity, int soloPlayers,
+                                             int[] remainingPartyPlayers, int[] loads, int[] partyTeams,
+                                             Random random, Set<SearchState> failedStates) {
+        int deficit = Arrays.stream(loads).map(load -> Math.max(0, minimumInTeam - load)).sum();
+        if (remainingPartyPlayers[partyIndex] + soloPlayers < deficit) return false;
+        if (partyIndex == parties.size()) return soloPlayers >= deficit;
 
-        List<Integer> emptyTeams = new ArrayList<>();
-        for (int index = 0; index < teams.size(); index++) {
-            if (teams.get(index).isEmpty()) emptyTeams.add(index);
+        int[] normalizedLoads = loads.clone();
+        Arrays.sort(normalizedLoads);
+        SearchState state = new SearchState(partyIndex, normalizedLoads);
+        if (failedStates.contains(state)) return false;
+
+        int partySize = parties.get(partyIndex).size();
+        List<Integer> candidates = new ArrayList<>();
+        for (int teamIndex = 0; teamIndex < loads.length; teamIndex++) {
+            if (loads[teamIndex] + partySize <= capacity) candidates.add(teamIndex);
         }
-        List<T> source = teams.stream().filter(team -> team.size() > 1).findFirst().orElseThrow();
-        T player = source.remove(random.nextInt(source.size()));
-        teams.get(emptyTeams.get(random.nextInt(emptyTeams.size()))).add(player);
+        Collections.shuffle(candidates, random);
+        candidates.sort(Comparator.comparingInt(teamIndex -> loads[teamIndex]));
+
+        Set<Integer> triedLoads = new HashSet<>();
+        for (int teamIndex : candidates) {
+            if (!triedLoads.add(loads[teamIndex])) continue;
+            loads[teamIndex] += partySize;
+            partyTeams[partyIndex] = teamIndex;
+            if (placeParties(parties, partyIndex + 1, minimumInTeam, capacity, soloPlayers,
+                    remainingPartyPlayers, loads, partyTeams, random, failedStates)) {
+                return true;
+            }
+            partyTeams[partyIndex] = -1;
+            loads[teamIndex] -= partySize;
+        }
+        failedStates.add(state);
+        return false;
     }
 
     private static <T> List<Integer> fittingTeams(List<List<T>> teams, int capacity, int required) {
@@ -129,5 +184,12 @@ final class TeamAllocationPlanner {
                 .filter(index -> teams.get(index).size() == minimum)
                 .toList();
         return leastFilled.get(random.nextInt(leastFilled.size()));
+    }
+
+    private record SearchState(int partyIndex, List<Integer> loads) {
+
+        private SearchState(int partyIndex, int[] loads) {
+            this(partyIndex, Arrays.stream(loads).boxed().toList());
+        }
     }
 }
