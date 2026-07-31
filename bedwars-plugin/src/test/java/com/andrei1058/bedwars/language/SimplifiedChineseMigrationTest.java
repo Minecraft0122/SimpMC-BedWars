@@ -106,7 +106,7 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
-    void migratesOnlyBuiltInArenaJoinAndPlayingTeamMessages() {
+    void migratesOnlyBuiltInArenaJoinAndRestoresUpstreamTeamPrefixes() {
         YamlConfiguration language = new YamlConfiguration();
         language.set(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG,
                 "{prefix}&7{player}&e加入了游戏(&b{on}&e/&b{max}&e)！");
@@ -122,8 +122,10 @@ class SimplifiedChineseMigrationTest {
                 language.getString(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG));
         assertEquals("&f你属于 {teamColor}{teamName}队",
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER).get(1));
-        assertEquals(List.of(""), language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
-        assertEquals(List.of(""), language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
+        assertEquals(List.of("{teamColor}{teamName} "),
+                language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
+        assertEquals(List.of("&6&l⭐ {teamColor}{teamName} "),
+                language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
     }
 
     @Test
@@ -131,12 +133,38 @@ class SimplifiedChineseMigrationTest {
         YamlConfiguration language = new YamlConfiguration();
         language.set(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG, "custom join");
         language.set(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER, List.of("custom footer"));
+        language.set(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("&dCUSTOM "));
 
         SimplifiedChinese.migrateCurrentMessageDefaults(language);
 
         assertEquals("custom join", language.getString(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG));
         assertEquals(List.of("custom footer"),
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER));
+        assertEquals(List.of("&dCUSTOM "),
+                language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
+    }
+
+    @Test
+    void restoresEveryBuiltInTeamPrefixRemovedByThePreviousMigration() {
+        YamlConfiguration language = new YamlConfiguration();
+        for (String path : List.of(
+                Messages.FORMATTING_SB_TAB_PLAYING_PREFIX,
+                Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX,
+                Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX,
+                Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX)) {
+            language.set(path, List.of(""));
+        }
+
+        SimplifiedChinese.migrateBuiltInTeamNamePrefixes(language);
+
+        assertEquals(List.of("{teamColor}{teamName} "),
+                language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
+        assertEquals(List.of("{teamColor}{teamName} "),
+                language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX));
+        assertEquals(List.of("&6&l⭐ {teamColor}{teamName} "),
+                language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
+        assertEquals(List.of("&6&l⭐ {teamColor}{teamName} "),
+                language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX));
     }
 
     @Test

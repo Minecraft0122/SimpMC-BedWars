@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -31,7 +32,6 @@ class BwTabListTest {
 
         assertSame(ChatColor.RED, BwTabList.getPlayerListColor(redTeam));
         assertSame(ChatColor.WHITE, BwTabList.getPlayerListColor(null));
-        assertEquals("", BwTabList.teamColorOnlyPrefix());
     }
 
     @Test
@@ -55,15 +55,59 @@ class BwTabListTest {
         IArena arena = arena(
                 List.of(red, blue),
                 List.of(charlie, bob, adam, alice),
-                List.of(viewer, aaron),
+                List.of(viewer, aaron, bob),
                 currentTeams,
                 formerTeams
         );
 
         assertEquals(
-                List.of("Aaron", "Alice", "Bob", "Adam", "charlie", "Viewer"),
+                List.of("Alice", "Bob", "Adam", "charlie", "Aaron", "Viewer"),
                 BwTabList.orderedArenaPlayers(arena).stream().map(Player::getName).toList()
         );
+    }
+
+    @Test
+    void teamsFollowVisibleSpectrumRegardlessOfConfigurationOrder() {
+        List<TeamColor> configuredOrder = List.of(
+                TeamColor.DARK_GRAY, TeamColor.BLUE, TeamColor.PINK, TeamColor.WHITE,
+                TeamColor.CYAN, TeamColor.DARK_GREEN, TeamColor.RED, TeamColor.GRAY,
+                TeamColor.GREEN, TeamColor.YELLOW
+        );
+        List<ITeam> teams = configuredOrder.stream()
+                .map(color -> team(color.name(), color))
+                .toList();
+        List<Player> players = teams.stream()
+                .map(team -> player(team.getColor().name()))
+                .toList();
+        Map<UUID, ITeam> assignments = java.util.stream.IntStream.range(0, players.size())
+                .boxed()
+                .collect(java.util.stream.Collectors.toMap(
+                        index -> players.get(index).getUniqueId(),
+                        teams::get
+                ));
+
+        IArena arena = arena(teams, players, List.of(), assignments, Map.of());
+
+        assertEquals(
+                List.of("RED", "YELLOW", "GREEN", "DARK_GREEN", "CYAN",
+                        "BLUE", "PINK", "WHITE", "GRAY", "DARK_GRAY"),
+                BwTabList.orderedArenaPlayers(arena).stream().map(Player::getName).toList()
+        );
+    }
+
+    @Test
+    void writesTheCalculatedOrderAndSkipsUnchangedPlayers() {
+        PlayerOrderState firstState = new PlayerOrderState(1);
+        PlayerOrderState secondState = new PlayerOrderState(9);
+        Player first = orderedPlayer("Alice", firstState);
+        Player second = orderedPlayer("Bob", secondState);
+
+        BwTabList.applyPlayerListOrder(List.of(first, second));
+
+        assertEquals(1, firstState.order);
+        assertEquals(0, firstState.writes.get());
+        assertEquals(2, secondState.order);
+        assertEquals(1, secondState.writes.get());
     }
 
     private static ITeam team(String name, TeamColor color) {
@@ -74,6 +118,26 @@ class BwTabListTest {
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getIdentity" -> identity;
                     case "getColor" -> color;
+                    case "getName" -> name;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                }
+        );
+    }
+
+    private static Player orderedPlayer(String name, PlayerOrderState state) {
+        UUID uniqueId = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+        return (Player) Proxy.newProxyInstance(
+                Player.class.getClassLoader(),
+                new Class<?>[]{Player.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getName" -> name;
+                    case "getUniqueId" -> uniqueId;
+                    case "getPlayerListOrder" -> state.order;
+                    case "setPlayerListOrder" -> {
+                        state.order = (int) args[0];
+                        state.writes.incrementAndGet();
+                        yield null;
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 }
         );
@@ -107,5 +171,14 @@ class BwTabListTest {
                     default -> throw new UnsupportedOperationException(method.getName());
                 }
         );
+    }
+
+    private static final class PlayerOrderState {
+        private int order;
+        private final AtomicInteger writes = new AtomicInteger();
+
+        private PlayerOrderState(int order) {
+            this.order = order;
+        }
     }
 }

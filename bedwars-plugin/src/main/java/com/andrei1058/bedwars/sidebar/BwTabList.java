@@ -47,7 +47,6 @@ import static com.andrei1058.bedwars.BedWars.*;
 
 public class BwTabList {
 
-    private static final SidebarLine TEAM_COLOR_ONLY_PREFIX = new SidebarLine();
     private static final Comparator<Player> PLAYER_NAME_ORDER = Comparator
             .comparing(Player::getName, String.CASE_INSENSITIVE_ORDER)
             .thenComparing(Player::getName)
@@ -70,12 +69,11 @@ public class BwTabList {
     void handlePlayerList() {
 
         handleHealthIcon();
-        requestPlayerListOrderUpdate();
-
         if (this.isTabFormattingDisabled()) {
             clearDeployedTabs();
             return;
         }
+        requestPlayerListOrderUpdate();
 
         LinkedHashMap<UUID, Player> desiredPlayers = new LinkedHashMap<>();
         if (null == sidebar.getArena()) {
@@ -196,8 +194,6 @@ public class BwTabList {
      * Will handle invisibility potion as well.
      */
     public void giveUpdateTabFormat(@NotNull Player player, boolean skipStateCheck, @Nullable Boolean spectator) {
-        requestPlayerListOrderUpdate();
-
         // if sidebar was not created
         if (sidebar.getHandle() == null) {
             return;
@@ -212,6 +208,7 @@ public class BwTabList {
                 return;
             }
         }
+        requestPlayerListOrderUpdate();
 
         SidebarLine prefix;
         SidebarLine suffix;
@@ -244,10 +241,10 @@ public class BwTabList {
 
                 if (arena.getStatus() == GameState.restarting && null != arena.getWinner()) {
                     if (arena.getWinner().equals(exTeam)) {
-                        prefix = TEAM_COLOR_ONLY_PREFIX;
+                        prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, player, replacements);
                         suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, player, replacements);
                     } else {
-                        prefix = TEAM_COLOR_ONLY_PREFIX;
+                        prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, player, replacements);
                         suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, player, replacements);
                     }
                 } else {
@@ -312,7 +309,7 @@ public class BwTabList {
                 case restarting:
                     HashMap<String, String> replacements = getTeamReplacements(team);
 
-                    prefix = TEAM_COLOR_ONLY_PREFIX;
+                    prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, player, replacements);
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, player, replacements);
                     break;
                 default:
@@ -332,7 +329,7 @@ public class BwTabList {
         // tab list of playing state
         HashMap<String, String> replacements = getTeamReplacements(team);
 
-        prefix = TEAM_COLOR_ONLY_PREFIX;
+        prefix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, player, replacements);
         suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, player, replacements);
 
         PlayerTab teamTab = handle.playerTabCreate(
@@ -426,35 +423,42 @@ public class BwTabList {
         return replacements;
     }
 
-    static String teamColorOnlyPrefix() {
-        return TEAM_COLOR_ONLY_PREFIX.getLine();
-    }
-
     static ChatColor getPlayerListColor(@Nullable ITeam targetTeam) {
         if (targetTeam == null) return ChatColor.WHITE;
         return targetTeam.getColor().chat();
     }
 
     /**
-     * Returns the arena roster grouped by configured team order. Members of each
-     * team are ordered by player name; former team members keep their group while
-     * spectating, and unassigned spectators are placed last.
+     * Returns the arena roster grouped from red to violet. Active team members
+     * come first, followed by eliminated members grouped by their former team,
+     * then unassigned spectators. Every group is ordered by player name.
      */
     static List<Player> orderedArenaPlayers(@NotNull IArena arena) {
-        LinkedHashMap<UUID, Player> roster = new LinkedHashMap<>();
-        arena.getPlayers().forEach(player -> roster.put(player.getUniqueId(), player));
-        arena.getSpectators().forEach(player -> roster.put(player.getUniqueId(), player));
-
-        LinkedHashMap<UUID, List<Player>> teamMembers = new LinkedHashMap<>();
-        for (ITeam team : arena.getTeams()) {
-            teamMembers.put(team.getIdentity(), new ArrayList<>());
+        List<ITeam> teams = new ArrayList<>(arena.getTeams());
+        teams.sort(TabTeamOrder.COMPARATOR);
+        LinkedHashMap<UUID, List<Player>> activeMembers = new LinkedHashMap<>();
+        LinkedHashMap<UUID, List<Player>> eliminatedMembers = new LinkedHashMap<>();
+        for (ITeam team : teams) {
+            activeMembers.put(team.getIdentity(), new ArrayList<>());
+            eliminatedMembers.put(team.getIdentity(), new ArrayList<>());
         }
 
+        Set<UUID> seenPlayers = new HashSet<>();
         List<Player> unassigned = new ArrayList<>();
-        for (Player player : roster.values()) {
+        for (Player player : arena.getPlayers()) {
+            if (!seenPlayers.add(player.getUniqueId())) continue;
             ITeam team = arena.getTeam(player);
-            if (team == null) team = arena.getExTeam(player.getUniqueId());
-            List<Player> members = team == null ? null : teamMembers.get(team.getIdentity());
+            List<Player> members = team == null ? null : activeMembers.get(team.getIdentity());
+            if (members == null) {
+                unassigned.add(player);
+            } else {
+                members.add(player);
+            }
+        }
+        for (Player player : arena.getSpectators()) {
+            if (!seenPlayers.add(player.getUniqueId())) continue;
+            ITeam formerTeam = arena.getExTeam(player.getUniqueId());
+            List<Player> members = formerTeam == null ? null : eliminatedMembers.get(formerTeam.getIdentity());
             if (members == null) {
                 unassigned.add(player);
             } else {
@@ -462,14 +466,19 @@ public class BwTabList {
             }
         }
 
-        List<Player> ordered = new ArrayList<>(roster.size());
-        for (List<Player> members : teamMembers.values()) {
-            members.sort(PLAYER_NAME_ORDER);
-            ordered.addAll(members);
-        }
+        List<Player> ordered = new ArrayList<>(seenPlayers.size());
+        appendSortedGroups(ordered, activeMembers.values());
+        appendSortedGroups(ordered, eliminatedMembers.values());
         unassigned.sort(PLAYER_NAME_ORDER);
         ordered.addAll(unassigned);
         return ordered;
+    }
+
+    private static void appendSortedGroups(List<Player> destination, Collection<List<Player>> groups) {
+        for (List<Player> group : groups) {
+            group.sort(PLAYER_NAME_ORDER);
+            destination.addAll(group);
+        }
     }
 
     /**
@@ -503,11 +512,15 @@ public class BwTabList {
         }
         lobbyPlayers.sort(PLAYER_NAME_ORDER);
 
+        List<Player> orderedPlayers = new ArrayList<>(lobbyPlayers.size() + arenaPlayers.size());
+        orderedPlayers.addAll(lobbyPlayers);
+        orderedPlayers.addAll(arenaPlayers.values());
+        applyPlayerListOrder(orderedPlayers);
+    }
+
+    static void applyPlayerListOrder(@NotNull Collection<Player> orderedPlayers) {
         int order = 1;
-        for (Player player : lobbyPlayers) {
-            setPlayerListOrderIfChanged(player, order++);
-        }
-        for (Player player : arenaPlayers.values()) {
+        for (Player player : orderedPlayers) {
             setPlayerListOrderIfChanged(player, order++);
         }
     }

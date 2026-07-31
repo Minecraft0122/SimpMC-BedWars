@@ -817,7 +817,7 @@ public class SimplifiedChinese extends Language {
                 "&f由 {poweredBy} 提供支持",
                 ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}{teamName} "));
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // player eliminated - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER, List.of(
@@ -874,7 +874,8 @@ public class SimplifiedChinese extends Language {
                 "&f由 {poweredBy} 提供支持",
                 ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX,
+                List.of("&6&l⭐ {teamColor}{teamName} "));
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // winner dead - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_HEADER, List.of(
@@ -895,7 +896,8 @@ public class SimplifiedChinese extends Language {
                 "&f由 {poweredBy} 提供支持",
                 ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX,
+                List.of("&6&l⭐ {teamColor}{teamName} "));
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, List.of(" {vPrefix}", " &c&o已淘汰", " {level}", " &c&o已淘汰"));
         // loser - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_HEADER, List.of(
@@ -915,7 +917,7 @@ public class SimplifiedChinese extends Language {
                 "&f由 {poweredBy} 提供支持",
                 ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, List.of(""));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, List.of("{teamColor}{teamName} "));
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, List.of(" {vPrefix}", " &c&o已淘汰", " {level}", " &c&o已淘汰"));
         // spectator - restarting state
         yml.addDefault(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_HEADER, List.of(
@@ -1116,7 +1118,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(13, SimplifiedChinese::migrateLegacyMessages);
+        updateToLatestVersion(14, SimplifiedChinese::migrateLegacyMessages);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
@@ -1185,14 +1187,13 @@ public class SimplifiedChinese extends Language {
         for (String path : List.of(
                 Messages.FORMATTING_SB_TAB_PLAYING_PREFIX,
                 Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX)) {
-            replaceListIfEqual(yml, path, List.of("{teamColor}{teamName} "), List.of(""));
-            replaceListIfEqual(yml, path, List.of("{teamColor}[{teamLetter}] "), List.of(""));
+            replaceListIfEqual(yml, path, List.of(""), List.of("{teamColor}{teamName} "));
         }
         for (String path : List.of(
                 Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX,
                 Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX)) {
-            replaceListIfEqual(yml, path, List.of("&6&l⭐ {teamColor}{teamName} "), List.of(""));
-            replaceListIfEqual(yml, path, List.of("&6★ {teamColor}[{teamLetter}] "), List.of(""));
+            replaceListIfEqual(yml, path, List.of(""),
+                    List.of("&6&l⭐ {teamColor}{teamName} "));
         }
     }
 
@@ -1257,7 +1258,7 @@ public class SimplifiedChinese extends Language {
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_HEADER)
                 || path.equals(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER)) return List.of("&a&l{serverIp}", "&7{map} &8| &7{group}", "&f{nextEvent} &a{time}");
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER)) return List.of("&7队伍：{teamColor}{teamName}", "&8{poweredBy}");
-        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX)) return List.of("");
+        if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX)) return List.of("{teamColor}[{teamLetter}] ");
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER)) return List.of("&a&l{serverIp}", "&7{map} &8| &7{group}", "&f{nextEvent} &a{time}", "&c你已被淘汰");
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_FOOTER)) return List.of("&7继续观战", "&8{poweredBy}");
         if (path.equals(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX)) return ELIMINATED_TAB_SUFFIX;
@@ -1267,11 +1268,11 @@ public class SimplifiedChinese extends Language {
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_FOOTER)
                 || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_FOOTER)) return List.of("&a本局胜利", "&e击杀 &f{kills} &8| &e最终击杀 &f{finalKills}", "&e破坏床 &f{beds} &8| &e死亡 &f{deaths}", "&7竞技场将在 &e{time} &7秒后重置");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX)
-                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX)) return List.of("");
+                || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX)) return List.of("&6★ {teamColor}[{teamLetter}] ");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX)) return List.of(" &7[已淘汰]");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_HEADER)) return List.of("&6★ {winnerTeamColor}&l{winnerTeamName}队获胜", "&7{map} &8| &7{group}");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_FOOTER)) return List.of("&c本局失败", "&e击杀 &f{kills} &8| &e最终击杀 &f{finalKills}", "&e破坏床 &f{beds} &8| &e死亡 &f{deaths}", "&7竞技场将在 &e{time} &7秒后重置");
-        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX)) return List.of("");
+        if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX)) return List.of("{teamColor}[{teamLetter}] ");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX)) return List.of(" &c[失败]");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_HEADER)) return List.of("&a&l{serverIp}", "&6★ {winnerTeamColor}&l{winnerTeamName}队获胜", "&7{map} &8| &7{group}");
         if (path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_FOOTER)) return List.of("&7竞技场将在 &e{time} &7秒后重置", "&8{poweredBy}");

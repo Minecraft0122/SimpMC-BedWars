@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SidebarTabSynchronizationTest {
@@ -80,6 +81,22 @@ class SidebarTabSynchronizationTest {
 
         secondViewer.removeTab("alice");
         assertEquals(customName, playerState.playerListName);
+    }
+
+    @Test
+    void appliesRequestedColorAndAddsPlayerToScoreboardTeam() {
+        Sidebar sidebar = sidebar();
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(team(state));
+        Player player = player("Alice");
+
+        sidebar.applyTab(scoreboard, tab(player, new SidebarLine("&cRed "), ChatColor.RED,
+                PlayerTab.NameTagVisibility.NEVER));
+
+        assertSame(ChatColor.RED, state.color);
+        assertTrue(state.entries.contains("Alice"));
+        assertSame(Team.OptionStatus.NEVER, state.visibility);
+        assertEquals(Sidebar.component("§cRed "), state.prefix);
     }
 
     private static Sidebar sidebar() {
@@ -163,6 +180,9 @@ class SidebarTabSynchronizationTest {
         private Team.OptionStatus visibility = Team.OptionStatus.ALWAYS;
         private final Set<String> entries = new HashSet<>();
         private int writeCount;
+
+        private TeamState() {
+        }
 
         private TeamState(String entry) {
             entries.add(entry);
