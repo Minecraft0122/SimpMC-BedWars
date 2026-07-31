@@ -383,13 +383,24 @@ public class SidebarService implements ISidebarService {
 
     public void handleJoin(IArena arena, Player player, @Nullable Boolean spectator) {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> {
-            if (null != v.getArena() && v.getArena().equals(arena)) {
-                if (!v.getPlayer().equals(player)) {
-                    v.giveUpdateTabFormat(player, false, spectator);
-                }
-            }
-        });
+        updateArenaPlayerTabs(sidebars.values(), arena, player, spectator);
+    }
+
+    /** Refresh an eliminated player's TAB entry on every other arena scoreboard. */
+    public void handleElimination(@NotNull IArena arena, @NotNull Player player) {
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        updateArenaPlayerTabs(sidebars.values(), arena, player, true);
+    }
+
+    static void updateArenaPlayerTabs(@NotNull Collection<? extends ISidebar> sidebars,
+                                      @NotNull IArena arena, @NotNull Player player,
+                                      @Nullable Boolean spectator) {
+        UUID playerId = player.getUniqueId();
+        for (ISidebar sidebar : sidebars) {
+            if (sidebar == null || sidebar.getArena() != arena
+                    || sidebar.getPlayer().getUniqueId().equals(playerId)) continue;
+            sidebar.giveUpdateTabFormat(player, false, spectator);
+        }
     }
 
     public void applyLobbyTab(Player player) {

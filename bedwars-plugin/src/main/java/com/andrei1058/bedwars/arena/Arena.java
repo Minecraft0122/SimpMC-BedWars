@@ -639,7 +639,9 @@ public class Arena implements IArena {
                 broadcastArenaJoin(p);
             }
 
-            SidebarService.getInstance().giveSidebar(p, this, false);
+            SidebarService sidebarService = SidebarService.getInstance();
+            sidebarService.giveSidebar(p, this, false);
+            if (playerBefore) sidebarService.handleElimination(this, p);
             nms.setCollide(p, this, false);
 
             if (!playerBefore) {

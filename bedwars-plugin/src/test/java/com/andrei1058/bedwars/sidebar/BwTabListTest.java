@@ -61,7 +61,7 @@ class BwTabListTest {
         );
 
         assertEquals(
-                List.of("Alice", "Bob", "Adam", "charlie", "Aaron", "Viewer"),
+                List.of("Aaron", "Alice", "Bob", "Adam", "charlie", "Viewer"),
                 BwTabList.orderedArenaPlayers(arena).stream().map(Player::getName).toList()
         );
     }
@@ -96,18 +96,48 @@ class BwTabListTest {
     }
 
     @Test
-    void writesTheCalculatedOrderAndSkipsUnchangedPlayers() {
-        PlayerOrderState firstState = new PlayerOrderState(1);
+    void writesTheCalculatedOrderAndRestoresThePreviousOwner() {
+        PlayerOrderState firstState = new PlayerOrderState(2);
         PlayerOrderState secondState = new PlayerOrderState(9);
         Player first = orderedPlayer("Alice", firstState);
         Player second = orderedPlayer("Bob", secondState);
 
-        BwTabList.applyPlayerListOrder(List.of(first, second));
+        try {
+            BwTabList.applyPlayerListOrder(List.of(first, second));
 
-        assertEquals(1, firstState.order);
-        assertEquals(0, firstState.writes.get());
-        assertEquals(2, secondState.order);
-        assertEquals(1, secondState.writes.get());
+            assertEquals(2, firstState.order);
+            assertEquals(0, firstState.writes.get());
+            assertEquals(1, secondState.order);
+            assertEquals(1, secondState.writes.get());
+
+            BwTabList.applyPlayerListOrder(List.of());
+
+            assertEquals(2, firstState.order);
+            assertEquals(0, firstState.writes.get());
+            assertEquals(9, secondState.order);
+            assertEquals(2, secondState.writes.get());
+        } finally {
+            BwTabList.applyPlayerListOrder(List.of());
+        }
+    }
+
+    @Test
+    void doesNotOverwriteAnOrderChangedByAnotherPlugin() {
+        PlayerOrderState state = new PlayerOrderState(7);
+        Player player = orderedPlayer("Alice", state);
+
+        try {
+            BwTabList.applyPlayerListOrder(List.of(player));
+            assertEquals(1, state.order);
+
+            state.order = 4;
+            BwTabList.applyPlayerListOrder(List.of());
+
+            assertEquals(4, state.order);
+            assertEquals(1, state.writes.get());
+        } finally {
+            BwTabList.applyPlayerListOrder(List.of());
+        }
     }
 
     private static ITeam team(String name, TeamColor color) {
@@ -132,6 +162,7 @@ class BwTabListTest {
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getName" -> name;
                     case "getUniqueId" -> uniqueId;
+                    case "isOnline" -> true;
                     case "getPlayerListOrder" -> state.order;
                     case "setPlayerListOrder" -> {
                         state.order = (int) args[0];
