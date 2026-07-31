@@ -71,7 +71,8 @@ public class BwTabList {
 
         handleHealthIcon();
         requestPlayerListOrderUpdate();
-        if (this.isTabFormattingDisabled()) {
+        boolean fullFormatting = !this.isTabFormattingDisabled();
+        if (!fullFormatting && sidebar.getArena() == null) {
             clearDeployedTabs();
             return;
         }
@@ -91,13 +92,13 @@ public class BwTabList {
             }
             // sometimes due to timing issues player is not listed yet in lobby players
             desiredPlayers.put(sidebar.getPlayer().getUniqueId(), sidebar.getPlayer());
-            synchronizeTabs(desiredPlayers);
+            synchronizeTabs(desiredPlayers, true);
             return;
         }
 
         sidebar.getArena().getPlayers().forEach(playing -> desiredPlayers.put(playing.getUniqueId(), playing));
         sidebar.getArena().getSpectators().forEach(spectating -> desiredPlayers.put(spectating.getUniqueId(), spectating));
-        synchronizeTabs(desiredPlayers);
+        synchronizeTabs(desiredPlayers, fullFormatting);
     }
 
     public void handleHealthIcon() {
@@ -206,7 +207,7 @@ public class BwTabList {
 
         if (!skipStateCheck) {
             if (this.isTabFormattingDisabled()) {
-                removeDeployedTab(player.getUniqueId());
+                giveUpdateTeamColor(player);
                 return;
             }
         }
@@ -343,7 +344,36 @@ public class BwTabList {
         deployedPerPlayerTabList.put(player.getUniqueId(), teamTab);
     }
 
-    private void synchronizeTabs(@NotNull Map<UUID, Player> desiredPlayers) {
+    private void giveUpdateTeamColor(@NotNull Player player) {
+        IArena arena = sidebar.getArena();
+        Sidebar handle = sidebar.getHandle();
+        if (arena == null || handle == null) {
+            removeDeployedTab(player.getUniqueId());
+            return;
+        }
+
+        ITeam team = resolvePlayerListTeam(arena, player);
+        if (team == null) {
+            removeDeployedTab(player.getUniqueId());
+            return;
+        }
+
+        PlayerTab tab = handle.playerTabCreate(
+                player.getUniqueId().toString(), player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, sidebar.getPlaceholders(player),
+                getPlayerListColor(team), player.hasPotionEffect(PotionEffectType.INVISIBILITY)
+                        ? PlayerTab.NameTagVisibility.NEVER
+                        : PlayerTab.NameTagVisibility.ALWAYS
+        );
+        deployedPerPlayerTabList.put(player.getUniqueId(), tab);
+    }
+
+    static @Nullable ITeam resolvePlayerListTeam(@NotNull IArena arena, @NotNull Player player) {
+        ITeam currentTeam = arena.getTeam(player);
+        return currentTeam == null ? arena.getExTeam(player.getUniqueId()) : currentTeam;
+    }
+
+    private void synchronizeTabs(@NotNull Map<UUID, Player> desiredPlayers, boolean fullFormatting) {
         Set<UUID> onlinePlayers = new HashSet<>();
         desiredPlayers.forEach((uuid, player) -> {
             if (player.isOnline()) onlinePlayers.add(uuid);
@@ -354,7 +384,13 @@ public class BwTabList {
         stale.forEach(this::removeDeployedTab);
         desiredPlayers.values().stream()
                 .filter(Player::isOnline)
-                .forEach(player -> giveUpdateTabFormat(player, true, null));
+                .forEach(player -> {
+                    if (fullFormatting) {
+                        giveUpdateTabFormat(player, true, null);
+                    } else {
+                        giveUpdateTeamColor(player);
+                    }
+                });
     }
 
     private void clearDeployedTabs() {

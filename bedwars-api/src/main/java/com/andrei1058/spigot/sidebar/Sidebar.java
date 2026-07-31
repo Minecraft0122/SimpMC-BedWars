@@ -376,6 +376,19 @@ public class Sidebar {
         if (!team.hasEntry(tab.getPlayer().getName())) {
             team.addEntry(tab.getPlayer().getName());
         }
+
+        // A custom player-list component bypasses scoreboard team formatting in
+        // the client. Render the complete row explicitly from the target
+        // player's own sidebar; scoreboard teams continue to color name tags.
+        if (scoreboards.containsKey(tab.getPlayer().getUniqueId())) {
+            PlayerListNameState.apply(tab.getPlayer(), formattedPlayerListName(tab, prefix, suffix));
+        }
+    }
+
+    static Component formattedPlayerListName(@NotNull PlayerTab tab, @NotNull Component prefix,
+                                             @NotNull Component suffix) {
+        Component coloredName = component(tab.getColor() + tab.getPlayer().getName());
+        return prefix.append(coloredName).append(suffix);
     }
 
     private static void unregisterObjective(@NotNull Scoreboard scoreboard, @NotNull String name) {

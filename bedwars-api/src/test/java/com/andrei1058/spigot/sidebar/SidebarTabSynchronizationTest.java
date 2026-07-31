@@ -62,8 +62,9 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
-    void clearsAndRestoresCustomPlayerListNameAcrossViewers() {
+    void appliesAndRestoresRenderedPlayerListNameAcrossViewers() {
         Component customName = Component.text("大厅称号 Alice");
+        Component renderedName = Component.text("红队 Alice");
         PlayerNameState playerState = new PlayerNameState(customName);
         Player player = player("Alice", playerState);
         Sidebar firstViewer = sidebar();
@@ -71,16 +72,47 @@ class SidebarTabSynchronizationTest {
 
         firstViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        assertEquals(null, playerState.playerListName,
-                "a custom tab component prevents the client from applying scoreboard team color");
+        PlayerListNameState.apply(player, renderedName);
+        assertEquals(renderedName, playerState.playerListName);
 
         secondViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
         firstViewer.removeTab("alice");
-        assertEquals(null, playerState.playerListName, "another viewer still needs scoreboard formatting");
+        assertEquals(renderedName, playerState.playerListName, "another viewer still owns the rendered name");
 
         secondViewer.removeTab("alice");
         assertEquals(customName, playerState.playerListName);
+    }
+
+    @Test
+    void doesNotOverwriteAPlayerListNameChangedByAnotherPlugin() {
+        Component original = Component.text("原始名称");
+        Component rendered = Component.text("红队 Alice");
+        Component external = Component.text("其他插件名称");
+        PlayerNameState state = new PlayerNameState(original);
+        Player player = player("ExternalAlice", state);
+        Sidebar viewer = sidebar();
+
+        viewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        PlayerListNameState.apply(player, rendered);
+        state.playerListName = external;
+        viewer.removeTab("external-alice");
+
+        assertEquals(external, state.playerListName);
+    }
+
+    @Test
+    void rendersTeamPrefixColoredPlayerNameAndSuffixAsOneTabComponent() {
+        Player player = player("Alice");
+        PlayerTab tab = tab(player, new SidebarLine("&c红队 "), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS);
+
+        Component rendered = Sidebar.formattedPlayerListName(
+                tab, Sidebar.component("§c红队 "), Sidebar.component("§7 [VIP]"));
+
+        assertEquals(Sidebar.component("§cAlice"), rendered.children().get(0));
+        assertEquals(Sidebar.component("§7 [VIP]"), rendered.children().get(1));
     }
 
     @Test

@@ -35,6 +35,22 @@ class BwTabListTest {
     }
 
     @Test
+    void minimalFormattingRetainsCurrentAndEliminatedTeamColors() {
+        ITeam red = team("red", TeamColor.RED);
+        Player active = player("Active");
+        Player eliminated = player("Eliminated");
+        Player spectator = player("Spectator");
+        IArena arena = arena(
+                List.of(red), List.of(active), List.of(eliminated, spectator),
+                Map.of(active.getUniqueId(), red), Map.of(eliminated.getUniqueId(), red)
+        );
+
+        assertSame(red, BwTabList.resolvePlayerListTeam(arena, active));
+        assertSame(red, BwTabList.resolvePlayerListTeam(arena, eliminated));
+        assertEquals(null, BwTabList.resolvePlayerListTeam(arena, spectator));
+    }
+
+    @Test
     void arenaPlayersAreGroupedByTeamAndSortedByName() {
         ITeam red = team("red", TeamColor.RED);
         ITeam blue = team("blue", TeamColor.BLUE);
