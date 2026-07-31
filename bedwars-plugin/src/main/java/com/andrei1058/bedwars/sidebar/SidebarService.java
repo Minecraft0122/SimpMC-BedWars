@@ -129,6 +129,13 @@ public class SidebarService implements ISidebarService {
         boolean lobbyTabEnabled = arena == null && shouldKeepLobbyTabContext(
                 config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE),
                 config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY));
+        boolean arenaTabEnabled = arena != null && shouldKeepArenaTabContext(arena.getStatus(),
+                config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE),
+                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING),
+                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING),
+                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING),
+                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_RESTARTING));
+        boolean tabContextEnabled = lobbyTabEnabled || arenaTabEnabled;
 
         // check if we might need to remove the existing sidebar
         if (null != sidebar) {
@@ -138,15 +145,14 @@ public class SidebarService implements ISidebarService {
                     return;
                 }
             } else {
-                // if sidebar is disabled in game
-                if (!sidebarEnabled) {
+                if (!sidebarEnabled && !arenaTabEnabled) {
                     this.remove(sidebar);
                     return;
                 }
             }
         }
 
-        if (!sidebarEnabled && !lobbyTabEnabled) return;
+        if (!sidebarEnabled && !tabContextEnabled) return;
 
         // set sidebar lines based on game state or lobby
         List<String> lines = null;
@@ -157,6 +163,8 @@ public class SidebarService implements ISidebarService {
             } else if (lobbyTabEnabled) {
                 lines = Collections.emptyList();
             }
+        } else if (!sidebarEnabled) {
+            lines = Collections.emptyList();
         } else {
             if (arena.getStatus() == GameState.waiting) {
                 if (arena.isSpectator(player)) {
@@ -202,7 +210,7 @@ public class SidebarService implements ISidebarService {
 
         // if we do not have lines we eventually remove the sidebar
         if (null == lines || lines.isEmpty()) {
-            if (arena == null && lobbyTabEnabled) {
+            if (tabContextEnabled) {
                 boolean newlyAdded = false;
                 if (sidebar == null) {
                     sidebar = new BwSidebar(player);
@@ -212,7 +220,7 @@ public class SidebarService implements ISidebarService {
                     Bukkit.getPluginManager().callEvent(event);
                     if (event.isCancelled()) return;
                 }
-                sidebar.setContent(Collections.emptyList(), Collections.emptyList(), null);
+                sidebar.setContent(Collections.emptyList(), Collections.emptyList(), arena);
                 if (newlyAdded) sidebars.put(player.getUniqueId(), sidebar);
                 return;
             }
@@ -277,6 +285,18 @@ public class SidebarService implements ISidebarService {
 
     static boolean shouldKeepLobbyTabContext(boolean headerFooterEnabled, boolean playerListFormattingEnabled) {
         return headerFooterEnabled || playerListFormattingEnabled;
+    }
+
+    static boolean shouldKeepArenaTabContext(GameState state, boolean headerFooterEnabled,
+                                             boolean waiting, boolean starting,
+                                             boolean playing, boolean restarting) {
+        if (headerFooterEnabled) return true;
+        return switch (state) {
+            case waiting -> waiting;
+            case starting -> starting;
+            case playing -> playing;
+            case restarting -> restarting;
+        };
     }
 
     protected SidebarManager getSidebarHandler() {

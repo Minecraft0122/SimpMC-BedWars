@@ -524,8 +524,7 @@ public class Arena implements IArena {
             boolean isStatusChange = reevaluateStartEligibility();
 
             //half full arena time shorten
-            if (players.size() >= getMaxPlayers() / 2
-                    && players.size() > ArenaStartPolicy.MINIMUM_PLAYERS) {
+            if (players.size() >= getMaxPlayers() / 2) {
                 if (startingTask != null) {
                     if (Bukkit.getScheduler().isCurrentlyRunning(startingTask.getTask())) {
                         if (startingTask.getCountdown() > getConfig().getInt(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_HALF)) {
@@ -546,10 +545,9 @@ public class Arena implements IArena {
                 SidebarService.getInstance().giveSidebar(p, this, false);
             }
             sendPreGameCommandItems(p);
-            if (getMaxInTeam() > 1) {
-                p.sendMessage(ChatColor.GOLD + "[组队] " + ChatColor.YELLOW
-                        + "使用 /" + mainCmd + " team 打开开局组队 GUI；未组队玩家将按单人队随机分配。");
-            }
+            p.sendMessage(ChatColor.GOLD + "[选队] " + ChatColor.YELLOW
+                    + "使用 /" + mainCmd + " team 打开游戏队伍选择 GUI。"
+                    + (getMaxInTeam() > 1 ? " 邀请固定队友可使用 /" + mainCmd + " team squad。" : ""));
             for (PotionEffect pf : p.getActivePotionEffects()) {
                 p.removePotionEffect(pf.getType());
             }

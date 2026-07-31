@@ -36,4 +36,19 @@ class ArenaSelectorPaginationTest {
         assertEquals(24, slots.size());
         assertEquals(2, ArenaSelectorPagination.pageCount(25, slots.size()));
     }
+
+    @Test
+    void legacySevenSlotDefaultExpandsOnTheLargeMenu() {
+        List<Integer> slots = ArenaSelectorPagination.contentSlots(
+                "10,11,12,13,14,15,16", ArenaSelectorPagination.DEFAULT_SIZE);
+
+        assertEquals(45, slots.size());
+    }
+
+    @Test
+    void expandsASmallInventoryWhenItsCurrentPageCannotFitAllArenas() {
+        String sevenSlots = "10,11,12,13,14,15,16";
+        assertEquals(27, ArenaSelectorPagination.effectiveSize(27, sevenSlots, 7));
+        assertEquals(54, ArenaSelectorPagination.effectiveSize(27, sevenSlots, 8));
+    }
 }

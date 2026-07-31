@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.sidebar;
 
+import com.andrei1058.bedwars.api.arena.GameState;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -12,5 +13,15 @@ class SidebarServiceTest {
         assertTrue(SidebarService.shouldKeepLobbyTabContext(true, false));
         assertTrue(SidebarService.shouldKeepLobbyTabContext(false, true));
         assertFalse(SidebarService.shouldKeepLobbyTabContext(false, false));
+    }
+
+    @Test
+    void keepsGameTabAndNameTagsIndependentFromTheSidebarObjective() {
+        assertTrue(SidebarService.shouldKeepArenaTabContext(
+                GameState.playing, false, false, false, true, false));
+        assertTrue(SidebarService.shouldKeepArenaTabContext(
+                GameState.waiting, true, false, false, false, false));
+        assertFalse(SidebarService.shouldKeepArenaTabContext(
+                GameState.playing, false, false, false, false, false));
     }
 }

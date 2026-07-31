@@ -48,6 +48,12 @@ public class ArenaSelectorListener implements Listener {
 
         event.setCancelled(true);
 
+        Integer targetPage = holder.getPageAt(event.getRawSlot());
+        if (targetPage != null) {
+            ArenaGUI.openPage(player, holder.getGroup(), targetPage);
+            return;
+        }
+
         ItemStack item = event.getCurrentItem();
         if (item == null) return;
         if (item.getType() == Material.AIR) return;

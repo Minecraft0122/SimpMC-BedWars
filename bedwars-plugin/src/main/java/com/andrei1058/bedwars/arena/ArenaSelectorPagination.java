@@ -21,6 +21,15 @@ public final class ArenaSelectorPagination {
                 ? configuredSize : DEFAULT_SIZE;
     }
 
+    static int effectiveSize(int configuredSize, String configuredSlots, int entryCount) {
+        int normalized = normalizeSize(configuredSize);
+        if (normalized < DEFAULT_SIZE
+                && entryCount > contentSlots(configuredSlots, normalized).size()) {
+            return DEFAULT_SIZE;
+        }
+        return normalized;
+    }
+
     static List<Integer> contentSlots(String configuredSlots, int inventorySize) {
         Set<Integer> reserved = Set.of(previousSlot(inventorySize), indicatorSlot(inventorySize),
                 nextSlot(inventorySize));
@@ -33,6 +42,9 @@ public final class ArenaSelectorPagination {
                 } catch (NumberFormatException ignored) {
                 }
             }
+        }
+        if (inventorySize == DEFAULT_SIZE && slots.equals(Set.of(10, 11, 12, 13, 14, 15, 16))) {
+            return contentSlots(DEFAULT_CONTENT_SLOTS, inventorySize);
         }
         if (!slots.isEmpty()) return List.copyOf(slots);
 

@@ -145,7 +145,7 @@ public class UpgradesConfig extends ConfigManager {
         setComments("upgrade-swords", "升级项由价格、货币、显示物品和 receive 动作组成。");
         setComments("category-traps", "陷阱分类菜单内容及槽位。");
         ChineseConfigDocumentation.upgrades(this);
-        updateToLatestVersion(6, UpgradesConfig::migrateLegacyForgeDefaults);
+        updateToLatestVersion(7, UpgradesConfig::migrateDefaults);
     }
 
     static void addDefaultSwordTiers(YamlConfiguration yml) {
@@ -175,6 +175,20 @@ public class UpgradesConfig extends ConfigManager {
         replaceLegacyList(yml, "upgrade-forge.tier-4.receive",
                 Arrays.asList("generator-edit: iron,1,4,120", "generator-edit: gold,2,4,80", "generator-edit: emerald,10,2,20"),
                 Arrays.asList("generator-edit: iron,1,8,120", "generator-edit: gold,1,4,80", "generator-edit: emerald,10,2,20"));
+    }
+
+    static void migrateDefaults(YamlConfiguration yml) {
+        migrateLegacyForgeDefaults(yml);
+        for (int tier = 1; tier <= 4; tier++) {
+            String root = "upgrade-swords.tier-" + tier;
+            for (String child : List.of("cost", "currency", "display-item.material", "display-item.data",
+                    "display-item.amount", "display-item.enchanted", "receive")) {
+                String path = root + "." + child;
+                if (!yml.contains(path, true) && yml.getDefaults() != null) {
+                    yml.set(path, yml.getDefaults().get(path));
+                }
+            }
+        }
     }
 
     private static void replaceLegacyList(YamlConfiguration yml, String path, List<String> oldValue, List<String> newValue) {

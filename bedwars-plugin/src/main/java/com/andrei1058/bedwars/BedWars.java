@@ -37,6 +37,8 @@ import com.andrei1058.bedwars.arena.feature.SpoilPlayerTNTFeature;
 import com.andrei1058.bedwars.arena.spectator.SpectatorListeners;
 import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
 import com.andrei1058.bedwars.arena.team.PreGameSquadGUI;
+import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionGUI;
+import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionManager;
 import com.andrei1058.bedwars.arena.stats.DefaultStatsHandler;
 import com.andrei1058.bedwars.arena.tasks.OneTick;
 import com.andrei1058.bedwars.arena.tasks.Refresh;
@@ -88,6 +90,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
@@ -266,7 +269,8 @@ public class BedWars extends JavaPlugin {
                 new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(),
                 new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),
-                PreGameSquadManager.getInstance(), PreGameSquadGUI.getInstance()
+                PreGameSquadManager.getInstance(), PreGameSquadGUI.getInstance(),
+                PreGameTeamSelectionManager.getInstance(), PreGameTeamSelectionGUI.getInstance()
         );
 
         if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE)) {
@@ -468,8 +472,13 @@ public class BedWars extends JavaPlugin {
     }
 
     private void registerDelayedCommands() {
-        if (!nms.isBukkitCommandRegistered("shout")) {
-            nms.registerCommand("shout", new ShoutCommand("shout"));
+        ShoutCommand shout = new ShoutCommand("shout");
+        PluginCommand declaredShout = getCommand("shout");
+        if (declaredShout != null) {
+            declaredShout.setExecutor((sender, command, label, args) ->
+                    shout.execute(sender, label, args));
+        } else if (!nms.isBukkitCommandRegistered("shout")) {
+            nms.registerCommand("shout", shout);
         }
         nms.registerCommand("rejoin", new RejoinCommand("rejoin"));
         if (!(nms.isBukkitCommandRegistered("leave") && getServerType() == ServerType.BUNGEE)) {

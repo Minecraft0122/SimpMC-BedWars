@@ -74,5 +74,7 @@ class PermissionManifestTest {
                 .findFirst().orElseThrow();
         assertTrue(shout.getDefault() == PermissionDefault.TRUE,
                 "ordinary players should be able to use /shout without an extra grant");
+        assertTrue(description.getCommands().containsKey("shout"),
+                "/shout must be declared so Bukkit always routes it to the plugin");
     }
 }

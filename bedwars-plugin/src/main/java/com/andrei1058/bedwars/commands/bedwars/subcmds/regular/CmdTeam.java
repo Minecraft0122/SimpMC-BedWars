@@ -21,6 +21,7 @@ package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.PreGameSquad;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -28,6 +29,8 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
 import com.andrei1058.bedwars.arena.team.PreGameSquadGUI;
+import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionGUI;
+import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionManager;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -37,12 +40,15 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Locale;
 
 public class CmdTeam extends SubCommand {
 
-    private static final String PREFIX = ChatColor.GOLD + "[组队] " + ChatColor.RESET;
+    private static final String PREFIX = ChatColor.GOLD + "[队伍] " + ChatColor.RESET;
     private final PreGameSquadManager squads = PreGameSquadManager.getInstance();
-    private final PreGameSquadGUI gui = PreGameSquadGUI.getInstance();
+    private final PreGameSquadGUI squadGui = PreGameSquadGUI.getInstance();
+    private final PreGameTeamSelectionGUI teamGui = PreGameTeamSelectionGUI.getInstance();
+    private final PreGameTeamSelectionManager selections = PreGameTeamSelectionManager.getInstance();
 
     public CmdTeam(ParentCommand parent, String name) {
         super(parent, name);
@@ -57,16 +63,16 @@ public class CmdTeam extends SubCommand {
             player.sendMessage(PREFIX + ChatColor.RED + "只能在开局前使用竞技场组队功能。");
             return true;
         }
-        if (arena.getMaxInTeam() <= 1) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "当前地图为单人队模式，无需邀请队友。");
-            return true;
-        }
-        if (args.length == 0 || args[0].equalsIgnoreCase("list")) {
-            gui.open(player);
+        if (args.length == 0 || args[0].equalsIgnoreCase("select")
+                || args[0].equalsIgnoreCase("list")) {
+            teamGui.open(player);
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
+        switch (args[0].toLowerCase(Locale.ROOT)) {
+            case "choose" -> choose(player, arena, args);
+            case "clear" -> clearSelection(player);
+            case "squad" -> squadGui.open(player);
             case "invite" -> invite(player, args);
             case "accept" -> accept(player, args);
             case "decline", "reject" -> decline(player, args);
@@ -78,6 +84,11 @@ public class CmdTeam extends SubCommand {
     }
 
     private void invite(Player player, String[] args) {
+        IArena arena = preGameArena(player);
+        if (arena != null && arena.getMaxInTeam() <= 1) {
+            player.sendMessage(PREFIX + ChatColor.YELLOW + "当前地图为单人队模式，无需邀请固定队友。");
+            return;
+        }
         if (args.length < 2) {
             player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
                     + " team invite <玩家>");
@@ -107,6 +118,36 @@ public class CmdTeam extends SubCommand {
         message.addExtra(accept);
         message.addExtra(decline);
         target.spigot().sendMessage(message);
+    }
+
+    private void choose(Player player, IArena arena, String[] args) {
+        if (args.length < 2) {
+            teamGui.open(player);
+            return;
+        }
+        ITeam team = arena.getTeams().stream()
+                .filter(candidate -> candidate.getName().equalsIgnoreCase(args[1]))
+                .findFirst()
+                .orElse(null);
+        if (team == null) {
+            player.sendMessage(PREFIX + ChatColor.RED + "找不到队伍：" + args[1]);
+            return;
+        }
+        PreGameTeamSelectionManager.Result result = selections.select(player, team);
+        if (result == PreGameTeamSelectionManager.Result.TEAM_FULL) {
+            player.sendMessage(PREFIX + ChatColor.RED + "该队伍的预选人数已达到每队上限。");
+            return;
+        }
+        if (result != PreGameTeamSelectionManager.Result.SELECTED) {
+            player.sendMessage(PREFIX + ChatColor.RED + "当前无法选择该队伍。");
+            return;
+        }
+        player.sendMessage(PREFIX + team.getColor().chat() + "已选择 " + team.getName());
+    }
+
+    private void clearSelection(Player player) {
+        selections.clear(player);
+        player.sendMessage(PREFIX + ChatColor.YELLOW + "已取消队伍选择，开局时将自动均衡分队。");
     }
 
     private void accept(Player player, String[] args) {
@@ -163,9 +204,12 @@ public class CmdTeam extends SubCommand {
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "开局组队命令：");
+        player.sendMessage(PREFIX + ChatColor.YELLOW + "开局选队与固定队友命令：");
         String command = "/" + com.andrei1058.bedwars.BedWars.mainCmd + " team";
-        player.sendMessage(ChatColor.GRAY + command + ChatColor.WHITE + " 打开开局组队 GUI");
+        player.sendMessage(ChatColor.GRAY + command + ChatColor.WHITE + " 打开游戏队伍选择 GUI");
+        player.sendMessage(ChatColor.GRAY + command + " choose <队伍> " + ChatColor.WHITE + "直接选择队伍");
+        player.sendMessage(ChatColor.GRAY + command + " clear " + ChatColor.WHITE + "取消队伍选择");
+        player.sendMessage(ChatColor.GRAY + command + " squad " + ChatColor.WHITE + "打开固定队友 GUI");
         player.sendMessage(ChatColor.GRAY + command + " invite <玩家> " + ChatColor.WHITE + "邀请队友");
         player.sendMessage(ChatColor.GRAY + command + " accept <玩家> " + ChatColor.WHITE + "接受邀请");
         player.sendMessage(ChatColor.GRAY + command + " decline <玩家> " + ChatColor.WHITE + "拒绝邀请");
@@ -197,7 +241,7 @@ public class CmdTeam extends SubCommand {
 
     @Override
     public List<String> getTabComplete() {
-        return List.of("list", "invite", "accept", "decline", "leave", "help");
+        return List.of("select", "choose", "clear", "squad", "invite", "accept", "decline", "leave", "help");
     }
 
     @Override

@@ -41,8 +41,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.io.File;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -248,8 +251,7 @@ public class UpgradesManager {
         if (getMenuContent(name) != null) return false;
         MenuUpgrade mu = new MenuUpgrade(name);
 
-        for (String s : upgrades.getYml().getConfigurationSection(name).getKeys(false)) {
-            if (!s.startsWith("tier-")) continue;
+        for (String s : orderedTierNames(upgrades.getYml().getConfigurationSection(name).getKeys(false))) {
             if (upgrades.getYml().get(name + "." + s + ".receive") == null) {
                 BedWars.debug("Could not load Upgrade " + name + " tier: " + s + ". Receive not set.");
                 continue;
@@ -274,6 +276,13 @@ public class UpgradesManager {
         BedWars.debug("Registering upgrade: " + name);
         menuContentByName.put(name.toLowerCase(), mu);
         return true;
+    }
+
+    static List<String> orderedTierNames(Collection<String> keys) {
+        return keys.stream()
+                .filter(key -> key.matches("tier-\\d+"))
+                .sorted(Comparator.comparingInt(key -> Integer.parseInt(key.substring(5))))
+                .toList();
     }
 
     /**

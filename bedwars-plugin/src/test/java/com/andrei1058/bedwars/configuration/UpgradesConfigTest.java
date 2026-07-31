@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UpgradesConfigTest {
 
@@ -41,5 +42,21 @@ class UpgradesConfigTest {
                 configuration.getStringList("upgrade-swords.tier-4.receive"));
         assertEquals(4, configuration.getInt("upgrade-swords.tier-4.display-item.amount"));
         assertFalse(configuration.getBoolean("upgrade-swords.tier-4.display-item.enchanted"));
+    }
+
+    @Test
+    void materializesSharpnessTiersDuringExistingConfigMigration() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        UpgradesConfig.addDefaultSwordTiers(configuration);
+        configuration.set("upgrade-swords.tier-1.cost", 7);
+
+        UpgradesConfig.migrateDefaults(configuration);
+
+        assertEquals(7, configuration.getInt("upgrade-swords.tier-1.cost"));
+        assertEquals(16, configuration.getInt("upgrade-swords.tier-3.cost"));
+        assertEquals(List.of("enchant-item: DAMAGE_ALL,4,sword"),
+                configuration.getStringList("upgrade-swords.tier-4.receive"));
+        assertTrue(configuration.contains("upgrade-swords.tier-4.receive", true),
+                "tier IV must be stored in the migrated file, not only inherited in memory");
     }
 }

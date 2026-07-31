@@ -25,8 +25,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Capacity-aware randomized allocator used by the arena team assigner.
@@ -58,6 +65,41 @@ final class TeamAllocationPlanner {
             if (allocation != null) return allocation;
         }
         return List.of();
+    }
+
+    /**
+     * Allocate directly onto configured teams. A compatible pre-game choice is
+     * honoured, while an impossible choice is treated as a preference and must
+     * never prevent an otherwise valid round from starting.
+     */
+    static <T, K> Map<K, List<T>> allocateWithMinimum(@NotNull List<List<T>> sourceGroups,
+                                                       @NotNull List<K> configuredTeams,
+                                                       int minimumInTeam, int capacity,
+                                                       @NotNull Random random,
+                                                       @NotNull Function<T, K> preferredTeam) {
+        if (configuredTeams.isEmpty() || minimumInTeam < 1 || capacity < minimumInTeam) {
+            return Map.of();
+        }
+
+        int players = sourceGroups.stream().filter(group -> group != null).mapToInt(List::size).sum();
+        int maximumTeams = ArenaStartPolicy.maximumFeasibleActiveTeams(players, configuredTeams.size(),
+                minimumInTeam, capacity);
+        for (int teamCount = maximumTeams; teamCount >= 2; teamCount--) {
+            if (!ArenaStartPolicy.isFeasibleActiveTeamCount(players, teamCount, minimumInTeam, capacity)) {
+                continue;
+            }
+
+            Map<K, List<T>> preferred = findPreferredAllocation(sourceGroups, configuredTeams, teamCount,
+                    minimumInTeam, capacity, random, preferredTeam);
+            if (preferred != null) return preferred;
+
+            List<List<T>> fallback = findAtomicAllocation(sourceGroups, teamCount, minimumInTeam,
+                    capacity, random, false);
+            if (fallback != null) {
+                return mapToConfiguredTeams(fallback, configuredTeams, random, preferredTeam);
+            }
+        }
+        return Map.of();
     }
 
     static <T> List<List<T>> allocate(@NotNull List<List<T>> sourceGroups, int teamCount,
@@ -115,6 +157,83 @@ final class TeamAllocationPlanner {
             teams.get(partyTeams[index]).addAll(parties.get(index));
         }
 
+        distributeSoloPlayers(teams, soloPlayers, minimumInTeam, capacity, random);
+        return teams;
+    }
+
+    private static <T, K> Map<K, List<T>> findPreferredAllocation(List<List<T>> sourceGroups,
+                                                                   List<K> configuredTeams, int teamCount,
+                                                                   int minimumInTeam, int capacity,
+                                                                   Random random,
+                                                                   Function<T, K> preferredTeam) {
+        List<PreferredGroup<T, K>> preferredGroups = new ArrayList<>();
+        LinkedHashSet<K> requestedTeams = new LinkedHashSet<>();
+        for (List<T> group : sourceGroups) {
+            if (group == null || group.isEmpty()) continue;
+            GroupPreference<K> groupPreference = commonPreference(group, preferredTeam);
+            if (groupPreference.conflicting()) return null;
+            K preference = groupPreference.team();
+            if (preference != null && !configuredTeams.contains(preference)) return null;
+            preferredGroups.add(new PreferredGroup<>(group, preference));
+            if (preference != null) requestedTeams.add(preference);
+        }
+        if (requestedTeams.size() > teamCount) return null;
+
+        List<K> activeTeams = new ArrayList<>(requestedTeams);
+        List<K> unrequested = configuredTeams.stream()
+                .filter(team -> !requestedTeams.contains(team))
+                .collect(Collectors.toCollection(ArrayList::new));
+        Collections.shuffle(unrequested, random);
+        activeTeams.addAll(unrequested.subList(0, teamCount - activeTeams.size()));
+
+        List<List<T>> teams = new ArrayList<>(teamCount);
+        for (int index = 0; index < teamCount; index++) teams.add(new ArrayList<>());
+        List<List<T>> parties = new ArrayList<>();
+        List<T> soloPlayers = new ArrayList<>();
+
+        for (PreferredGroup<T, K> preferredGroup : preferredGroups) {
+            List<T> group = preferredGroup.members();
+            K preference = preferredGroup.team();
+            if (group.size() > capacity) return null;
+            if (preference != null) {
+                List<T> selectedTeam = teams.get(activeTeams.indexOf(preference));
+                if (selectedTeam.size() + group.size() > capacity) return null;
+                selectedTeam.addAll(group);
+            } else if (group.size() == 1) {
+                soloPlayers.add(group.getFirst());
+            } else {
+                parties.add(new ArrayList<>(group));
+            }
+        }
+
+        Collections.shuffle(parties, random);
+        parties.sort(Comparator.comparingInt((List<T> group) -> group.size()).reversed());
+        Collections.shuffle(soloPlayers, random);
+
+        int[] loads = teams.stream().mapToInt(List::size).toArray();
+        int[] partyTeams = new int[parties.size()];
+        Arrays.fill(partyTeams, -1);
+        int partyPlayers = parties.stream().mapToInt(List::size).sum();
+        if (!calculatePartyPlacement(parties, 0, minimumInTeam, capacity, soloPlayers.size(),
+                partyPlayers, loads, partyTeams, random)) {
+            return null;
+        }
+
+        for (int index = 0; index < parties.size(); index++) {
+            teams.get(partyTeams[index]).addAll(parties.get(index));
+        }
+        distributeSoloPlayers(teams, soloPlayers, minimumInTeam, capacity, random);
+
+        Map<K, List<T>> result = new LinkedHashMap<>();
+        for (K configuredTeam : configuredTeams) {
+            int activeIndex = activeTeams.indexOf(configuredTeam);
+            if (activeIndex >= 0) result.put(configuredTeam, teams.get(activeIndex));
+        }
+        return result;
+    }
+
+    private static <T> void distributeSoloPlayers(List<List<T>> teams, List<T> soloPlayers,
+                                                   int minimumInTeam, int capacity, Random random) {
         int soloIndex = 0;
         for (List<T> team : teams) {
             while (team.size() < minimumInTeam) team.add(soloPlayers.get(soloIndex++));
@@ -123,7 +242,65 @@ final class TeamAllocationPlanner {
             List<Integer> available = fittingTeams(teams, capacity, 1);
             teams.get(randomLeastFilled(teams, available, random)).add(soloPlayers.get(soloIndex++));
         }
-        return teams;
+    }
+
+    private static <T, K> GroupPreference<K> commonPreference(List<T> group,
+                                                              Function<T, K> preferredTeam) {
+        K common = null;
+        for (T player : group) {
+            K preference = preferredTeam.apply(player);
+            if (preference == null) continue;
+            if (common != null && !common.equals(preference)) return new GroupPreference<>(null, true);
+            common = preference;
+        }
+        return new GroupPreference<>(common, false);
+    }
+
+    private static <T, K> Map<K, List<T>> mapToConfiguredTeams(List<List<T>> allocation,
+                                                               List<K> configuredTeams, Random random,
+                                                               Function<T, K> preferredTeam) {
+        List<K> availableTeams = new ArrayList<>(configuredTeams);
+        Collections.shuffle(availableTeams, random);
+        Map<Integer, K> assigned = new HashMap<>();
+        Set<K> used = new LinkedHashSet<>();
+
+        List<PreferenceScore<K>> scores = new ArrayList<>();
+        for (int allocationIndex = 0; allocationIndex < allocation.size(); allocationIndex++) {
+            Map<K, Integer> counts = new LinkedHashMap<>();
+            for (T player : allocation.get(allocationIndex)) {
+                K preference = preferredTeam.apply(player);
+                if (preference != null && configuredTeams.contains(preference)) {
+                    counts.merge(preference, 1, Integer::sum);
+                }
+            }
+            int index = allocationIndex;
+            counts.forEach((team, score) -> scores.add(new PreferenceScore<>(index, team, score)));
+        }
+        scores.sort(Comparator.comparingInt((PreferenceScore<K> score) -> score.score()).reversed());
+        for (PreferenceScore<K> score : scores) {
+            if (assigned.containsKey(score.allocationIndex()) || used.contains(score.team())) continue;
+            assigned.put(score.allocationIndex(), score.team());
+            used.add(score.team());
+        }
+
+        availableTeams.removeAll(used);
+        Map<K, List<T>> result = new LinkedHashMap<>();
+        int remainingIndex = 0;
+        for (int index = 0; index < allocation.size(); index++) {
+            K team = assigned.get(index);
+            if (team == null) team = availableTeams.get(remainingIndex++);
+            result.put(team, allocation.get(index));
+        }
+        return result;
+    }
+
+    private record PreferenceScore<K>(int allocationIndex, K team, int score) {
+    }
+
+    private record PreferredGroup<T, K>(List<T> members, K team) {
+    }
+
+    private record GroupPreference<K>(K team, boolean conflicting) {
     }
 
     private static <T> boolean calculatePartyPlacement(List<List<T>> parties, int partyIndex,

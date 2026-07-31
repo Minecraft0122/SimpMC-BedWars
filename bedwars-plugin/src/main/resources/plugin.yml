@@ -6,6 +6,10 @@ prefix: SimpMC-BedWars
 description: 面向 Paper 1.21.11 的中文起床战争小游戏插件
 main: com.andrei1058.bedwars.BedWars
 softdepend: [Vault,PlaceholderAPI,Citizens,Parties,VipFeatures,PartyAndFriends,Spigot-Party-API-PAF]
+commands:
+  shout:
+    description: 在游戏内向全场发送消息
+    usage: /shout <消息>
 permissions:
   bw.player:
     description: 旧版普通玩家命令集合；官方无需权限的命令现在无需授予此节点

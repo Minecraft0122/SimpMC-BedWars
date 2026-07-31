@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -196,6 +197,61 @@ class TeamAllocationPlannerTest {
 
         assertEquals(3, allocation.size());
         assertTrue(allocation.stream().allMatch(team -> team.size() == 3));
+    }
+
+    @Test
+    void honoursCompatibleNamedTeamChoicesAndStillMaximizesTeams() {
+        List<List<String>> groups = List.of(
+                List.of("A"), List.of("B"), List.of("C"), List.of("D"), List.of("E"),
+                List.of("F"), List.of("G"), List.of("H"), List.of("I"));
+        Map<String, String> choices = Map.of("A", "Red", "B", "Red", "D", "Blue");
+
+        Map<String, List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                groups, List.of("Red", "Blue", "Green", "Yellow"), 3, 4,
+                new Random(43), choices::get);
+
+        assertEquals(3, allocation.size());
+        assertTrue(allocation.get("Red").containsAll(List.of("A", "B")));
+        assertTrue(allocation.get("Blue").contains("D"));
+        assertTrue(allocation.values().stream().allMatch(team -> team.size() >= 3 && team.size() <= 4));
+    }
+
+    @Test
+    void conflictingChoicesCannotBlockAnOtherwiseValidRound() {
+        List<List<String>> groups = List.of(List.of("A", "B"), List.of("C", "D"));
+        Map<String, String> choices = Map.of("A", "Red", "B", "Blue");
+
+        Map<String, List<String>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                groups, List.of("Red", "Blue"), 2, 2, new Random(47), choices::get);
+
+        assertEquals(2, allocation.size());
+        assertTrue(allocation.values().stream().allMatch(team -> team.size() == 2));
+        assertEquals(Set.of("A", "B", "C", "D"), flatten(new java.util.ArrayList<>(allocation.values())));
+    }
+
+    @Test
+    void soloAllocationMatchesTheCalculatedTeamCountForEveryRange() {
+        List<String> configuredTeams = List.of("T1", "T2", "T3", "T4", "T5", "T6");
+        for (int minimum = 1; minimum <= 4; minimum++) {
+            for (int maximum = minimum; maximum <= 6; maximum++) {
+                for (int players = 0; players <= 36; players++) {
+                    List<List<Integer>> groups = java.util.stream.IntStream.range(0, players)
+                            .mapToObj(List::of)
+                            .toList();
+                    Map<String, List<Integer>> allocation = TeamAllocationPlanner.allocateWithMinimum(
+                            groups, configuredTeams, minimum, maximum, new Random(53), ignored -> null);
+                    int expectedTeams = com.andrei1058.bedwars.arena.ArenaStartPolicy
+                            .maximumFeasibleActiveTeams(players, configuredTeams.size(), minimum, maximum);
+
+                    assertEquals(expectedTeams, allocation.size(),
+                            "players=" + players + ", range=" + minimum + ".." + maximum);
+                    int lowerBound = minimum;
+                    int upperBound = maximum;
+                    assertTrue(allocation.values().stream()
+                            .allMatch(team -> team.size() >= lowerBound && team.size() <= upperBound));
+                }
+            }
+        }
     }
 
     private static Set<String> flatten(List<List<String>> allocation) {

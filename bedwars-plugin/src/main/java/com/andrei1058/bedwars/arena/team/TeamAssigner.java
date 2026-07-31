@@ -33,6 +33,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -40,8 +41,10 @@ public class TeamAssigner implements ITeamAssigner {
 
     public static boolean canFormValidTeams(IArena arena) {
         List<List<Player>> groups = PreGameSquadManager.getInstance().getAssignmentGroups(arena);
-        return canFormValidGroups(groups, arena.getTeams().size(), arena.getMinInTeam(),
-                arena.getMaxInTeam(), ThreadLocalRandom.current());
+        PreGameTeamSelectionManager selections = PreGameTeamSelectionManager.getInstance();
+        return !TeamAllocationPlanner.allocateWithMinimum(groups, arena.getTeams(), arena.getMinInTeam(),
+                arena.getMaxInTeam(), ThreadLocalRandom.current(),
+                player -> selections.getSelection(arena, player)).isEmpty();
     }
 
     static <T> boolean canFormValidGroups(List<List<T>> groups, int configuredTeamCount,
@@ -57,10 +60,9 @@ public class TeamAssigner implements ITeamAssigner {
         try {
             List<List<Player>> groups = squads.getAssignmentGroups(arena);
             List<ITeam> arenaTeams = new ArrayList<>(arena.getTeams());
-            Collections.shuffle(arenaTeams);
             StartingTask startingTask = arena.getStartingTask();
             boolean debugStart = startingTask != null && startingTask.isSingleTeamDebugStart();
-            AllocationPlan plan = findAllocation(groups, arenaTeams, arena.getMinInTeam(),
+            AllocationPlan plan = findAllocation(arena, groups, arenaTeams, arena.getMinInTeam(),
                     arena.getMaxInTeam(), debugStart);
             if (plan == null) {
                 BedWars.plugin.getLogger().warning("竞技场 " + arena.getArenaName()
@@ -103,21 +105,26 @@ public class TeamAssigner implements ITeamAssigner {
         }
     }
 
-    private static AllocationPlan findAllocation(List<List<Player>> groups, List<ITeam> arenaTeams,
+    private static AllocationPlan findAllocation(IArena arena, List<List<Player>> groups,
+                                                 List<ITeam> arenaTeams,
                                                  int minimumInTeam, int maximumInTeam,
                                                  boolean debugStart) {
         int playerCount = groups.stream().mapToInt(List::size).sum();
-        List<List<Player>> allocation = TeamAllocationPlanner.allocateWithMinimum(groups, arenaTeams.size(),
-                minimumInTeam, maximumInTeam, ThreadLocalRandom.current());
+        PreGameTeamSelectionManager selections = PreGameTeamSelectionManager.getInstance();
+        Map<ITeam, List<Player>> allocation = TeamAllocationPlanner.allocateWithMinimum(groups, arenaTeams,
+                minimumInTeam, maximumInTeam, ThreadLocalRandom.current(),
+                player -> selections.getSelection(arena, player));
         if (!allocation.isEmpty()) {
-            return new AllocationPlan(new ArrayList<>(arenaTeams.subList(0, allocation.size())), allocation);
+            return new AllocationPlan(new ArrayList<>(allocation.keySet()), new ArrayList<>(allocation.values()));
         }
 
         if (!debugStart) return null;
         int teamCount = ArenaStartPolicy.debugActiveTeamCount(playerCount, arenaTeams.size(), maximumInTeam);
         if (teamCount == 0) return null;
-        allocation = TeamAllocationPlanner.allocate(groups, teamCount, maximumInTeam, ThreadLocalRandom.current());
-        return new AllocationPlan(new ArrayList<>(arenaTeams.subList(0, teamCount)), allocation);
+        Collections.shuffle(arenaTeams);
+        List<List<Player>> debugAllocation = TeamAllocationPlanner.allocate(groups, teamCount, maximumInTeam,
+                ThreadLocalRandom.current());
+        return new AllocationPlan(new ArrayList<>(arenaTeams.subList(0, teamCount)), debugAllocation);
     }
 
     static boolean canApplyAllocation(List<Integer> teamSizes, int minimumInTeam,

@@ -11,13 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ArenaStartPolicyTest {
 
     @Test
-    void requiresTwoPlayersBeforeStartingCountdown() {
-        assertFalse(ArenaStartPolicy.hasEnoughPlayers(0));
-        assertFalse(ArenaStartPolicy.hasEnoughPlayers(1));
-        assertTrue(ArenaStartPolicy.hasEnoughPlayers(2));
-    }
-
-    @Test
     void requiresEnoughPlayersToFillTwoTeamsToTheArenaMinimum() {
         assertFalse(ArenaStartPolicy.hasEnoughPlayers(3, 8, 2, 4));
         assertTrue(ArenaStartPolicy.hasEnoughPlayers(4, 8, 2, 4));
@@ -66,5 +59,27 @@ class ArenaStartPolicyTest {
         assertTrue(ArenaStartPolicy.canStartWithTeamSizes(List.of(3, 4), 3, 4, false));
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(3, 5), 3, 4, false));
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(5), 3, 4, true));
+    }
+
+    @Test
+    void calculatesTheMaximumTeamCountFromTheInequalities() {
+        for (int configuredTeams = 1; configuredTeams <= 10; configuredTeams++) {
+            for (int minimum = 1; minimum <= 6; minimum++) {
+                for (int maximum = minimum; maximum <= 8; maximum++) {
+                    for (int players = 0; players <= 50; players++) {
+                        int calculated = ArenaStartPolicy.maximumFeasibleActiveTeams(
+                                players, configuredTeams, minimum, maximum);
+                        int lowerBound = players < 1 ? 0
+                                : Math.max(2, players / maximum + (players % maximum == 0 ? 0 : 1));
+                        int upperBound = players < 1 ? 0
+                                : Math.min(configuredTeams, players / minimum);
+                        int expected = upperBound >= lowerBound ? upperBound : 0;
+                        assertEquals(expected, calculated,
+                                "players=" + players + ", teams=" + configuredTeams
+                                        + ", range=" + minimum + ".." + maximum);
+                    }
+                }
+            }
+        }
     }
 }

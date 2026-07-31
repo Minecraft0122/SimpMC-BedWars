@@ -20,13 +20,7 @@ import java.util.Collection;
  */
 public final class ArenaStartPolicy {
 
-    public static final int MINIMUM_PLAYERS = 2;
-
     private ArenaStartPolicy() {
-    }
-
-    public static boolean hasEnoughPlayers(int playerCount) {
-        return playerCount >= MINIMUM_PLAYERS;
     }
 
     public static boolean hasEnoughPlayers(int playerCount, int configuredTeamCount,
