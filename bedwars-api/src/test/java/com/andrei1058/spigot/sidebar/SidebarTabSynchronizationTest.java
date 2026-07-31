@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,9 +63,8 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
-    void appliesAndRestoresRenderedPlayerListNameAcrossViewers() {
+    void clearsAndRestoresCustomPlayerListNameAcrossViewers() {
         Component customName = Component.text("大厅称号 Alice");
-        Component renderedName = Component.text("红队 Alice");
         PlayerNameState playerState = new PlayerNameState(customName);
         Player player = player("Alice", playerState);
         Sidebar firstViewer = sidebar();
@@ -72,47 +72,39 @@ class SidebarTabSynchronizationTest {
 
         firstViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        PlayerListNameState.apply(player, renderedName);
-        assertEquals(renderedName, playerState.playerListName);
+        assertNull(playerState.playerListName,
+                "a custom component prevents the client from applying the viewer's scoreboard team color");
 
         secondViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
         firstViewer.removeTab("alice");
-        assertEquals(renderedName, playerState.playerListName, "another viewer still owns the rendered name");
+        assertNull(playerState.playerListName, "another viewer still needs scoreboard formatting");
 
         secondViewer.removeTab("alice");
         assertEquals(customName, playerState.playerListName);
     }
 
     @Test
-    void doesNotOverwriteAPlayerListNameChangedByAnotherPlugin() {
+    void reClearsAndEventuallyRestoresAPlayerListNameChangedByAnotherPlugin() {
         Component original = Component.text("原始名称");
-        Component rendered = Component.text("红队 Alice");
         Component external = Component.text("其他插件名称");
         PlayerNameState state = new PlayerNameState(original);
         Player player = player("ExternalAlice", state);
-        Sidebar viewer = sidebar();
+        Sidebar firstViewer = sidebar();
+        Sidebar secondViewer = sidebar();
 
-        viewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
+        firstViewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        PlayerListNameState.apply(player, rendered);
         state.playerListName = external;
-        viewer.removeTab("external-alice");
+        secondViewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        assertNull(state.playerListName, "a later refresh must not leave a custom component bypassing team color");
 
-        assertEquals(external, state.playerListName);
-    }
+        firstViewer.removeTab("external-alice");
+        secondViewer.removeTab("external-alice");
 
-    @Test
-    void rendersTeamPrefixColoredPlayerNameAndSuffixAsOneTabComponent() {
-        Player player = player("Alice");
-        PlayerTab tab = tab(player, new SidebarLine("&c红队 "), ChatColor.RED,
-                PlayerTab.NameTagVisibility.ALWAYS);
-
-        Component rendered = Sidebar.formattedPlayerListName(
-                tab, Sidebar.component("§c红队 "), Sidebar.component("§7 [VIP]"));
-
-        assertEquals(Sidebar.component("§cAlice"), rendered.children().get(0));
-        assertEquals(Sidebar.component("§7 [VIP]"), rendered.children().get(1));
+        assertEquals(external, state.playerListName,
+                "the latest external value must be restored instead of the stale value from arena entry");
     }
 
     @Test

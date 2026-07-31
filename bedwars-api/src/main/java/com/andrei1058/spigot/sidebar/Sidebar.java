@@ -377,18 +377,11 @@ public class Sidebar {
             team.addEntry(tab.getPlayer().getName());
         }
 
-        // A custom player-list component bypasses scoreboard team formatting in
-        // the client. Render the complete row explicitly from the target
-        // player's own sidebar; scoreboard teams continue to color name tags.
-        if (scoreboards.containsKey(tab.getPlayer().getUniqueId())) {
-            PlayerListNameState.apply(tab.getPlayer(), formattedPlayerListName(tab, prefix, suffix));
-        }
-    }
-
-    static Component formattedPlayerListName(@NotNull PlayerTab tab, @NotNull Component prefix,
-                                             @NotNull Component suffix) {
-        Component coloredName = component(tab.getColor() + tab.getPlayer().getName());
-        return prefix.append(coloredName).append(suffix);
+        // The client ignores scoreboard team formatting when playerListName is
+        // a non-null custom component. Keep the default profile name active so
+        // this viewer's team prefix, suffix and color render both TAB and the
+        // overhead name tag.
+        PlayerListNameState.enforceScoreboardFormatting(tab.getPlayer());
     }
 
     private static void unregisterObjective(@NotNull Scoreboard scoreboard, @NotNull String name) {

@@ -8,7 +8,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** Owns an explicitly rendered player-list name while one or more sidebars use it. */
+/**
+ * Temporarily clears a custom player-list component while scoreboard teams
+ * render a player. A non-null component bypasses the viewer's scoreboard team
+ * formatting in the client, so it must stay null for TAB and name-tag colors
+ * to use the same team metadata.
+ */
 final class PlayerListNameState {
 
     private static final Map<UUID, Entry> ACTIVE = new HashMap<>();
@@ -20,22 +25,21 @@ final class PlayerListNameState {
         Entry current = ACTIVE.get(player.getUniqueId());
         if (current != null) {
             current.references++;
+            enforceScoreboardFormatting(player);
             return;
         }
 
-        Component original = player.playerListName();
-        ACTIVE.put(player.getUniqueId(), new Entry(player, original));
+        Entry entry = new Entry(player, player.playerListName());
+        ACTIVE.put(player.getUniqueId(), entry);
+        clearCustomName(entry);
     }
 
-    static synchronized void apply(@NotNull Player player, @NotNull Component renderedName) {
+    static synchronized void enforceScoreboardFormatting(@NotNull Player player) {
         Entry current = ACTIVE.get(player.getUniqueId());
         if (current == null) {
             return;
         }
-        if (!renderedName.equals(player.playerListName())) {
-            player.playerListName(renderedName);
-        }
-        current.applied = renderedName;
+        clearCustomName(current);
     }
 
     static synchronized void release(@NotNull Player player) {
@@ -47,20 +51,31 @@ final class PlayerListNameState {
         ACTIVE.remove(player.getUniqueId());
         // Do not overwrite a list name installed by another plugin while the
         // BedWars sidebar was active.
-        if (current.applied != null && current.applied.equals(current.player.playerListName())) {
-            current.player.playerListName(current.original);
+        if (current.player.playerListName() == null && current.restoreName != null) {
+            current.player.playerListName(current.restoreName);
         }
+    }
+
+    private static void clearCustomName(@NotNull Entry entry) {
+        Component customName = entry.player.playerListName();
+        if (customName == null) {
+            return;
+        }
+
+        // Remember the latest external value, not only the value present when
+        // the player entered BedWars, so removal never restores stale data.
+        entry.restoreName = customName;
+        entry.player.playerListName(null);
     }
 
     private static final class Entry {
         private final Player player;
-        private final Component original;
-        private Component applied;
+        private Component restoreName;
         private int references = 1;
 
-        private Entry(Player player, Component original) {
+        private Entry(Player player, Component restoreName) {
             this.player = player;
-            this.original = original;
+            this.restoreName = restoreName;
         }
     }
 }
