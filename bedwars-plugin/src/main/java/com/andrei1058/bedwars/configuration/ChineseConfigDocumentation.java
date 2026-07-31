@@ -20,7 +20,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "禁止玩家选择的语言代码列表。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
                 "可用于匹配和竞技场选择器的全局分组名称；Default 是内置组，无需填写。",
-                "竞技场 groups 列表可以同时引用多个这里声明的组。");
+                "每张竞技场地图只能引用其中一个分组。");
         comment(config, "storeLink", "服务器商店或官方网站地址，可用于消息占位符。");
         comment(config, "lobbyServer",
                 "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
@@ -52,8 +52,10 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_TNT_AUTO_IGNITE, "TNT 放置后是否自动点燃，以及引信持续 tick 数。");
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
                 "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, "普通投掷的火球飞行速度；默认 11，比旧默认值 10 飞得稍远。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, "潜行投掷的额外速度倍率；默认 1.25。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER,
+                "普通投掷的火球初速度倍率；默认 16，对应 1.6 格/tick。", "开阔且区块已加载时通常足以覆盖约 100–200 格；碰撞和服务端视距仍会影响实际距离。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
+                "按住潜行键投掷的额外初速度倍率；默认 1.5，对应 2.4 格/tick。", "插件同时检查 Paper 当前输入与潜行姿态，确保潜行加速生效。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, "潜行投掷时给予发射者的水平后坐速度；默认 0.05，插件硬限制最大 0.08。", "按原版空气阻力的低摩擦情况估算，单次后坐约半格且不足一格；不创建逐 tick 跟踪任务。");
         comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否在命中处生成火焰；竞技场始终禁止火势向周围蔓延。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.20 默认值略微降低为 1.15。");
@@ -85,7 +87,7 @@ public final class ChineseConfigDocumentation {
     }
 
     public static void arena(ConfigManager config) {
-        comment(config, "groups", "竞技场所属的全部匹配分组；可以同时填写多个。", "第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。", "旧版 group 字段会自动迁移并删除。");
+        comment(config, "group", "竞技场唯一的匹配分组，也用于生成器、开局物品、升级菜单和计分板等组专属配置。", "旧版 groups 列表会保留第一项并自动迁移为单值。");
         comment(config, ConfigPath.ARENA_DISPLAY_NAME, "玩家可见名称；留空时使用竞技场世界名。");
         comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数；所有设置模式均可使用 /bw setMaxInTeam 修改。", "在设置会话中修改容量时，minInTeam 会先自动同步为相同值；随后可用 /bw setMinInTeam 单独调整。");
         comment(config, "minInTeam", "每支启用队伍正常开局所需的最少人数，范围为 1..maxInTeam。", "已有竞技场载入和配置迁移不会覆盖此值；至少两支队伍达标即可开始，无需竞技场满员。");
@@ -134,8 +136,8 @@ public final class ChineseConfigDocumentation {
     }
 
     public static void generators(ConfigManager config) {
-        comment(config, "Default", "默认分组的生成器参数；可以复制本节并将 Default 改为竞技场分组名。", "delay/start 单位为秒，amount 是每次生成数量，spawn-limit 是地面物品上限。");
-        comment(config, ConfigPath.GENERATOR_STACK_ITEMS, "是否把同类生成资源合并堆叠，可减少物品实体数量。");
+        comment(config, "Default", "默认分组的生成器参数；可以复制本节并将 Default 改为竞技场分组名。", "delay/start 单位为秒，amount 是每次生成数量，spawn-limit 按地面物品总数计算，不按实体数量计算。");
+        comment(config, ConfigPath.GENERATOR_STACK_ITEMS, "是否在生成时直接合并同类资源，可减少物品实体数量。");
         String root = "Default.";
         comment(config, root + ConfigPath.GENERATOR_IRON_DELAY, "铁资源生成间隔，单位为秒；2.10.7 默认值为 1 秒。");
         comment(config, root + ConfigPath.GENERATOR_IRON_AMOUNT, "每次生成的铁数量。");
@@ -201,7 +203,7 @@ public final class ChineseConfigDocumentation {
 
     public static void upgrades(ConfigManager config) {
         comment(config, "default-upgrades-settings", "升级菜单布局和陷阱规则：menu-content 为 元素,槽位；价格货币支持 iron、gold、diamond、emerald 或 Vault。");
-        comment(config, "upgrade-swords", "锋利升级：每个 tier 包含价格、货币、显示物品和 receive 动作。");
+        comment(config, "upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 4、6、9、14 钻石，后一级约为前一级的 1.5 倍。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
         comment(config, "upgrade-armor", "护甲保护升级。");
         comment(config, "upgrade-miner", "挖掘急迫升级。");
         comment(config, "upgrade-forge", "岛屿资源生成器升级。");

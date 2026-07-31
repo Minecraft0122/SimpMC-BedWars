@@ -341,10 +341,10 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
 
         if (UpgradesManager.getConfiguration().getBoolean(name + ".custom-announce")) {
             String name2 = name.replace("base-trap-", "");
-            String color = trapTeam.getArena().getTeam(player) == null ? "" : trapTeam.getArena().getTeam(player).getColor().chat().toString();
+            String color = enemyTeam == null ? "" : enemyTeam.getColor().chat().toString();
             for (Player p : trapTeam.getMembers()) {
                 String trapName = ChatColor.stripColor(Language.getMsg(p, getNameMsgPath())).replace("{color}", "");
-                String enemy = trapTeam.getArena().getTeam(player) == null ? "NULL" : trapTeam.getArena().getTeam(player).getDisplayName(Language.getPlayerLanguage(p));
+                String enemy = enemyTeam == null ? "NULL" : enemyTeam.getDisplayName(Language.getPlayerLanguage(p));
                 p.sendMessage(Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_MSG + name2).replace("{trap}", trapName)
                         .replace("{player}", player.getName()).replace("{team}", enemy).replace("{color}", color));
                 BedWars.nms.sendTitle(p, Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_TITLE + name2)

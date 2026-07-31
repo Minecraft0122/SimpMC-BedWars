@@ -85,6 +85,11 @@ public interface IArena {
      */
     List<Player> getSpectators();
 
+    /** 不会修改竞技场内部旁观者列表的只读快照。 */
+    default List<Player> getSpectatorsSnapshot() {
+        return List.copyOf(getSpectators());
+    }
+
     /**
      * Get the player's team.
      * This will work if the player is alive only.
@@ -123,18 +128,25 @@ public interface IArena {
      */
     List<Player> getPlayers();
 
+    /** 不会修改竞技场内部玩家列表的只读快照。 */
+    default List<Player> getPlayersSnapshot() {
+        return List.copyOf(getPlayers());
+    }
+
     /**
      * Get maximum allowed players amount.
      */
     int getMaxPlayers();
 
-    /** 获取竞技场主组。组专属玩法配置读取此值；全部匹配组请使用 {@link #getGroups()}。 */
+    /** 获取竞技场唯一的匹配组。 */
     String getGroup();
 
     /**
-     * 获取竞技场所属的全部匹配组，第一项是 {@link #getGroup()} 返回的主组。
-     * 默认实现保证旧版第三方竞技场实现与原单组 API 保持源码和二进制兼容。
+     * 2.13.x 多组 API 的兼容桥。当前始终只返回 {@link #getGroup()}。
+     *
+     * @deprecated 每个竞技场只属于一个组；请使用 {@link #getGroup()}。
      */
+    @Deprecated
     default List<String> getGroups() {
         return Collections.singletonList(getGroup());
     }
@@ -142,7 +154,8 @@ public interface IArena {
     /** 检查竞技场是否属于指定匹配组。 */
     default boolean isInGroup(String group) {
         if (group == null) return false;
-        return getGroups().stream().anyMatch(value -> value.equalsIgnoreCase(group.trim()));
+        String current = getGroup();
+        return current != null && current.equalsIgnoreCase(group.trim());
     }
 
     /**
@@ -259,6 +272,11 @@ public interface IArena {
 
     List<ITeam> getTeams();
 
+    /** 不会修改竞技场内部队伍列表的只读快照。 */
+    default List<ITeam> getTeamsSnapshot() {
+        return List.copyOf(getTeams());
+    }
+
     /**
      * Get the teams that contained at least one player when the current game
      * entered the playing state. The order matches {@link #getTeams()}.
@@ -336,6 +354,11 @@ public interface IArena {
      */
     List<Block> getSigns();
 
+    /** 不会修改竞技场内部告示牌注册列表的只读快照。 */
+    default List<Block> getSignsSnapshot() {
+        return List.copyOf(getSigns());
+    }
+
     /**
      * Get the island radius
      */
@@ -344,11 +367,21 @@ public interface IArena {
     void setGroup(String group);
 
     /**
-     * 替换全部竞技场组成员关系，第一项成为主组。
-     * 旧版实现会通过 {@link #setGroup(String)} 保留第一项。
+     * 2.13.x 多组 API 的兼容桥，只把第一个值交给 {@link #setGroup(String)}。
+     *
+     * @deprecated 每个竞技场只属于一个组；请使用 {@link #setGroup(String)}。
      */
+    @Deprecated
     default void setGroups(List<String> groups) {
-        setGroup(groups == null || groups.isEmpty() ? "Default" : groups.get(0));
+        if (groups != null) {
+            for (String group : groups) {
+                if (group != null && !group.isBlank()) {
+                    setGroup(group);
+                    return;
+                }
+            }
+        }
+        setGroup("Default");
     }
 
     /**
@@ -449,6 +482,11 @@ public interface IArena {
      * Get Ore Generators.
      */
     List<IGenerator> getOreGenerators();
+
+    /** 不会修改竞技场中央生成器列表的只读快照。 */
+    default List<IGenerator> getOreGeneratorsSnapshot() {
+        return List.copyOf(getOreGenerators());
+    }
 
     /**
      * Get the list of next events to come.

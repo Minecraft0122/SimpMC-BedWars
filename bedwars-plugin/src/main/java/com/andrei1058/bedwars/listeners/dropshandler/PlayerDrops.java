@@ -75,7 +75,9 @@ public class PlayerDrops {
         if (cause.isFinalKill()) {
             // if is final kill drop items at generator
             if (victimsTeam != null) {
-                Location dropsLocation = new Location(victim.getWorld(), victimsTeam.getKillDropsLocation().getBlockX(), victimsTeam.getKillDropsLocation().getY(), victimsTeam.getKillDropsLocation().getZ());
+                Vector configuredDrop = victimsTeam.getKillDropsLocation();
+                Location dropsLocation = new Location(victim.getWorld(), configuredDrop.getBlockX(),
+                        configuredDrop.getBlockY(), configuredDrop.getBlockZ());
                 victim.getEnderChest().forEach(item -> {
                     if (item != null) {
                         victim.getWorld().dropItemNaturally(dropsLocation, item);
@@ -90,6 +92,9 @@ public class PlayerDrops {
         if (victimsTeam != null && !(victimsTeam.equals(killersTeam) && victim.equals(killer))) {
             // if final kill give items at kill drops location (team generator)
             if (victimsTeam.isBedDestroyed()) {
+                Vector configuredDrop = victimsTeam.getKillDropsLocation();
+                Location dropsLocation = new Location(arena.getWorld(), configuredDrop.getX(),
+                        configuredDrop.getY(), configuredDrop.getZ());
                 for (ItemStack i : inventory) {
                     if (i == null) continue;
                     if (i.getType() == Material.AIR) continue;
@@ -97,8 +102,7 @@ public class PlayerDrops {
                     String identifier = nms.getShopUpgradeIdentifier(i);
                     if (identifier != null && !identifier.trim().isEmpty()) continue;
                     if (arena.getTeam(killer) != null) {
-                        Vector v = victimsTeam.getKillDropsLocation();
-                        killer.getWorld().dropItemNaturally(new Location(arena.getWorld(), v.getX(), v.getY(), v.getZ()), i);
+                        killer.getWorld().dropItemNaturally(dropsLocation, i);
                     }
                 }
 
@@ -155,11 +159,12 @@ public class PlayerDrops {
     }
 
     private static void dropItems(Player player, List<ItemStack> inventory) {
+        Location location = player.getLocation();
         for (ItemStack i : inventory) {
             if (i == null) continue;
             if (i.getType() == Material.AIR) continue;
             if (i.getType() == Material.DIAMOND || i.getType() == Material.EMERALD || i.getType() == Material.IRON_INGOT || i.getType() == Material.GOLD_INGOT) {
-                player.getLocation().getWorld().dropItemNaturally(player.getLocation(), i);
+                location.getWorld().dropItemNaturally(location, i);
             }
         }
     }

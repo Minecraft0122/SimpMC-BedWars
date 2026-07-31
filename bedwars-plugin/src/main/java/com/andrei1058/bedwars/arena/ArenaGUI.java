@@ -236,7 +236,7 @@ public class ArenaGUI {
         List<IArena> arenas = new ArrayList<>();
         for (IArena arena : Arena.getArenas()) {
             if (group.equalsIgnoreCase("default")
-                    || ArenaGroupMembership.matchesAny(arena.getGroups(), group)) {
+                    || ArenaGroupPolicy.matches(arena.getGroup(), group)) {
                 arenas.add(arena);
             }
         }

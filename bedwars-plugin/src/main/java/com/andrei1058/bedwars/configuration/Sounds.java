@@ -129,7 +129,7 @@ public class Sounds {
         int volume = getSounds().getInt(path + ".volume");
         int pitch = getSounds().getInt(path + ".pitch");
         if (sound != null) {
-            players.forEach(p -> p.playSound(p.getLocation(), sound, volume, pitch));
+            players.forEach(p -> p.playSound(p, sound, volume, pitch));
         }
     }
 
@@ -138,7 +138,7 @@ public class Sounds {
      */
     public static boolean playSound(Sound sound, List<Player> players) {
         if (sound == null) return false;
-        players.forEach(p -> p.playSound(p.getLocation(), sound, 1f, 1f));
+        players.forEach(p -> p.playSound(p, sound, 1f, 1f));
         return true;
     }
 
@@ -146,7 +146,7 @@ public class Sounds {
         final Sound sound = getSound(path);
         float volume = (float) getSounds().getYml().getDouble(path + ".volume");
         float pitch = (float) getSounds().getYml().getDouble(path + ".pitch");
-        if (sound != null) player.playSound(player.getLocation(), sound, volume, pitch);
+        if (sound != null) player.playSound(player, sound, volume, pitch);
     }
 
     public static ConfigManager getSounds() {

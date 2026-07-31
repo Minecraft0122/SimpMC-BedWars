@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class IArenaGroupDefaultsTest {
 
     @Test
-    void keepsLegacySingleGroupImplementationsCompatible() {
+    void keepsPublishedMultiGroupMethodsAsSingleGroupCompatibilityBridges() {
         String[] primary = {"Solo"};
         IArena arena = (IArena) Proxy.newProxyInstance(IArena.class.getClassLoader(),
                 new Class<?>[]{IArena.class}, (proxy, method, args) -> {
@@ -34,5 +34,10 @@ class IArenaGroupDefaultsTest {
 
         arena.setGroups(List.of("Doubles", "Featured"));
         assertEquals("Doubles", arena.getGroup());
+        assertEquals(List.of("Doubles"), arena.getGroups());
+        assertFalse(arena.isInGroup("Featured"));
+
+        arena.setGroups(List.of(" ", "Featured"));
+        assertEquals("Featured", arena.getGroup());
     }
 }

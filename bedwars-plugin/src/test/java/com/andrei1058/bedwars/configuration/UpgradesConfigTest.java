@@ -36,8 +36,8 @@ class UpgradesConfigTest {
 
         assertEquals(4, configuration.getInt("upgrade-swords.tier-1.cost"));
         assertEquals(99, configuration.getInt("upgrade-swords.tier-2.cost"));
-        assertEquals(16, configuration.getInt("upgrade-swords.tier-3.cost"));
-        assertEquals(32, configuration.getInt("upgrade-swords.tier-4.cost"));
+        assertEquals(9, configuration.getInt("upgrade-swords.tier-3.cost"));
+        assertEquals(14, configuration.getInt("upgrade-swords.tier-4.cost"));
         assertEquals(List.of("enchant-item: DAMAGE_ALL,4,sword"),
                 configuration.getStringList("upgrade-swords.tier-4.receive"));
         assertEquals(4, configuration.getInt("upgrade-swords.tier-4.display-item.amount"));
@@ -53,10 +53,34 @@ class UpgradesConfigTest {
         UpgradesConfig.migrateDefaults(configuration);
 
         assertEquals(7, configuration.getInt("upgrade-swords.tier-1.cost"));
-        assertEquals(16, configuration.getInt("upgrade-swords.tier-3.cost"));
+        assertEquals(9, configuration.getInt("upgrade-swords.tier-3.cost"));
         assertEquals(List.of("enchant-item: DAMAGE_ALL,4,sword"),
                 configuration.getStringList("upgrade-swords.tier-4.receive"));
         assertTrue(configuration.contains("upgrade-swords.tier-4.receive", true),
                 "tier IV must be stored in the migrated file, not only inherited in memory");
+    }
+
+    @Test
+    void pricesSuccessiveSharpnessTiersAtApproximatelyOnePointFiveTimesThePreviousTier() {
+        assertEquals(List.of(4, 6, 9, 14), java.util.stream.IntStream.rangeClosed(1, 4)
+                .map(UpgradesConfig::defaultSwordTierCost)
+                .boxed()
+                .toList());
+    }
+
+    @Test
+    void migratesOnlyLegacyDefaultSharpnessPrices() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set("upgrade-swords.tier-1.cost", 4);
+        configuration.set("upgrade-swords.tier-2.cost", 8);
+        configuration.set("upgrade-swords.tier-3.cost", 99);
+        configuration.set("upgrade-swords.tier-4.cost", 32);
+
+        UpgradesConfig.migrateLegacySwordTierCosts(configuration);
+
+        assertEquals(4, configuration.getInt("upgrade-swords.tier-1.cost"));
+        assertEquals(6, configuration.getInt("upgrade-swords.tier-2.cost"));
+        assertEquals(99, configuration.getInt("upgrade-swords.tier-3.cost"));
+        assertEquals(14, configuration.getInt("upgrade-swords.tier-4.cost"));
     }
 }

@@ -79,25 +79,25 @@ class ArenaConfigTest {
     }
 
     @Test
-    void migratesLegacySingleGroupToOrderedGroupList() {
+    void keepsLegacySingleGroup() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("group", "Solo");
 
         ArenaConfig.migrateArenaGroups(config);
 
-        assertEquals(List.of("Solo"), config.getStringList("groups"));
-        assertFalse(config.contains("group", true));
+        assertEquals("Solo", config.getString("group"));
+        assertFalse(config.contains("groups", true));
     }
 
     @Test
-    void normalizesExistingMultipleGroupsDuringMigration() {
+    void migratesMultipleGroupsToTheirPrimaryEntry() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("groups", List.of("Solo", "solo", " Featured "));
         config.set("group", "Doubles");
 
         ArenaConfig.migrateArenaGroups(config);
 
-        assertEquals(List.of("Solo", "Featured"), config.getStringList("groups"));
-        assertFalse(config.contains("group", true));
+        assertEquals("Solo", config.getString("group"));
+        assertFalse(config.contains("groups", true));
     }
 }

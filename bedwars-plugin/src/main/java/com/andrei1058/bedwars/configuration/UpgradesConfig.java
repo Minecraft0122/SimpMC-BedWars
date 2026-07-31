@@ -31,6 +31,10 @@ import static com.andrei1058.bedwars.BedWars.plugin;
 
 public class UpgradesConfig extends ConfigManager {
 
+    private static final int MAX_SWORD_TIER = 4;
+    private static final int FIRST_SWORD_TIER_COST = 4;
+    private static final double SWORD_TIER_PRICE_MULTIPLIER = 1.5D;
+
     public UpgradesConfig(String name, String dir) {
         super(plugin, name, dir);
         YamlConfiguration yml = getYml();
@@ -142,16 +146,16 @@ public class UpgradesConfig extends ConfigManager {
         }
         yml.options().copyDefaults(true);
         setComments("default-upgrades-settings", "队伍升级菜单布局、陷阱价格和队列上限。");
-        setComments("upgrade-swords", "升级项由价格、货币、显示物品和 receive 动作组成。");
+        setComments("upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 4、6、9、14 钻石，后一级约为前一级的 1.5 倍。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
         setComments("category-traps", "陷阱分类菜单内容及槽位。");
         ChineseConfigDocumentation.upgrades(this);
-        updateToLatestVersion(7, UpgradesConfig::migrateDefaults);
+        updateToLatestVersion(8, UpgradesConfig::migrateDefaults);
     }
 
     static void addDefaultSwordTiers(YamlConfiguration yml) {
-        for (int tier = 1; tier <= 4; tier++) {
+        for (int tier = 1; tier <= MAX_SWORD_TIER; tier++) {
             String path = "upgrade-swords.tier-" + tier;
-            yml.addDefault(path + ".cost", 1 << (tier + 1));
+            yml.addDefault(path + ".cost", defaultSwordTierCost(tier));
             yml.addDefault(path + ".currency", "diamond");
             yml.addDefault(path + ".display-item.material", "IRON_SWORD");
             yml.addDefault(path + ".display-item.data", 0);
@@ -160,6 +164,17 @@ public class UpgradesConfig extends ConfigManager {
             yml.addDefault(path + ".receive",
                     Collections.singletonList("enchant-item: DAMAGE_ALL," + tier + ",sword"));
         }
+    }
+
+    static int defaultSwordTierCost(int tier) {
+        if (tier < 1 || tier > MAX_SWORD_TIER) {
+            throw new IllegalArgumentException("Sword tier must be between 1 and " + MAX_SWORD_TIER);
+        }
+        int cost = FIRST_SWORD_TIER_COST;
+        for (int currentTier = 1; currentTier < tier; currentTier++) {
+            cost = (int) Math.round(cost * SWORD_TIER_PRICE_MULTIPLIER);
+        }
+        return cost;
     }
 
     static void migrateLegacyForgeDefaults(YamlConfiguration yml) {
@@ -179,7 +194,8 @@ public class UpgradesConfig extends ConfigManager {
 
     static void migrateDefaults(YamlConfiguration yml) {
         migrateLegacyForgeDefaults(yml);
-        for (int tier = 1; tier <= 4; tier++) {
+        migrateLegacySwordTierCosts(yml);
+        for (int tier = 1; tier <= MAX_SWORD_TIER; tier++) {
             String root = "upgrade-swords.tier-" + tier;
             for (String child : List.of("cost", "currency", "display-item.material", "display-item.data",
                     "display-item.amount", "display-item.enchanted", "receive")) {
@@ -187,6 +203,16 @@ public class UpgradesConfig extends ConfigManager {
                 if (!yml.contains(path, true) && yml.getDefaults() != null) {
                     yml.set(path, yml.getDefaults().get(path));
                 }
+            }
+        }
+    }
+
+    static void migrateLegacySwordTierCosts(YamlConfiguration yml) {
+        for (int tier = 1; tier <= MAX_SWORD_TIER; tier++) {
+            String path = "upgrade-swords.tier-" + tier + ".cost";
+            int oldDefault = 1 << (tier + 1);
+            if (yml.contains(path, true) && yml.getInt(path) == oldDefault) {
+                yml.set(path, defaultSwordTierCost(tier));
             }
         }
     }

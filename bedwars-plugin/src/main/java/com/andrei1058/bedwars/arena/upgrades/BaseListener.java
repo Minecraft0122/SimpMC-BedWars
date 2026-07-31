@@ -47,13 +47,14 @@ public class BaseListener implements Listener {
 
     public static Map<Player, ITeam> isOnABase = new WeakHashMap<>();
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent e) {
-        IArena a = Arena.getArenaByIdentifier(e.getPlayer().getWorld().getName());
+        if (!e.hasChangedPosition()) return;
+        Player player = e.getPlayer();
+        IArena a = Arena.getArenaByPlayer(player);
         if (a == null) return;
         if (a.getStatus() != GameState.playing) return;
-        Player p = e.getPlayer();
-        checkEvents(p, a);
+        checkEvents(player, a);
     }
 
     @EventHandler
@@ -85,32 +86,33 @@ public class BaseListener implements Listener {
         if (a.isReSpawning(p)) return;
         boolean notOnBase = true;
         Location playerLocation = p.getLocation();
+        ITeam currentBase = isOnABase.get(p);
         for (ITeam bwt : a.getTeams()) {
             /* BaseEnterEvent */
             if (isInsideBase(playerLocation, bwt.getBed(), a.getIslandRadius())) {
                 notOnBase = false;
-                if (isOnABase.containsKey(p)) {
-                    if (isOnABase.get(p) != bwt) {
-                        Bukkit.getPluginManager().callEvent(new PlayerBaseLeaveEvent(p, isOnABase.get(p)));
+                if (currentBase != null) {
+                    if (currentBase != bwt) {
+                        Bukkit.getPluginManager().callEvent(new PlayerBaseLeaveEvent(p, currentBase));
                         if (!Arena.magicMilk.containsKey(p.getUniqueId())) {
                             Bukkit.getPluginManager().callEvent(new PlayerBaseEnterEvent(p, bwt));
                         }
-                        isOnABase.replace(p, bwt);
+                        isOnABase.put(p, bwt);
+                        currentBase = bwt;
                     }
                 } else {
                     if (!Arena.magicMilk.containsKey(p.getUniqueId())) {
                         Bukkit.getPluginManager().callEvent(new PlayerBaseEnterEvent(p, bwt));
                         isOnABase.put(p, bwt);
+                        currentBase = bwt;
                     }
                 }
             }
         }
         /* BaseLeaveEvent */
-        if (notOnBase) {
-            if (isOnABase.containsKey(p)) {
-                Bukkit.getPluginManager().callEvent(new PlayerBaseLeaveEvent(p, isOnABase.get(p)));
-                isOnABase.remove(p);
-            }
+        if (notOnBase && currentBase != null) {
+            Bukkit.getPluginManager().callEvent(new PlayerBaseLeaveEvent(p, currentBase));
+            isOnABase.remove(p);
         }
     }
 

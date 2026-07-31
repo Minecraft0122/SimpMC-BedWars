@@ -75,6 +75,11 @@ public class Interact implements Listener {
     private final double fireballSneakRecoil;
     private final double fireballCooldown;
     private final float fireballExplosionSize;
+    private final boolean craftingDisabled;
+    private final boolean enchantingDisabled;
+    private final boolean furnaceDisabled;
+    private final boolean brewingStandDisabled;
+    private final boolean anvilDisabled;
 
     public Interact() {
         this.fireballSpeedMultiplier = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER);
@@ -83,6 +88,11 @@ public class Interact implements Listener {
         this.fireballSneakRecoil = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL);
         this.fireballCooldown = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_COOLDOWN);
         this.fireballExplosionSize = (float) config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE);
+        this.craftingDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING);
+        this.enchantingDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_ENCHANTING);
+        this.furnaceDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_FURNACE);
+        this.brewingStandDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_BREWING_STAND);
+        this.anvilDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_ANVIL);
     }
 
     @EventHandler
@@ -160,15 +170,15 @@ public class Interact implements Listener {
         Block b = e.getClickedBlock();
         if (b == null) return;
         if ((BedWars.getServerType() == ServerType.MULTIARENA && b.getWorld().getName().equals(BedWars.getLobbyWorld()) && !BreakPlace.isBuildSession(e.getPlayer())) || Arena.getArenaByPlayer(e.getPlayer()) != null) {
-            if (b.getType() == nms.materialCraftingTable() && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING)) {
+            if (b.getType() == Material.CRAFTING_TABLE && craftingDisabled) {
                 e.setCancelled(true);
-            } else if (b.getType() == nms.materialEnchantingTable() && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_ENCHANTING)) {
+            } else if (b.getType() == Material.ENCHANTING_TABLE && enchantingDisabled) {
                 e.setCancelled(true);
-            } else if (b.getType() == Material.FURNACE && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_FURNACE)) {
+            } else if (b.getType() == Material.FURNACE && furnaceDisabled) {
                 e.setCancelled(true);
-            } else if (b.getType() == Material.BREWING_STAND && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_BREWING_STAND)) {
+            } else if (b.getType() == Material.BREWING_STAND && brewingStandDisabled) {
                 e.setCancelled(true);
-            } else if (b.getType() == Material.ANVIL && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_ANVIL)) {
+            } else if (b.getType() == Material.ANVIL && anvilDisabled) {
                 e.setCancelled(true);
             }
         }
@@ -301,19 +311,19 @@ public class Interact implements Listener {
             IArena a = Arena.getArenaByPlayer(p);
             if (a != null) {
                 if (a.isPlayer(p)) {
-                    if (inHand.getType() == nms.materialFireball()) {
+                    if (inHand.getType() == Material.FIRE_CHARGE) {
 
                         e.setCancelled(true);
 
                         if(System.currentTimeMillis() - a.getFireballCooldowns().getOrDefault(p.getUniqueId(), 0L) > (fireballCooldown*1000)) {
                             a.getFireballCooldowns().put(p.getUniqueId(), System.currentTimeMillis());
-                            Fireball fb = p.launchProjectile(Fireball.class);
                             Vector direction = p.getEyeLocation().getDirection();
-                            fb = nms.setFireballDirection(fb, direction);
-                            boolean sneaking = p.isSneaking();
-                            double launchSpeed = FireballLaunchPhysics.launchSpeed(
-                                    fireballSpeedMultiplier, sneaking, fireballSneakSpeedMultiplier);
-                            fb.setVelocity(fb.getDirection().multiply(launchSpeed));
+                            boolean sneaking = p.isSneaking() || p.getCurrentInput().isSneak();
+                            Vector launchVelocity = FireballLaunchPhysics.launchVelocity(
+                                    direction, fireballSpeedMultiplier, sneaking, fireballSneakSpeedMultiplier);
+                            Fireball fb = p.launchProjectile(Fireball.class, launchVelocity);
+                            // Keep vanilla acceleration so the 1.21.11 client predicts the projectile smoothly.
+                            fb.setAcceleration(FireballLaunchPhysics.launchAcceleration(direction));
                             if (sneaking) {
                                 p.setVelocity(p.getVelocity().add(
                                         FireballLaunchPhysics.sneakRecoil(direction, fireballSneakRecoil)));
@@ -410,7 +420,7 @@ public class Interact implements Listener {
     public void onCrafting(PrepareItemCraftEvent e) {
         if (e == null) return;
         if (Arena.getArenaByPlayer((Player) e.getView().getPlayer()) != null) {
-            if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING)) {
+            if (craftingDisabled) {
                 e.getInventory().setResult(new ItemStack(Material.AIR));
             }
         }

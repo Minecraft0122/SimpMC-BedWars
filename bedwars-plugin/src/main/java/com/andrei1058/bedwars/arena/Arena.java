@@ -129,8 +129,7 @@ public class Arena implements IArena {
     public int upgradeDiamondsCount = 0, upgradeEmeraldsCount = 0;
     public boolean allowSpectate = true;
     private World world;
-    private String group = ArenaGroupMembership.DEFAULT_GROUP, arenaName, worldName;
-    private List<String> groups = List.of(ArenaGroupMembership.DEFAULT_GROUP);
+    private String group = ArenaGroupPolicy.DEFAULT_GROUP, arenaName, worldName;
     private List<ITeam> teams = new ArrayList<>();
     private final ArenaTeamParticipation teamParticipation = new ArenaTeamParticipation();
     private final PlacedBlockTracker placedBlocks = new PlacedBlockTracker();
@@ -244,8 +243,8 @@ public class Arena implements IArena {
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
         allowMapBreak = yml.getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK);
-        setGroups(ArenaGroupMembership.resolveConfigured(
-                ArenaGroupMembership.read(yml),
+        setGroup(ArenaGroupPolicy.resolveConfigured(
+                ArenaGroupPolicy.read(yml),
                 config.getYml().getStringList(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS)));
 
 
@@ -594,7 +593,7 @@ public class Arena implements IArena {
         }
 
         refreshSigns();
-        getGroups().forEach(JoinNPC::updateNPCs);
+        JoinNPC.updateNPCs(getGroup());
         return true;
     }
 
@@ -640,8 +639,7 @@ public class Arena implements IArena {
             }
 
             SidebarService sidebarService = SidebarService.getInstance();
-            sidebarService.giveSidebar(p, this, false);
-            if (playerBefore) sidebarService.handleElimination(this, p);
+            if (!playerBefore) sidebarService.giveSidebar(p, this, false);
             nms.setCollide(p, this, false);
 
             if (!playerBefore) {
@@ -656,7 +654,7 @@ public class Arena implements IArena {
             applySpectatorInvisibility(p);
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (leaving.contains(p)) return;
+                if (!isCurrentSpectator(p)) return;
                 p.setAllowFlight(true);
                 p.setFlying(true);
             }, 5L);
@@ -665,21 +663,12 @@ public class Arena implements IArena {
                 p.getPassenger().remove();
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (leaving.contains(p)) return;
-                for (Player on : Bukkit.getOnlinePlayers()) {
-                    if (on == p) continue;
-                    if (getSpectators().contains(on)) {
-                        BedWars.nms.spigotShowPlayer(p, on);
-                        BedWars.nms.spigotShowPlayer(on, p);
-                    } else if (getPlayers().contains(on)) {
-                        BedWars.nms.spigotHidePlayer(p, on);
-                        BedWars.nms.spigotShowPlayer(on, p);
-                    } else {
-                        BedWars.nms.spigotHidePlayer(p, on);
-                        BedWars.nms.spigotHidePlayer(on, p);
-                    }
+                if (!isCurrentSpectator(p)) return;
+                if (playerBefore) {
+                    sidebarService.giveSidebar(p, this, false);
+                    sidebarService.handleElimination(this, p);
                 }
-
+                synchronizeSpectatorVisibility(p, !playerBefore);
 
                 if (!playerBefore) {
                     if (staffTeleport == null) {
@@ -698,27 +687,16 @@ public class Arena implements IArena {
                 sendSpectatorCommandItems(p);
 
                 p.getInventory().setArmorContents(null);
+                if (playerBefore) {
+                    refreshArenaIndicators();
+                } else {
+                    refreshSpectatorHolograms(p);
+                }
             });
 
             leaving.remove(p);
 
             p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_MSG).replace("{arena}", this.getDisplayName()));
-
-            /* update generator holograms for spectators */
-            String iso = Language.getPlayerLanguage(p).getIso();
-            for (IGenerator o : getOreGenerators()) {
-                o.updateHolograms(p, iso);
-            }
-            for (ITeam t : getTeams()) {
-                for (IGenerator o : t.getGenerators()) {
-                    o.updateHolograms(p, iso);
-                }
-            }
-            for (ShopHolo sh : ShopHolo.getShopHolo()) {
-                if (sh.getA() == this) {
-                    sh.updateForPlayer(p, iso);
-                }
-            }
 
         } else {
             p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_DENIED_MSG));
@@ -726,9 +704,50 @@ public class Arena implements IArena {
         }
 
         showTime.remove(p);
-        refreshSigns();
-        getGroups().forEach(JoinNPC::updateNPCs);
+        if (!playerBefore) refreshArenaIndicators();
         return true;
+    }
+
+    private boolean isCurrentSpectator(Player player) {
+        return player.isOnline() && spectators.contains(player)
+                && getArenaByPlayer(player) == this && !leaving.contains(player);
+    }
+
+    /** 将淘汰后的数据包更新集中到下一 tick，避免阻塞 PlayerRespawnEvent。 */
+    private void synchronizeSpectatorVisibility(Player spectator, boolean includeOutsidePlayers) {
+        for (Player otherSpectator : spectators) {
+            if (otherSpectator == spectator || !otherSpectator.isOnline()) continue;
+            BedWars.nms.spigotShowPlayer(spectator, otherSpectator);
+            BedWars.nms.spigotShowPlayer(otherSpectator, spectator);
+        }
+        for (Player activePlayer : players) {
+            if (!activePlayer.isOnline()) continue;
+            BedWars.nms.spigotHidePlayer(spectator, activePlayer);
+            BedWars.nms.spigotShowPlayer(activePlayer, spectator);
+        }
+        if (!includeOutsidePlayers) return;
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online == spectator || spectators.contains(online) || players.contains(online)) continue;
+            BedWars.nms.spigotHidePlayer(spectator, online);
+            BedWars.nms.spigotHidePlayer(online, spectator);
+        }
+    }
+
+    private void refreshSpectatorHolograms(Player spectator) {
+        String iso = Language.getPlayerLanguage(spectator).getIso();
+        for (IGenerator generator : oreGenerators) generator.updateHolograms(spectator, iso);
+        for (ITeam team : teams) {
+            for (IGenerator generator : team.getGenerators()) generator.updateHolograms(spectator, iso);
+        }
+        for (ShopHolo shopHologram : ShopHolo.getShopHolo()) {
+            if (shopHologram.getA() == this) shopHologram.updateForPlayer(spectator, iso);
+        }
+    }
+
+    private void refreshArenaIndicators() {
+        refreshSigns();
+        JoinNPC.updateNPCs(group);
     }
 
     /**
@@ -957,7 +976,7 @@ public class Arena implements IArena {
         showTime.remove(p);
 
         refreshSigns();
-        getGroups().forEach(JoinNPC::updateNPCs);
+        JoinNPC.updateNPCs(getGroup());
 
         // fix #340
         // remove player from party if leaves and the owner is still in the arena while waiting or starting
@@ -1073,7 +1092,7 @@ public class Arena implements IArena {
         }
 
         refreshSigns();
-        getGroups().forEach(JoinNPC::updateNPCs);
+        JoinNPC.updateNPCs(getGroup());
     }
 
     /**
@@ -1268,6 +1287,13 @@ public class Arena implements IArena {
     }
 
     /**
+     * Check whether an arena instance is still part of the active registry.
+     */
+    public static boolean isRegistered(IArena arena) {
+        return arena != null && arenaByName.get(arena.getArenaName()) == arena;
+    }
+
+    /**
      * Get the display status for an arena.
      * A message that can be used on signs etc.
      */
@@ -1339,13 +1365,14 @@ public class Arena implements IArena {
     }
 
     @Override
+    @Deprecated
     public List<String> getGroups() {
-        return groups;
+        return List.of(group);
     }
 
     @Override
     public boolean isInGroup(String group) {
-        return ArenaGroupMembership.contains(groups, group);
+        return ArenaGroupPolicy.matches(this.group, group);
     }
 
     @Override
@@ -1460,19 +1487,20 @@ public class Arena implements IArena {
     //SETTER METHODS
     @Override
     public void setGroup(String group) {
-        setGroups(List.of(group));
+        this.group = ArenaGroupPolicy.normalize(group);
     }
 
+    /** @deprecated 每个竞技场只属于一个组；仅为 2.13.x 附属插件保留。 */
+    @Deprecated
     @Override
     public void setGroups(List<String> groups) {
-        this.groups = List.copyOf(ArenaGroupMembership.normalize(groups));
-        this.group = this.groups.get(0);
+        setGroup(ArenaGroupPolicy.first(groups));
     }
 
     public static void setArenaByPlayer(Player p, IArena arena) {
         arenaByPlayer.put(p, arena);
         arena.refreshSigns();
-        arena.getGroups().forEach(JoinNPC::updateNPCs);
+        JoinNPC.updateNPCs(arena.getGroup());
     }
 
     public static void setArenaByName(IArena arena) {
@@ -1486,7 +1514,7 @@ public class Arena implements IArena {
     public static void removeArenaByPlayer(Player p, @NotNull IArena arena) {
         arenaByPlayer.remove(p);
         arena.refreshSigns();
-        arena.getGroups().forEach(JoinNPC::updateNPCs);
+        JoinNPC.updateNPCs(arena.getGroup());
     }
 
     /**
@@ -1886,6 +1914,9 @@ public class Arena implements IArena {
      */
     @Override
     public ITeam getTeam(Player p) {
+        if (p == null) return null;
+        ITeam startingTeam = teamParticipation.gameStartTeam(p.getUniqueId());
+        if (startingTeam != null && startingTeam.isMember(p)) return startingTeam;
         for (ITeam t : getTeams()) {
             if (t.isMember(p)) {
                 return t;
@@ -1900,6 +1931,8 @@ public class Arena implements IArena {
      */
     @Override
     public ITeam getExTeam(UUID p) {
+        ITeam startingTeam = teamParticipation.gameStartTeam(p);
+        if (startingTeam != null) return startingTeam;
         for (ITeam t : getTeams()) {
             if (t.wasMember(p)) {
                 return t;
@@ -2188,7 +2221,7 @@ public class Arena implements IArena {
         int i = 0;
 
         for (IArena arena : getArenas()) {
-            if (ArenaGroupMembership.matchesAny(arena.getGroups(), group)) {
+            if (ArenaGroupPolicy.matches(arena.getGroup(), group)) {
                 i += arena.getPlayers().size();
             }
         }
@@ -2300,43 +2333,13 @@ public class Arena implements IArena {
 
         for (IArena a : arenas) {
             if (a.getPlayers().size() == a.getMaxPlayers()) continue;
-            if (a.getMaxPlayers() - a.getPlayers().size() >= amount) {
-                if (a.addPlayer(p, false)) break;
-            }
+            if (a.getMaxPlayers() - a.getPlayers().size() >= amount && a.addPlayer(p, false)) return true;
         }
-        return true;
+        return false;
     }
 
     public static List<IArena> getSorted(List<IArena> arenas) {
-        List<IArena> sorted = new ArrayList<>(arenas);
-        sorted.sort(new Comparator<>() {
-            @Override
-            public int compare(IArena o1, IArena o2) {
-                if (o1.getStatus() == GameState.starting && o2.getStatus() == GameState.starting) {
-                    return Integer.compare(o2.getPlayers().size(), o1.getPlayers().size());
-                } else if (o1.getStatus() == GameState.starting && o2.getStatus() != GameState.starting) {
-                    return -1;
-                } else if (o2.getStatus() == GameState.starting && o1.getStatus() != GameState.starting) {
-                    return 1;
-                } else if (o1.getStatus() == GameState.waiting && o2.getStatus() == GameState.waiting) {
-                    return Integer.compare(o2.getPlayers().size(), o1.getPlayers().size());
-                } else if (o1.getStatus() == GameState.waiting && o2.getStatus() != GameState.waiting) {
-                    return -1;
-                } else if (o2.getStatus() == GameState.waiting && o1.getStatus() != GameState.waiting) {
-                    return 1;
-                } else if (o1.getStatus() == GameState.playing && o2.getStatus() == GameState.playing) {
-                    return 0;
-                } else if (o1.getStatus() == GameState.playing && o2.getStatus() != GameState.playing) {
-                    return -1;
-                } else return 1;
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                return obj instanceof IArena;
-            }
-        });
-        return sorted;
+        return ArenaSorting.sorted(arenas);
     }
 
     /**
@@ -2356,7 +2359,7 @@ public class Arena implements IArena {
 
         for (IArena a : arenas) {
             if (a.getPlayers().size() == a.getMaxPlayers()) continue;
-            if (!ArenaGroupMembership.matchesAny(a.getGroups(), group)) continue;
+            if (!ArenaGroupPolicy.matches(a.getGroup(), group)) continue;
             if (a.getMaxPlayers() - a.getPlayers().size() >= amount && a.addPlayer(p, false)) {
                 return true;
             }

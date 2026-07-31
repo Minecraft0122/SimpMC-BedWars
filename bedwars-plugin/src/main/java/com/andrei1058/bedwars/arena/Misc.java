@@ -279,7 +279,7 @@ public class Misc {
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public static boolean isProjectile(Material i) {
-        return Material.EGG == i || nms.materialFireball() == i || nms.materialSnowball() == i || Material.ARROW == i;
+        return i == Material.EGG || i == Material.FIRE_CHARGE || i == Material.SNOWBALL || i == Material.ARROW;
     }
 
     /**

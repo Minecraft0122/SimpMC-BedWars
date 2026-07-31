@@ -92,8 +92,26 @@ class MainConfigTest {
         MainConfig.migrateFireballDefaults(defaults, 22);
         MainConfig.migrateFireballDefaults(customized, 22);
 
-        assertEquals(11.0, defaults.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+        assertEquals(16.0, defaults.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
         assertEquals(9.5, customized.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+    }
+
+    @Test
+    void extendsOnlyThePreviousDefaultFireballSpeeds() {
+        YamlConfiguration defaults = new YamlConfiguration();
+        defaults.set(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 11.0);
+        defaults.set(ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, 1.25);
+        YamlConfiguration customized = new YamlConfiguration();
+        customized.set(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 13.0);
+        customized.set(ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, 1.75);
+
+        MainConfig.migrateFireballDefaults(defaults, 24);
+        MainConfig.migrateFireballDefaults(customized, 24);
+
+        assertEquals(16.0, defaults.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+        assertEquals(1.5, defaults.getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER));
+        assertEquals(13.0, customized.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+        assertEquals(1.75, customized.getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER));
     }
 
     @Test

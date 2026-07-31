@@ -115,7 +115,7 @@ public class ArenaSocket {
         js.addProperty("arena_max_in_team", a.getMaxInTeam());
         js.addProperty("arena_group", a.getGroup().toUpperCase(Locale.ROOT));
         JsonArray arenaGroups = new JsonArray();
-        a.getGroups().forEach(group -> arenaGroups.add(group.toUpperCase(Locale.ROOT)));
+        arenaGroups.add(a.getGroup().toUpperCase(Locale.ROOT));
         js.add("arena_groups", arenaGroups);
         js.addProperty("spectate", a.isAllowSpectate());
         return js.toString();

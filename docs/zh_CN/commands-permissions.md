@@ -46,13 +46,11 @@
 
 官方 Wiki 曾把启用竞技场写成 `bw.enable`，而旧源码使用 `bw.enableRotation`。本插件以文档节点 `bw.enable` 为主，同时接受旧节点，方便现有 LuckPerms 数据平滑迁移。
 
-竞技场多分组管理：
+竞技场分组管理：
 
-- `/bw arenaGroup set <竞技场> <分组>`：设置主组，并保留其他成员组。
-- `/bw arenaGroup add <竞技场> <分组>`：追加一个匹配组。
-- `/bw arenaGroup unset <竞技场> <分组>`：移除一个成员组；全部移除后自动回到 `Default`。
-- `/bw arenaGroup show <竞技场>`：查看全部成员组和主组。
-- `/bw arenaGroup remove <分组>`：删除全局分组，并清理所有竞技场中的对应成员关系。
+- `/bw arenaGroup set <竞技场> <分组>`：设置竞技场唯一的匹配组。
+- `/bw arenaGroup show <竞技场>`：查看竞技场分组。
+- `/bw arenaGroup remove <分组>`：删除全局分组，并把使用它的竞技场重置到 `Default`。
 
 ## 竞技场设置命令
 

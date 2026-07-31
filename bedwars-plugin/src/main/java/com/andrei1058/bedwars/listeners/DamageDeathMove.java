@@ -74,6 +74,7 @@ import static com.andrei1058.bedwars.arena.LastHit.getLastHit;
 
 public class DamageDeathMove implements Listener {
 
+    private static final DecimalFormat HEALTH_FORMAT = new DecimalFormat("00.#");
     private final Map<UUID, Location> deathLocations = new HashMap<>();
     private final Set<UUID> voidRespawns = new HashSet<>();
     private final double tntJumpBarycenterAlterationInY;
@@ -98,8 +99,7 @@ public class DamageDeathMove implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (e.getEntity() instanceof Player) {
-            Player p = (Player) e.getEntity();
+        if (e.getEntity() instanceof Player p) {
             IArena worldArena = Arena.getArenaByIdentifier(p.getWorld().getName());
             if (worldArena != null && Arena.getArenaByPlayer(p) != worldArena) {
                 e.setCancelled(true);
@@ -126,11 +126,7 @@ public class DamageDeathMove implements Listener {
                     return;
                 }*/
                 //if (e.getCause() == EntityDamageEvent.DamageCause.FALL) {
-                if (BedWarsTeam.reSpawnInvulnerability.containsKey(p.getUniqueId())) {
-                    if (BedWarsTeam.reSpawnInvulnerability.get(p.getUniqueId()) > System.currentTimeMillis()) {
-                        e.setCancelled(true);
-                    } else BedWarsTeam.reSpawnInvulnerability.remove(p.getUniqueId());
-                }
+                if (isRespawnProtected(p)) e.setCancelled(true);
                 //}
 
             }
@@ -140,14 +136,10 @@ public class DamageDeathMove implements Listener {
     // show player health on bow hit
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBowHit(EntityDamageByEntityEvent e) {
-        if (e.getEntity().getType() != EntityType.PLAYER) return;
-        if (!(e.getDamager() instanceof Projectile)) return;
-        Projectile projectile = (Projectile) e.getDamager();
-        if (projectile.getShooter() == null) return;
-        if (!(projectile.getShooter() instanceof Player)) return;
+        if (!(e.getEntity() instanceof Player p)) return;
+        if (!(e.getDamager() instanceof Projectile projectile)) return;
+        if (!(projectile.getShooter() instanceof Player damager)) return;
 
-        Player p = (Player) e.getEntity();
-        Player damager = (Player) projectile.getShooter();
         IArena a = Arena.getArenaByPlayer(p);
         if (a == null) return;
         if (a.getStatus() != GameState.playing) return;
@@ -155,9 +147,10 @@ public class DamageDeathMove implements Listener {
         // projectile hit message #696, #711
         ITeam team = a.getTeam(p);
         Language lang = Language.getPlayerLanguage(damager);
-        if (lang.m(Messages.PLAYER_HIT_BOW).isEmpty()) return;
-        String message = lang.m(Messages.PLAYER_HIT_BOW)
-                .replace("{amount}", new DecimalFormat("00.#").format(((Player) e.getEntity()).getHealth() - e.getFinalDamage()))
+        String template = lang.m(Messages.PLAYER_HIT_BOW);
+        if (template.isEmpty()) return;
+        String message = template
+                .replace("{amount}", HEALTH_FORMAT.format(p.getHealth() - e.getFinalDamage()))
                 .replace("{TeamColor}", team.getColor().chat().toString())
                 .replace("{TeamName}", team.getDisplayName(lang))
                 .replace("{PlayerName}", ChatColor.stripColor(p.getDisplayName()));
@@ -177,8 +170,7 @@ public class DamageDeathMove implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (e.getEntity() instanceof Player) {
-            Player p = (Player) e.getEntity();
+        if (e.getEntity() instanceof Player p) {
             IArena a = Arena.getArenaByPlayer(p);
             if (worldArena != null && a != worldArena) {
                 e.setCancelled(true);
@@ -194,7 +186,9 @@ public class DamageDeathMove implements Listener {
                     return;
                 }
 
+                ITeam victimTeam = a.getTeam(p);
                 Player damager = null;
+                ITeam damagerTeam = null;
                 if (e.getDamager() instanceof Player) {
                     damager = (Player) e.getDamager();
                 } else if (e.getDamager() instanceof Projectile) {
@@ -220,9 +214,8 @@ public class DamageDeathMove implements Listener {
                                 resultingForce.setY(resultingForce.getY() / (distance.length() + tntJumpYAxisReductionConstant));
                                 damaged.setVelocity(resultingForce);
                             } else {
-                                ITeam currentTeam = a.getTeam(p);
-                                ITeam damagerTeam = a.getTeam(damager);
-                                if (currentTeam.equals(damagerTeam)) {
+                                damagerTeam = a.getTeam(damager);
+                                if (victimTeam != null && victimTeam.equals(damagerTeam)) {
                                     if (tntDamageTeammates > -1) {
                                         e.setDamage(tntDamageTeammates);
                                     }
@@ -249,7 +242,8 @@ public class DamageDeathMove implements Listener {
                         return;
                     }
 
-                    if (a.getTeam(p).equals(a.getTeam(damager))) {
+                    if (damagerTeam == null) damagerTeam = a.getTeam(damager);
+                    if (victimTeam != null && victimTeam.equals(damagerTeam)) {
                         if (!(e.getDamager() instanceof TNTPrimed)) {
                             e.setCancelled(true);
                         }
@@ -257,11 +251,9 @@ public class DamageDeathMove implements Listener {
                     }
 
                     // protection after re-spawn
-                    if (BedWarsTeam.reSpawnInvulnerability.containsKey(p.getUniqueId())) {
-                        if (BedWarsTeam.reSpawnInvulnerability.get(p.getUniqueId()) > System.currentTimeMillis()) {
-                            e.setCancelled(true);
-                            return;
-                        } else BedWarsTeam.reSpawnInvulnerability.remove(p.getUniqueId());
+                    if (isRespawnProtected(p)) {
+                        e.setCancelled(true);
+                        return;
                     }
                     // but if the damageR is the re-spawning player remove protection
                     BedWarsTeam.reSpawnInvulnerability.remove(damager.getUniqueId());
@@ -284,9 +276,8 @@ public class DamageDeathMove implements Listener {
                             }
                             a.getShowTime().remove(p);
                             p.removePotionEffect(PotionEffectType.INVISIBILITY);
-                            ITeam team = a.getTeam(p);
                             p.sendMessage(getMsg(p, Messages.INTERACT_INVISIBILITY_REMOVED_DAMGE_TAKEN));
-                            Bukkit.getPluginManager().callEvent(new PlayerInvisibilityPotionEvent(PlayerInvisibilityPotionEvent.Type.REMOVED, team, p, a));
+                            Bukkit.getPluginManager().callEvent(new PlayerInvisibilityPotionEvent(PlayerInvisibilityPotionEvent.Type.REMOVED, victimTeam, p, a));
                         });
                     }
                     //
@@ -309,7 +300,8 @@ public class DamageDeathMove implements Listener {
             if (a != null) {
                 if (a.isPlayer(damager)) {
                     // do not hurt own mobs
-                    if (a.getTeam(damager) == nms.getDespawnablesList().get(e.getEntity().getUniqueId()).getTeam()) {
+                    Despawnable despawnable = nms.getDespawnablesList().get(e.getEntity().getUniqueId());
+                    if (despawnable != null && a.getTeam(damager) == despawnable.getTeam()) {
                         e.setCancelled(true);
                     }
                 } else {
@@ -541,20 +533,6 @@ public class DamageDeathMove implements Listener {
         } else {
             if (a.isSpectator(e.getPlayer())) {
                 e.setRespawnLocation(a.getSpectatorLocation());
-                String iso = Language.getPlayerLanguage(e.getPlayer()).getIso();
-                for (IGenerator o : a.getOreGenerators()) {
-                    o.updateHolograms(e.getPlayer(), iso);
-                }
-                for (ITeam t : a.getTeams()) {
-                    for (IGenerator o : t.getGenerators()) {
-                        o.updateHolograms(e.getPlayer(), iso);
-                    }
-                }
-                for (ShopHolo sh : ShopHolo.getShopHolo()) {
-                    if (sh.getA() == a) {
-                        sh.updateForPlayer(e.getPlayer(), iso);
-                    }
-                }
                 a.sendSpectatorCommandItems(e.getPlayer());
                 return;
             }
@@ -607,30 +585,40 @@ public class DamageDeathMove implements Listener {
         voidRespawns.remove(playerId);
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent e) {
-        if (Arena.isInArena(e.getPlayer())) {
-            IArena a = Arena.getArenaByPlayer(e.getPlayer());
+        if (!e.hasChangedPosition()) return;
 
-            // todo check on x y z change... not head rotation because this is really spammy
-            if (e.getFrom().getChunk().getX() != e.getTo().getChunk().getX() ||
-                    e.getFrom().getChunk().getZ() != e.getTo().getChunk().getZ() ||
-                    !e.getFrom().getChunk().getWorld().equals(e.getTo().getChunk().getWorld())
-            ) {
+        Player player = e.getPlayer();
+        UUID playerId = player.getUniqueId();
+        Arena.afkCheck.remove(playerId);
+        if (BedWars.getAPI().getAFKUtil().isPlayerAFK(player)) {
+            BedWars.getAPI().getAFKUtil().setPlayerAFK(player, false);
+        }
+
+        // Paper 1.21.11 exposes exact block-change checks; everything below is block based.
+        if (!e.hasChangedBlock()) return;
+
+        Location from = e.getFrom();
+        Location to = e.getTo();
+        IArena a = Arena.getArenaByPlayer(player);
+        if (a != null) {
+
+            if (changedChunk(from, to)) {
 
                 /* update armor-stands hidden by nms */
-                String iso = Language.getPlayerLanguage(e.getPlayer()).getIso();
+                String iso = Language.getPlayerLanguage(player).getIso();
                 for (IGenerator o : a.getOreGenerators()) {
-                    o.updateHolograms(e.getPlayer(), iso);
+                    o.updateHolograms(player, iso);
                 }
                 for (ITeam t : a.getTeams()) {
                     for (IGenerator o : t.getGenerators()) {
-                        o.updateHolograms(e.getPlayer(), iso);
+                        o.updateHolograms(player, iso);
                     }
                 }
                 for (ShopHolo sh : ShopHolo.getShopHolo()) {
                     if (sh.getA() == a) {
-                        sh.updateForPlayer(e.getPlayer(), iso);
+                        sh.updateForPlayer(player, iso);
                     }
                 }
 
@@ -643,80 +631,71 @@ public class DamageDeathMove implements Listener {
                         }
                     }
                     // if the moving player has invisible armor
-                    if (a.getShowTime().containsKey(e.getPlayer())) {
+                    if (a.getShowTime().containsKey(player)) {
                         for (Player p : a.getPlayers()) {
-                            nms.hideArmor(e.getPlayer(), p);
+                            nms.hideArmor(player, p);
                         }
-                    }
-                    if (a.getShowTime().containsKey(e.getPlayer())) {
                         for (Player p : a.getSpectators()) {
-                            nms.hideArmor(e.getPlayer(), p);
+                            nms.hideArmor(player, p);
                         }
                     }
                 }
             }
 
-            if (a.isSpectator(e.getPlayer())) {
-                if (e.getTo().getY() < 0) {
-                    TeleportManager.teleportC(e.getPlayer(), a.getSpectatorLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                    e.getPlayer().setAllowFlight(true);
-                    e.getPlayer().setFlying(true);
+            if (a.isSpectator(player)) {
+                if (to.getY() < 0) {
+                    TeleportManager.teleportC(player, a.getSpectatorLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                    player.setAllowFlight(true);
+                    player.setFlying(true);
                     // how to remove fall velocity?
                 }
-            } else if (a.isReSpawning(e.getPlayer())) {
+            } else if (a.isReSpawning(player)) {
                 // Waiting to respawn in spectator mode.
             } else {
                 if (a.getStatus() == GameState.playing) {
-                    if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()) {
-                        voidRespawns.add(e.getPlayer().getUniqueId());
-                        nms.voidKill(e.getPlayer());
+                    if (to.getBlockY() <= a.getYKillHeight()) {
+                        voidRespawns.add(playerId);
+                        nms.voidKill(player);
                         return;
                     }
-                    Location playerLocation = e.getTo();
-                    for (ITeam t : a.getTeams()) {
-                        Location bedLocation = t.getBed();
-                        boolean isNearBed = ConfigManager.isSameWorldWithin(playerLocation, bedLocation, 4);
-                        if (isNearBed) {
-                            if (t.isMember(e.getPlayer()) && t instanceof BedWarsTeam) {
-                                if (((BedWarsTeam) t).getBedHolo(e.getPlayer()) == null) continue;
-                                if (!((BedWarsTeam) t).getBedHolo(e.getPlayer()).isHidden()) {
-                                    ((BedWarsTeam) t).getBedHolo(e.getPlayer()).hide();
-                                }
-                            }
-                        } else {
-                            if (t.isMember(e.getPlayer()) && t instanceof BedWarsTeam) {
-                                if (((BedWarsTeam) t).getBedHolo(e.getPlayer()) == null) continue;
-                                if (((BedWarsTeam) t).getBedHolo(e.getPlayer()).isHidden()) {
-                                    ((BedWarsTeam) t).getBedHolo(e.getPlayer()).show();
-                                }
+                    if (a.getTeam(player) instanceof BedWarsTeam playerTeam) {
+                        BedWarsTeam.BedHolo bedHolo = playerTeam.getBedHolo(player);
+                        if (bedHolo != null) {
+                            boolean nearOwnBed = ConfigManager.isSameWorldWithin(to, playerTeam.getBed(), 4);
+                            if (nearOwnBed && !bedHolo.isHidden()) {
+                                bedHolo.hide();
+                            } else if (!nearOwnBed && bedHolo.isHidden()) {
+                                bedHolo.show();
                             }
                         }
                     }
-                    if (e.getFrom() != e.getTo()) {
-                        Arena.afkCheck.remove(e.getPlayer().getUniqueId());
-                        BedWars.getAPI().getAFKUtil().setPlayerAFK(e.getPlayer(), false);
-                    }
                 } else {
-                    if (e.getPlayer().getLocation().getBlockY() <= 0) {
-                        ITeam bwt = a.getTeam(e.getPlayer());
+                    if (to.getBlockY() <= 0) {
+                        ITeam bwt = a.getTeam(player);
                         if (bwt != null) {
-                            SafeSpawnResolver.teleport(e.getPlayer(), bwt.getSpawn());
+                            SafeSpawnResolver.teleport(player, bwt.getSpawn());
                         } else {
-                            TeleportManager.teleport(e.getPlayer(), a.getSpectatorLocation());
+                            TeleportManager.teleport(player, a.getSpectatorLocation());
                         }
                     }
                 }
             }
         } else {
-            if (config.getBoolean(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED) && e.getPlayer().getWorld().getName().equalsIgnoreCase(config.getLobbyWorldName()) && BedWars.getServerType() == ServerType.MULTIARENA) {
-                if (e.getTo().getY() < config.getInt(ConfigPath.LOBBY_VOID_TELEPORT_HEIGHT)) {
-                    TeleportManager.teleportC(e.getPlayer(), config.getConfigLoc("lobbyLoc"), PlayerTeleportEvent.TeleportCause.PLUGIN)
+            if (config.getBoolean(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED) && player.getWorld().getName().equalsIgnoreCase(config.getLobbyWorldName()) && BedWars.getServerType() == ServerType.MULTIARENA) {
+                if (to.getY() < config.getInt(ConfigPath.LOBBY_VOID_TELEPORT_HEIGHT)) {
+                    TeleportManager.teleportC(player, config.getConfigLoc("lobbyLoc"), PlayerTeleportEvent.TeleportCause.PLUGIN)
                             .whenComplete((success, error) -> Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
-                                if (error == null && Boolean.TRUE.equals(success)) Arena.enterLobby(e.getPlayer());
+                                if (error == null && Boolean.TRUE.equals(success)) Arena.enterLobby(player);
                             }));
                 }
             }
         }
+    }
+
+    static boolean changedChunk(Location from, Location to) {
+        return from.getWorld() != to.getWorld()
+                || (from.getBlockX() >> 4) != (to.getBlockX() >> 4)
+                || (from.getBlockZ() >> 4) != (to.getBlockZ() >> 4);
     }
 
     private static boolean isMultiArenaLobby(org.bukkit.World world) {
@@ -730,6 +709,15 @@ public class DamageDeathMove implements Listener {
         if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) return player;
         if (damager instanceof TNTPrimed tnt && tnt.getSource() instanceof Player player) return player;
         return null;
+    }
+
+    private static boolean isRespawnProtected(Player player) {
+        UUID playerId = player.getUniqueId();
+        Long expiresAt = BedWarsTeam.reSpawnInvulnerability.get(playerId);
+        if (expiresAt == null) return false;
+        if (expiresAt > System.currentTimeMillis()) return true;
+        BedWarsTeam.reSpawnInvulnerability.remove(playerId, expiresAt);
+        return false;
     }
 
     private boolean isVoidDeath(Player player, EntityDamageEvent damageEvent, IArena arena) {

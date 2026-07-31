@@ -23,6 +23,7 @@ package com.andrei1058.bedwars.shop.main;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.shop.IBuyItem;
+import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamEnchant;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.configuration.Sounds;
@@ -201,18 +202,18 @@ public class BuyItem implements IBuyItem {
         if (i.getType() == Material.AIR) {
             return;
         }
+        ITeam team = arena.getTeam(player);
+        if (team == null) {
+            BedWars.debug("Could not give BuyItem to " + player.getName() + " - TEAM IS NULL");
+            return;
+        }
 
         if (autoEquip && nms.isArmor(itemStack)) {
             Material m = i.getType();
 
             ItemMeta im = i.getItemMeta();
-            // idk dadea erori
-            if (arena.getTeam(player) == null) {
-                BedWars.debug("Could not give BuyItem to " + player.getName() + " - TEAM IS NULL");
-                return;
-            }
             if (im != null) {
-                for (TeamEnchant e : arena.getTeam(player).getArmorsEnchantments()) {
+                for (TeamEnchant e : team.getArmorsEnchantments()) {
                     im.addEnchant(e.getEnchantment(), e.getAmplifier(), true);
                 }
                 if (permanent) nms.setUnbreakable(im);
@@ -248,17 +249,17 @@ public class BuyItem implements IBuyItem {
         } else {
 
             ItemMeta im = i.getItemMeta();
-            i = nms.colourItem(i, arena.getTeam(player));
+            i = nms.colourItem(i, team);
             if (im != null) {
                 if (permanent) nms.setUnbreakable(im);
                 if (unbreakable) nms.setUnbreakable(im);
                 if (i.getType() == Material.BOW) {
                     if (permanent) nms.setUnbreakable(im);
-                    for (TeamEnchant e : arena.getTeam(player).getBowsEnchantments()) {
+                    for (TeamEnchant e : team.getBowsEnchantments()) {
                         im.addEnchant(e.getEnchantment(), e.getAmplifier(), true);
                     }
                 } else if (nms.isSword(i) || nms.isAxe(i)) {
-                    for (TeamEnchant e : arena.getTeam(player).getSwordsEnchantments()) {
+                    for (TeamEnchant e : team.getSwordsEnchantments()) {
                         im.addEnchant(e.getEnchantment(), e.getAmplifier(), true);
                     }
                 }

@@ -110,7 +110,7 @@ public class PAPISupport extends PlaceholderExpansion {
         if (s.startsWith("arena_groups_")) {
             String a = s.replace("arena_groups_", "");
             IArena arena = Arena.getArenaByName(a);
-            return arena == null ? "-" : String.join(",", arena.getGroups());
+            return arena == null ? "-" : arena.getGroup();
         }
 
         /* Player required placeholders */
@@ -247,7 +247,7 @@ public class PAPISupport extends PlaceholderExpansion {
                 break;
             case "current_arena_groups":
                 if (a != null) {
-                    response = String.join(",", a.getGroups());
+                    response = a.getGroup();
                 }
                 break;
             case "elapsed_time":

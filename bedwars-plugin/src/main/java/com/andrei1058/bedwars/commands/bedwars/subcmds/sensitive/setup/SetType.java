@@ -25,7 +25,7 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
-import com.andrei1058.bedwars.arena.ArenaGroupMembership;
+import com.andrei1058.bedwars.arena.ArenaGroupPolicy;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -83,12 +83,10 @@ public class SetType extends SubCommand {
             }
             int maximum = ss.getConfig().getYml().getInt("maxInTeam", 1);
             ss.getConfig().getYml().set("minInTeam", maximum);
-            List<String> arenaGroups = ArenaGroupMembership.withPrimary(
-                    ArenaGroupMembership.read(ss.getConfig().getYml()), input);
-            ss.getConfig().getYml().set(ArenaGroupMembership.GROUPS_PATH, arenaGroups);
-            ss.getConfig().getYml().set(ArenaGroupMembership.LEGACY_GROUP_PATH, null);
+            ss.getConfig().getYml().set(ArenaGroupPolicy.GROUP_PATH, input);
+            ss.getConfig().getYml().set(ArenaGroupPolicy.LEGACY_GROUPS_PATH, null);
             ss.getConfig().save();
-            p.sendMessage("§6 ▪ §7竞技场主分组已改为：§d" + input);
+            p.sendMessage("§6 ▪ §7竞技场分组已改为：§d" + input);
             if (ss.getSetupType() == SetupType.ASSISTED) {
                 Bukkit.dispatchCommand(p, getParent().getName());
             }

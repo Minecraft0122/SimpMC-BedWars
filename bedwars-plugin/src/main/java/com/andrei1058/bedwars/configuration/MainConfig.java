@@ -40,9 +40,10 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 24;
+    private static final int CONFIG_VERSION = 25;
     private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
-    private static final double FIREBALL_SPEED_MULTIPLIER_DEFAULT = 11.0;
+    private static final double FIREBALL_SPEED_MULTIPLIER_DEFAULT = 16.0;
+    private static final double FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT = 1.5;
     private static final double FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT = 1.15;
     private static final double FIREBALL_VERTICAL_KNOCKBACK_DEFAULT = 0.75;
     private static final double FIREBALL_ENEMY_DAMAGE_DEFAULT = 3.5;
@@ -134,7 +135,8 @@ public class MainConfig extends ConfigManager {
         // fireball category
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, FIREBALL_EXPLOSION_SIZE_DEFAULT);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, FIREBALL_SPEED_MULTIPLIER_DEFAULT);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, 1.25);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
+                FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, 0.05);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, false);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT);
@@ -284,7 +286,7 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
                 "可用于匹配和竞技场选择器的全局分组名称。Default 是内置组，无需填写。",
-                "每张地图在 Arenas/<地图>.yml 的 groups 列表中引用一个或多个名称。");
+                "每张地图在 Arenas/<地图>.yml 的 group 中引用一个名称。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板与 TAB 列表相关设置。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY,
                 "是否在大厅 TAB 中显示玩家前后缀；默认开启，且不依赖右侧大厅计分板。");
@@ -412,6 +414,12 @@ public class MainConfig extends ConfigManager {
         if (storedConfigVersion < 23) {
             upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 10.0,
                     FIREBALL_SPEED_MULTIPLIER_DEFAULT);
+        }
+        if (storedConfigVersion < 25) {
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 11.0,
+                    FIREBALL_SPEED_MULTIPLIER_DEFAULT);
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, 1.25,
+                    FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT);
         }
     }
 

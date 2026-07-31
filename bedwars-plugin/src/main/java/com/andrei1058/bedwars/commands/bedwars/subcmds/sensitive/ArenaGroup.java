@@ -26,7 +26,7 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.arena.ArenaGroupMembership;
+import com.andrei1058.bedwars.arena.ArenaGroupPolicy;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
@@ -75,10 +75,8 @@ public class ArenaGroup extends SubCommand {
             case "create" -> createGroup(player, args);
             case "remove" -> removeGroup(player, args);
             case "list" -> listGroups(player);
-            case "set" -> updateArenaMembership(player, args, MembershipAction.SET_PRIMARY);
-            case "add" -> updateArenaMembership(player, args, MembershipAction.ADD);
-            case "unset" -> updateArenaMembership(player, args, MembershipAction.REMOVE);
-            case "show" -> showArenaGroups(player, args);
+            case "set" -> setArenaGroup(player, args);
+            case "show" -> showArenaGroup(player, args);
             default -> {
                 sendArenaGroupCmdList(player);
                 yield true;
@@ -114,7 +112,7 @@ public class ArenaGroup extends SubCommand {
             return true;
         }
         String group = findConfiguredGroup(args[1]);
-        if (group == null || group.equalsIgnoreCase(ArenaGroupMembership.DEFAULT_GROUP)) {
+        if (group == null || group.equalsIgnoreCase(ArenaGroupPolicy.DEFAULT_GROUP)) {
             player.sendMessage("§c▪ §7该竞技场组不存在或不能删除！");
             return true;
         }
@@ -122,8 +120,8 @@ public class ArenaGroup extends SubCommand {
         List<String> groups = configuredGroups();
         groups.removeIf(value -> value.equalsIgnoreCase(group));
         config.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS, groups);
-        int changed = removeMembershipFromAllArenas(group);
-        player.sendMessage("§6 ▪ §7竞技场组已删除：§f" + group + "§7；已清理 " + changed + " 张地图的成员关系。");
+        int changed = resetGroupForAllArenas(group);
+        player.sendMessage("§6 ▪ §7竞技场组已删除：§f" + group + "§7；已将 " + changed + " 张地图重置到 Default。");
         return true;
     }
 
@@ -136,7 +134,7 @@ public class ArenaGroup extends SubCommand {
         return true;
     }
 
-    private boolean updateArenaMembership(Player player, String[] args, MembershipAction action) {
+    private boolean setArenaGroup(Player player, String[] args) {
         if (args.length < 3) {
             sendArenaGroupCmdList(player);
             return true;
@@ -144,53 +142,26 @@ public class ArenaGroup extends SubCommand {
         ArenaConfig arenaConfig = arenaConfig(player, args[1]);
         if (arenaConfig == null) return true;
 
-        List<String> current = ArenaGroupMembership.read(arenaConfig.getYml());
-        String group = action == MembershipAction.REMOVE
-                ? current.stream().filter(value -> value.equalsIgnoreCase(args[2])).findFirst().orElse(null)
-                : findConfiguredGroup(args[2]);
+        String group = findConfiguredGroup(args[2]);
         if (group == null) {
-            player.sendMessage("§c▪ §7不存在该竞技场组或地图不属于该组：" + args[2]);
+            player.sendMessage("§c▪ §7不存在该竞技场组：" + args[2]);
             return true;
         }
 
-        List<String> updated;
-        if (action == MembershipAction.SET_PRIMARY) {
-            updated = ArenaGroupMembership.withPrimary(current, group);
-        } else if (action == MembershipAction.ADD) {
-            if (ArenaGroupMembership.contains(current, group)) {
-                player.sendMessage("§e▪ §7竞技场已经属于该组：" + group);
-                return true;
-            }
-            updated = new ArrayList<>(current);
-            updated.add(group);
-            updated = ArenaGroupMembership.normalize(updated);
-        } else {
-            updated = new ArrayList<>(current);
-            updated.removeIf(value -> value.equalsIgnoreCase(group));
-            updated = ArenaGroupMembership.normalize(updated);
-        }
-
-        saveMembership(args[1], arenaConfig, updated);
-        String groups = String.join("、", updated);
-        String message = switch (action) {
-            case SET_PRIMARY -> "已把主组设为 " + group;
-            case ADD -> "已加入竞技场组 " + group;
-            case REMOVE -> "已移出竞技场组 " + group;
-        };
-        player.sendMessage("§6 ▪ §7" + args[1] + " " + message + "；当前分组：§f" + groups);
+        saveGroup(args[1], arenaConfig, group);
+        player.sendMessage("§6 ▪ §7竞技场 §f" + args[1] + " §7的分组已设为：§f" + group);
         return true;
     }
 
-    private boolean showArenaGroups(Player player, String[] args) {
+    private boolean showArenaGroup(Player player, String[] args) {
         if (args.length < 2) {
             sendArenaGroupCmdList(player);
             return true;
         }
         ArenaConfig arenaConfig = arenaConfig(player, args[1]);
         if (arenaConfig == null) return true;
-        List<String> groups = ArenaGroupMembership.read(arenaConfig.getYml());
-        player.sendMessage("§6 ▪ §7竞技场 §f" + args[1] + " §7的分组：§f" + String.join("、", groups));
-        player.sendMessage("§6 ▪ §7主组：§f" + groups.get(0));
+        player.sendMessage("§6 ▪ §7竞技场 §f" + args[1] + " §7的分组：§f"
+                + ArenaGroupPolicy.read(arenaConfig.getYml()));
         return true;
     }
 
@@ -207,16 +178,16 @@ public class ArenaGroup extends SubCommand {
         return new ArenaConfig(BedWars.plugin, arenaName, new File(plugin.getDataFolder(), "Arenas").getPath());
     }
 
-    private void saveMembership(String arenaName, ArenaConfig arenaConfig, List<String> groups) {
-        List<String> normalized = ArenaGroupMembership.normalize(groups);
-        arenaConfig.getYml().set(ArenaGroupMembership.GROUPS_PATH, normalized);
-        arenaConfig.getYml().set(ArenaGroupMembership.LEGACY_GROUP_PATH, null);
+    private void saveGroup(String arenaName, ArenaConfig arenaConfig, String group) {
+        String normalized = ArenaGroupPolicy.normalize(group);
+        arenaConfig.getYml().set(ArenaGroupPolicy.GROUP_PATH, normalized);
+        arenaConfig.getYml().set(ArenaGroupPolicy.LEGACY_GROUPS_PATH, null);
         arenaConfig.save();
         IArena liveArena = Arena.getArenaByName(arenaName);
-        if (liveArena != null) liveArena.setGroups(normalized);
+        if (liveArena != null) liveArena.setGroup(normalized);
     }
 
-    private int removeMembershipFromAllArenas(String removedGroup) {
+    private int resetGroupForAllArenas(String removedGroup) {
         File directory = new File(plugin.getDataFolder(), "Arenas");
         File[] files = directory.listFiles(file -> file.isFile() && file.getName().endsWith(".yml"));
         if (files == null) return 0;
@@ -227,10 +198,9 @@ public class ArenaGroup extends SubCommand {
             if (!WorldNameValidator.isSafe(arenaName)) continue;
             try {
                 ArenaConfig arenaConfig = new ArenaConfig(BedWars.plugin, arenaName, directory.getPath());
-                List<String> groups = ArenaGroupMembership.read(arenaConfig.getYml());
-                if (!ArenaGroupMembership.contains(groups, removedGroup)) continue;
-                groups.removeIf(value -> value.equalsIgnoreCase(removedGroup));
-                saveMembership(arenaName, arenaConfig, groups);
+                String group = ArenaGroupPolicy.read(arenaConfig.getYml());
+                if (!ArenaGroupPolicy.matches(group, removedGroup)) continue;
+                saveGroup(arenaName, arenaConfig, ArenaGroupPolicy.DEFAULT_GROUP);
                 changed++;
             } catch (RuntimeException exception) {
                 plugin.getLogger().log(Level.WARNING,
@@ -246,8 +216,8 @@ public class ArenaGroup extends SubCommand {
 
     private String findConfiguredGroup(String requested) {
         if (requested == null) return null;
-        if (ArenaGroupMembership.DEFAULT_GROUP.equalsIgnoreCase(requested.trim())) {
-            return ArenaGroupMembership.DEFAULT_GROUP;
+        if (ArenaGroupPolicy.DEFAULT_GROUP.equalsIgnoreCase(requested.trim())) {
+            return ArenaGroupPolicy.DEFAULT_GROUP;
         }
         return configuredGroups().stream()
                 .filter(group -> group.equalsIgnoreCase(requested.trim()))
@@ -256,17 +226,15 @@ public class ArenaGroup extends SubCommand {
 
     @Override
     public List<String> getTabComplete() {
-        return Arrays.asList("create", "remove", "list", "set", "add", "unset", "show");
+        return Arrays.asList("create", "remove", "list", "set", "show");
     }
 
     private void sendArenaGroupCmdList(Player player) {
         sendUsage(player, "create <groupName>", "创建竞技场组。", "create");
         sendUsage(player, "list", "查看可用的竞技场组。", "list");
-        sendUsage(player, "remove <groupName>", "删除竞技场组并清理所有地图中的成员关系。", "remove");
-        sendUsage(player, "set <arenaName> <groupName>", "设置主组，并保留其他成员组。", "set");
-        sendUsage(player, "add <arenaName> <groupName>", "把竞技场追加到另一个组。", "add");
-        sendUsage(player, "unset <arenaName> <groupName>", "移除竞技场的一个组成员关系。", "unset");
-        sendUsage(player, "show <arenaName>", "查看竞技场的全部分组和主组。", "show");
+        sendUsage(player, "remove <groupName>", "删除竞技场组，并把使用它的地图重置到 Default。", "remove");
+        sendUsage(player, "set <arenaName> <groupName>", "设置竞技场唯一的分组。", "set");
+        sendUsage(player, "show <arenaName>", "查看竞技场分组。", "show");
     }
 
     private void sendUsage(Player player, String syntax, String description, String action) {
@@ -286,9 +254,4 @@ public class ArenaGroup extends SubCommand {
         return hasPermission(sender);
     }
 
-    private enum MembershipAction {
-        SET_PRIMARY,
-        ADD,
-        REMOVE
-    }
 }

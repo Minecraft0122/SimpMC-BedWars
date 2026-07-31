@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>2.13.1</version>
+    <version>3.0.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -45,6 +45,8 @@ for (IArena arena : api.getArenaUtil().getArenasSnapshot()) {
 
 旧版 `getArenas()` 为兼容保留，但会暴露内部可变集合；新代码应使用 `getArenasSnapshot()`。
 
+竞技场内的常用集合也提供只读快照：`getPlayersSnapshot()`、`getSpectatorsSnapshot()`、`getTeamsSnapshot()`、`getOreGeneratorsSnapshot()` 和 `getSignsSnapshot()`。旧的无 `Snapshot` 方法仍为二进制兼容保留，但附属插件不应修改它们返回的内部列表。
+
 游戏进入 `playing` 后，可以区分全部配置队伍与本局实际参战队伍：
 
 ```java
@@ -58,16 +60,15 @@ int playersAtStart = arena.getTeamSizeAtGameStart(firstTeam);
 
 `IArena#getMinInTeam()` 返回每支启用队伍正常开局所需的最少人数，`getMaxInTeam()` 返回容量。只要分配器能够组成至少两支人数位于该范围内的队伍即可开局，不要求达到 `getMaxPlayers()`；未被本局选中的配置队伍可以为空。`/bw start debug` 仍可绕过双队限制。第三方旧实现无需立即修改，接口默认返回 `1`。
 
-2.10.47 起竞技场可以属于多个匹配分组：
+3.0.0 起每个竞技场只属于一个匹配分组：
 
 ```java
-String primaryGroup = arena.getGroup();       // 主组，用于组专属玩法配置
-List<String> groups = arena.getGroups();      // 全部分组的不可变快照
+String group = arena.getGroup();
 boolean featured = arena.isInGroup("Featured");
-arena.setGroups(List.of("Solo", "Featured"));
+arena.setGroup("Solo");
 ```
 
-列表第一项是主组。旧版第三方 `IArena` 实现无需修改：默认 `getGroups()` 会返回只包含 `getGroup()` 的列表，默认 `setGroups()` 会把第一项交给旧 `setGroup()`。PlaceholderAPI 的 `%bw1058_arena_groups_<竞技场>%` 和 `%bw1058_current_arena_groups%` 使用英文逗号连接全部组；原单数占位符继续只返回主组。
+2.13.x 发布过的 `getGroups()`、`setGroups()` 以及 PlaceholderAPI 复数占位符继续存在，避免旧附属插件加载失败，但已弃用并只读写第一个组。新代码只使用单数 API。
 
 ## 开局邀请组队 API
 

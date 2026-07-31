@@ -24,7 +24,7 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.configuration.GameMainOverridable;
-import com.andrei1058.bedwars.arena.ArenaGroupMembership;
+import com.andrei1058.bedwars.arena.ArenaGroupPolicy;
 import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.PlayerFacing;
 import org.bukkit.Location;
@@ -39,7 +39,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 20;
+    private static final int CONFIG_VERSION = 21;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -49,7 +49,7 @@ public class ArenaConfig extends ConfigManager {
 
         YamlConfiguration yml = getYml();
         yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 服务器。");
-        yml.addDefault(ArenaGroupMembership.GROUPS_PATH, List.of(ArenaGroupMembership.DEFAULT_GROUP));
+        yml.addDefault(ArenaGroupPolicy.GROUP_PATH, ArenaGroupPolicy.DEFAULT_GROUP);
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
         yml.addDefault("maxInTeam", 1);
         yml.addDefault("minInTeam", 1);
@@ -80,9 +80,8 @@ public class ArenaConfig extends ConfigManager {
         rules.add("locatorBar:false");
         yml.addDefault(ConfigPath.ARENA_GAME_RULES, rules);
         yml.options().copyDefaults(true);
-        setComments(ArenaGroupMembership.GROUPS_PATH,
-                "竞技场所属的全部匹配分组；同一竞技场可以同时出现在多个组中。",
-                "列表第一项是主组，生成器、开局物品、升级菜单和计分板等组专属配置读取主组。");
+        setComments(ArenaGroupPolicy.GROUP_PATH,
+                "竞技场唯一的匹配分组，也用于生成器、开局物品、升级菜单和计分板等组专属配置。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
         setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "设置容量时会把 minInTeam 一并重置为相同值，之后可用 /bw setMinInTeam 单独降低开局下限。");
         setComments("minInTeam", "正常开局时每支启用队伍至少需要的人数，范围为 1..maxInTeam。", "插件载入和迁移已有竞技场时不会覆盖此值；达到至少两支达标队伍即可开始匹配，无需竞技场满员。");
@@ -176,8 +175,8 @@ public class ArenaConfig extends ConfigManager {
     }
 
     static void migrateArenaGroups(YamlConfiguration config) {
-        config.set(ArenaGroupMembership.GROUPS_PATH, ArenaGroupMembership.read(config));
-        config.set(ArenaGroupMembership.LEGACY_GROUP_PATH, null);
+        config.set(ArenaGroupPolicy.GROUP_PATH, ArenaGroupPolicy.read(config));
+        config.set(ArenaGroupPolicy.LEGACY_GROUPS_PATH, null);
     }
 
     private static void migratePlayerFacing(Plugin plugin, YamlConfiguration config, String locationPath,

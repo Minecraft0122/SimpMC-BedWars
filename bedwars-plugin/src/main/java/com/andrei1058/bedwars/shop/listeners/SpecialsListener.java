@@ -20,7 +20,6 @@
 
 package com.andrei1058.bedwars.shop.listeners;
 
-import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
@@ -28,8 +27,8 @@ import com.andrei1058.bedwars.api.events.player.PlayerBedBugSpawnEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerDreamDefenderSpawnEvent;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.Misc;
+import com.andrei1058.bedwars.shop.ShopManager;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -43,9 +42,38 @@ import static com.andrei1058.bedwars.BedWars.nms;
 
 public class SpecialsListener implements Listener {
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    private final Material silverfishMaterial;
+    private final boolean silverfishPlaceable;
+    private final double silverfishSpeed;
+    private final double silverfishHealth;
+    private final double silverfishDamage;
+    private final int silverfishDespawn;
+    private final Material ironGolemMaterial;
+    private final boolean ironGolemPlaceable;
+    private final double ironGolemSpeed;
+    private final double ironGolemHealth;
+    private final int ironGolemDespawn;
+
+    public SpecialsListener(ShopManager shop) {
+        var config = shop.getYml();
+        silverfishMaterial = Material.matchMaterial(config.getString(ConfigPath.SHOP_SPECIAL_SILVERFISH_MATERIAL, ""));
+        silverfishPlaceable = config.getBoolean(ConfigPath.SHOP_SPECIAL_SILVERFISH_ENABLE)
+                && silverfishMaterial != null && !Misc.isProjectile(silverfishMaterial);
+        silverfishSpeed = config.getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_SPEED);
+        silverfishHealth = config.getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_HEALTH);
+        silverfishDamage = config.getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_DAMAGE);
+        silverfishDespawn = config.getInt(ConfigPath.SHOP_SPECIAL_SILVERFISH_DESPAWN);
+
+        ironGolemMaterial = Material.matchMaterial(config.getString(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_MATERIAL, ""));
+        ironGolemPlaceable = config.getBoolean(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_ENABLE)
+                && ironGolemMaterial != null && !Misc.isProjectile(ironGolemMaterial);
+        ironGolemSpeed = config.getDouble(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_SPEED);
+        ironGolemHealth = config.getDouble(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_HEALTH);
+        ironGolemDespawn = config.getInt(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_DESPAWN);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onSpecialInteract(PlayerInteractEvent e) {
-        if (e.isCancelled()) return;
         Player p = e.getPlayer();
         ItemStack i = e.getItem();
         if (i == null) return;
@@ -56,40 +84,25 @@ public class SpecialsListener implements Listener {
         if (!a.isPlayer(p)) return;
         Block b = e.getClickedBlock();
         if (b == null) return;
-        Location l = b.getLocation();
-
-        if (BedWars.shop.getYml().getBoolean(ConfigPath.SHOP_SPECIAL_SILVERFISH_ENABLE)) {
-            if (!Misc.isProjectile(Material.valueOf(BedWars.shop.getYml().getString(ConfigPath.SHOP_SPECIAL_SILVERFISH_MATERIAL)))) {
-                if (i.getType() == Material.valueOf(BedWars.shop.getYml().getString(ConfigPath.SHOP_SPECIAL_SILVERFISH_MATERIAL))) {
-                    e.setCancelled(true);
-                    ITeam playerTeam = a.getTeam(p);
-                    PlayerBedBugSpawnEvent event = new PlayerBedBugSpawnEvent(p, playerTeam, a);
-                    nms.spawnSilverfish(l.add(0, 1, 0), playerTeam, BedWars.shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_SPEED),
-                            BedWars.shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_HEALTH), BedWars.shop.getInt(ConfigPath.SHOP_SPECIAL_SILVERFISH_DESPAWN),
-                            BedWars.shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_DAMAGE));
-                    Bukkit.getPluginManager().callEvent(event);
-                    if (!nms.isProjectile(i)) {
-                        nms.minusAmount(p, i, 1);
-                        p.updateInventory();
-                    }
-                }
-            }
+        if (silverfishPlaceable && i.getType() == silverfishMaterial) {
+            e.setCancelled(true);
+            ITeam playerTeam = a.getTeam(p);
+            PlayerBedBugSpawnEvent event = new PlayerBedBugSpawnEvent(p, playerTeam, a);
+            nms.spawnSilverfish(b.getLocation().add(0, 1, 0), playerTeam, silverfishSpeed,
+                    silverfishHealth, silverfishDespawn, silverfishDamage);
+            Bukkit.getPluginManager().callEvent(event);
+            nms.minusAmount(p, i, 1);
+            p.updateInventory();
         }
-        if (BedWars.shop.getYml().getBoolean(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_ENABLE)) {
-            if (!Misc.isProjectile(Material.valueOf(BedWars.shop.getYml().getString(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_MATERIAL)))) {
-                if (i.getType() == Material.valueOf(BedWars.shop.getYml().getString(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_MATERIAL))) {
-                    e.setCancelled(true);
-                    ITeam playerTeam = a.getTeam(p);
-                    PlayerDreamDefenderSpawnEvent event = new PlayerDreamDefenderSpawnEvent(p, playerTeam, a);
-                    nms.spawnIronGolem(l.add(0, 1, 0), playerTeam, BedWars.shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_SPEED),
-                            BedWars.shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_HEALTH), BedWars.shop.getInt(ConfigPath.SHOP_SPECIAL_IRON_GOLEM_DESPAWN));
-                    Bukkit.getPluginManager().callEvent(event);
-                    if (!nms.isProjectile(i)) {
-                        nms.minusAmount(p, i, 1);
-                        p.updateInventory();
-                    }
-                }
-            }
+        if (ironGolemPlaceable && i.getType() == ironGolemMaterial) {
+            e.setCancelled(true);
+            ITeam playerTeam = a.getTeam(p);
+            PlayerDreamDefenderSpawnEvent event = new PlayerDreamDefenderSpawnEvent(p, playerTeam, a);
+            nms.spawnIronGolem(b.getLocation().add(0, 1, 0), playerTeam, ironGolemSpeed,
+                    ironGolemHealth, ironGolemDespawn);
+            Bukkit.getPluginManager().callEvent(event);
+            nms.minusAmount(p, i, 1);
+            p.updateInventory();
         }
     }
 }

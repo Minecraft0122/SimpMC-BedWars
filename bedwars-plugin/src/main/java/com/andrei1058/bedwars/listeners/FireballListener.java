@@ -7,7 +7,6 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -61,13 +60,15 @@ public class FireballListener implements Listener {
 
         World world = location.getWorld();
         if (world == null) return;
-        Collection<Entity> nearbyEntities = world
-                .getNearbyEntities(location, fireballExplosionSize, fireballExplosionSize, fireballExplosionSize);
-        for (Entity entity : nearbyEntities) {
-            if (!(entity instanceof Player player)) continue;
-            if (Arena.getArenaByPlayer(player) != arena || !arena.isPlayer(player)) continue;
+        Collection<Player> nearbyPlayers = world.getNearbyPlayers(location,
+                fireballExplosionSize, fireballExplosionSize, fireballExplosionSize,
+                player -> Arena.getArenaByPlayer(player) == arena && arena.isPlayer(player));
+        Vector explosionPosition = location.toVector();
+        long hitTime = System.currentTimeMillis();
+        for (Player player : nearbyPlayers) {
 
-            player.setVelocity(calculateKnockback(location.toVector(), player.getLocation().toVector(),
+            player.setVelocity(calculateKnockback(explosionPosition,
+                    new Vector(player.getX(), player.getY(), player.getZ()),
                     fireballHorizontal, fireballVertical));
 
             boolean teammate = sourceTeam != null && sourceTeam.equals(arena.getTeam(player));
@@ -75,9 +76,9 @@ public class FireballListener implements Listener {
                 LastHit lastHit = LastHit.getLastHit(player);
                 if (lastHit != null) {
                     lastHit.setDamager(source);
-                    lastHit.setTime(System.currentTimeMillis());
+                    lastHit.setTime(hitTime);
                 } else {
-                    new LastHit(player, source, System.currentTimeMillis());
+                    new LastHit(player, source, hitTime);
                 }
             }
 

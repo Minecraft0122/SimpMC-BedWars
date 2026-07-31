@@ -340,10 +340,11 @@ public class SidebarService implements ISidebarService {
     public void refreshHealth() {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
-            if (null != v.getArena() && Arena.getArenas().contains(v.getArena())) {
+            if (Arena.isRegistered(v.getArena())) {
+                boolean displayHealth = SidebarHealthPolicy.shouldDisplay(v.getArena().getStatus(), false);
                 v.getHandle().playerHealthRefreshAnimation();
                 for (Player player : v.getArena().getPlayers()) {
-                    if (SidebarHealthPolicy.shouldDisplay(v.getArena().getStatus(), false)) {
+                    if (displayHealth) {
                         v.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
                     } else {
                         v.getHandle().clearPlayerHealth(player);

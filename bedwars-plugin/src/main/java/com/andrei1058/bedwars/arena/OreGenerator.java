@@ -32,7 +32,6 @@ import com.andrei1058.bedwars.api.events.gameplay.GeneratorUpgradeEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Cuboid;
-import com.andrei1058.bedwars.configuration.Sounds;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -53,6 +52,7 @@ import static com.andrei1058.bedwars.BedWars.*;
 @SuppressWarnings("WeakerAccess")
 public class OreGenerator implements IGenerator {
 
+    private static final Vector ZERO_VELOCITY = new Vector();
     private Location location;
     private int delay = 1, upgradeStage = 1, lastSpawn, spawnLimit = 0, amount = 1;
     private IArena arena;
@@ -60,6 +60,7 @@ public class OreGenerator implements IGenerator {
     private GeneratorType type;
     private int rotate = 0, dropID = 0;
     private ITeam bwt;
+    private final boolean splitEnabled;
     boolean up = true;
 
     /**
@@ -81,6 +82,7 @@ public class OreGenerator implements IGenerator {
         this.arena = arena;
         this.bwt = bwt;
         this.type = type;
+        this.splitEnabled = plugin.getConfig().getBoolean(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT);
         loadDefaults();
 
         Cuboid c = new Cuboid(location, getArena().getConfig().getInt(ConfigPath.ARENA_GENERATOR_PROTECTION), true);
@@ -152,19 +154,13 @@ public class OreGenerator implements IGenerator {
         if (isSpawnDue(lastSpawn)) {
             lastSpawn = delay;
 
-            if (spawnLimit != 0) {
-                int oreCount = 0;
-
-                for (Entity e : location.getWorld().getNearbyEntities(location, 3, 3, 3)) {
-                    if (e.getType() == EntityType.ITEM) {
-                        Item i = (Item) e;
-                        if (i.getItemStack().getType() == ore.getType()) {
-                            oreCount++;
-                        }
-                        if (oreCount >= spawnLimit) return;
-                    }
+            if (spawnLimit > 0) {
+                int nearbyOre = 0;
+                for (Item item : location.getWorld().getNearbyEntitiesByType(Item.class, location, 3, 3, 3,
+                        nearby -> nearby.getItemStack().getType() == ore.getType())) {
+                    nearbyOre += item.getItemStack().getAmount();
+                    if (nearbyOre >= spawnLimit) return;
                 }
-                lastSpawn = delay;
             }
             if (bwt == null) {
                 dropItem(location);
@@ -174,24 +170,22 @@ public class OreGenerator implements IGenerator {
                 dropItem(location);
                 return;
             }
-            if (plugin.getConfig().getBoolean(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT)) {
-                Object[] players = location.getWorld().getNearbyEntities(location, 1, 1, 1).stream().filter(entity -> entity.getType() == EntityType.PLAYER)
-                        .filter(entity -> arena.isPlayer((Player) entity)).toArray();
-                if (players.length <= 1) {
+            if (splitEnabled) {
+                Collection<Player> players = location.getWorld().getNearbyPlayers(location, 1, 1, 1, arena::isPlayer);
+                if (players.size() <= 1) {
                     dropItem(location);
                     return;
                 }
-                for (Object o : players) {
-                    Player player = (Player) o;
+                for (Player player : players) {
                     ItemStack item = ore.clone();
                     item.setAmount(amount);
-                    Sound pickupSound = Sounds.resolveSound("ENTITY_ITEM_PICKUP");
-                    if (pickupSound != null) {
-                        player.playSound(player.getLocation(), pickupSound, 0.6f, 1.3f);
-                    }
+                    player.playSound(player, Sound.ENTITY_ITEM_PICKUP, 0.6f, 1.3f);
                     Collection<ItemStack> excess = player.getInventory().addItem(item).values();
-                    for (ItemStack value : excess) {
-                        dropItem(player.getLocation(), value.getAmount());
+                    if (!excess.isEmpty()) {
+                        Location overflowLocation = player.getLocation();
+                        for (ItemStack value : excess) {
+                            dropItem(overflowLocation, value.getAmount());
+                        }
                     }
                 }
                 return;
@@ -207,16 +201,28 @@ public class OreGenerator implements IGenerator {
     }
 
     private void dropItem(Location location, int amount) {
-        for (int temp = amount; temp > 0; temp--) {
+        int maxStackSize = Math.max(1, ore.getMaxStackSize());
+        int remaining = amount;
+        int entityCount = dropEntityCount(amount, maxStackSize, stack);
+        for (int index = 0; index < entityCount; index++) {
             ItemStack itemStack = new ItemStack(ore);
+            int stackSize = stack ? Math.min(remaining, maxStackSize) : 1;
+            itemStack.setAmount(stackSize);
             if (!stack) {
                 ItemMeta itemMeta = itemStack.getItemMeta();
                 itemMeta.setDisplayName("custom" + dropID++);
                 itemStack.setItemMeta(itemMeta);
             }
             Item item = location.getWorld().dropItem(location, itemStack);
-            item.setVelocity(new Vector(0, 0, 0));
+            item.setVelocity(ZERO_VELOCITY);
+            remaining -= stackSize;
         }
+    }
+
+    static int dropEntityCount(int amount, int maxStackSize, boolean stackItems) {
+        if (amount <= 0) return 0;
+        if (!stackItems) return amount;
+        return Math.ceilDiv(amount, Math.max(1, maxStackSize));
     }
 
     /**

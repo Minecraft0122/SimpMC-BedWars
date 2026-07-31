@@ -576,6 +576,6 @@ public class ShopManager extends ConfigManager {
         pm.registerEvents(new QuickBuyListener(), BedWars.plugin);
         pm.registerEvents(new ShopOpenListener(), BedWars.plugin);
         pm.registerEvents(new PlayerDropListener(), BedWars.plugin);
-        pm.registerEvents(new SpecialsListener(), BedWars.plugin);
+        pm.registerEvents(new SpecialsListener(this), BedWars.plugin);
     }
 }
