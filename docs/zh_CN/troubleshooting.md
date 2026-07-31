@@ -47,7 +47,7 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 - 至少两支队伍。
 - 每队已设置 Color、Spawn、Bed、Shop、Upgrade。
 - 等待点和观战点所在世界正确。
-- `minInTeam` 和 `maxInTeam` 合法，且地图至少配置两支队伍；正常开局时至少两支启用队伍都必须达到 `minInTeam`。
+- `minPlayers` 至少为 2 且不超过地图总容量，`maxInTeam` 至少为 1，并且地图至少配置两支队伍。
 - 控制台是否指出具体缺失路径。
 
 ## 自动找不到床
@@ -62,7 +62,7 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 
 ## 游戏只有一支队伍
 
-当前版本会强制至少两支非空队伍，并验证每队人数都位于 `minInTeam..maxInTeam`。若第三方附属插件取消全部 `TeamAssignEvent` 或使用错误的自定义分配器，开局会停止并在控制台打印警告。检查附属插件逻辑。只有管理员明确执行 `/bw start debug` 时才允许单队测试。
+当前版本在总人数达到 `minPlayers` 后尝试分队，并强制至少两支非空队伍、每队不超过 `maxInTeam`。一个人数未超过容量的完整小队不会被拆成两队制造对手。若第三方附属插件取消全部 `TeamAssignEvent` 或使用错误的自定义分配器，开局会停止并在控制台打印警告。只有管理员明确执行 `/bw start debug` 时才允许单队测试。
 
 ## 火球飞不远或潜行没有加速
 
@@ -105,6 +105,12 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 ## 竞技场重置时玩家被踢出
 
 2.10.38 已删除 `You're not supposed to be here.` 重置踢人逻辑。倒计时到 0 后会先返回大厅，确认竞技场世界无人后才卸载；异步传送失败时每秒重试并保持世界加载。若地图一直不重置，检查控制台的大厅目标警告和 `lobbyLoc`，而不是强制卸载仍有玩家的世界。
+
+## `Corrupt regionfile header` 或区块坐标不匹配
+
+`Attempting to read chunk data ... but got chunk data for ... instead` 表示对应世界的 `.mca` 区域文件头已经损坏，不是普通 Java 插件异常。Paper 会先生成形如 `r.-1.-1.mca.<数字>.backup` 的备份，再尝试重建文件头；日志明确写着 `could not be recovered` 的区块只能重新生成或从已知完好的地图备份恢复。
+
+若错误来自竞技场地图：先停止服务器并备份整个实例，再从完好原图替换日志点名的 `region/r.*.*.mca`。使用内部地图恢复器时还必须同步替换或删除 `plugins/SimpMC-BedWars/Cache/<竞技场>.zip` 中的损坏副本，否则每局重置都会再次还原坏文件。不要把 Paper 自动生成的 `.backup` 当作完整原图。当前版本在设置会话结束后会等待玩家离开、确认世界成功卸载，才异步压缩地图；若 60 秒内仍无法安全卸载，只记录错误并放弃本次压缩，不再读取仍加载的区域文件。
 
 ## 放置后方块暂时看不见
 

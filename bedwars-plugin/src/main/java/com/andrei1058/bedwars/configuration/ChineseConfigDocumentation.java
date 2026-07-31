@@ -89,8 +89,8 @@ public final class ChineseConfigDocumentation {
     public static void arena(ConfigManager config) {
         comment(config, "group", "竞技场唯一的匹配分组，也用于生成器、开局物品、升级菜单和计分板等组专属配置。", "旧版 groups 列表会保留第一项并自动迁移为单值。");
         comment(config, ConfigPath.ARENA_DISPLAY_NAME, "玩家可见名称；留空时使用竞技场世界名。");
-        comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数；所有设置模式均可使用 /bw setMaxInTeam 修改。", "在设置会话中修改容量时，minInTeam 会先自动同步为相同值；随后可用 /bw setMinInTeam 单独调整。");
-        comment(config, "minInTeam", "每支启用队伍正常开局所需的最少人数，范围为 1..maxInTeam。", "已有竞技场载入和配置迁移不会覆盖此值；至少两支队伍达标即可开始，无需竞技场满员。");
+        comment(config, "minPlayers", "开始正常匹配倒计时所需的全场最低玩家数，必须至少为 2；可使用 /bw setMinPlayers 修改。", "分队时还会检查 maxInTeam，并确保至少产生两个非空队伍。");
+        comment(config, "maxInTeam", "每支队伍可容纳的最大玩家数；所有设置模式均可使用 /bw setMaxInTeam 修改。", "修改队伍容量不会覆盖全场最低开局人数 minPlayers。");
         comment(config, "allowSpectate", "是否允许玩家在游戏开始后进入观战。");
         comment(config, ConfigPath.ARENA_SPAWN_PROTECTION, "队伍出生点保护半径，单位为方块。");
         comment(config, ConfigPath.ARENA_SHOP_PROTECTION, "商店 NPC 周围保护半径，最小为 1 格；按方块坐标对称保护。");

@@ -192,6 +192,8 @@ public class SetupSession implements ISetupSession {
                             Arena.enterLobby(setupPlayer);
                         }
                     }));
+        } else {
+            Misc.connectToProxyLobby(setupPlayer);
         }
         Bukkit.getPluginManager().callEvent(new SetupSessionCloseEvent(this));
     }

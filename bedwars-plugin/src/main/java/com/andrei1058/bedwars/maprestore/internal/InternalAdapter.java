@@ -47,6 +47,8 @@ import static com.andrei1058.bedwars.BedWars.plugin;
 @SuppressWarnings("CallToPrintStackTrace")
 public class InternalAdapter extends RestoreAdapter {
 
+    private static final int SETUP_CLOSE_MAX_ATTEMPTS = 240;
+    private static final long SETUP_CLOSE_RETRY_TICKS = 5L;
     public static File backupFolder = new File(BedWars.plugin.getDataFolder() + "/Cache");
     public InternalAdapter(Plugin plugin) {
         super(plugin);
@@ -186,11 +188,37 @@ public class InternalAdapter extends RestoreAdapter {
 
     @Override
     public void onSetupSessionClose(ISetupSession s) {
-        Bukkit.getScheduler().runTask(getOwner(), () -> {
-            Bukkit.getWorld(s.getWorldName()).save();
-            Bukkit.unloadWorld(s.getWorldName(), true);
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> new WorldZipper(s.getWorldName(), true));
-        });
+        Bukkit.getScheduler().runTask(getOwner(), () -> closeSetupWorld(s, 0));
+    }
+
+    private void closeSetupWorld(ISetupSession session, int attempt) {
+        World world = Bukkit.getWorld(session.getWorldName());
+        if (world != null && !world.getPlayers().isEmpty()) {
+            retrySetupWorldClose(session, attempt,
+                    "仍有玩家留在世界中（" + world.getPlayers().size() + " 人）");
+            return;
+        }
+
+        if (world != null) {
+            world.save();
+            if (!Bukkit.unloadWorld(world, false)) {
+                retrySetupWorldClose(session, attempt, "Bukkit 拒绝卸载世界");
+                return;
+            }
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin,
+                () -> new WorldZipper(session.getWorldName(), true));
+    }
+
+    private void retrySetupWorldClose(ISetupSession session, int attempt, String reason) {
+        if (attempt >= SETUP_CLOSE_MAX_ATTEMPTS) {
+            getOwner().getLogger().severe("无法安全保存设置地图 " + session.getWorldName() + "：" + reason
+                    + "。为避免损坏区域文件，本次不会压缩仍加载的世界。");
+            return;
+        }
+        Bukkit.getScheduler().runTaskLater(getOwner(),
+                () -> closeSetupWorld(session, attempt + 1), SETUP_CLOSE_RETRY_TICKS);
     }
 
     @Override

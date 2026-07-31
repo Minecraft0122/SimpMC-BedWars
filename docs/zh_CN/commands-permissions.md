@@ -66,7 +66,8 @@
 | `waitingPos` | `bw.command.waitingpos` |
 | `removeTeam` | `bw.command.removeteam` |
 | `setMaxInTeam` | `bw.command.setmaxinteam` |
-| `setMinInTeam <人数>`（设置每支启用队伍的开局下限） | `bw.command.setmininteam` |
+| `setMinPlayers <人数>`（设置全场最低开局人数） | `bw.command.setminplayers` |
+| `setMinInTeam <人数>`（旧兼容别名） | `bw.command.setmininteam` |
 | `setMaxBuildHeight` | `bw.command.setmaxbuildheight` |
 | `setSpawn` | `bw.command.setspawn` |
 | `setBed` | `bw.command.setbed` |

@@ -34,4 +34,10 @@ class LobbyAnnouncementsTest {
         assertFalse(LobbyAnnouncements.isLobbyContext(ServerType.BUNGEE,
                 "lobby", "lobby", false, false));
     }
+
+    @Test
+    void onlyAPlayerWhoActuallyQuitFromTheLobbyIsAnnounced() {
+        assertTrue(LobbyAnnouncements.shouldAnnounceQuit(true));
+        assertFalse(LobbyAnnouncements.shouldAnnounceQuit(false));
+    }
 }

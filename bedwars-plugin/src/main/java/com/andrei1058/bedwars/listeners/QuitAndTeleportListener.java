@@ -51,6 +51,9 @@ public class QuitAndTeleportListener implements Listener {
         Player p = e.getPlayer();
         boolean wasInLobby = LobbyAnnouncements.isLobbyPlayer(p);
         e.setQuitMessage(null);
+        // Announce before arena/database cleanup so an unrelated listener or
+        // adapter failure cannot swallow a genuine lobby disconnect message.
+        LobbyAnnouncements.playerQuit(p, wasInLobby);
         // Remove from arena
         IArena a = Arena.getArenaByPlayer(p);
         if (a != null) {
@@ -74,8 +77,6 @@ public class QuitAndTeleportListener implements Listener {
                         () -> BedWars.getRemoteDatabase().setLanguage(u, languageToSave));
             }
         }
-
-        LobbyAnnouncements.playerQuit(p, wasInLobby);
         // Manage internal parties
         if (getParty().isInternal()) {
             if (getParty().hasParty(p)) {

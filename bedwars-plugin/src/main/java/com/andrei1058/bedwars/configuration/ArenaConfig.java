@@ -39,7 +39,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 21;
+    private static final int CONFIG_VERSION = 22;
 
     @SuppressWarnings({"SpellCheckingInspection"})
     private List<String> cachedGameOverridables = new ArrayList<>();
@@ -51,8 +51,8 @@ public class ArenaConfig extends ConfigManager {
         yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 服务器。");
         yml.addDefault(ArenaGroupPolicy.GROUP_PATH, ArenaGroupPolicy.DEFAULT_GROUP);
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
+        yml.addDefault("minPlayers", 2);
         yml.addDefault("maxInTeam", 1);
-        yml.addDefault("minInTeam", 1);
         yml.addDefault("allowSpectate", true);
         yml.addDefault(ConfigPath.ARENA_SPAWN_PROTECTION, 5);
         yml.addDefault(ConfigPath.ARENA_SHOP_PROTECTION, 1);
@@ -83,8 +83,8 @@ public class ArenaConfig extends ConfigManager {
         setComments(ArenaGroupPolicy.GROUP_PATH,
                 "竞技场唯一的匹配分组，也用于生成器、开局物品、升级菜单和计分板等组专属配置。");
         setComments(ConfigPath.ARENA_DISPLAY_NAME, "玩家看到的竞技场名称；留空时使用世界名。");
-        setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。", "设置容量时会把 minInTeam 一并重置为相同值，之后可用 /bw setMinInTeam 单独降低开局下限。");
-        setComments("minInTeam", "正常开局时每支启用队伍至少需要的人数，范围为 1..maxInTeam。", "插件载入和迁移已有竞技场时不会覆盖此值；达到至少两支达标队伍即可开始匹配，无需竞技场满员。");
+        setComments("minPlayers", "开始正常匹配倒计时所需的全场最低玩家数，必须至少为 2；可使用 /bw setMinPlayers 修改。", "此值与每队容量 maxInTeam 相互独立，最终分队仍必须产生至少两个非空队伍。");
+        setComments("maxInTeam", "每支队伍的最大玩家数；高级和引导式设置均可使用 /bw setMaxInTeam 修改。");
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
@@ -108,7 +108,8 @@ public class ArenaConfig extends ConfigManager {
         moveIfAbsent(config, "islandRadius", ConfigPath.ARENA_ISLAND_RADIUS);
         config.set("voidKill", null);
         config.set(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT, null);
-        config.set("minPlayers", null);
+        config.set("minPlayers", Math.max(2, config.getInt("minPlayers", 2)));
+        config.set("minInTeam", null);
         migrateArenaGroups(config);
 
         List<String> gameRules = new ArrayList<>(config.getStringList(ConfigPath.ARENA_GAME_RULES));

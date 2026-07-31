@@ -45,4 +45,16 @@ class IArenaSnapshotDefaultsTest {
         assertThrows(UnsupportedOperationException.class, () -> arena.getSignsSnapshot().clear());
         assertThrows(UnsupportedOperationException.class, () -> arena.getOreGeneratorsSnapshot().clear());
     }
+
+    @Test
+    void thirdPartyArenasKeepTheBedWars1058MinimumPlayerDefault() {
+        IArena arena = (IArena) Proxy.newProxyInstance(IArena.class.getClassLoader(),
+                new Class<?>[]{IArena.class}, (proxy, method, args) -> {
+                    if (method.isDefault()) return InvocationHandler.invokeDefault(proxy, method, args);
+                    throw new UnsupportedOperationException(method.getName());
+                });
+
+        assertEquals(2, arena.getMinPlayers());
+        assertEquals(1, arena.getMinInTeam());
+    }
 }

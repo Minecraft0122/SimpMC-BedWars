@@ -6,19 +6,10 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 package com.andrei1058.bedwars.arena.team;
 
-import com.andrei1058.bedwars.arena.ArenaStartPolicy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -33,98 +24,75 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
- * Capacity-aware randomized allocator used by the arena team assigner.
- * Normal-sized squads are atomic: matchmaking either finds a valid placement
- * for the whole squad or waits for more players. Only an external party that
- * already exceeds one team's capacity is split because keeping it intact is
- * impossible in every legal allocation.
+ * Capacity-aware allocator. It spreads groups over every configured team,
+ * keeps normal squads together and treats pre-game team choices as preferences.
+ * Only a group larger than one team's capacity may be split.
  */
 final class TeamAllocationPlanner {
 
     private TeamAllocationPlanner() {
     }
 
-    static <T> List<List<T>> allocateWithMinimum(@NotNull List<List<T>> sourceGroups,
-                                                  int configuredTeamCount, int minimumInTeam,
-                                                  int capacity, @NotNull Random random) {
-        if (configuredTeamCount < 1 || minimumInTeam < 1 || capacity < minimumInTeam) {
-            return List.of();
-        }
-        int players = sourceGroups.stream().filter(group -> group != null).mapToInt(List::size).sum();
-        int maximumTeams = ArenaStartPolicy.maximumFeasibleActiveTeams(players, configuredTeamCount,
-                minimumInTeam, capacity);
-        for (int teamCount = maximumTeams; teamCount >= 2; teamCount--) {
-            if (!ArenaStartPolicy.isFeasibleActiveTeamCount(players, teamCount, minimumInTeam, capacity)) {
-                continue;
-            }
-            List<List<T>> allocation = findAtomicAllocation(sourceGroups, teamCount, minimumInTeam,
-                    capacity, random, false);
-            if (allocation != null) return allocation;
-        }
-        return List.of();
-    }
-
-    /**
-     * Allocate directly onto configured teams. A compatible pre-game choice is
-     * honoured, while an impossible choice is treated as a preference and must
-     * never prevent an otherwise valid round from starting.
-     */
-    static <T, K> Map<K, List<T>> allocateWithMinimum(@NotNull List<List<T>> sourceGroups,
-                                                       @NotNull List<K> configuredTeams,
-                                                       int minimumInTeam, int capacity,
-                                                       @NotNull Random random,
-                                                       @NotNull Function<T, K> preferredTeam) {
-        if (configuredTeams.isEmpty() || minimumInTeam < 1 || capacity < minimumInTeam) {
-            return Map.of();
-        }
-
-        int players = sourceGroups.stream().filter(group -> group != null).mapToInt(List::size).sum();
-        int maximumTeams = ArenaStartPolicy.maximumFeasibleActiveTeams(players, configuredTeams.size(),
-                minimumInTeam, capacity);
-        for (int teamCount = maximumTeams; teamCount >= 2; teamCount--) {
-            if (!ArenaStartPolicy.isFeasibleActiveTeamCount(players, teamCount, minimumInTeam, capacity)) {
-                continue;
-            }
-
-            Map<K, List<T>> preferred = findPreferredAllocation(sourceGroups, configuredTeams, teamCount,
-                    minimumInTeam, capacity, random, preferredTeam);
-            if (preferred != null) return preferred;
-
-            List<List<T>> fallback = findAtomicAllocation(sourceGroups, teamCount, minimumInTeam,
-                    capacity, random, false);
-            if (fallback != null) {
-                return mapToConfiguredTeams(fallback, configuredTeams, random, preferredTeam);
-            }
-        }
-        return Map.of();
-    }
-
     static <T> List<List<T>> allocate(@NotNull List<List<T>> sourceGroups, int teamCount,
                                       int capacity, @NotNull Random random) {
-        if (teamCount < 1 || capacity < 1) {
-            throw new IllegalArgumentException("Team count and capacity must be positive");
-        }
+        validateCapacity(sourceGroups, teamCount, capacity);
 
-        int players = sourceGroups.stream().filter(group -> group != null).mapToInt(List::size).sum();
-        if (players > teamCount * capacity) {
-            throw new IllegalArgumentException("Players exceed total team capacity");
-        }
-        List<List<T>> allocation = findAtomicAllocation(sourceGroups, teamCount, 0, capacity, random, false);
+        List<List<T>> allocation = findAtomicAllocation(sourceGroups, teamCount, capacity, random, false);
         if (allocation != null) return allocation;
 
-        // Debug/custom assignment still has to fit every player. If atomic
-        // parties make the requested fixed team count impossible, split them
-        // only in this non-matchmaking fallback.
-        allocation = findAtomicAllocation(sourceGroups, teamCount, 0, capacity, random, true);
+        // A group larger than maxInTeam cannot remain atomic. This fallback is
+        // also useful to custom/debug callers that supplied impossible groups.
+        allocation = findAtomicAllocation(sourceGroups, teamCount, capacity, random, true);
         if (allocation == null) throw new IllegalStateException("No team allocation could be created");
         return allocation;
     }
 
+    static <T, K> Map<K, List<T>> allocateBalanced(@NotNull List<List<T>> sourceGroups,
+                                                    @NotNull List<K> configuredTeams,
+                                                    int capacity, int requiredActiveTeams,
+                                                    @NotNull Random random,
+                                                    @NotNull Function<T, K> preferredTeam) {
+        if (configuredTeams.isEmpty() || requiredActiveTeams < 1
+                || requiredActiveTeams > configuredTeams.size()) {
+            return Map.of();
+        }
+        validateCapacity(sourceGroups, configuredTeams.size(), capacity);
+
+        Map<K, List<T>> preferred = findPreferredAllocation(
+                sourceGroups, configuredTeams, capacity, random, preferredTeam);
+        if (preferred != null && hasActiveTeams(preferred.values(), requiredActiveTeams)) return preferred;
+
+        List<List<T>> fallback = findAtomicAllocation(
+                sourceGroups, configuredTeams.size(), capacity, random, false);
+        if (fallback == null) {
+            fallback = findAtomicAllocation(sourceGroups, configuredTeams.size(), capacity, random, true);
+        }
+        if (fallback == null || !hasActiveTeams(fallback, requiredActiveTeams)) return Map.of();
+        return mapToConfiguredTeams(fallback, configuredTeams, random, preferredTeam);
+    }
+
+    private static void validateCapacity(List<? extends List<?>> groups, int teamCount, int capacity) {
+        if (teamCount < 1 || capacity < 1) {
+            throw new IllegalArgumentException("Team count and capacity must be positive");
+        }
+        long players = groups.stream().filter(group -> group != null).mapToLong(List::size).sum();
+        if (players > (long) teamCount * capacity) {
+            throw new IllegalArgumentException("Players exceed total team capacity");
+        }
+    }
+
+    private static boolean hasActiveTeams(Iterable<? extends List<?>> teams, int required) {
+        int active = 0;
+        for (List<?> team : teams) {
+            if (team != null && !team.isEmpty() && ++active >= required) return true;
+        }
+        return false;
+    }
+
     private static <T> List<List<T>> findAtomicAllocation(List<List<T>> sourceGroups, int teamCount,
-                                                           int minimumInTeam, int capacity, Random random,
+                                                           int capacity, Random random,
                                                            boolean splitEveryGroup) {
         List<List<T>> parties = new ArrayList<>();
         List<T> soloPlayers = new ArrayList<>();
@@ -144,61 +112,32 @@ final class TeamAllocationPlanner {
         int[] loads = new int[teamCount];
         int[] partyTeams = new int[parties.size()];
         Arrays.fill(partyTeams, -1);
-        int remainingPartyPlayers = parties.stream().mapToInt(List::size).sum();
+        if (!calculatePartyPlacement(parties, 0, capacity, loads, partyTeams, random)) return null;
 
-        if (!calculatePartyPlacement(parties, 0, minimumInTeam, capacity, soloPlayers.size(),
-                remainingPartyPlayers, loads, partyTeams, random)) {
-            return null;
-        }
-
-        List<List<T>> teams = new ArrayList<>(teamCount);
-        for (int index = 0; index < teamCount; index++) teams.add(new ArrayList<>());
+        List<List<T>> teams = emptyTeams(teamCount);
         for (int index = 0; index < parties.size(); index++) {
             teams.get(partyTeams[index]).addAll(parties.get(index));
         }
-
-        distributeSoloPlayers(teams, soloPlayers, minimumInTeam, capacity, random);
+        distributeSoloPlayers(teams, soloPlayers, capacity, random);
         return teams;
     }
 
     private static <T, K> Map<K, List<T>> findPreferredAllocation(List<List<T>> sourceGroups,
-                                                                   List<K> configuredTeams, int teamCount,
-                                                                   int minimumInTeam, int capacity,
-                                                                   Random random,
+                                                                   List<K> configuredTeams,
+                                                                   int capacity, Random random,
                                                                    Function<T, K> preferredTeam) {
-        List<PreferredGroup<T, K>> preferredGroups = new ArrayList<>();
-        LinkedHashSet<K> requestedTeams = new LinkedHashSet<>();
-        for (List<T> group : sourceGroups) {
-            if (group == null || group.isEmpty()) continue;
-            GroupPreference<K> groupPreference = commonPreference(group, preferredTeam);
-            if (groupPreference.conflicting()) return null;
-            K preference = groupPreference.team();
-            if (preference != null && !configuredTeams.contains(preference)) return null;
-            preferredGroups.add(new PreferredGroup<>(group, preference));
-            if (preference != null) requestedTeams.add(preference);
-        }
-        if (requestedTeams.size() > teamCount) return null;
-
-        List<K> activeTeams = new ArrayList<>(requestedTeams);
-        List<K> unrequested = configuredTeams.stream()
-                .filter(team -> !requestedTeams.contains(team))
-                .collect(Collectors.toCollection(ArrayList::new));
-        Collections.shuffle(unrequested, random);
-        activeTeams.addAll(unrequested.subList(0, teamCount - activeTeams.size()));
-
-        List<List<T>> teams = new ArrayList<>(teamCount);
-        for (int index = 0; index < teamCount; index++) teams.add(new ArrayList<>());
+        List<List<T>> teams = emptyTeams(configuredTeams.size());
         List<List<T>> parties = new ArrayList<>();
         List<T> soloPlayers = new ArrayList<>();
 
-        for (PreferredGroup<T, K> preferredGroup : preferredGroups) {
-            List<T> group = preferredGroup.members();
-            K preference = preferredGroup.team();
-            if (group.size() > capacity) return null;
-            if (preference != null) {
-                List<T> selectedTeam = teams.get(activeTeams.indexOf(preference));
-                if (selectedTeam.size() + group.size() > capacity) return null;
-                selectedTeam.addAll(group);
+        for (List<T> group : sourceGroups) {
+            if (group == null || group.isEmpty()) continue;
+            GroupPreference<K> preference = commonPreference(group, preferredTeam);
+            if (preference.conflicting() || group.size() > capacity) return null;
+            if (preference.team() != null) {
+                int index = configuredTeams.indexOf(preference.team());
+                if (index < 0 || teams.get(index).size() + group.size() > capacity) return null;
+                teams.get(index).addAll(group);
             } else if (group.size() == 1) {
                 soloPlayers.add(group.getFirst());
             } else {
@@ -213,34 +152,30 @@ final class TeamAllocationPlanner {
         int[] loads = teams.stream().mapToInt(List::size).toArray();
         int[] partyTeams = new int[parties.size()];
         Arrays.fill(partyTeams, -1);
-        int partyPlayers = parties.stream().mapToInt(List::size).sum();
-        if (!calculatePartyPlacement(parties, 0, minimumInTeam, capacity, soloPlayers.size(),
-                partyPlayers, loads, partyTeams, random)) {
-            return null;
-        }
-
+        if (!calculatePartyPlacement(parties, 0, capacity, loads, partyTeams, random)) return null;
         for (int index = 0; index < parties.size(); index++) {
             teams.get(partyTeams[index]).addAll(parties.get(index));
         }
-        distributeSoloPlayers(teams, soloPlayers, minimumInTeam, capacity, random);
+        distributeSoloPlayers(teams, soloPlayers, capacity, random);
 
         Map<K, List<T>> result = new LinkedHashMap<>();
-        for (K configuredTeam : configuredTeams) {
-            int activeIndex = activeTeams.indexOf(configuredTeam);
-            if (activeIndex >= 0) result.put(configuredTeam, teams.get(activeIndex));
+        for (int index = 0; index < configuredTeams.size(); index++) {
+            result.put(configuredTeams.get(index), teams.get(index));
         }
         return result;
     }
 
+    private static <T> List<List<T>> emptyTeams(int teamCount) {
+        List<List<T>> teams = new ArrayList<>(teamCount);
+        for (int index = 0; index < teamCount; index++) teams.add(new ArrayList<>());
+        return teams;
+    }
+
     private static <T> void distributeSoloPlayers(List<List<T>> teams, List<T> soloPlayers,
-                                                   int minimumInTeam, int capacity, Random random) {
-        int soloIndex = 0;
-        for (List<T> team : teams) {
-            while (team.size() < minimumInTeam) team.add(soloPlayers.get(soloIndex++));
-        }
-        while (soloIndex < soloPlayers.size()) {
+                                                   int capacity, Random random) {
+        for (T player : soloPlayers) {
             List<Integer> available = fittingTeams(teams, capacity, 1);
-            teams.get(randomLeastFilled(teams, available, random)).add(soloPlayers.get(soloIndex++));
+            teams.get(randomLeastFilled(teams, available, random)).add(player);
         }
     }
 
@@ -294,22 +229,10 @@ final class TeamAllocationPlanner {
         return result;
     }
 
-    private record PreferenceScore<K>(int allocationIndex, K team, int score) {
-    }
-
-    private record PreferredGroup<T, K>(List<T> members, K team) {
-    }
-
-    private record GroupPreference<K>(K team, boolean conflicting) {
-    }
-
     private static <T> boolean calculatePartyPlacement(List<List<T>> parties, int partyIndex,
-                                                        int minimumInTeam, int capacity, int soloPlayers,
-                                                        int remainingPartyPlayers, int[] loads,
+                                                        int capacity, int[] loads,
                                                         int[] partyTeams, Random random) {
-        int deficit = Arrays.stream(loads).map(load -> Math.max(0, minimumInTeam - load)).sum();
-        if (remainingPartyPlayers + soloPlayers < deficit) return false;
-        if (partyIndex == parties.size()) return soloPlayers >= deficit;
+        if (partyIndex == parties.size()) return true;
 
         int partySize = parties.get(partyIndex).size();
         List<Integer> candidates = new ArrayList<>();
@@ -322,13 +245,11 @@ final class TeamAllocationPlanner {
         Integer previousLoad = null;
         for (int teamIndex : candidates) {
             int currentLoad = loads[teamIndex];
-            // Equal-load teams are interchangeable for capacity calculation.
             if (previousLoad != null && previousLoad == currentLoad) continue;
             previousLoad = currentLoad;
             loads[teamIndex] += partySize;
             partyTeams[partyIndex] = teamIndex;
-            if (calculatePartyPlacement(parties, partyIndex + 1, minimumInTeam, capacity, soloPlayers,
-                    remainingPartyPlayers - partySize, loads, partyTeams, random)) {
+            if (calculatePartyPlacement(parties, partyIndex + 1, capacity, loads, partyTeams, random)) {
                 return true;
             }
             partyTeams[partyIndex] = -1;
@@ -352,5 +273,11 @@ final class TeamAllocationPlanner {
                 .filter(index -> teams.get(index).size() == minimum)
                 .toList();
         return leastFilled.get(random.nextInt(leastFilled.size()));
+    }
+
+    private record PreferenceScore<K>(int allocationIndex, K team, int score) {
+    }
+
+    private record GroupPreference<K>(K team, boolean conflicting) {
     }
 }

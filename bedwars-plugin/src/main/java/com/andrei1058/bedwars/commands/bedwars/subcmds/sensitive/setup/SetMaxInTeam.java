@@ -63,11 +63,9 @@ public class SetMaxInTeam extends SubCommand {
             return true;
         }
         ss.getConfig().getYml().set("maxInTeam", maximum);
-        ss.getConfig().getYml().set("minInTeam", maximum);
         ss.getConfig().save();
-        p.sendMessage("§6 ▪ §7已设置每队人数为 §e" + maximum
-                + "§7，并将每队开局下限同步为相同值；可用 /" + mainCmd
-                + " setMinInTeam <整数> 单独降低下限。");
+        p.sendMessage("§6 ▪ §7已将每支队伍容量设置为 §e" + maximum
+                + "§7；全场最低开局人数 minPlayers 保持不变。");
         return true;
     }
 

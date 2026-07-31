@@ -127,7 +127,7 @@ public class CmdList extends SubCommand {
             }
 
             int maxInTeam = ss.getConfig().getInt("maxInTeam");
-            int minInTeam = ss.getConfig().getInt("minInTeam");
+            int minPlayers = ss.getConfig().getInt("minPlayers");
 
             String setWaitingSpawn = ss.dot() + (waitingSpawn ? ChatColor.STRIKETHROUGH : "") + "setWaitingSpawn" + ChatColor.RESET + " " + (waitingSpawn ? ChatColor.GREEN + "（已设置）" : ChatColor.RED + "（未设置）");
             String waitingPos = ss.dot() + (pos ? ChatColor.STRIKETHROUGH : "") + "waitingPos 1/2" + ChatColor.RESET + " " + posMsg;
@@ -171,11 +171,11 @@ public class CmdList extends SubCommand {
                 p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setType <type> " + group, ChatColor.WHITE + "设置竞技场分组。", "/" + getParent().getName() + " setType", ClickEvent.Action.RUN_COMMAND));
             }
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMaxInTeam <int>（当前每队 " + maxInTeam + " 人）",
-                    ChatColor.WHITE + "设置每队容量；设置时会把开局下限同步为容量。",
+                    ChatColor.WHITE + "设置每支队伍的最大容量。",
                     "/" + mainCmd + " setMaxInTeam ", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMinInTeam <int>（当前最少 " + minInTeam + " 人）",
-                    ChatColor.WHITE + "单独设置每支启用队伍的开局下限；至少两支队伍达标即可开始。",
-                    "/" + mainCmd + " setMinInTeam ", ClickEvent.Action.SUGGEST_COMMAND));
+            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMinPlayers <int>（当前全场最少 " + minPlayers + " 人）",
+                    ChatColor.WHITE + "设置全场最低开局人数；分队仍检查每队容量并要求至少两个非空队伍。",
+                    "/" + mainCmd + " setMinPlayers ", ClickEvent.Action.SUGGEST_COMMAND));
 
             p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "save", ChatColor.WHITE + "保存竞技场并返回大厅", "/" + getParent().getName() + " save", ClickEvent.Action.SUGGEST_COMMAND));
         } else {

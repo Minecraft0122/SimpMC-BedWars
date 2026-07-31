@@ -125,7 +125,7 @@ public class Arena implements IArena {
     private GameState status = GameState.restarting;
     private YamlConfiguration yml;
     private ArenaConfig cm;
-    private int maxPlayers = 10, maxInTeam = 1, minInTeam = 1, islandRadius = 10;
+    private int minPlayers = 2, maxPlayers = 10, maxInTeam = 1, islandRadius = 10;
     public int upgradeDiamondsCount = 0, upgradeEmeraldsCount = 0;
     public boolean allowSpectate = true;
     private World world;
@@ -238,8 +238,12 @@ public class Arena implements IArena {
             return;
         }
         maxInTeam = Math.max(1, yml.getInt("maxInTeam", 1));
-        minInTeam = Math.max(1, Math.min(yml.getInt("minInTeam", 1), maxInTeam));
         maxPlayers = yml.getConfigurationSection("Team").getKeys(false).size() * maxInTeam;
+        minPlayers = Math.max(ArenaStartPolicy.ABSOLUTE_MINIMUM_PLAYERS, yml.getInt("minPlayers", 2));
+        if (minPlayers > maxPlayers) {
+            plugin.getLogger().warning("竞技场 " + name + " 的 minPlayers=" + minPlayers
+                    + " 超过总容量 " + maxPlayers + "，修正配置前不会自动开始。");
+        }
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
         allowMapBreak = yml.getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK);
@@ -523,7 +527,7 @@ public class Arena implements IArena {
             boolean isStatusChange = reevaluateStartEligibility();
 
             //half full arena time shorten
-            if (players.size() >= getMaxPlayers() / 2) {
+            if (players.size() >= getMaxPlayers() / 2 && players.size() > minPlayers) {
                 if (startingTask != null) {
                     if (Bukkit.getScheduler().isCurrentlyRunning(startingTask.getTask())) {
                         if (startingTask.getCountdown() > getConfig().getInt(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_HALF)) {
@@ -1227,8 +1231,14 @@ public class Arena implements IArena {
     }
 
     @Override
+    public int getMinPlayers() {
+        return minPlayers;
+    }
+
+    @Deprecated
+    @Override
     public int getMinInTeam() {
-        return minInTeam;
+        return 1;
     }
 
     /** Re-check normal start eligibility after players or pre-game squads change. */

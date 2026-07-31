@@ -81,8 +81,6 @@ public class SetType extends SubCommand {
             } else if (input.equalsIgnoreCase("4v4v4v4")) {
                 ss.getConfig().getYml().set("maxInTeam", 4);
             }
-            int maximum = ss.getConfig().getYml().getInt("maxInTeam", 1);
-            ss.getConfig().getYml().set("minInTeam", maximum);
             ss.getConfig().getYml().set(ArenaGroupPolicy.GROUP_PATH, input);
             ss.getConfig().getYml().set(ArenaGroupPolicy.LEGACY_GROUPS_PATH, null);
             ss.getConfig().save();

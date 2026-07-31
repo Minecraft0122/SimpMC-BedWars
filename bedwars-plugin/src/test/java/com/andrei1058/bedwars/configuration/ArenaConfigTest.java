@@ -57,15 +57,17 @@ class ArenaConfigTest {
     }
 
     @Test
-    void migrationPreservesExistingTeamLimits() {
+    void migrationRestoresArenaMinimumAndRemovesObsoletePerTeamMinimum() {
         YamlConfiguration config = new YamlConfiguration();
+        config.set("minPlayers", 6);
         config.set("maxInTeam", 2);
         config.set("minInTeam", 1);
 
         ArenaConfig.migrateLegacyConfig(null, config);
 
+        assertEquals(6, config.getInt("minPlayers"));
         assertEquals(2, config.getInt("maxInTeam"));
-        assertEquals(1, config.getInt("minInTeam"));
+        assertFalse(config.contains("minInTeam", true));
     }
 
     @Test

@@ -48,10 +48,14 @@ public final class LobbyAnnouncements {
 
     public static void playerQuit(Player player, boolean wasInLobby) {
         if (player == null) return;
-        boolean wasTracked = endLobbyPresence(player.getUniqueId());
-        if (wasInLobby || wasTracked) {
+        endLobbyPresence(player.getUniqueId());
+        if (shouldAnnounceQuit(wasInLobby)) {
             broadcast("§e[BW] §f玩家 §b" + player.getName() + " §f离开了游戏", player);
         }
+    }
+
+    static boolean shouldAnnounceQuit(boolean wasInLobby) {
+        return wasInLobby;
     }
 
     static boolean beginLobbyPresence(UUID playerId) {

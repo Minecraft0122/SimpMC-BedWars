@@ -2,9 +2,10 @@ package com.andrei1058.bedwars.api.util;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -19,9 +20,24 @@ public final class ZipFileUtil {
     }
 
     public static void zipDirectory(File dir, File zipFile) throws IOException {
-        try (FileOutputStream fout = new FileOutputStream(zipFile);
-             ZipOutputStream zout = new ZipOutputStream(fout)) {
-            zipSubDirectory("", dir, zout);
+        Path target = zipFile.toPath().toAbsolutePath().normalize();
+        Path parent = target.getParent();
+        if (parent == null) throw new IOException("ZIP target has no parent: " + target);
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent, target.getFileName().toString(), ".tmp");
+        try {
+            try (OutputStream fout = Files.newOutputStream(temporary);
+                 ZipOutputStream zout = new ZipOutputStream(fout)) {
+                zipSubDirectory("", dir, zout);
+            }
+            try {
+                Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
         }
     }
 

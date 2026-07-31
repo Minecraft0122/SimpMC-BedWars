@@ -107,7 +107,7 @@ public class GameStartingTask implements Runnable, StartingTask {
                     .map(team -> team.getMembers().size())
                     .toList();
             if (!ArenaStartPolicy.canStartWithTeamSizes(teamSizes,
-                    getArena().getMinInTeam(), getArena().getMaxInTeam(), singleTeamDebugStart)) {
+                    getArena().getMinPlayers(), getArena().getMaxInTeam(), singleTeamDebugStart)) {
                 abortInvalidTeamAssignment();
                 return;
             }

@@ -30,8 +30,8 @@ import static com.andrei1058.bedwars.api.language.Language.*;
 
 public class BwSidebar implements ISidebar {
 
-    static final int LOBBY_TAB_MIN_WIDTH = 128;
-    private static final String LOBBY_TAB_WIDTH_SPACER = " ".repeat(LOBBY_TAB_MIN_WIDTH);
+    static final int TAB_MIN_WIDTH = 128;
+    private static final String TAB_WIDTH_SPACER = " ".repeat(TAB_MIN_WIDTH);
 
     private static final SidebarLine EMPTY_TITLE = new SidebarLine() {
         @Override
@@ -557,6 +557,8 @@ public class BwSidebar implements ISidebar {
         if (hasNoArena()) {
             headerLines = selectLobbyHeader(config.getYml().getStringList(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER),
                     headerLines);
+        } else {
+            headerLines = ensureTabWidth(headerLines);
         }
 
         this.headerFooter = new TabHeaderFooter(
@@ -571,20 +573,24 @@ public class BwSidebar implements ISidebar {
     static List<String> selectLobbyHeader(List<String> configuredHeader, List<String> languageHeader) {
         List<String> selected = configuredHeader == null || configuredHeader.isEmpty()
                 ? languageHeader : configuredHeader;
+        return ensureTabWidth(selected);
+    }
+
+    static List<String> ensureTabWidth(List<String> selected) {
         if (selected == null || selected.isEmpty()) return selected;
 
         String firstLine = selected.getFirst();
-        if (firstLine != null && firstLine.isBlank() && firstLine.length() >= LOBBY_TAB_MIN_WIDTH) {
+        if (firstLine != null && firstLine.isBlank() && firstLine.length() >= TAB_MIN_WIDTH) {
             return selected;
         }
 
         List<String> widenedHeader = new ArrayList<>(selected.size() + 1);
         if (firstLine != null && firstLine.isBlank()) {
             widenedHeader.addAll(selected);
-            widenedHeader.set(0, LOBBY_TAB_WIDTH_SPACER);
+            widenedHeader.set(0, TAB_WIDTH_SPACER);
             return widenedHeader;
         }
-        widenedHeader.add(LOBBY_TAB_WIDTH_SPACER);
+        widenedHeader.add(TAB_WIDTH_SPACER);
         widenedHeader.addAll(selected);
         return widenedHeader;
     }

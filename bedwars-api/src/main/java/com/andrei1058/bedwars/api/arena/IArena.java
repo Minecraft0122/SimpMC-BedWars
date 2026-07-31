@@ -164,10 +164,21 @@ public interface IArena {
     int getMaxInTeam();
 
     /**
-     * Get the minimum number of players required in every active team for a
-     * normal round. At least two teams must reach this value. Older third-party
-     * implementations default to one.
+     * Get the arena-wide number of players required to begin a normal round.
+     * Team capacity remains controlled independently by {@link #getMaxInTeam()}.
+     * Older third-party implementations retain the BedWars1058 default of two.
      */
+    default int getMinPlayers() {
+        return 2;
+    }
+
+    /**
+     * Legacy per-team minimum retained as a source-compatible API bridge.
+     * Normal matchmaking no longer uses this value.
+     *
+     * @deprecated use {@link #getMinPlayers()} for the arena-wide start threshold
+     */
+    @Deprecated
     default int getMinInTeam() {
         return 1;
     }
