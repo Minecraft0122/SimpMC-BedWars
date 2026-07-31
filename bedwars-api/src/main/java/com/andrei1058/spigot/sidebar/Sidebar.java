@@ -73,13 +73,23 @@ public class Sidebar {
         if (manager == null) {
             return;
         }
+        UUID playerId = player.getUniqueId();
+        Scoreboard currentScoreboard = player.getScoreboard();
+        Scoreboard managedScoreboard = scoreboards.get(playerId);
         Scoreboard scoreboard = manager.getNewScoreboard();
-        scoreboards.put(player.getUniqueId(), scoreboard);
-        previousScoreboards.put(player.getUniqueId(), player.getScoreboard());
-        player.setScoreboard(scoreboard);
+        // Build off-screen first. Binding a different scoreboard instance makes
+        // CraftBukkit send one complete snapshot, including team CREATE data.
         render(scoreboard);
         tabs.values().forEach(tab -> applyTab(scoreboard, tab));
         renderHealth(scoreboard);
+        player.setScoreboard(scoreboard);
+        if (shouldCapturePreviousScoreboard(managedScoreboard, currentScoreboard)) {
+            // Another plugin may have replaced our board since the previous
+            // replay. Restore that latest external board when BedWars releases
+            // ownership, not the stale board captured on first entry.
+            previousScoreboards.put(playerId, currentScoreboard);
+        }
+        scoreboards.put(playerId, scoreboard);
     }
 
     public void remove(@NotNull Player player) {
@@ -88,7 +98,7 @@ public class Sidebar {
         if (scoreboard == null) {
             return;
         }
-        if (player.getScoreboard().equals(scoreboard)) {
+        if (player.getScoreboard() == scoreboard) {
             ScoreboardManager manager = Bukkit.getScoreboardManager();
             player.setScoreboard(previous == null && manager != null ? manager.getMainScoreboard() : previous);
         }
@@ -413,6 +423,11 @@ public class Sidebar {
         // could merge two unrelated players into one scoreboard team and corrupt client state.
         return tabTeamNames.computeIfAbsent(identifier,
                 ignored -> TAB_TEAM_PREFIX + Integer.toString(nextTabTeamId++, Character.MAX_RADIX));
+    }
+
+    static boolean shouldCapturePreviousScoreboard(Scoreboard managedScoreboard,
+                                                    @NotNull Scoreboard currentScoreboard) {
+        return managedScoreboard != currentScoreboard;
     }
 
     private static void detachTab(@NotNull PlayerTab tab) {

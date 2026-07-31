@@ -37,6 +37,14 @@ class SidebarServiceTest {
     }
 
     @Test
+    void onlyReplaysTheFullScoreboardForLoginOrCrossWorldLoads() {
+        assertTrue(SidebarService.requiresClientResynchronization(true, false));
+        assertTrue(SidebarService.requiresClientResynchronization(false, true));
+        assertTrue(SidebarService.requiresClientResynchronization(true, true));
+        assertFalse(SidebarService.requiresClientResynchronization(false, false));
+    }
+
+    @Test
     void eliminationRefreshesEveryOtherViewerInTheSameArena() {
         IArena arena = arena();
         IArena otherArena = arena();

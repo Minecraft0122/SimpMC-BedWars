@@ -536,7 +536,7 @@ public interface BedWars {
 
         /**
          * Restores user scoreboard based on plugin configuration.
-         * @param delay 5 seconds delay. to be used on server join.
+         * @param delay whether to wait 5 server ticks before applying; intended for server join
          */
         void givePlayerScoreboard(Player player, boolean delay);
     }

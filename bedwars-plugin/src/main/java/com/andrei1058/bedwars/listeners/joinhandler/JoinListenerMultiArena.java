@@ -86,10 +86,15 @@ public class JoinListenerMultiArena implements Listener {
         }
         TeleportManager.teleport(p, lobbyLocation)
                 .whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                    if (error == null && Boolean.TRUE.equals(success)) Arena.enterLobby(p);
+                    if (!p.isOnline()) return;
+                    if (error == null && Boolean.TRUE.equals(success)) {
+                        Arena.enterLobby(p);
+                    }
+                    // Initialize only after the teleport attempt has completed.
+                    // Even if it fails, do not leave an online player with the
+                    // vanilla TAB until they later enter an arena.
+                    SidebarService.getInstance().giveSidebar(p, null, true);
                 }));
-
-        SidebarService.getInstance().giveSidebar(p, null, true);
 
         p.setHealthScale(p.getMaxHealth());
         p.setExp(0);

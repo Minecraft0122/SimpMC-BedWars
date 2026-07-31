@@ -47,7 +47,7 @@ class PlayerGoods {
     private HashMap<ItemStack, Integer> enderchest = new HashMap<>();
     private GameMode gamemode;
     private boolean allowFlight, flying;
-    private String displayName, tabName;
+    private String displayName;
 
     PlayerGoods(Player p, boolean prepare){
         this(p, prepare, false);
@@ -95,7 +95,10 @@ class PlayerGoods {
         this.gamemode = p.getGameMode();
         this.allowFlight = p.getAllowFlight();
         this.flying = p.isFlying();
-        this.tabName = p.getPlayerListName();
+        // TAB names are owned by PlayerListNameState. Paper's legacy getter
+        // returns the profile name for a null custom value, so snapshotting and
+        // restoring it here would create an explicit white name that bypasses
+        // scoreboard-team formatting.
         this.displayName = p.getDisplayName();
 
         /* prepare for arena */
@@ -188,10 +191,6 @@ class PlayerGoods {
         if (!displayName.equals(player.getDisplayName())) {
             player.setDisplayName(displayName);
         }
-        if (!tabName.equals(player.getPlayerListName())) {
-            player.setPlayerListName(tabName);
-        }
-
         uuid = null;
         items = null;
         potions = null;

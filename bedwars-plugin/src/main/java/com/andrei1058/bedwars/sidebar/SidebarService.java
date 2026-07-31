@@ -18,6 +18,7 @@ import com.andrei1058.spigot.sidebar.SidebarManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,11 +31,14 @@ public class SidebarService implements ISidebarService {
 
     private static final int MIN_GENERAL_REFRESH_INTERVAL = 20;
     private static final int MIN_TITLE_REFRESH_INTERVAL = 4;
+    private static final long JOIN_INITIALIZATION_DELAY_TICKS = 5L;
 
     private static SidebarService instance;
 
     private final SidebarManager sidebarHandler;
     private final HashMap<UUID, BwSidebar> sidebars = new HashMap<>();
+    private final HashMap<UUID, BukkitTask> delayedSidebarTasks = new HashMap<>();
+    private final HashSet<UUID> pendingWorldResynchronizations = new HashSet<>();
 
     public static boolean init(JavaPlugin plugin) {
         if (null == instance) {
@@ -121,7 +125,21 @@ public class SidebarService implements ISidebarService {
 
     public void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay) {
         if (sidebarHandler == null || !player.isOnline()) return;
-        BwSidebar sidebar = sidebars.getOrDefault(player.getUniqueId(), null);
+        UUID playerId = player.getUniqueId();
+        if (delay) {
+            cancelDelayedSidebar(playerId);
+            BukkitTask task = Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
+                delayedSidebarTasks.remove(playerId);
+                if (!player.isOnline() || Arena.getArenaByPlayer(player) != arena) {
+                    return;
+                }
+                giveSidebar(player, arena, false);
+            }, JOIN_INITIALIZATION_DELAY_TICKS);
+            delayedSidebarTasks.put(playerId, task);
+            return;
+        }
+        cancelDelayedSidebar(playerId);
+        BwSidebar sidebar = sidebars.getOrDefault(playerId, null);
         boolean sidebarEnabled = arena == null
                 ? config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR)
                     && BedWars.getServerType() != ServerType.SHARED
@@ -257,17 +275,65 @@ public class SidebarService implements ISidebarService {
     }
 
     /**
+     * Replay an already-created sidebar after Paper confirms that the client
+     * finished its initial load or a marked cross-world transition. Packets
+     * sent before that acknowledgement can otherwise be discarded while the
+     * server-side scoreboard cache remains unchanged.
+     */
+    void handleClientLoadedWorld(@NotNull Player player, boolean initialLoad) {
+        if (sidebarHandler == null || !player.isOnline()) return;
+        boolean changedWorld = pendingWorldResynchronizations.remove(player.getUniqueId());
+        if (!requiresClientResynchronization(initialLoad, changedWorld)) {
+            return;
+        }
+        BwSidebar sidebar = sidebars.get(player.getUniqueId());
+        if (sidebar == null) {
+            return;
+        }
+
+        cancelDelayedSidebar(player.getUniqueId());
+        IArena currentArena = Arena.getArenaByPlayer(player);
+        if (sidebar.getArena() != currentArena) {
+            giveSidebar(player, currentArena, false);
+            return;
+        }
+        sidebar.resynchronizeClientState();
+    }
+
+    /** Mark a cross-world teleport for a full replay once its client acknowledges loading. */
+    void markClientWorldChange(@NotNull Player player) {
+        pendingWorldResynchronizations.add(player.getUniqueId());
+    }
+
+    static boolean requiresClientResynchronization(boolean initialLoad, boolean changedWorld) {
+        return initialLoad || changedWorld;
+    }
+
+    /**
      * Kill a sidebar lifecycle.
      */
     public void remove(@NotNull BwSidebar sidebar) {
-        this.sidebars.remove(sidebar.getPlayer().getUniqueId());
+        UUID playerId = sidebar.getPlayer().getUniqueId();
+        cancelDelayedSidebar(playerId);
+        pendingWorldResynchronizations.remove(playerId);
+        this.sidebars.remove(playerId);
         sidebar.remove();
     }
 
     public void remove(@NotNull Player player) {
-        BwSidebar sidebar = this.sidebars.remove(player.getUniqueId());
+        UUID playerId = player.getUniqueId();
+        cancelDelayedSidebar(playerId);
+        pendingWorldResynchronizations.remove(playerId);
+        BwSidebar sidebar = this.sidebars.remove(playerId);
         if (null != sidebar) {
             sidebar.remove();
+        }
+    }
+
+    private void cancelDelayedSidebar(@NotNull UUID playerId) {
+        BukkitTask pending = delayedSidebarTasks.remove(playerId);
+        if (pending != null) {
+            pending.cancel();
         }
     }
 

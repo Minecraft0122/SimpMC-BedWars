@@ -42,6 +42,7 @@ public class BwSidebar implements ISidebar {
 
     private final Player player;
     private IArena arena;
+    private GameState renderedArenaState;
     private Sidebar handle;
     private TabHeaderFooter headerFooter;
     private final SimpleDateFormat dateFormat;
@@ -79,6 +80,9 @@ public class BwSidebar implements ISidebar {
     }
 
     public void setContent(List<String> titleArray, List<String> lineArray, @Nullable IArena arena) {
+        GameState nextArenaState = arena == null ? null : arena.getStatus();
+        boolean tabContextChanged = handle != null && shouldResynchronizeTabContext(
+                this.arena, renderedArenaState, arena, nextArenaState);
         this.arena = arena;
         SidebarLine title = this.normalizeTitle(titleArray);
         List<SidebarLine> lines = this.normalizeLines(lineArray);
@@ -94,11 +98,29 @@ public class BwSidebar implements ISidebar {
         // if it is the first time setting content we create the handle
         if (null == handle) {
             handle = SidebarService.getInstance().getSidebarHandler().createSidebar(title, lines, placeholders);
+            // Populate TAB teams before attaching the scoreboard so the client
+            // receives one complete initial snapshot instead of an empty board
+            // followed by a burst of incremental team CREATE packets.
+            tabList.handlePlayerList();
             handle.add(player);
         } else {
             handle.setContent(title, lines, placeholders);
+            tabList.handlePlayerList();
         }
-        tabList.handlePlayerList();
+        if (tabContextChanged) {
+            handle.add(player);
+        }
+        renderedArenaState = nextArenaState;
+        assignTabHeaderFooter();
+    }
+
+    /** Replay the complete managed scoreboard after the client finished login. */
+    void resynchronizeClientState() {
+        if (handle == null || !player.isOnline()) {
+            return;
+        }
+        handle.add(player);
+        SidebarManager.getInstance().clearHeaderFooterCache(player);
         assignTabHeaderFooter();
     }
 
@@ -593,6 +615,13 @@ public class BwSidebar implements ISidebar {
         widenedHeader.add(TAB_WIDTH_SPACER);
         widenedHeader.addAll(selected);
         return widenedHeader;
+    }
+
+    static boolean shouldResynchronizeTabContext(@Nullable IArena previousArena,
+                                                 @Nullable GameState previousState,
+                                                 @Nullable IArena nextArena,
+                                                 @Nullable GameState nextState) {
+        return previousArena != nextArena || previousState != nextState;
     }
 
     @Override

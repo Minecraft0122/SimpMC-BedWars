@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -72,16 +73,16 @@ class SidebarTabSynchronizationTest {
 
         firstViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        assertNull(playerState.playerListName,
+        assertNull(playerState.storedPlayerListName,
                 "a custom component prevents the client from applying the viewer's scoreboard team color");
 
         secondViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
         firstViewer.removeTab("alice");
-        assertNull(playerState.playerListName, "another viewer still needs scoreboard formatting");
+        assertNull(playerState.storedPlayerListName, "another viewer still needs scoreboard formatting");
 
         secondViewer.removeTab("alice");
-        assertEquals(customName, playerState.playerListName);
+        assertEquals(customName, playerState.storedPlayerListName);
     }
 
     @Test
@@ -95,16 +96,79 @@ class SidebarTabSynchronizationTest {
 
         firstViewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        state.playerListName = external;
+        state.storedPlayerListName = external;
         secondViewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        assertNull(state.playerListName, "a later refresh must not leave a custom component bypassing team color");
+        assertNull(state.storedPlayerListName, "a later refresh must not leave a custom component bypassing team color");
 
         firstViewer.removeTab("external-alice");
         secondViewer.removeTab("external-alice");
 
-        assertEquals(external, state.playerListName,
+        assertEquals(external, state.storedPlayerListName,
                 "the latest external value must be restored instead of the stale value from arena entry");
+    }
+
+    @Test
+    void modelsPaperDefaultNameWithoutCreatingAnExplicitWhiteListName() {
+        PlayerNameState state = new PlayerNameState(null);
+        Player player = player("DefaultAlice", state);
+        Sidebar firstViewer = sidebar();
+        Sidebar secondViewer = sidebar();
+
+        firstViewer.playerTabCreate("default-alice", player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        secondViewer.playerTabCreate("default-alice", player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+
+        assertEquals(Component.text("DefaultAlice"), player.playerListName(),
+                "Paper exposes the profile name even while its internal custom value is null");
+        assertNull(state.storedPlayerListName);
+        assertEquals(1, state.setterCalls,
+                "additional viewers must not broadcast duplicate UPDATE_DISPLAY_NAME packets");
+
+        firstViewer.removeTab("default-alice");
+        secondViewer.removeTab("default-alice");
+        assertNull(state.storedPlayerListName,
+                "release must not restore the effective profile name as an explicit white component");
+        assertEquals(1, state.setterCalls);
+    }
+
+    @Test
+    void reconnectReplacesStalePlayerListNameOwnership() {
+        PlayerNameState oldState = new PlayerNameState(Component.text("Old session"));
+        Player oldPlayer = player("ReconnectAlice", oldState);
+        Sidebar firstOldViewer = sidebar();
+        Sidebar secondOldViewer = sidebar();
+        firstOldViewer.playerTabCreate("old-one", oldPlayer, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        secondOldViewer.playerTabCreate("old-two", oldPlayer, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+
+        Component newCustomName = Component.text("New session");
+        PlayerNameState newState = new PlayerNameState(newCustomName);
+        Player reconnectedPlayer = player("ReconnectAlice", newState);
+        Sidebar newViewer = sidebar();
+        newViewer.playerTabCreate("new", reconnectedPlayer, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        assertNull(newState.storedPlayerListName);
+
+        firstOldViewer.removeTab("old-one");
+        secondOldViewer.removeTab("old-two");
+        assertNull(newState.storedPlayerListName,
+                "stale releases from the previous connection must not release the new connection");
+
+        newViewer.removeTab("new");
+        assertEquals(newCustomName, newState.storedPlayerListName);
+    }
+
+    @Test
+    void capturesOnlyTheLatestExternallyOwnedScoreboard() {
+        Scoreboard managed = scoreboard(team(new TeamState()));
+        Scoreboard external = scoreboard(team(new TeamState()));
+
+        assertFalse(Sidebar.shouldCapturePreviousScoreboard(managed, managed));
+        assertTrue(Sidebar.shouldCapturePreviousScoreboard(managed, external));
+        assertTrue(Sidebar.shouldCapturePreviousScoreboard(null, external));
     }
 
     @Test
@@ -143,8 +207,13 @@ class SidebarTabSynchronizationTest {
                     case "getName" -> name;
                     case "getUniqueId" -> java.util.UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
                     case "playerListName" -> {
-                        if (args == null || args.length == 0) yield state.playerListName;
-                        state.playerListName = (Component) args[0];
+                        if (args == null || args.length == 0) {
+                            yield state.storedPlayerListName == null
+                                    ? Component.text(name)
+                                    : state.storedPlayerListName;
+                        }
+                        state.storedPlayerListName = (Component) args[0];
+                        state.setterCalls++;
                         yield null;
                     }
                     default -> throw new UnsupportedOperationException(method.getName());
@@ -214,10 +283,11 @@ class SidebarTabSynchronizationTest {
     }
 
     private static final class PlayerNameState {
-        private Component playerListName;
+        private Component storedPlayerListName;
+        private int setterCalls;
 
         private PlayerNameState(Component playerListName) {
-            this.playerListName = playerListName;
+            this.storedPlayerListName = playerListName;
         }
     }
 }

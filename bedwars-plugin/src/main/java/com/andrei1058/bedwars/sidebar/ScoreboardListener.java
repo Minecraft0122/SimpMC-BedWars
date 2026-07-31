@@ -25,16 +25,25 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.events.player.*;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 public class ScoreboardListener implements Listener {
+
+    private final Set<UUID> awaitingInitialClientLoad = new HashSet<>();
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDamage(@NotNull EntityDamageEvent e) {
@@ -90,10 +99,28 @@ public class ScoreboardListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void serverJoin(@NotNull PlayerJoinEvent e) {
+        awaitingInitialClientLoad.add(e.getPlayer().getUniqueId());
         if (BedWars.getServerType() == ServerType.MULTIARENA || BedWars.getServerType() == ServerType.SHARED) {
             // add player to scoreboard tab list
             SidebarService.getInstance().applyLobbyTab(e.getPlayer());
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void clientLoadedWorld(@NotNull PlayerClientLoadedWorldEvent event) {
+        Player player = event.getPlayer();
+        boolean initialLoad = awaitingInitialClientLoad.remove(player.getUniqueId());
+        SidebarService.getInstance().handleClientLoadedWorld(player, initialLoad);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void clientChangedWorld(@NotNull PlayerChangedWorldEvent event) {
+        SidebarService.getInstance().markClientWorldChange(event.getPlayer());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void serverQuit(@NotNull PlayerQuitEvent event) {
+        awaitingInitialClientLoad.remove(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
