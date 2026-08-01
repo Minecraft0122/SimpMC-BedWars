@@ -95,10 +95,8 @@ class PlayerGoods {
         this.gamemode = p.getGameMode();
         this.allowFlight = p.getAllowFlight();
         this.flying = p.isFlying();
-        // TAB names are owned by PlayerListNameState. Paper's legacy getter
-        // returns the profile name for a null custom value, so snapshotting and
-        // restoring it here would create an explicit white name that bypasses
-        // scoreboard-team formatting.
+        // TAB rows are rendered per viewer and never mutate the player's
+        // global list name, so PlayerGoods must not snapshot or restore it.
         this.displayName = p.getDisplayName();
 
         /* prepare for arena */

@@ -268,6 +268,14 @@ public class BwSidebar implements ISidebar {
         tabList.giveUpdateTabFormat(player, skipStateCheck, spectator);
     }
 
+    void replayPlayerListEntry(@NotNull Player player) {
+        tabList.replayPlayerListEntry(player);
+    }
+
+    void removePlayerListEntry(@NotNull UUID playerId) {
+        tabList.removePlayerListEntry(playerId);
+    }
+
     @SuppressWarnings("removal")
     @Override
     public boolean isTabFormattingDisabled() {

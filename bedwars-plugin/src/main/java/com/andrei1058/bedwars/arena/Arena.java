@@ -1149,6 +1149,11 @@ public class Arena implements IArena {
         reJoin.getBwt().reJoin(p, ev.getRespawnTime());
         reJoin.destroy(false);
 
+        // PlayerReJoinEvent is cancellable and therefore fires before the
+        // player is restored to the arena/team. Update other viewers only now,
+        // when team color resolution can no longer fall back to white.
+        SidebarService.getInstance().handleReJoin(this, p);
+
         checkWinner();
 
         SidebarService.getInstance().giveSidebar(p, this, true);

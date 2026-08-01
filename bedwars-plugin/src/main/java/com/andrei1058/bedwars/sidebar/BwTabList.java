@@ -344,6 +344,17 @@ public class BwTabList {
         deployedPerPlayerTabList.put(player.getUniqueId(), teamTab);
     }
 
+    /** Recreate an existing row so Sidebar sends a forced one-entry update. */
+    void replayPlayerListEntry(@NotNull Player player) {
+        if (!deployedPerPlayerTabList.containsKey(player.getUniqueId())) return;
+        giveUpdateTabFormat(player, false, null);
+    }
+
+    /** Remove one target from this viewer's deployed TAB state. */
+    void removePlayerListEntry(@NotNull UUID playerId) {
+        removeDeployedTab(playerId);
+    }
+
     private void giveUpdateTeamColor(@NotNull Player player) {
         IArena arena = sidebar.getArena();
         Sidebar handle = sidebar.getHandle();
@@ -583,6 +594,11 @@ public class BwTabList {
             }
             state.apply(order--);
         }
+    }
+
+    static void restorePlayerListOrder() {
+        playerListOrderUpdateScheduled = false;
+        applyPlayerListOrder(List.of());
     }
 
     private static boolean isPlayerListFormattingEnabled(@NotNull GameState state) {

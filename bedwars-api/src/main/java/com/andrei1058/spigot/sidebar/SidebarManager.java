@@ -5,8 +5,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -15,12 +17,29 @@ public class SidebarManager {
     private static final SidebarManager INSTANCE = new SidebarManager();
 
     private final Map<Player, String> headerFooterCache = new WeakHashMap<>();
+    private final Map<UUID, DisplayNameOwner> displayNameOwners = new HashMap<>();
 
     private SidebarManager() {
     }
 
     public static SidebarManager init() {
+        PlayerListDisplayNamePackets.verifyCompatibility();
         return INSTANCE;
+    }
+
+    void claimDisplayNameOwnership(@NotNull Sidebar sidebar, @NotNull Player viewer) {
+        displayNameOwners.put(viewer.getUniqueId(), new DisplayNameOwner(sidebar, viewer));
+    }
+
+    boolean ownsDisplayNames(@NotNull Sidebar sidebar, @NotNull Player viewer) {
+        DisplayNameOwner owner = displayNameOwners.get(viewer.getUniqueId());
+        return owner != null && owner.sidebar() == sidebar && owner.viewer() == viewer;
+    }
+
+    boolean releaseDisplayNameOwnership(@NotNull Sidebar sidebar, @NotNull Player viewer) {
+        if (!ownsDisplayNames(sidebar, viewer)) return false;
+        displayNameOwners.remove(viewer.getUniqueId());
+        return true;
     }
 
     @NotNull
@@ -61,5 +80,8 @@ public class SidebarManager {
             rendered.add(Sidebar.renderText(line, placeholders));
         }
         return String.join("\n", rendered);
+    }
+
+    private record DisplayNameOwner(@NotNull Sidebar sidebar, @NotNull Player viewer) {
     }
 }

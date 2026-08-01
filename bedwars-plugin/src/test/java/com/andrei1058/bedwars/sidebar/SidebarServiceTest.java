@@ -45,6 +45,14 @@ class SidebarServiceTest {
     }
 
     @Test
+    void clientLoadCreatesAMissingSidebarButReplaysAnExistingOne() {
+        assertTrue(SidebarService.shouldCreateSidebarOnClientLoad(true, false, false));
+        assertFalse(SidebarService.shouldCreateSidebarOnClientLoad(true, false, true));
+        assertTrue(SidebarService.shouldCreateSidebarOnClientLoad(false, true, false));
+        assertFalse(SidebarService.shouldCreateSidebarOnClientLoad(false, false, false));
+    }
+
+    @Test
     void eliminationRefreshesEveryOtherViewerInTheSameArena() {
         IArena arena = arena();
         IArena otherArena = arena();

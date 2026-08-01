@@ -126,7 +126,7 @@ class BwTabListTest {
             assertEquals(1, secondState.order);
             assertEquals(1, secondState.writes.get());
 
-            BwTabList.applyPlayerListOrder(List.of());
+            BwTabList.restorePlayerListOrder();
 
             assertEquals(2, firstState.order);
             assertEquals(0, firstState.writes.get());

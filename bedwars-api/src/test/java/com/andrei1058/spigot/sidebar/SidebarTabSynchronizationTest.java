@@ -13,11 +13,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -64,101 +64,125 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
-    void clearsAndRestoresCustomPlayerListNameAcrossViewers() {
-        Component customName = Component.text("大厅称号 Alice");
-        PlayerNameState playerState = new PlayerNameState(customName);
-        Player player = player("Alice", playerState);
-        Sidebar firstViewer = sidebar();
-        Sidebar secondViewer = sidebar();
+    void rendersTheCompletePlayerListRowWithAnExplicitTeamColoredName() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("Alice");
+        PlayerTab tab = new PlayerTab("alice", target,
+                new SidebarLine("&7[&cR&7] "), new SidebarLine("&8 !"),
+                PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS);
 
-        firstViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        assertNull(playerState.storedPlayerListName,
-                "a custom component prevents the client from applying the viewer's scoreboard team color");
+        sidebar.renderPlayerListName(viewer, tab);
 
-        secondViewer.playerTabCreate("alice", player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        firstViewer.removeTab("alice");
-        assertNull(playerState.storedPlayerListName, "another viewer still needs scoreboard formatting");
-
-        secondViewer.removeTab("alice");
-        assertEquals(customName, playerState.storedPlayerListName);
+        assertEquals("§7[§cR§7] §cAlice§8 !", renderer.rendered.getFirst().displayName());
+        assertSame(viewer, renderer.rendered.getFirst().viewer());
+        assertSame(target, renderer.rendered.getFirst().target());
     }
 
     @Test
-    void reClearsAndEventuallyRestoresAPlayerListNameChangedByAnotherPlugin() {
-        Component original = Component.text("原始名称");
-        Component external = Component.text("其他插件名称");
-        PlayerNameState state = new PlayerNameState(original);
-        Player player = player("ExternalAlice", state);
-        Sidebar firstViewer = sidebar();
-        Sidebar secondViewer = sidebar();
+    void cachesUnchangedRowsAndRestoresTheTargetsRealServerState() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("Alice");
+        String[] prefix = {"&7["};
+        SidebarLine changingPrefix = new SidebarLine() {
+            @Override
+            public String getLine() {
+                return prefix[0];
+            }
+        };
+        PlayerTab tab = new PlayerTab("alice", target, changingPrefix, new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, List.of(), ChatColor.BLUE,
+                PlayerTab.NameTagVisibility.ALWAYS);
 
-        firstViewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        state.storedPlayerListName = external;
-        secondViewer.playerTabCreate("external-alice", player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        assertNull(state.storedPlayerListName, "a later refresh must not leave a custom component bypassing team color");
+        sidebar.renderPlayerListName(viewer, tab);
+        sidebar.renderPlayerListName(viewer, tab);
+        assertEquals(1, renderer.rendered.size(), "unchanged animation frames must not resend packets");
 
-        firstViewer.removeTab("external-alice");
-        secondViewer.removeTab("external-alice");
+        prefix[0] = "&8[";
+        sidebar.renderPlayerListName(viewer, tab);
+        assertEquals(2, renderer.rendered.size());
 
-        assertEquals(external, state.storedPlayerListName,
-                "the latest external value must be restored instead of the stale value from arena entry");
+        sidebar.restorePlayerListName(viewer, tab);
+        sidebar.restorePlayerListName(viewer, tab);
+        assertEquals(1, renderer.restored.size(), "a managed row is restored exactly once");
+        assertSame(target, renderer.restored.getFirst().target());
     }
 
     @Test
-    void modelsPaperDefaultNameWithoutCreatingAnExplicitWhiteListName() {
-        PlayerNameState state = new PlayerNameState(null);
-        Player player = player("DefaultAlice", state);
-        Sidebar firstViewer = sidebar();
-        Sidebar secondViewer = sidebar();
+    void offlineRowsReleaseTheirPerViewerCacheWithoutSendingARestorePacket() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        boolean[] online = {true};
+        Player target = player("OfflineAlice", () -> online[0]);
+        PlayerTab tab = new PlayerTab("offline-alice", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS);
 
-        firstViewer.playerTabCreate("default-alice", player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        secondViewer.playerTabCreate("default-alice", player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        sidebar.renderPlayerListName(viewer, tab);
+        online[0] = false;
+        sidebar.restorePlayerListName(viewer, tab);
+        online[0] = true;
+        sidebar.renderPlayerListName(viewer, tab);
 
-        assertEquals(Component.text("DefaultAlice"), player.playerListName(),
-                "Paper exposes the profile name even while its internal custom value is null");
-        assertNull(state.storedPlayerListName);
-        assertEquals(1, state.setterCalls,
-                "additional viewers must not broadcast duplicate UPDATE_DISPLAY_NAME packets");
-
-        firstViewer.removeTab("default-alice");
-        secondViewer.removeTab("default-alice");
-        assertNull(state.storedPlayerListName,
-                "release must not restore the effective profile name as an explicit white component");
-        assertEquals(1, state.setterCalls);
+        assertEquals(2, renderer.rendered.size(),
+                "removing an offline target must release its cached row");
+        assertTrue(renderer.restored.isEmpty(),
+                "an offline target no longer has a PlayerInfo row to restore");
     }
 
     @Test
-    void reconnectReplacesStalePlayerListNameOwnership() {
-        PlayerNameState oldState = new PlayerNameState(Component.text("Old session"));
-        Player oldPlayer = player("ReconnectAlice", oldState);
-        Sidebar firstOldViewer = sidebar();
-        Sidebar secondOldViewer = sidebar();
-        firstOldViewer.playerTabCreate("old-one", oldPlayer, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        secondOldViewer.playerTabCreate("old-two", oldPlayer, new SidebarLine(), new SidebarLine(),
+    void forcedReplayRepairsAPlayerInfoEntryOverwrittenAfterRendering() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("Alice");
+        PlayerTab tab = sidebar.playerTabCreate("alice", target, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
 
-        Component newCustomName = Component.text("New session");
-        PlayerNameState newState = new PlayerNameState(newCustomName);
-        Player reconnectedPlayer = player("ReconnectAlice", newState);
-        Sidebar newViewer = sidebar();
-        newViewer.playerTabCreate("new", reconnectedPlayer, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
-        assertNull(newState.storedPlayerListName);
+        sidebar.renderPlayerListName(viewer, tab);
+        sidebar.forcePlayerListNameRefresh(viewer);
 
-        firstOldViewer.removeTab("old-one");
-        secondOldViewer.removeTab("old-two");
-        assertNull(newState.storedPlayerListName,
-                "stale releases from the previous connection must not release the new connection");
+        assertEquals(2, renderer.rendered.size(),
+                "a later ADD_PLAYER or third-party update must be repairable even when text did not change");
+    }
 
-        newViewer.removeTab("new");
-        assertEquals(newCustomName, newState.storedPlayerListName);
+    @Test
+    void failedPacketWriteDoesNotPoisonTheRenderedNameCache() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        renderer.renderResult = false;
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("Alice");
+        PlayerTab tab = new PlayerTab("alice", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS);
+
+        sidebar.renderPlayerListName(viewer, tab);
+        renderer.renderResult = true;
+        sidebar.renderPlayerListName(viewer, tab);
+
+        assertEquals(2, renderer.renderCalls,
+                "an unchanged row must retry after the previous packet write failed");
+    }
+
+    @Test
+    void staleSidebarCannotReleaseALaterOwnersDisplayNames() {
+        SidebarManager manager = SidebarManager.getInstance();
+        Sidebar oldSidebar = sidebar(new RecordingRenderer());
+        Sidebar currentSidebar = sidebar(new RecordingRenderer());
+        Player viewer = player("Viewer");
+
+        manager.claimDisplayNameOwnership(oldSidebar, viewer);
+        manager.claimDisplayNameOwnership(currentSidebar, viewer);
+
+        assertFalse(manager.releaseDisplayNameOwnership(oldSidebar, viewer));
+        assertTrue(manager.ownsDisplayNames(currentSidebar, viewer));
+        assertTrue(manager.releaseDisplayNameOwnership(currentSidebar, viewer));
     }
 
     @Test
@@ -191,6 +215,10 @@ class SidebarTabSynchronizationTest {
         return new Sidebar(new SidebarLine(), List.of(), new ConcurrentLinkedQueue<>());
     }
 
+    private static Sidebar sidebar(PlayerListDisplayNameRenderer renderer) {
+        return new Sidebar(new SidebarLine(), List.of(), new ConcurrentLinkedQueue<>(), renderer);
+    }
+
     private static PlayerTab tab(Player player, SidebarLine prefix, ChatColor color,
                                  PlayerTab.NameTagVisibility visibility) {
         return new PlayerTab(player.getUniqueId().toString(), player, prefix, new SidebarLine(),
@@ -198,24 +226,15 @@ class SidebarTabSynchronizationTest {
     }
 
     private static Player player(String name) {
-        return player(name, new PlayerNameState(null));
+        return player(name, () -> true);
     }
 
-    private static Player player(String name, PlayerNameState state) {
+    private static Player player(String name, BooleanSupplier online) {
         return (Player) Proxy.newProxyInstance(Player.class.getClassLoader(), new Class<?>[]{Player.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getName" -> name;
                     case "getUniqueId" -> java.util.UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
-                    case "playerListName" -> {
-                        if (args == null || args.length == 0) {
-                            yield state.storedPlayerListName == null
-                                    ? Component.text(name)
-                                    : state.storedPlayerListName;
-                        }
-                        state.storedPlayerListName = (Component) args[0];
-                        state.setterCalls++;
-                        yield null;
-                    }
+                    case "isOnline" -> online.getAsBoolean();
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
     }
@@ -282,12 +301,27 @@ class SidebarTabSynchronizationTest {
         }
     }
 
-    private static final class PlayerNameState {
-        private Component storedPlayerListName;
-        private int setterCalls;
+    private static final class RecordingRenderer implements PlayerListDisplayNameRenderer {
+        private final java.util.ArrayList<CapturedName> rendered = new java.util.ArrayList<>();
+        private final java.util.ArrayList<CapturedName> restored = new java.util.ArrayList<>();
+        private boolean renderResult = true;
+        private int renderCalls;
 
-        private PlayerNameState(Component playerListName) {
-            this.storedPlayerListName = playerListName;
+        @Override
+        public boolean render(Player viewer, java.util.Collection<PlayerListDisplayNameRenderer.RenderedName> names) {
+            renderCalls++;
+            names.forEach(name -> rendered.add(
+                    new CapturedName(viewer, name.target(), name.legacyDisplayName())));
+            return renderResult;
         }
+
+        @Override
+        public boolean restore(Player viewer, java.util.Collection<Player> targets) {
+            targets.forEach(target -> restored.add(new CapturedName(viewer, target, null)));
+            return true;
+        }
+    }
+
+    private record CapturedName(Player viewer, Player target, String displayName) {
     }
 }

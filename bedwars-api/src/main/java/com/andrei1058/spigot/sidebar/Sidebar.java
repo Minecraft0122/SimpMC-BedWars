@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -53,6 +54,8 @@ public class Sidebar {
     private final List<SidebarLine> lines = new ArrayList<>();
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
     private final Map<UUID, Scoreboard> scoreboards = new HashMap<>();
+    private final Map<UUID, Player> viewers = new HashMap<>();
+    private final Map<UUID, Map<UUID, String>> renderedPlayerListNames = new HashMap<>();
     private final Map<UUID, Scoreboard> previousScoreboards = new HashMap<>();
     private final Map<String, PlayerTab> tabs = new HashMap<>();
     private final Map<String, String> tabTeamNames = new HashMap<>();
@@ -60,12 +63,20 @@ public class Sidebar {
     private SidebarLine healthLine = new SidebarLine();
     private boolean healthEnabled = false;
     private boolean healthInTab = false;
+    private final PlayerListDisplayNameRenderer displayNameRenderer;
 
     public Sidebar(@NotNull SidebarLine title, @NotNull Collection<SidebarLine> lines,
                    @NotNull Collection<PlaceholderProvider> placeholders) {
+        this(title, lines, placeholders, PlayerListDisplayNamePackets.instance());
+    }
+
+    Sidebar(@NotNull SidebarLine title, @NotNull Collection<SidebarLine> lines,
+            @NotNull Collection<PlaceholderProvider> placeholders,
+            @NotNull PlayerListDisplayNameRenderer displayNameRenderer) {
         this.title = title;
         this.lines.addAll(lines);
         this.placeholders.addAll(placeholders);
+        this.displayNameRenderer = displayNameRenderer;
     }
 
     public void add(@NotNull Player player) {
@@ -77,10 +88,11 @@ public class Sidebar {
         Scoreboard currentScoreboard = player.getScoreboard();
         Scoreboard managedScoreboard = scoreboards.get(playerId);
         Scoreboard scoreboard = manager.getNewScoreboard();
+        List<RenderedPlayerTab> renderedTabs = renderPlayerTabs(tabs.values());
         // Build off-screen first. Binding a different scoreboard instance makes
         // CraftBukkit send one complete snapshot, including team CREATE data.
         render(scoreboard);
-        tabs.values().forEach(tab -> applyTab(scoreboard, tab));
+        renderedTabs.forEach(tab -> applyTab(scoreboard, tab));
         renderHealth(scoreboard);
         player.setScoreboard(scoreboard);
         if (shouldCapturePreviousScoreboard(managedScoreboard, currentScoreboard)) {
@@ -90,14 +102,26 @@ public class Sidebar {
             previousScoreboards.put(playerId, currentScoreboard);
         }
         scoreboards.put(playerId, scoreboard);
+        viewers.put(playerId, player);
+        renderedPlayerListNames.put(playerId, new HashMap<>());
+        SidebarManager.getInstance().claimDisplayNameOwnership(this, player);
+        renderPlayerListNames(player, renderedTabs, true);
     }
 
     public void remove(@NotNull Player player) {
         Scoreboard scoreboard = scoreboards.remove(player.getUniqueId());
+        Player viewer = viewers.remove(player.getUniqueId());
         Scoreboard previous = previousScoreboards.remove(player.getUniqueId());
         if (scoreboard == null) {
+            renderedPlayerListNames.remove(player.getUniqueId());
             return;
         }
+        boolean ownedDisplayNames = viewer != null
+                && SidebarManager.getInstance().releaseDisplayNameOwnership(this, viewer);
+        if (ownedDisplayNames && viewer.isOnline()) {
+            restorePlayerListNames(viewer, tabs.values());
+        }
+        renderedPlayerListNames.remove(player.getUniqueId());
         if (player.getScoreboard() == scoreboard) {
             ScoreboardManager manager = Bukkit.getScoreboardManager();
             player.setScoreboard(previous == null && manager != null ? manager.getMainScoreboard() : previous);
@@ -168,7 +192,19 @@ public class Sidebar {
     }
 
     public void playerTabRefreshAnimation() {
-        scoreboards.values().forEach(scoreboard -> tabs.values().forEach(tab -> applyTab(scoreboard, tab)));
+        List<RenderedPlayerTab> renderedTabs = renderPlayerTabs(tabs.values());
+        scoreboards.forEach((viewerId, scoreboard) -> {
+            Player viewer = viewers.get(viewerId);
+            if (viewer == null || !viewer.isOnline()) return;
+            renderedTabs.forEach(tab -> applyTab(scoreboard, tab));
+            // A visibility change or another plugin can resend ADD_PLAYER or
+            // UPDATE_DISPLAY_NAME after our event update. One batched replay
+            // per viewer keeps production clients authoritative without a
+            // viewer-by-target packet explosion.
+            if (SidebarManager.getInstance().ownsDisplayNames(this, viewer)) {
+                renderPlayerListNames(viewer, renderedTabs, true);
+            }
+        });
     }
 
     public void playerHealthRefreshAnimation() {
@@ -199,9 +235,12 @@ public class Sidebar {
     }
 
     public void removeTabs() {
+        viewers.values().stream()
+                .filter(Player::isOnline)
+                .filter(viewer -> SidebarManager.getInstance().ownsDisplayNames(this, viewer))
+                .forEach(viewer -> restorePlayerListNames(viewer, tabs.values()));
         tabs.values().forEach(tab -> {
             detachTab(tab);
-            PlayerListNameState.release(tab.getPlayer());
         });
         tabs.clear();
         scoreboards.values().forEach(Sidebar::removeTabTeams);
@@ -248,17 +287,15 @@ public class Sidebar {
                 color, nameTagVisibility);
         tab.setUpdateCallback(this::applyTabToAll);
         PlayerTab previous = tabs.put(identifier, tab);
-        if (previous == null) {
-            PlayerListNameState.acquire(player);
-        } else {
+        boolean forceDisplayName = previous != null;
+        if (previous != null) {
             previous.setUpdateCallback(ignored -> {
             });
-            if (previous.getPlayer() != player) {
-                PlayerListNameState.release(previous.getPlayer());
-                PlayerListNameState.acquire(player);
+            if (!previous.getPlayer().getUniqueId().equals(player.getUniqueId())) {
+                restoreOrRenderRemainingTab(previous);
             }
         }
-        applyTabToAll(tab);
+        applyTabToAll(tab, forceDisplayName);
         return tab;
     }
 
@@ -268,7 +305,6 @@ public class Sidebar {
             return;
         }
         detachTab(tab);
-        PlayerListNameState.release(tab.getPlayer());
         String teamName = teamName(identifier);
         scoreboards.values().forEach(scoreboard -> {
             Team team = scoreboard.getTeam(teamName);
@@ -276,6 +312,7 @@ public class Sidebar {
                 team.unregister();
             }
         });
+        restoreOrRenderRemainingTab(tab);
     }
 
     private void renderAll() {
@@ -360,19 +397,37 @@ public class Sidebar {
     }
 
     private void applyTabToAll(@NotNull PlayerTab tab) {
-        scoreboards.values().forEach(scoreboard -> applyTab(scoreboard, tab));
+        applyTabToAll(tab, false);
+    }
+
+    private void applyTabToAll(@NotNull PlayerTab tab, boolean forceDisplayName) {
+        RenderedPlayerTab renderedTab = renderPlayerTab(tab);
+        scoreboards.forEach((viewerId, scoreboard) -> {
+            Player viewer = viewers.get(viewerId);
+            if (viewer != null && viewer.isOnline()) {
+                applyTab(scoreboard, renderedTab);
+                if (SidebarManager.getInstance().ownsDisplayNames(this, viewer)) {
+                    renderPlayerListNames(viewer, List.of(renderedTab), forceDisplayName);
+                }
+            }
+        });
     }
 
     void applyTab(@NotNull Scoreboard scoreboard, @NotNull PlayerTab tab) {
+        applyTab(scoreboard, renderPlayerTab(tab));
+    }
+
+    private void applyTab(@NotNull Scoreboard scoreboard, @NotNull RenderedPlayerTab renderedTab) {
+        PlayerTab tab = renderedTab.tab();
         Team team = scoreboard.getTeam(teamName(tab.getIdentifier()));
         if (team == null) {
             team = scoreboard.registerNewTeam(teamName(tab.getIdentifier()));
         }
 
-        Component prefix = component(renderText(tab.getPrefix(), tab.getPlaceholders()));
+        Component prefix = component(renderedTab.prefix());
         if (!team.prefix().equals(prefix)) team.prefix(prefix);
 
-        Component suffix = component(renderText(tab.getSuffix(), tab.getPlaceholders()));
+        Component suffix = component(renderedTab.suffix());
         if (!team.suffix().equals(suffix)) team.suffix(suffix);
 
         if (team.getColor() != tab.getColor()) team.setColor(tab.getColor());
@@ -387,11 +442,91 @@ public class Sidebar {
             team.addEntry(tab.getPlayer().getName());
         }
 
-        // The client ignores scoreboard team formatting when playerListName is
-        // a non-null custom component. Keep the default profile name active so
-        // this viewer's team prefix, suffix and color render both TAB and the
-        // overhead name tag.
-        PlayerListNameState.enforceScoreboardFormatting(tab.getPlayer());
+    }
+
+    void renderPlayerListName(@NotNull Player viewer, @NotNull PlayerTab tab) {
+        renderPlayerListNames(viewer, List.of(renderPlayerTab(tab)), false);
+    }
+
+    void forcePlayerListNameRefresh(@NotNull Player viewer) {
+        renderPlayerListNames(viewer, renderPlayerTabs(tabs.values()), true);
+    }
+
+    private void renderPlayerListNames(@NotNull Player viewer, @NotNull Collection<RenderedPlayerTab> playerTabs,
+                                       boolean force) {
+        Map<UUID, String> viewerCache = renderedPlayerListNames.computeIfAbsent(
+                viewer.getUniqueId(), ignored -> new HashMap<>());
+        List<PlayerListDisplayNameRenderer.RenderedName> updates = new ArrayList<>();
+        for (RenderedPlayerTab renderedTab : playerTabs) {
+            PlayerTab tab = renderedTab.tab();
+            if (!tab.getPlayer().isOnline()) continue;
+            String rendered = renderedTab.displayName();
+            UUID targetId = tab.getPlayer().getUniqueId();
+            if (!force && rendered.equals(viewerCache.get(targetId))) continue;
+            updates.add(new PlayerListDisplayNameRenderer.RenderedName(tab.getPlayer(), rendered));
+        }
+        if (updates.isEmpty()) return;
+        if (displayNameRenderer.render(viewer, updates)) {
+            updates.forEach(update -> viewerCache.put(update.target().getUniqueId(), update.legacyDisplayName()));
+        }
+    }
+
+    void restorePlayerListName(@NotNull Player viewer, @NotNull PlayerTab tab) {
+        restorePlayerListNames(viewer, List.of(tab));
+    }
+
+    private void restorePlayerListNames(@NotNull Player viewer, @NotNull Collection<PlayerTab> playerTabs) {
+        Map<UUID, String> viewerCache = renderedPlayerListNames.get(viewer.getUniqueId());
+        if (viewerCache == null) return;
+        Map<UUID, Player> targets = new LinkedHashMap<>();
+        for (PlayerTab tab : playerTabs) {
+            Player target = tab.getPlayer();
+            UUID targetId = target.getUniqueId();
+            if (!viewerCache.containsKey(targetId)) continue;
+            if (target.isOnline()) {
+                targets.putIfAbsent(targetId, target);
+            } else {
+                // Paper has already removed an offline player's PlayerInfo row,
+                // so there is nothing left to restore on the client. Still
+                // release our per-viewer cache entry to avoid retaining every
+                // player that has ever passed through a long-running lobby.
+                viewerCache.remove(targetId);
+            }
+        }
+        if (!targets.isEmpty() && displayNameRenderer.restore(viewer, targets.values())) {
+            targets.keySet().forEach(viewerCache::remove);
+        }
+    }
+
+    private void restoreOrRenderRemainingTab(@NotNull PlayerTab removedTab) {
+        PlayerTab remaining = tabs.values().stream()
+                .filter(tab -> tab.getPlayer().getUniqueId().equals(removedTab.getPlayer().getUniqueId()))
+                .findFirst()
+                .orElse(null);
+        if (remaining != null) {
+            applyTabToAll(remaining, true);
+            return;
+        }
+        viewers.values().stream()
+                .filter(Player::isOnline)
+                .filter(viewer -> SidebarManager.getInstance().ownsDisplayNames(this, viewer))
+                .forEach(viewer -> restorePlayerListNames(viewer, List.of(removedTab)));
+    }
+
+    private static @NotNull List<RenderedPlayerTab> renderPlayerTabs(
+            @NotNull Collection<PlayerTab> playerTabs) {
+        return playerTabs.stream().map(Sidebar::renderPlayerTab).toList();
+    }
+
+    private static @NotNull RenderedPlayerTab renderPlayerTab(@NotNull PlayerTab tab) {
+        String prefix = renderText(tab.getPrefix(), tab.getPlaceholders());
+        String suffix = renderText(tab.getSuffix(), tab.getPlaceholders());
+        return new RenderedPlayerTab(tab, prefix, suffix,
+                prefix + tab.getColor() + tab.getPlayer().getName() + suffix);
+    }
+
+    private record RenderedPlayerTab(@NotNull PlayerTab tab, @NotNull String prefix,
+                                     @NotNull String suffix, @NotNull String displayName) {
     }
 
     private static void unregisterObjective(@NotNull Scoreboard scoreboard, @NotNull String name) {

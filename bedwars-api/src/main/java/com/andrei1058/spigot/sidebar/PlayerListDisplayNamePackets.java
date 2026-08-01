@@ -1,0 +1,178 @@
+package com.andrei1058.spigot.sidebar;
+
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.UUID;
+import java.util.logging.Level;
+
+/**
+ * Paper 1.21.11 player-list packet bridge. Reflection keeps NMS out of the
+ * published API artifact while all reflective members are resolved only once.
+ */
+final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRenderer {
+
+    private static final PlayerListDisplayNameRenderer INSTANCE = new LazyRenderer();
+
+    private final Method craftPlayerGetHandle;
+    private final Field serverPlayerConnection;
+    private final Method connectionSend;
+    private final Method legacyComponent;
+    private final Constructor<?> snapshotPacket;
+    private final Constructor<?> entryConstructor;
+    private final Constructor<?> entriesPacket;
+    private final EnumSet<?> displayNameAction;
+    private boolean packetFailureLogged;
+
+    private PlayerListDisplayNamePackets() throws ReflectiveOperationException {
+        Class<?> craftPlayer = Class.forName("org.bukkit.craftbukkit.entity.CraftPlayer");
+        Class<?> serverPlayer = Class.forName("net.minecraft.server.level.ServerPlayer");
+        Class<?> packet = Class.forName("net.minecraft.network.protocol.Packet");
+        Class<?> playerInfoPacket = Class.forName(
+                "net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket");
+        Class<?> playerInfoEntry = Class.forName(
+                "net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket$Entry");
+        Class<?> playerInfoAction = Class.forName(
+                "net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket$Action");
+        Class<?> gameProfile = Class.forName("com.mojang.authlib.GameProfile");
+        Class<?> gameType = Class.forName("net.minecraft.world.level.GameType");
+        Class<?> component = Class.forName("net.minecraft.network.chat.Component");
+        Class<?> chatSessionData = Class.forName("net.minecraft.network.chat.RemoteChatSession$Data");
+        Class<?> connection = Class.forName("net.minecraft.server.network.ServerGamePacketListenerImpl");
+        Class<?> craftChatMessage = Class.forName("org.bukkit.craftbukkit.util.CraftChatMessage");
+
+        craftPlayerGetHandle = craftPlayer.getMethod("getHandle");
+        serverPlayerConnection = serverPlayer.getField("connection");
+        connectionSend = connection.getMethod("send", packet);
+        legacyComponent = craftChatMessage.getMethod("fromStringOrEmpty", String.class);
+        snapshotPacket = playerInfoPacket.getConstructor(EnumSet.class, Collection.class);
+        entryConstructor = playerInfoEntry.getConstructor(
+                UUID.class, gameProfile, boolean.class, int.class, gameType,
+                component, boolean.class, int.class, chatSessionData);
+        entriesPacket = playerInfoPacket.getConstructor(EnumSet.class, List.class);
+        displayNameAction = displayNameAction(playerInfoAction);
+    }
+
+    static @NotNull PlayerListDisplayNameRenderer instance() {
+        return INSTANCE;
+    }
+
+    static void verifyCompatibility() {
+        if (INSTANCE instanceof LazyRenderer lazyRenderer) lazyRenderer.delegate();
+    }
+
+    @Override
+    public boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names) {
+        if (names.isEmpty()) return true;
+        try {
+            ArrayList<Object> entries = new ArrayList<>(names.size());
+            for (RenderedName name : names) {
+                Object renderedName = legacyComponent.invoke(null, name.legacyDisplayName());
+                // UPDATE_DISPLAY_NAME serializes only profileId and displayName
+                // in 1.21.11. The remaining record fields are deliberately inert.
+                entries.add(entryConstructor.newInstance(
+                        name.target().getUniqueId(), null, false, 0, null,
+                        renderedName, false, 0, null));
+            }
+            send(viewer, entriesPacket.newInstance(displayNameAction, entries));
+            return true;
+        } catch (ReflectiveOperationException exception) {
+            logPacketFailure(viewer, exception);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean restore(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+        if (targets.isEmpty()) return true;
+        try {
+            ArrayList<Object> targetHandles = new ArrayList<>(targets.size());
+            for (Player target : targets) targetHandles.add(craftPlayerGetHandle.invoke(target));
+            // The normal packet constructor reads Paper's current nullable
+            // player-list name, so third-party display names are restored too.
+            Object packet = snapshotPacket.newInstance(displayNameAction, targetHandles);
+            send(viewer, packet);
+            return true;
+        } catch (ReflectiveOperationException exception) {
+            logPacketFailure(viewer, exception);
+            return false;
+        }
+    }
+
+    private void send(Player viewer, Object packet) throws ReflectiveOperationException {
+        Object viewerHandle = craftPlayerGetHandle.invoke(viewer);
+        Object connection = serverPlayerConnection.get(viewerHandle);
+        connectionSend.invoke(connection, packet);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static EnumSet<?> displayNameAction(Class<?> actionType) {
+        Class<? extends Enum> enumType = actionType.asSubclass(Enum.class);
+        EnumSet actions = EnumSet.noneOf(enumType);
+        actions.add(Enum.valueOf(enumType, "UPDATE_DISPLAY_NAME"));
+        return actions;
+    }
+
+    private void logPacketFailure(Player viewer, Exception cause) {
+        if (packetFailureLogged) return;
+        packetFailureLogged = true;
+        Bukkit.getLogger().log(Level.SEVERE, "SimpMC-BedWars 无法更新 " + viewer.getName()
+                + " 看到的 TAB 名称；已保留 scoreboard 降级显示。", cause);
+    }
+
+    private static final class LazyRenderer implements PlayerListDisplayNameRenderer {
+        private volatile PlayerListDisplayNameRenderer delegate;
+
+        @Override
+        public boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names) {
+            return delegate().render(viewer, names);
+        }
+
+        @Override
+        public boolean restore(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+            return delegate().restore(viewer, targets);
+        }
+
+        private PlayerListDisplayNameRenderer delegate() {
+            PlayerListDisplayNameRenderer current = delegate;
+            if (current != null) return current;
+            synchronized (this) {
+                if (delegate == null) delegate = createRenderer();
+                return delegate;
+            }
+        }
+
+        private static PlayerListDisplayNameRenderer createRenderer() {
+            try {
+                return new PlayerListDisplayNamePackets();
+            } catch (ReflectiveOperationException exception) {
+                Bukkit.getLogger().log(Level.SEVERE,
+                        "SimpMC-BedWars 无法初始化 Paper 1.21.11 TAB 数据包支持；玩家名颜色不会生效。",
+                        exception);
+                return UnavailableRenderer.INSTANCE;
+            }
+        }
+    }
+
+    private enum UnavailableRenderer implements PlayerListDisplayNameRenderer {
+        INSTANCE;
+
+        @Override
+        public boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names) {
+            return false;
+        }
+
+        @Override
+        public boolean restore(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+            return false;
+        }
+    }
+}

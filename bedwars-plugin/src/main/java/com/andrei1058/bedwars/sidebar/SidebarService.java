@@ -286,13 +286,17 @@ public class SidebarService implements ISidebarService {
         if (!requiresClientResynchronization(initialLoad, changedWorld)) {
             return;
         }
+        cancelDelayedSidebar(player.getUniqueId());
+        IArena currentArena = Arena.getArenaByPlayer(player);
         BwSidebar sidebar = sidebars.get(player.getUniqueId());
-        if (sidebar == null) {
+        if (shouldCreateSidebarOnClientLoad(initialLoad, changedWorld, sidebar != null)) {
+            // The client-load event can precede the asynchronous lobby
+            // teleport callback. Create the TAB context now instead of
+            // consuming the only initial replay and leaving a vanilla list.
+            giveSidebar(player, currentArena, false);
             return;
         }
 
-        cancelDelayedSidebar(player.getUniqueId());
-        IArena currentArena = Arena.getArenaByPlayer(player);
         if (sidebar.getArena() != currentArena) {
             giveSidebar(player, currentArena, false);
             return;
@@ -305,8 +309,48 @@ public class SidebarService implements ISidebarService {
         pendingWorldResynchronizations.add(player.getUniqueId());
     }
 
+    /** Replay only the PlayerInfo row rebuilt by Paper's showPlayer path. */
+    void handlePlayerShown(@NotNull Player viewer, @NotNull Player target) {
+        if (!viewer.isOnline() || !target.isOnline()) return;
+        BwSidebar sidebar = sidebars.get(viewer.getUniqueId());
+        if (sidebar != null) sidebar.replayPlayerListEntry(target);
+    }
+
+    /**
+     * Synchronize a newly connected player after Paper has broadcast its
+     * ADD_PLAYER entry. BUNGEE may already have added the player to an arena
+     * during PlayerJoinEvent, while multi-arena/shared players can still be in
+     * a lobby at this point.
+     */
+    void synchronizeJoinedPlayer(@NotNull Player joinedPlayer) {
+        if (sidebarHandler == null || !joinedPlayer.isOnline()) return;
+        IArena joinedArena = Arena.getArenaByPlayer(joinedPlayer);
+        if (joinedArena == null) {
+            applyLobbyTab(joinedPlayer);
+            return;
+        }
+        UUID joinedId = joinedPlayer.getUniqueId();
+        for (BwSidebar sidebar : sidebars.values()) {
+            if (sidebar.getArena() != joinedArena
+                    || sidebar.getPlayer().getUniqueId().equals(joinedId)) continue;
+            sidebar.replayPlayerListEntry(joinedPlayer);
+        }
+    }
+
+    /** Drop a departing target from every viewer so TAB state cannot grow with player churn. */
+    void removePlayerFromTabs(@NotNull Player player) {
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        UUID playerId = player.getUniqueId();
+        sidebars.values().forEach(sidebar -> sidebar.removePlayerListEntry(playerId));
+    }
+
     static boolean requiresClientResynchronization(boolean initialLoad, boolean changedWorld) {
         return initialLoad || changedWorld;
+    }
+
+    static boolean shouldCreateSidebarOnClientLoad(boolean initialLoad, boolean changedWorld,
+                                                   boolean sidebarExists) {
+        return requiresClientResynchronization(initialLoad, changedWorld) && !sidebarExists;
     }
 
     /**
@@ -343,6 +387,25 @@ public class SidebarService implements ISidebarService {
                 .filter(sidebar -> sidebar.getArena() == arena)
                 .toList();
         stale.forEach(this::remove);
+    }
+
+    /** Restore every client-owned TAB/scoreboard value before plugin unload. */
+    void shutdown() {
+        delayedSidebarTasks.values().forEach(BukkitTask::cancel);
+        delayedSidebarTasks.clear();
+        pendingWorldResynchronizations.clear();
+        List<BwSidebar> activeSidebars = new ArrayList<>(sidebars.values());
+        for (BwSidebar sidebar : activeSidebars) {
+            try {
+                sidebar.remove();
+            } catch (RuntimeException exception) {
+                BedWars.plugin.getLogger().log(java.util.logging.Level.WARNING,
+                        "关闭插件时无法完整清理 " + sidebar.getPlayer().getName() + " 的 TAB 状态。",
+                        exception);
+            }
+        }
+        sidebars.clear();
+        BwTabList.restorePlayerListOrder();
     }
 
     public static SidebarService getInstance() {
