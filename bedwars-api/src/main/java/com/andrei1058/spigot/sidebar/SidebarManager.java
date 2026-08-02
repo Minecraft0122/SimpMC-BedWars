@@ -1,11 +1,16 @@
 package com.andrei1058.spigot.sidebar;
 
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Scoreboard;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -17,7 +22,7 @@ public class SidebarManager {
     private static final SidebarManager INSTANCE = new SidebarManager();
 
     private final Map<Player, String> headerFooterCache = new WeakHashMap<>();
-    private final Map<UUID, DisplayNameOwner> displayNameOwners = new HashMap<>();
+    private final Map<UUID, Deque<DisplayNameOwner>> displayNameOwners = new HashMap<>();
 
     private SidebarManager() {
     }
@@ -28,18 +33,81 @@ public class SidebarManager {
     }
 
     void claimDisplayNameOwnership(@NotNull Sidebar sidebar, @NotNull Player viewer) {
-        displayNameOwners.put(viewer.getUniqueId(), new DisplayNameOwner(sidebar, viewer));
+        UUID viewerId = viewer.getUniqueId();
+        Deque<DisplayNameOwner> owners = displayNameOwners.computeIfAbsent(viewerId,
+                ignored -> new ArrayDeque<>());
+        owners.removeIf(owner -> !owner.viewer().isOnline());
+        DisplayNameOwner current = owners.peekLast();
+        if (current != null && current.sidebar() == sidebar) {
+            // Refresh the CraftPlayer reference after a reconnect without
+            // disturbing the ownership order.
+            owners.removeLast();
+            owners.addLast(new DisplayNameOwner(sidebar, viewer));
+            return;
+        }
+
+        if (current != null) {
+            current.sidebar().suspendDisplayNameOwnership(current.viewer());
+        }
+        removeOwner(owners, sidebar);
+        owners.addLast(new DisplayNameOwner(sidebar, viewer));
     }
 
     boolean ownsDisplayNames(@NotNull Sidebar sidebar, @NotNull Player viewer) {
-        DisplayNameOwner owner = displayNameOwners.get(viewer.getUniqueId());
-        return owner != null && owner.sidebar() == sidebar && owner.viewer() == viewer;
+        Deque<DisplayNameOwner> owners = displayNameOwners.get(viewer.getUniqueId());
+        DisplayNameOwner owner = owners == null ? null : owners.peekLast();
+        return owner != null && owner.sidebar() == sidebar;
+    }
+
+    boolean hasDisplayNameOwnership(@NotNull Sidebar sidebar, @NotNull Player viewer) {
+        Deque<DisplayNameOwner> owners = displayNameOwners.get(viewer.getUniqueId());
+        if (owners == null) return false;
+        return owners.stream().anyMatch(owner -> owner.sidebar() == sidebar);
+    }
+
+    void unlinkPreviousScoreboard(@NotNull Sidebar sidebar, @NotNull Player viewer,
+                                  @NotNull Scoreboard managedScoreboard,
+                                  @Nullable Scoreboard replacementScoreboard) {
+        Deque<DisplayNameOwner> owners = displayNameOwners.get(viewer.getUniqueId());
+        if (owners == null) return;
+
+        boolean found = false;
+        for (DisplayNameOwner owner : owners) {
+            if (found) {
+                owner.sidebar().replacePreviousScoreboard(
+                        viewer.getUniqueId(), managedScoreboard, replacementScoreboard);
+                return;
+            }
+            found = owner.sidebar() == sidebar;
+        }
     }
 
     boolean releaseDisplayNameOwnership(@NotNull Sidebar sidebar, @NotNull Player viewer) {
-        if (!ownsDisplayNames(sidebar, viewer)) return false;
-        displayNameOwners.remove(viewer.getUniqueId());
-        return true;
+        UUID viewerId = viewer.getUniqueId();
+        Deque<DisplayNameOwner> owners = displayNameOwners.get(viewerId);
+        if (owners == null || owners.isEmpty()) return false;
+
+        DisplayNameOwner current = owners.peekLast();
+        boolean wasCurrentOwner = current != null && current.sidebar() == sidebar;
+        if (!removeOwner(owners, sidebar)) return false;
+
+        owners.removeIf(owner -> !owner.viewer().isOnline());
+        DisplayNameOwner resumed = wasCurrentOwner ? owners.peekLast() : null;
+        if (owners.isEmpty()) displayNameOwners.remove(viewerId);
+        if (resumed != null) {
+            resumed.sidebar().resumeDisplayNameOwnership(resumed.viewer());
+        }
+        return wasCurrentOwner;
+    }
+
+    private static boolean removeOwner(@NotNull Deque<DisplayNameOwner> owners, @NotNull Sidebar sidebar) {
+        Iterator<DisplayNameOwner> iterator = owners.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().sidebar() != sidebar) continue;
+            iterator.remove();
+            return true;
+        }
+        return false;
     }
 
     @NotNull

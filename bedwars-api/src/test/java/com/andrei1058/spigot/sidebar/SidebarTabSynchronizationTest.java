@@ -7,10 +7,12 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.BooleanSupplier;
@@ -186,6 +188,195 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
+    void removingTabsReleasesTheirAllocatedTeamNames() {
+        Sidebar neverRendered = sidebar();
+        Player unrendered = player("MappingUnrendered");
+        neverRendered.playerTabCreate("unrendered", unrendered, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.GRAY);
+        neverRendered.removeTab("unrendered");
+        assertTrue(fieldMap(neverRendered, "tabTeamNames").isEmpty(),
+                "removing an unrendered row must not allocate a team name on the cleanup path");
+
+        Sidebar singleRemoval = sidebar();
+        Player alice = player("MappingAlice");
+        singleRemoval.playerTabCreate("alice", alice, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        singleRemoval.teamName("alice");
+
+        singleRemoval.removeTab("alice");
+
+        assertFalse(fieldMap(singleRemoval, "tabTeamNames").containsKey("alice"),
+                "removeTab must release identifiers belonging to players that have left");
+
+        Sidebar bulkRemoval = sidebar();
+        Player bob = player("MappingBob");
+        Player charlie = player("MappingCharlie");
+        bulkRemoval.playerTabCreate("bob", bob, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.BLUE);
+        bulkRemoval.playerTabCreate("charlie", charlie, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.GREEN);
+        bulkRemoval.teamName("bob");
+        bulkRemoval.teamName("charlie");
+
+        bulkRemoval.removeTabs();
+
+        assertTrue(fieldMap(bulkRemoval, "tabTeamNames").isEmpty(),
+                "removeTabs must not retain identifiers from historical players");
+    }
+
+    @Test
+    void releasingANewerSidebarRestoresAndReplaysThePreviousOwner() {
+        SidebarManager manager = SidebarManager.getInstance();
+        RecordingRenderer previousRenderer = new RecordingRenderer();
+        RecordingRenderer currentRenderer = new RecordingRenderer();
+        Sidebar previous = sidebar(previousRenderer);
+        Sidebar current = sidebar(currentRenderer);
+        Player viewer = player("OwnershipViewer");
+        Player previousTarget = player("PreviousTarget");
+        Player currentTarget = player("CurrentTarget");
+        PlayerTab previousTab = previous.playerTabCreate("previous", previousTarget,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        PlayerTab currentTab = current.playerTabCreate("current", currentTarget,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                new ConcurrentLinkedQueue<>(), ChatColor.BLUE);
+
+        manager.claimDisplayNameOwnership(previous, viewer);
+        try {
+            previous.renderPlayerListName(viewer, previousTab);
+            manager.claimDisplayNameOwnership(current, viewer);
+
+            assertEquals(1, previousRenderer.restoreCalls,
+                    "claiming a newer Sidebar must remove the previous owner's client rows");
+            assertSame(previousTarget, previousRenderer.restored.getFirst().target());
+
+            current.renderPlayerListName(viewer, currentTab);
+            assertTrue(manager.releaseDisplayNameOwnership(current, viewer));
+
+            assertTrue(manager.ownsDisplayNames(previous, viewer),
+                    "releasing the newer Sidebar must reactivate the still-attached previous owner");
+            assertEquals(2, previousRenderer.rendered.size(),
+                    "reactivating the previous owner must replay its complete player list state");
+        } finally {
+            manager.releaseDisplayNameOwnership(current, viewer);
+            manager.releaseDisplayNameOwnership(previous, viewer);
+        }
+    }
+
+    @Test
+    void removingASuspendedSidebarRepairsTheNewerScoreboardFallback() {
+        SidebarManager manager = SidebarManager.getInstance();
+        Sidebar previous = sidebar(new RecordingRenderer());
+        Sidebar current = sidebar(new RecordingRenderer());
+        Player viewer = player("NonLifoViewer");
+        Scoreboard external = scoreboard(team(new TeamState()));
+        Scoreboard previousManaged = scoreboard(team(new TeamState()));
+        fieldMap(current, "previousScoreboards").put(viewer.getUniqueId(), previousManaged);
+
+        manager.claimDisplayNameOwnership(previous, viewer);
+        manager.claimDisplayNameOwnership(current, viewer);
+        try {
+            manager.unlinkPreviousScoreboard(previous, viewer, previousManaged, external);
+            assertFalse(manager.releaseDisplayNameOwnership(previous, viewer));
+
+            assertSame(external,
+                    fieldMap(current, "previousScoreboards").get(viewer.getUniqueId()),
+                    "removing a suspended owner must not leave its dead scoreboard as the fallback");
+        } finally {
+            manager.releaseDisplayNameOwnership(current, viewer);
+            manager.releaseDisplayNameOwnership(previous, viewer);
+        }
+    }
+
+    @Test
+    void replacingAnIdentifierRemovesThePreviousPlayerFromItsScoreboardTeam() {
+        Sidebar sidebar = sidebar();
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(team(state));
+        Player viewer = player("ReplacementViewer");
+        Player alice = player("ReplacementAlice");
+        Player bob = player("ReplacementBob");
+        fieldMap(sidebar, "scoreboards").put(viewer.getUniqueId(), scoreboard);
+        fieldMap(sidebar, "viewers").put(viewer.getUniqueId(), viewer);
+
+        sidebar.playerTabCreate("slot", alice, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        sidebar.playerTabCreate("slot", bob, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.BLUE);
+
+        assertFalse(state.entries.contains(alice.getName()),
+                "the old player must not keep the replacement row's overhead color");
+        assertTrue(state.entries.contains(bob.getName()));
+    }
+
+    @Test
+    void failedRestoreRemainsPendingUntilAnExplicitRefreshSucceeds() {
+        SidebarManager manager = SidebarManager.getInstance();
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("RetryViewer");
+        Player target = player("RetryTarget");
+        PlayerTab tab = sidebar.playerTabCreate("retry", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        fieldMap(sidebar, "viewers").put(viewer.getUniqueId(), viewer);
+
+        manager.claimDisplayNameOwnership(sidebar, viewer);
+        try {
+            sidebar.renderPlayerListName(viewer, tab);
+            renderer.restoreResult = false;
+
+            sidebar.removeTab("retry");
+
+            assertEquals(1, renderer.restoreCalls);
+            renderer.restoreResult = true;
+            sidebar.forcePlayerListNameRefresh(viewer);
+            assertEquals(2, renderer.restoreCalls,
+                    "an explicit refresh must retry a restore that previously failed");
+
+            sidebar.forcePlayerListNameRefresh(viewer);
+            assertEquals(2, renderer.restoreCalls,
+                    "a successful retry must clear the pending restore state");
+        } finally {
+            manager.releaseDisplayNameOwnership(sidebar, viewer);
+        }
+    }
+
+    @Test
+    void failedBulkRestoreKeepsAllTargetsUntilRefreshSucceeds() {
+        SidebarManager manager = SidebarManager.getInstance();
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("BulkRetryViewer");
+        Player alice = player("BulkRetryAlice");
+        Player bob = player("BulkRetryBob");
+        PlayerTab aliceTab = sidebar.playerTabCreate("bulk-alice", alice, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+        PlayerTab bobTab = sidebar.playerTabCreate("bulk-bob", bob, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.BLUE);
+        fieldMap(sidebar, "viewers").put(viewer.getUniqueId(), viewer);
+
+        manager.claimDisplayNameOwnership(sidebar, viewer);
+        try {
+            sidebar.renderPlayerListName(viewer, aliceTab);
+            sidebar.renderPlayerListName(viewer, bobTab);
+            renderer.restoreResult = false;
+
+            sidebar.removeTabs();
+            assertEquals(1, renderer.restoreCalls);
+
+            renderer.restoreResult = true;
+            sidebar.forcePlayerListNameRefresh(viewer);
+            assertEquals(2, renderer.restoreCalls);
+            assertEquals(Set.of(alice.getUniqueId(), bob.getUniqueId()),
+                    renderer.restored.subList(2, 4).stream()
+                            .map(captured -> captured.target().getUniqueId())
+                            .collect(java.util.stream.Collectors.toSet()));
+        } finally {
+            manager.releaseDisplayNameOwnership(sidebar, viewer);
+        }
+    }
+
+    @Test
     void capturesOnlyTheLatestExternallyOwnedScoreboard() {
         Scoreboard managed = scoreboard(team(new TeamState()));
         Scoreboard external = scoreboard(team(new TeamState()));
@@ -281,8 +472,24 @@ class SidebarTabSynchronizationTest {
                         state.writeCount++;
                         yield null;
                     }
+                    case "removeEntry" -> {
+                        boolean removed = state.entries.remove((String) args[0]);
+                        state.writeCount++;
+                        yield removed;
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <K, V> Map<K, V> fieldMap(Sidebar sidebar, String fieldName) {
+        try {
+            Field field = Sidebar.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return (Map<K, V>) field.get(sidebar);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("Unable to inspect Sidebar." + fieldName, exception);
+        }
     }
 
     private static final class TeamState {
@@ -305,7 +512,9 @@ class SidebarTabSynchronizationTest {
         private final java.util.ArrayList<CapturedName> rendered = new java.util.ArrayList<>();
         private final java.util.ArrayList<CapturedName> restored = new java.util.ArrayList<>();
         private boolean renderResult = true;
+        private boolean restoreResult = true;
         private int renderCalls;
+        private int restoreCalls;
 
         @Override
         public boolean render(Player viewer, java.util.Collection<PlayerListDisplayNameRenderer.RenderedName> names) {
@@ -317,8 +526,9 @@ class SidebarTabSynchronizationTest {
 
         @Override
         public boolean restore(Player viewer, java.util.Collection<Player> targets) {
+            restoreCalls++;
             targets.forEach(target -> restored.add(new CapturedName(viewer, target, null)));
-            return true;
+            return restoreResult;
         }
     }
 

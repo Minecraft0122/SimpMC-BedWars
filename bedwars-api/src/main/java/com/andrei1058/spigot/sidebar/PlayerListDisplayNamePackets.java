@@ -26,6 +26,10 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
     private final Field serverPlayerConnection;
     private final Method connectionSend;
     private final Method legacyComponent;
+    private final Method packetActions;
+    private final Method packetEntries;
+    private final Method entryProfileId;
+    private final Method entryDisplayName;
     private final Constructor<?> snapshotPacket;
     private final Constructor<?> entryConstructor;
     private final Constructor<?> entriesPacket;
@@ -58,7 +62,12 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
                 UUID.class, gameProfile, boolean.class, int.class, gameType,
                 component, boolean.class, int.class, chatSessionData);
         entriesPacket = playerInfoPacket.getConstructor(EnumSet.class, List.class);
+        packetActions = playerInfoPacket.getMethod("actions");
+        packetEntries = playerInfoPacket.getMethod("entries");
+        entryProfileId = playerInfoEntry.getMethod("profileId");
+        entryDisplayName = playerInfoEntry.getMethod("displayName");
         displayNameAction = displayNameAction(playerInfoAction);
+        verifyPacketConstruction();
     }
 
     static @NotNull PlayerListDisplayNameRenderer instance() {
@@ -67,6 +76,13 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
 
     static void verifyCompatibility() {
         if (INSTANCE instanceof LazyRenderer lazyRenderer) lazyRenderer.delegate();
+    }
+
+    static boolean isCompatible() {
+        PlayerListDisplayNameRenderer renderer = INSTANCE instanceof LazyRenderer lazyRenderer
+                ? lazyRenderer.delegate()
+                : INSTANCE;
+        return renderer != UnavailableRenderer.INSTANCE;
     }
 
     @Override
@@ -111,6 +127,31 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
         Object viewerHandle = craftPlayerGetHandle.invoke(viewer);
         Object connection = serverPlayerConnection.get(viewerHandle);
         connectionSend.invoke(connection, packet);
+    }
+
+    /**
+     * Construct and inspect the exact packet shape during plugin startup. Merely
+     * resolving reflective members would not catch a constructor whose fields
+     * no longer represent UPDATE_DISPLAY_NAME in the supported Paper build.
+     */
+    private void verifyPacketConstruction() throws ReflectiveOperationException {
+        UUID expectedId = new UUID(0L, 1L);
+        Object expectedDisplayName = legacyComponent.invoke(null, "\u00a7cSimpMC");
+        Object entry = entryConstructor.newInstance(
+                expectedId, null, false, 0, null, expectedDisplayName, false, 0, null);
+        Object packet = entriesPacket.newInstance(displayNameAction, List.of(entry));
+
+        Object actions = packetActions.invoke(packet);
+        Object entries = packetEntries.invoke(packet);
+        if (!(actions instanceof Collection<?> packetActionValues)
+                || !packetActionValues.containsAll(displayNameAction)
+                || !(entries instanceof List<?> packetEntryValues)
+                || packetEntryValues.size() != 1
+                || !expectedId.equals(entryProfileId.invoke(packetEntryValues.getFirst()))
+                || entryDisplayName.invoke(packetEntryValues.getFirst()) != expectedDisplayName) {
+            throw new ReflectiveOperationException(
+                    "Paper 1.21.11 PlayerInfo UPDATE_DISPLAY_NAME packet contract changed");
+        }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

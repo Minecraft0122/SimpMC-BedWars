@@ -1,6 +1,6 @@
 # SimpMC-BedWars 完整中文教程
 
-本教程对应 SimpMC-BedWars `3.x`，目标运行环境是 **Paper 1.21.11 + Java 21**。其他 Minecraft 版本、Spigot、Folia 和旧版 Java 不在支持范围内。仓库面向维护者和服主的说明、Issue/PR 模板及工作流显示文本均使用中文。
+本教程对应 SimpMC-BedWars `4.x`，目标运行环境是 **Paper 1.21.11 + Java 21**。其他 Minecraft 版本、Spigot、Folia 和旧版 Java 不在支持范围内。仓库面向维护者和服主的说明、Issue/PR 模板及工作流显示文本均使用中文。
 
 ## 文档导航
 

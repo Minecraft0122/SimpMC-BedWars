@@ -30,6 +30,32 @@ jobs:
       - name: 使用 Maven 构建并测试
         run: mvn -B -U verify -s ci_settings.xml
 
+      - name: 验证 Paper 1.21.11 TAB 数据包桥
+        shell: bash
+        env:
+          PAPER_URL: https://fill-data.papermc.io/v1/objects/5ffef465eeeb5f2a3c23a24419d97c51afd7dbb4923ff42df9a3f58bba1ccfba/paper-1.21.11-132.jar
+          PAPER_SHA256: 5ffef465eeeb5f2a3c23a24419d97c51afd7dbb4923ff42df9a3f58bba1ccfba
+        run: |
+          set -euo pipefail
+
+          runtime="$RUNNER_TEMP/paper-1.21.11-tab-contract"
+          mkdir -p "$runtime"
+          curl --fail --location --retry 3 \
+            --user-agent 'SimpMC-BedWars-CI/1.0 (https://github.com/Minecraft0122/SimpMC-BedWars)' \
+            --output "$runtime/paperclip.jar" "$PAPER_URL"
+          echo "$PAPER_SHA256  $runtime/paperclip.jar" | sha256sum --check
+          (cd "$runtime" && java -jar paperclip.jar --help >/dev/null)
+
+          patched_server="$runtime/versions/1.21.11/paper-1.21.11.jar"
+          test -f "$patched_server"
+          classpath="bedwars-api/target/test-classes:bedwars-api/target/classes:$patched_server"
+          while IFS= read -r library; do
+            classpath="$classpath:$library"
+          done < <(find "$runtime/libraries" -type f -name '*.jar' | sort)
+
+          java -cp "$classpath" \
+            com.andrei1058.spigot.sidebar.PlayerListDisplayNamePacketsRuntimeProbe
+
       - name: 上传插件 JAR
         uses: actions/upload-artifact@v7
         with:

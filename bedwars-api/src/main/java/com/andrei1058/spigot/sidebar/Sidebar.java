@@ -14,6 +14,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,6 +57,7 @@ public class Sidebar {
     private final Map<UUID, Scoreboard> scoreboards = new HashMap<>();
     private final Map<UUID, Player> viewers = new HashMap<>();
     private final Map<UUID, Map<UUID, String>> renderedPlayerListNames = new HashMap<>();
+    private final Map<UUID, Map<UUID, Player>> pendingPlayerListRestores = new HashMap<>();
     private final Map<UUID, Scoreboard> previousScoreboards = new HashMap<>();
     private final Map<String, PlayerTab> tabs = new HashMap<>();
     private final Map<String, String> tabTeamNames = new HashMap<>();
@@ -87,6 +89,20 @@ public class Sidebar {
         UUID playerId = player.getUniqueId();
         Scoreboard currentScoreboard = player.getScoreboard();
         Scoreboard managedScoreboard = scoreboards.get(playerId);
+        SidebarManager sidebarManager = SidebarManager.getInstance();
+        if (managedScoreboard != null
+                && sidebarManager.hasDisplayNameOwnership(this, player)
+                && !sidebarManager.ownsDisplayNames(this, player)) {
+            // Re-attaching a suspended layer must first remove its old place
+            // from the ownership chain, otherwise previous scoreboards form a
+            // cycle (A -> B -> A).
+            Scoreboard oldPrevious = previousScoreboards.remove(playerId);
+            sidebarManager.unlinkPreviousScoreboard(this, player, managedScoreboard, oldPrevious);
+            sidebarManager.releaseDisplayNameOwnership(this, player);
+            scoreboards.remove(playerId);
+            viewers.remove(playerId);
+            managedScoreboard = null;
+        }
         Scoreboard scoreboard = manager.getNewScoreboard();
         List<RenderedPlayerTab> renderedTabs = renderPlayerTabs(tabs.values());
         // Build off-screen first. Binding a different scoreboard instance makes
@@ -103,28 +119,52 @@ public class Sidebar {
         }
         scoreboards.put(playerId, scoreboard);
         viewers.put(playerId, player);
-        renderedPlayerListNames.put(playerId, new HashMap<>());
-        SidebarManager.getInstance().claimDisplayNameOwnership(this, player);
+        renderedPlayerListNames.computeIfAbsent(playerId, ignored -> new HashMap<>());
+        sidebarManager.claimDisplayNameOwnership(this, player);
+        retryPendingPlayerListRestores(player);
         renderPlayerListNames(player, renderedTabs, true);
     }
 
     public void remove(@NotNull Player player) {
-        Scoreboard scoreboard = scoreboards.remove(player.getUniqueId());
-        Player viewer = viewers.remove(player.getUniqueId());
-        Scoreboard previous = previousScoreboards.remove(player.getUniqueId());
+        UUID playerId = player.getUniqueId();
+        Scoreboard scoreboard = scoreboards.remove(playerId);
+        Player viewer = viewers.remove(playerId);
+        Scoreboard previous = previousScoreboards.remove(playerId);
+        SidebarManager sidebarManager = SidebarManager.getInstance();
         if (scoreboard == null) {
-            renderedPlayerListNames.remove(player.getUniqueId());
+            sidebarManager.releaseDisplayNameOwnership(this, player);
+            discardViewerDisplayNameState(playerId);
             return;
         }
+        Player ownershipViewer = viewer == null ? player : viewer;
         boolean ownedDisplayNames = viewer != null
-                && SidebarManager.getInstance().releaseDisplayNameOwnership(this, viewer);
+                && sidebarManager.ownsDisplayNames(this, viewer);
         if (ownedDisplayNames && viewer.isOnline()) {
+            retryPendingPlayerListRestores(viewer);
             restorePlayerListNames(viewer, tabs.values());
         }
-        renderedPlayerListNames.remove(player.getUniqueId());
         if (player.getScoreboard() == scoreboard) {
             ScoreboardManager manager = Bukkit.getScoreboardManager();
             player.setScoreboard(previous == null && manager != null ? manager.getMainScoreboard() : previous);
+        }
+        sidebarManager.unlinkPreviousScoreboard(this, ownershipViewer, scoreboard, previous);
+        sidebarManager.releaseDisplayNameOwnership(this, ownershipViewer);
+        if (viewer != null) {
+            if (!viewer.isOnline() || !pendingPlayerListRestores.containsKey(playerId)) {
+                discardViewerDisplayNameState(playerId);
+            }
+        } else {
+            discardViewerDisplayNameState(playerId);
+        }
+    }
+
+    void replacePreviousScoreboard(@NotNull UUID viewerId, @NotNull Scoreboard expected,
+                                   @Nullable Scoreboard replacement) {
+        if (previousScoreboards.get(viewerId) != expected) return;
+        if (replacement == null) {
+            previousScoreboards.remove(viewerId);
+        } else {
+            previousScoreboards.put(viewerId, replacement);
         }
     }
 
@@ -197,6 +237,7 @@ public class Sidebar {
             Player viewer = viewers.get(viewerId);
             if (viewer == null || !viewer.isOnline()) return;
             renderedTabs.forEach(tab -> applyTab(scoreboard, tab));
+            retryPendingPlayerListRestores(viewer);
             // A visibility change or another plugin can resend ADD_PLAYER or
             // UPDATE_DISPLAY_NAME after our event update. One batched replay
             // per viewer keeps production clients authoritative without a
@@ -244,6 +285,8 @@ public class Sidebar {
         });
         tabs.clear();
         scoreboards.values().forEach(Sidebar::removeTabTeams);
+        tabTeamNames.clear();
+        nextTabTeamId = 0;
     }
 
     public void hidePlayersHealth() {
@@ -291,6 +334,9 @@ public class Sidebar {
         if (previous != null) {
             previous.setUpdateCallback(ignored -> {
             });
+            if (!previous.getPlayer().getName().equals(player.getName())) {
+                removePlayerFromTabTeam(identifier, previous.getPlayer().getName());
+            }
             if (!previous.getPlayer().getUniqueId().equals(player.getUniqueId())) {
                 restoreOrRenderRemainingTab(previous);
             }
@@ -305,14 +351,27 @@ public class Sidebar {
             return;
         }
         detachTab(tab);
-        String teamName = teamName(identifier);
+        String teamName = tabTeamNames.remove(identifier);
+        if (teamName != null) {
+            scoreboards.values().forEach(scoreboard -> {
+                Team team = scoreboard.getTeam(teamName);
+                if (team != null) {
+                    team.unregister();
+                }
+            });
+        }
+        restoreOrRenderRemainingTab(tab);
+    }
+
+    private void removePlayerFromTabTeam(@NotNull String identifier, @NotNull String playerName) {
+        String teamName = tabTeamNames.get(identifier);
+        if (teamName == null) return;
         scoreboards.values().forEach(scoreboard -> {
             Team team = scoreboard.getTeam(teamName);
-            if (team != null) {
-                team.unregister();
+            if (team != null && team.hasEntry(playerName)) {
+                team.removeEntry(playerName);
             }
         });
-        restoreOrRenderRemainingTab(tab);
     }
 
     private void renderAll() {
@@ -449,6 +508,22 @@ public class Sidebar {
     }
 
     void forcePlayerListNameRefresh(@NotNull Player viewer) {
+        retryPendingPlayerListRestores(viewer);
+        renderPlayerListNames(viewer, renderPlayerTabs(tabs.values()), true);
+    }
+
+    void suspendDisplayNameOwnership(@NotNull Player viewer) {
+        if (!viewer.isOnline()) {
+            discardViewerDisplayNameState(viewer.getUniqueId());
+            return;
+        }
+        retryPendingPlayerListRestores(viewer);
+        restorePlayerListNames(viewer, tabs.values());
+    }
+
+    void resumeDisplayNameOwnership(@NotNull Player viewer) {
+        if (!viewer.isOnline() || !SidebarManager.getInstance().ownsDisplayNames(this, viewer)) return;
+        retryPendingPlayerListRestores(viewer);
         renderPlayerListNames(viewer, renderPlayerTabs(tabs.values()), true);
     }
 
@@ -459,15 +534,22 @@ public class Sidebar {
         List<PlayerListDisplayNameRenderer.RenderedName> updates = new ArrayList<>();
         for (RenderedPlayerTab renderedTab : playerTabs) {
             PlayerTab tab = renderedTab.tab();
-            if (!tab.getPlayer().isOnline()) continue;
-            String rendered = renderedTab.displayName();
             UUID targetId = tab.getPlayer().getUniqueId();
+            if (!tab.getPlayer().isOnline()) {
+                releaseCachedPlayerListName(viewer.getUniqueId(), targetId);
+                continue;
+            }
+            String rendered = renderedTab.displayName();
             if (!force && rendered.equals(viewerCache.get(targetId))) continue;
             updates.add(new PlayerListDisplayNameRenderer.RenderedName(tab.getPlayer(), rendered));
         }
         if (updates.isEmpty()) return;
         if (displayNameRenderer.render(viewer, updates)) {
-            updates.forEach(update -> viewerCache.put(update.target().getUniqueId(), update.legacyDisplayName()));
+            updates.forEach(update -> {
+                UUID targetId = update.target().getUniqueId();
+                viewerCache.put(targetId, update.legacyDisplayName());
+                removePendingPlayerListRestore(viewer.getUniqueId(), targetId);
+            });
         }
     }
 
@@ -476,11 +558,22 @@ public class Sidebar {
     }
 
     private void restorePlayerListNames(@NotNull Player viewer, @NotNull Collection<PlayerTab> playerTabs) {
-        Map<UUID, String> viewerCache = renderedPlayerListNames.get(viewer.getUniqueId());
+        List<Player> targets = playerTabs.stream().map(PlayerTab::getPlayer).toList();
+        restorePlayerListTargets(viewer, targets);
+    }
+
+    private void retryPendingPlayerListRestores(@NotNull Player viewer) {
+        Map<UUID, Player> pending = pendingPlayerListRestores.get(viewer.getUniqueId());
+        if (pending == null || pending.isEmpty()) return;
+        restorePlayerListTargets(viewer, new ArrayList<>(pending.values()));
+    }
+
+    private void restorePlayerListTargets(@NotNull Player viewer, @NotNull Collection<Player> candidates) {
+        UUID viewerId = viewer.getUniqueId();
+        Map<UUID, String> viewerCache = renderedPlayerListNames.get(viewerId);
         if (viewerCache == null) return;
         Map<UUID, Player> targets = new LinkedHashMap<>();
-        for (PlayerTab tab : playerTabs) {
-            Player target = tab.getPlayer();
+        for (Player target : candidates) {
             UUID targetId = target.getUniqueId();
             if (!viewerCache.containsKey(targetId)) continue;
             if (target.isOnline()) {
@@ -490,12 +583,34 @@ public class Sidebar {
                 // so there is nothing left to restore on the client. Still
                 // release our per-viewer cache entry to avoid retaining every
                 // player that has ever passed through a long-running lobby.
-                viewerCache.remove(targetId);
+                releaseCachedPlayerListName(viewerId, targetId);
             }
         }
-        if (!targets.isEmpty() && displayNameRenderer.restore(viewer, targets.values())) {
-            targets.keySet().forEach(viewerCache::remove);
+        if (targets.isEmpty()) return;
+        if (displayNameRenderer.restore(viewer, targets.values())) {
+            targets.keySet().forEach(targetId -> releaseCachedPlayerListName(viewerId, targetId));
+            return;
         }
+        pendingPlayerListRestores.computeIfAbsent(viewerId, ignored -> new LinkedHashMap<>())
+                .putAll(targets);
+    }
+
+    private void releaseCachedPlayerListName(@NotNull UUID viewerId, @NotNull UUID targetId) {
+        Map<UUID, String> viewerCache = renderedPlayerListNames.get(viewerId);
+        if (viewerCache != null) viewerCache.remove(targetId);
+        removePendingPlayerListRestore(viewerId, targetId);
+    }
+
+    private void removePendingPlayerListRestore(@NotNull UUID viewerId, @NotNull UUID targetId) {
+        Map<UUID, Player> pending = pendingPlayerListRestores.get(viewerId);
+        if (pending == null) return;
+        pending.remove(targetId);
+        if (pending.isEmpty()) pendingPlayerListRestores.remove(viewerId);
+    }
+
+    private void discardViewerDisplayNameState(@NotNull UUID viewerId) {
+        renderedPlayerListNames.remove(viewerId);
+        pendingPlayerListRestores.remove(viewerId);
     }
 
     private void restoreOrRenderRemainingTab(@NotNull PlayerTab removedTab) {
