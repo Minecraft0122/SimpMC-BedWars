@@ -6,7 +6,10 @@ import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -45,6 +48,30 @@ class SidebarServiceTest {
         assertFalse(SidebarService.shouldCreateSidebarOnClientLoad(true, false, true));
         assertTrue(SidebarService.shouldCreateSidebarOnClientLoad(false, true, false));
         assertFalse(SidebarService.shouldCreateSidebarOnClientLoad(false, false, false));
+    }
+
+    @Test
+    void ordinaryWorldChangeSchedulesOneFallbackAndDeduplicatesAClientLoad() {
+        UUID playerId = UUID.randomUUID();
+        Set<UUID> pending = new HashSet<>();
+        List<Runnable> scheduled = new ArrayList<>();
+        AtomicInteger resynchronizations = new AtomicInteger();
+
+        SidebarService.scheduleWorldResynchronization(
+                pending, playerId, scheduled::add, resynchronizations::incrementAndGet);
+        SidebarService.scheduleWorldResynchronization(
+                pending, playerId, scheduled::add, resynchronizations::incrementAndGet);
+
+        assertEquals(1, scheduled.size(), "rapid world changes must share one next-tick fallback");
+        assertTrue(pending.remove(playerId), "a real client-load event consumes the same marker");
+        scheduled.getFirst().run();
+        assertEquals(0, resynchronizations.get(), "the consumed fallback must not replay twice");
+
+        SidebarService.scheduleWorldResynchronization(
+                pending, playerId, scheduled::add, resynchronizations::incrementAndGet);
+        scheduled.get(1).run();
+        assertEquals(1, resynchronizations.get(), "ordinary cross-world travel needs its fallback");
+        assertFalse(pending.contains(playerId));
     }
 
     @Test

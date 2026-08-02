@@ -114,11 +114,16 @@ public class BwSidebar implements ISidebar {
         assignTabHeaderFooter();
     }
 
-    /** Replay the complete managed scoreboard after the client finished login. */
+    /** Rebuild and replay the complete TAB model after login or a world change. */
     void resynchronizeClientState() {
         if (handle == null || !player.isOnline()) {
             return;
         }
+        // In SHARED mode arena == null both inside and outside the configured
+        // lobby, while player-list formatting depends on the current world.
+        // Recompute the rows before reattaching instead of replaying the model
+        // that belonged to the previous world.
+        tabList.handlePlayerList();
         handle.add(player);
         SidebarManager.getInstance().clearHeaderFooterCache(player);
         assignTabHeaderFooter();

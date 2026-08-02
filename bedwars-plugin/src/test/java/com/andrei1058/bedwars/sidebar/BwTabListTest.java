@@ -124,6 +124,32 @@ class BwTabListTest {
     }
 
     @Test
+    void minimalTeamOrderingIncludesWaitingAndStartingArenas() {
+        ITeam red = team("red", TeamColor.RED);
+        ITeam blue = team("blue", TeamColor.BLUE);
+        Player startingBob = player("StartingBob");
+        Player startingAlice = player("StartingAlice");
+        Player waitingBlue = player("WaitingAlice");
+        Player waitingRed = player("WaitingZed");
+
+        IArena waiting = arena("z-waiting", List.of(blue, red),
+                List.of(waitingBlue, waitingRed), List.of(),
+                Map.of(waitingBlue.getUniqueId(), blue, waitingRed.getUniqueId(), red),
+                Map.of(), GameState.waiting);
+        IArena starting = arena("a-starting", List.of(red),
+                List.of(startingBob, startingAlice), List.of(),
+                Map.of(startingBob.getUniqueId(), red, startingAlice.getUniqueId(), red),
+                Map.of(), GameState.starting);
+
+        assertEquals(
+                List.of("StartingAlice", "StartingBob", "WaitingZed", "WaitingAlice"),
+                BwTabList.orderedActiveArenaPlayers(List.of(waiting, starting)).stream()
+                        .map(Player::getName)
+                        .toList()
+        );
+    }
+
+    @Test
     void writesTheCalculatedOrderAndRestoresThePreviousOwner() {
         PlayerOrderState firstState = new PlayerOrderState(2);
         PlayerOrderState secondState = new PlayerOrderState(9);
@@ -210,6 +236,7 @@ class BwTabListTest {
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getName" -> name;
                     case "getUniqueId" -> uniqueId;
+                    case "isOnline" -> true;
                     case "toString" -> name;
                     default -> throw new UnsupportedOperationException(method.getName());
                 }
@@ -224,10 +251,17 @@ class BwTabListTest {
     private static IArena arena(List<ITeam> teams, List<Player> players, List<Player> spectators,
                                 Map<UUID, ITeam> currentTeams, Map<UUID, ITeam> formerTeams,
                                 GameState state) {
+        return arena(state.name(), teams, players, spectators, currentTeams, formerTeams, state);
+    }
+
+    private static IArena arena(String name, List<ITeam> teams, List<Player> players,
+                                List<Player> spectators, Map<UUID, ITeam> currentTeams,
+                                Map<UUID, ITeam> formerTeams, GameState state) {
         return (IArena) Proxy.newProxyInstance(
                 IArena.class.getClassLoader(),
                 new Class<?>[]{IArena.class},
                 (proxy, method, args) -> switch (method.getName()) {
+                    case "getArenaName" -> name;
                     case "getTeams" -> teams;
                     case "getPlayers" -> players;
                     case "getSpectators" -> spectators;

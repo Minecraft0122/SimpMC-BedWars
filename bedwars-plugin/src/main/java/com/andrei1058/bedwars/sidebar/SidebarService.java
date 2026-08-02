@@ -23,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 import static com.andrei1058.bedwars.BedWars.config;
 import static com.andrei1058.bedwars.api.language.Language.getScoreboard;
@@ -276,15 +277,15 @@ public class SidebarService implements ISidebarService {
         }
     }
 
-    /**
-     * Replay an already-created sidebar after Paper confirms that the client
-     * finished its initial load or a marked cross-world transition. Packets
-     * sent before that acknowledgement can otherwise be discarded while the
-     * server-side scoreboard cache remains unchanged.
-     */
+    /** Replay after initial/respawn loading or consume a pending world change. */
     void handleClientLoadedWorld(@NotNull Player player, boolean initialLoad) {
-        if (sidebarHandler == null || !player.isOnline()) return;
         boolean changedWorld = pendingWorldResynchronizations.remove(player.getUniqueId());
+        resynchronizeClientState(player, initialLoad, changedWorld);
+    }
+
+    private void resynchronizeClientState(@NotNull Player player, boolean initialLoad,
+                                          boolean changedWorld) {
+        if (sidebarHandler == null || !player.isOnline()) return;
         if (!requiresClientResynchronization(initialLoad, changedWorld)) {
             return;
         }
@@ -306,9 +307,30 @@ public class SidebarService implements ISidebarService {
         sidebar.resynchronizeClientState();
     }
 
-    /** Mark a cross-world teleport for a full replay once its client acknowledges loading. */
+    /**
+     * Rebuild after an ordinary cross-world teleport. Paper 1.21.11 does not
+     * fire PlayerClientLoadedWorldEvent again for this path, so the next-tick
+     * fallback must consume the marker itself. A real client-loaded event can
+     * consume it first; the set then makes the fallback a no-op.
+     */
     void markClientWorldChange(@NotNull Player player) {
-        pendingWorldResynchronizations.add(player.getUniqueId());
+        UUID playerId = player.getUniqueId();
+        scheduleWorldResynchronization(
+                pendingWorldResynchronizations,
+                playerId,
+                task -> Bukkit.getScheduler().runTask(BedWars.plugin, task),
+                () -> resynchronizeClientState(player, false, true)
+        );
+    }
+
+    static void scheduleWorldResynchronization(@NotNull Set<UUID> pending, @NotNull UUID playerId,
+                                               @NotNull Consumer<Runnable> scheduler,
+                                               @NotNull Runnable resynchronization) {
+        if (!pending.add(playerId)) return;
+        scheduler.accept(() -> {
+            if (!pending.remove(playerId)) return;
+            resynchronization.run();
+        });
     }
 
     /** Replay only the PlayerInfo row rebuilt by Paper's showPlayer path. */

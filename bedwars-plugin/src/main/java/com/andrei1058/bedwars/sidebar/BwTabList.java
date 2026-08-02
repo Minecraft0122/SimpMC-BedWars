@@ -557,16 +557,9 @@ public class BwTabList {
     }
 
     private static void applyServerPlayerListOrder() {
-        List<IArena> arenas = new ArrayList<>(Arena.getArenas());
-        arenas.sort(Comparator.comparing(IArena::getArenaName, String.CASE_INSENSITIVE_ORDER)
-                .thenComparing(IArena::getArenaName));
-
         LinkedHashMap<UUID, Player> arenaPlayers = new LinkedHashMap<>();
-        for (IArena arena : arenas) {
-            if (!isPlayerListFormattingEnabled(arena.getStatus())) continue;
-            for (Player player : orderedArenaPlayers(arena)) {
-                if (player.isOnline()) arenaPlayers.put(player.getUniqueId(), player);
-            }
+        for (Player player : orderedActiveArenaPlayers(Arena.getArenas())) {
+            arenaPlayers.put(player.getUniqueId(), player);
         }
 
         List<Player> lobbyPlayers = new ArrayList<>();
@@ -583,6 +576,26 @@ public class BwTabList {
         orderedPlayers.addAll(lobbyPlayers);
         orderedPlayers.addAll(arenaPlayers.values());
         applyPlayerListOrder(orderedPlayers);
+    }
+
+    /**
+     * Builds the global arena section without consulting cosmetic TAB switches.
+     * Every arena keeps a minimal scoreboard Team context, so team grouping and
+     * spectrum ordering must remain active even when full prefixes are disabled.
+     */
+    static @NotNull List<Player> orderedActiveArenaPlayers(
+            @NotNull Collection<? extends IArena> activeArenas) {
+        List<IArena> arenas = new ArrayList<>(activeArenas);
+        arenas.sort(Comparator.comparing(IArena::getArenaName, String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(IArena::getArenaName));
+
+        LinkedHashMap<UUID, Player> players = new LinkedHashMap<>();
+        for (IArena arena : arenas) {
+            for (Player player : orderedArenaPlayers(arena)) {
+                if (player.isOnline()) players.putIfAbsent(player.getUniqueId(), player);
+            }
+        }
+        return new ArrayList<>(players.values());
     }
 
     static void applyPlayerListOrder(@NotNull Collection<Player> orderedPlayers) {
@@ -613,15 +626,6 @@ public class BwTabList {
     static void restorePlayerListOrder() {
         playerListOrderUpdateScheduled = false;
         applyPlayerListOrder(List.of());
-    }
-
-    private static boolean isPlayerListFormattingEnabled(@NotNull GameState state) {
-        return switch (state) {
-            case waiting -> config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING);
-            case starting -> config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING);
-            case playing -> config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING);
-            case restarting -> config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_RESTARTING);
-        };
     }
 
     private static boolean isInConfiguredLobbyWorld(@NotNull Player player) {
