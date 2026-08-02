@@ -1,6 +1,5 @@
 package com.andrei1058.bedwars.sidebar;
 
-import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.sidebar.ISidebar;
 import org.bukkit.entity.Player;
@@ -27,13 +26,9 @@ class SidebarServiceTest {
     }
 
     @Test
-    void keepsGameTabAndNameTagsIndependentFromTheSidebarObjective() {
-        assertTrue(SidebarService.shouldKeepArenaTabContext(
-                GameState.playing, false, false, false, true, false));
-        assertTrue(SidebarService.shouldKeepArenaTabContext(
-                GameState.waiting, true, false, false, false, false));
-        assertFalse(SidebarService.shouldKeepArenaTabContext(
-                GameState.playing, false, false, false, false, false));
+    void alwaysKeepsArenaTeamColorAndNameTagContext() {
+        assertTrue(SidebarService.shouldKeepArenaTabContext(arena()));
+        assertFalse(SidebarService.shouldKeepArenaTabContext(null));
     }
 
     @Test
@@ -76,6 +71,27 @@ class SidebarServiceTest {
         assertEquals(true, updateArguments.get()[2]);
     }
 
+    @Test
+    void preGameSelectionRefreshesAffectedRowsForEveryArenaViewerIncludingSelf() {
+        IArena arena = arena();
+        IArena otherArena = arena();
+        Player alice = player("alice");
+        Player bob = player("bob");
+        AtomicInteger firstViewerUpdates = new AtomicInteger();
+        AtomicInteger secondViewerUpdates = new AtomicInteger();
+        AtomicInteger otherArenaUpdates = new AtomicInteger();
+
+        SidebarService.updatePreGameTeamTabs(List.of(
+                sidebar(arena, alice, firstViewerUpdates, new AtomicReference<>()),
+                sidebar(arena, bob, secondViewerUpdates, new AtomicReference<>()),
+                sidebar(otherArena, player("other"), otherArenaUpdates, new AtomicReference<>())
+        ), arena, List.of(alice, bob));
+
+        assertEquals(2, firstViewerUpdates.get());
+        assertEquals(2, secondViewerUpdates.get());
+        assertEquals(0, otherArenaUpdates.get());
+    }
+
     private static IArena arena() {
         return (IArena) Proxy.newProxyInstance(IArena.class.getClassLoader(),
                 new Class<?>[]{IArena.class},
@@ -90,6 +106,7 @@ class SidebarServiceTest {
                 new Class<?>[]{Player.class},
                 (proxy, method, args) -> {
                     if (method.getName().equals("getUniqueId")) return identity;
+                    if (method.getName().equals("isOnline")) return true;
                     throw new UnsupportedOperationException(method.getName());
                 });
     }

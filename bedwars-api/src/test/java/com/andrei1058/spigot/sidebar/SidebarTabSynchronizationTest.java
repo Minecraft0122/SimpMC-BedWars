@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,25 +68,102 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
-    void rendersTheCompletePlayerListRowWithAnExplicitTeamColoredName() {
+    void reattachesOnlyTheActiveOwnerWhenItsManagedScoreboardWasReplaced() {
+        Scoreboard managed = scoreboard(team(new TeamState()));
+        Scoreboard external = scoreboard(team(new TeamState()));
+
+        assertTrue(Sidebar.shouldReattachScoreboard(true, managed, external));
+        assertFalse(Sidebar.shouldReattachScoreboard(false, managed, external));
+        assertFalse(Sidebar.shouldReattachScoreboard(true, managed, managed));
+        assertFalse(Sidebar.shouldReattachScoreboard(true, null, external));
+    }
+
+    @Test
+    void periodicReplayReattachesADriftedViewerAfterMapIteration() {
+        AtomicInteger reattachments = new AtomicInteger();
+        Sidebar sidebar = new Sidebar(new SidebarLine(), List.of(), new ConcurrentLinkedQueue<>()) {
+            @Override
+            public void add(Player player) {
+                reattachments.incrementAndGet();
+            }
+        };
+        Scoreboard managed = scoreboard(team(new TeamState()));
+        Scoreboard external = scoreboard(team(new TeamState()));
+        String name = "DriftedViewer";
+        java.util.UUID viewerId = java.util.UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+        Player viewer = (Player) Proxy.newProxyInstance(
+                Player.class.getClassLoader(), new Class<?>[]{Player.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getUniqueId" -> viewerId;
+                    case "isOnline" -> true;
+                    case "getScoreboard" -> external;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        fieldMap(sidebar, "scoreboards").put(viewerId, managed);
+        fieldMap(sidebar, "viewers").put(viewerId, viewer);
+
+        SidebarManager manager = SidebarManager.getInstance();
+        manager.claimDisplayNameOwnership(sidebar, viewer);
+        try {
+            sidebar.playerTabRefreshAnimation();
+            assertEquals(1, reattachments.get());
+        } finally {
+            manager.releaseDisplayNameOwnership(sidebar, viewer);
+        }
+    }
+
+    @Test
+    void clearsThePlayerInfoNameAndLeavesTheScoreboardTeamAsRenderingAuthority() {
         RecordingRenderer renderer = new RecordingRenderer();
         Sidebar sidebar = sidebar(renderer);
         Player viewer = player("Viewer");
         Player target = player("Alice");
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(team(state));
         PlayerTab tab = new PlayerTab("alice", target,
                 new SidebarLine("&7[&cR&7] "), new SidebarLine("&8 !"),
                 PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
                 PlayerTab.NameTagVisibility.ALWAYS);
 
+        sidebar.applyTab(scoreboard, tab);
         sidebar.renderPlayerListName(viewer, tab);
 
-        assertEquals("§7[§cR§7] §cAlice§8 !", renderer.rendered.getFirst().displayName());
-        assertSame(viewer, renderer.rendered.getFirst().viewer());
-        assertSame(target, renderer.rendered.getFirst().target());
+        assertEquals(1, renderer.cleared.size());
+        assertSame(viewer, renderer.cleared.getFirst().viewer());
+        assertSame(target, renderer.cleared.getFirst().target());
+        assertEquals(Sidebar.component("§7[§cR§7] "), state.prefix);
+        assertEquals(Sidebar.component("§8 !"), state.suffix);
+        assertSame(ChatColor.RED, state.color);
+        assertTrue(state.entries.contains("Alice"));
     }
 
     @Test
-    void cachesUnchangedRowsAndRestoresTheTargetsRealServerState() {
+    void creatingATabRowNeverMutatesTheTargetsGlobalPlayerListName() {
+        Sidebar sidebar = sidebar();
+        AtomicBoolean globalNameMutated = new AtomicBoolean();
+        String name = "ExternalAlice";
+        Player target = (Player) Proxy.newProxyInstance(
+                Player.class.getClassLoader(), new Class<?>[]{Player.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getName" -> name;
+                    case "getUniqueId" -> java.util.UUID.nameUUIDFromBytes(
+                            name.getBytes(StandardCharsets.UTF_8));
+                    case "playerListName" -> {
+                        if (args != null && args.length == 1) globalNameMutated.set(true);
+                        yield Component.text("[VIP] " + name);
+                    }
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+
+        sidebar.playerTabCreate("external-alice", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, new ConcurrentLinkedQueue<>(), ChatColor.RED);
+
+        assertFalse(globalNameMutated.get(),
+                "per-viewer BedWars formatting must not overwrite Paper's global player-list name");
+    }
+
+    @Test
+    void cachesClearedRowsAcrossTeamAnimationAndRestoresTheTargetsRealServerState() {
         RecordingRenderer renderer = new RecordingRenderer();
         Sidebar sidebar = sidebar(renderer);
         Player viewer = player("Viewer");
@@ -102,11 +181,12 @@ class SidebarTabSynchronizationTest {
 
         sidebar.renderPlayerListName(viewer, tab);
         sidebar.renderPlayerListName(viewer, tab);
-        assertEquals(1, renderer.rendered.size(), "unchanged animation frames must not resend packets");
+        assertEquals(1, renderer.cleared.size(), "an already-cleared row must not resend packets");
 
         prefix[0] = "&8[";
         sidebar.renderPlayerListName(viewer, tab);
-        assertEquals(2, renderer.rendered.size());
+        assertEquals(1, renderer.cleared.size(),
+                "scoreboard prefix animation must not resend an unchanged null display name");
 
         sidebar.restorePlayerListName(viewer, tab);
         sidebar.restorePlayerListName(viewer, tab);
@@ -131,7 +211,7 @@ class SidebarTabSynchronizationTest {
         online[0] = true;
         sidebar.renderPlayerListName(viewer, tab);
 
-        assertEquals(2, renderer.rendered.size(),
+        assertEquals(2, renderer.cleared.size(),
                 "removing an offline target must release its cached row");
         assertTrue(renderer.restored.isEmpty(),
                 "an offline target no longer has a PlayerInfo row to restore");
@@ -149,14 +229,14 @@ class SidebarTabSynchronizationTest {
         sidebar.renderPlayerListName(viewer, tab);
         sidebar.forcePlayerListNameRefresh(viewer);
 
-        assertEquals(2, renderer.rendered.size(),
+        assertEquals(2, renderer.cleared.size(),
                 "a later ADD_PLAYER or third-party update must be repairable even when text did not change");
     }
 
     @Test
     void failedPacketWriteDoesNotPoisonTheRenderedNameCache() {
         RecordingRenderer renderer = new RecordingRenderer();
-        renderer.renderResult = false;
+        renderer.clearResult = false;
         Sidebar sidebar = sidebar(renderer);
         Player viewer = player("Viewer");
         Player target = player("Alice");
@@ -165,10 +245,10 @@ class SidebarTabSynchronizationTest {
                 PlayerTab.NameTagVisibility.ALWAYS);
 
         sidebar.renderPlayerListName(viewer, tab);
-        renderer.renderResult = true;
+        renderer.clearResult = true;
         sidebar.renderPlayerListName(viewer, tab);
 
-        assertEquals(2, renderer.renderCalls,
+        assertEquals(2, renderer.clearCalls,
                 "an unchanged row must retry after the previous packet write failed");
     }
 
@@ -255,7 +335,7 @@ class SidebarTabSynchronizationTest {
 
             assertTrue(manager.ownsDisplayNames(previous, viewer),
                     "releasing the newer Sidebar must reactivate the still-attached previous owner");
-            assertEquals(2, previousRenderer.rendered.size(),
+            assertEquals(2, previousRenderer.cleared.size(),
                     "reactivating the previous owner must replay its complete player list state");
         } finally {
             manager.releaseDisplayNameOwnership(current, viewer);
@@ -509,29 +589,28 @@ class SidebarTabSynchronizationTest {
     }
 
     private static final class RecordingRenderer implements PlayerListDisplayNameRenderer {
-        private final java.util.ArrayList<CapturedName> rendered = new java.util.ArrayList<>();
-        private final java.util.ArrayList<CapturedName> restored = new java.util.ArrayList<>();
-        private boolean renderResult = true;
+        private final java.util.ArrayList<CapturedTarget> cleared = new java.util.ArrayList<>();
+        private final java.util.ArrayList<CapturedTarget> restored = new java.util.ArrayList<>();
+        private boolean clearResult = true;
         private boolean restoreResult = true;
-        private int renderCalls;
+        private int clearCalls;
         private int restoreCalls;
 
         @Override
-        public boolean render(Player viewer, java.util.Collection<PlayerListDisplayNameRenderer.RenderedName> names) {
-            renderCalls++;
-            names.forEach(name -> rendered.add(
-                    new CapturedName(viewer, name.target(), name.legacyDisplayName())));
-            return renderResult;
+        public boolean clear(Player viewer, java.util.Collection<Player> targets) {
+            clearCalls++;
+            targets.forEach(target -> cleared.add(new CapturedTarget(viewer, target)));
+            return clearResult;
         }
 
         @Override
         public boolean restore(Player viewer, java.util.Collection<Player> targets) {
             restoreCalls++;
-            targets.forEach(target -> restored.add(new CapturedName(viewer, target, null)));
+            targets.forEach(target -> restored.add(new CapturedTarget(viewer, target)));
             return restoreResult;
         }
     }
 
-    private record CapturedName(Player viewer, Player target, String displayName) {
+    private record CapturedTarget(Player viewer, Player target) {
     }
 }

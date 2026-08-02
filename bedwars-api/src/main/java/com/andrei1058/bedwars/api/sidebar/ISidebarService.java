@@ -11,7 +11,9 @@ import org.jetbrains.annotations.Nullable;
 public interface ISidebarService {
 
     /**
-     * Send player scoreboard based on conditions.
+     * Send the player's scoreboard for its current arena state. The arena
+     * argument is a caller snapshot; implementations must reconcile it with
+     * the live player-to-arena registry before applying delayed work.
      */
     void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay);
 

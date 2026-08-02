@@ -927,6 +927,8 @@ public class Arena implements IArena {
 
         if (!BedWars.isShuttingDown()) {
             Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+                if (!ArenaTransitionPolicy.shouldApplyLobbyTransition(
+                        disconnect, p.isOnline(), getArenaByPlayer(p) != null)) return;
                 for (Player on : Bukkit.getOnlinePlayers()) {
                     if (on.equals(p)) continue;
                     if (getArenaByPlayer(on) == null) {
@@ -937,7 +939,7 @@ public class Arena implements IArena {
                         BedWars.nms.spigotHidePlayer(on, p);
                     }
                 }
-                if (!disconnect && p.isOnline()) SidebarService.getInstance().giveSidebar(p, null, false);
+                SidebarService.getInstance().giveSidebar(p, null, false);
             }, 5L);
         }
 
@@ -1047,6 +1049,8 @@ public class Arena implements IArena {
 
         if (!BedWars.isShuttingDown()) {
             Bukkit.getScheduler().runTask(plugin, () -> {
+                if (!ArenaTransitionPolicy.shouldApplyLobbyTransition(
+                        disconnect, p.isOnline(), getArenaByPlayer(p) != null)) return;
                 for (Player on : Bukkit.getOnlinePlayers()) {
                     if (on.equals(p)) continue;
                     if (getArenaByPlayer(on) == null) {
@@ -1057,7 +1061,7 @@ public class Arena implements IArena {
                         BedWars.nms.spigotHidePlayer(on, p);
                     }
                 }
-                if (!disconnect && p.isOnline()) SidebarService.getInstance().giveSidebar(p, null, false);
+                SidebarService.getInstance().giveSidebar(p, null, false);
             });
         }
 

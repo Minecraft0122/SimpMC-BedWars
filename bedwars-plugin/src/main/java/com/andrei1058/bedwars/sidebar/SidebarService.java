@@ -125,15 +125,19 @@ public class SidebarService implements ISidebarService {
 
     public void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay) {
         if (sidebarHandler == null || !player.isOnline()) return;
+        // Callers can outlive an arena transition (for example the delayed
+        // lobby cleanup). Always render the player's current registry state.
+        arena = Arena.getArenaByPlayer(player);
         UUID playerId = player.getUniqueId();
         if (delay) {
+            IArena expectedArena = arena;
             cancelDelayedSidebar(playerId);
             BukkitTask task = Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                 delayedSidebarTasks.remove(playerId);
-                if (!player.isOnline() || Arena.getArenaByPlayer(player) != arena) {
+                if (!player.isOnline() || Arena.getArenaByPlayer(player) != expectedArena) {
                     return;
                 }
-                giveSidebar(player, arena, false);
+                giveSidebar(player, expectedArena, false);
             }, JOIN_INITIALIZATION_DELAY_TICKS);
             delayedSidebarTasks.put(playerId, task);
             return;
@@ -147,12 +151,10 @@ public class SidebarService implements ISidebarService {
         boolean lobbyTabEnabled = arena == null && shouldKeepLobbyTabContext(
                 config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE),
                 config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_LOBBY));
-        boolean arenaTabEnabled = arena != null && shouldKeepArenaTabContext(arena.getStatus(),
-                config.getBoolean(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_ENABLE),
-                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_WAITING),
-                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_STARTING),
-                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_PLAYING),
-                config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_LIST_FORMAT_RESTARTING));
+        // Team color and overhead name-tag ownership are gameplay state, not a
+        // cosmetic sidebar option. Every arena player therefore needs a TAB
+        // context even when all full-format/header/sidebar switches are off.
+        boolean arenaTabEnabled = shouldKeepArenaTabContext(arena);
         boolean tabContextEnabled = lobbyTabEnabled || arenaTabEnabled;
 
         // check if we might need to remove the existing sidebar
@@ -416,16 +418,8 @@ public class SidebarService implements ISidebarService {
         return headerFooterEnabled || playerListFormattingEnabled;
     }
 
-    static boolean shouldKeepArenaTabContext(GameState state, boolean headerFooterEnabled,
-                                             boolean waiting, boolean starting,
-                                             boolean playing, boolean restarting) {
-        if (headerFooterEnabled) return true;
-        return switch (state) {
-            case waiting -> waiting;
-            case starting -> starting;
-            case playing -> playing;
-            case restarting -> restarting;
-        };
+    static boolean shouldKeepArenaTabContext(@Nullable IArena arena) {
+        return arena != null;
     }
 
     protected SidebarManager getSidebarHandler() {
@@ -514,6 +508,24 @@ public class SidebarService implements ISidebarService {
     public void handleJoin(IArena arena, Player player, @Nullable Boolean spectator) {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
         updateArenaPlayerTabs(sidebars.values(), arena, player, spectator);
+    }
+
+    /** Immediately replay a changed pre-game team preference to every arena viewer. */
+    public void handlePreGameTeamSelection(@NotNull IArena arena,
+                                           @NotNull Collection<Player> affectedPlayers) {
+        if (sidebarHandler == null || sidebars.isEmpty() || affectedPlayers.isEmpty()) return;
+        updatePreGameTeamTabs(sidebars.values(), arena, affectedPlayers);
+    }
+
+    static void updatePreGameTeamTabs(@NotNull Collection<? extends ISidebar> sidebars,
+                                      @NotNull IArena arena,
+                                      @NotNull Collection<Player> affectedPlayers) {
+        for (ISidebar sidebar : sidebars) {
+            if (sidebar == null || sidebar.getArena() != arena) continue;
+            for (Player affected : affectedPlayers) {
+                if (affected.isOnline()) sidebar.giveUpdateTabFormat(affected, false, null);
+            }
+        }
     }
 
     /** Refresh an eliminated player's TAB entry on every other arena scoreboard. */

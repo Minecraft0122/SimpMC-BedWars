@@ -17,6 +17,7 @@ import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerLeaveArenaEvent;
 import com.andrei1058.bedwars.api.events.server.ArenaDisableEvent;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.sidebar.SidebarService;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -64,13 +65,16 @@ public final class PreGameTeamSelectionManager implements Listener {
 
         Selection selection = new Selection(arena, team.getIdentity());
         assignmentGroup.forEach(member -> selections.put(member.getUniqueId(), selection));
+        refreshPlayerList(arena, assignmentGroup);
         return Result.SELECTED;
     }
 
     public Result clear(@NotNull Player player) {
         IArena arena = preGameArena(player);
         if (arena == null) return Result.NOT_IN_PRE_GAME;
-        assignmentGroup(player, arena).forEach(member -> selections.remove(member.getUniqueId()));
+        List<Player> assignmentGroup = assignmentGroup(player, arena);
+        assignmentGroup.forEach(member -> selections.remove(member.getUniqueId()));
+        refreshPlayerList(arena, assignmentGroup);
         return Result.CLEARED;
     }
 
@@ -136,6 +140,11 @@ public final class PreGameTeamSelectionManager implements Listener {
         IArena arena = Arena.getArenaByPlayer(player);
         if (arena == null || !arena.isPlayer(player)) return null;
         return arena.getStatus() == GameState.waiting || arena.getStatus() == GameState.starting ? arena : null;
+    }
+
+    private static void refreshPlayerList(@NotNull IArena arena, @NotNull List<Player> players) {
+        SidebarService sidebarService = SidebarService.getInstance();
+        if (sidebarService != null) sidebarService.handlePreGameTeamSelection(arena, players);
     }
 
     private record Selection(IArena arena, UUID teamIdentity) {

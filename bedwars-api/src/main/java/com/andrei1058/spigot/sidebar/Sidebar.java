@@ -19,9 +19,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -56,7 +58,7 @@ public class Sidebar {
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
     private final Map<UUID, Scoreboard> scoreboards = new HashMap<>();
     private final Map<UUID, Player> viewers = new HashMap<>();
-    private final Map<UUID, Map<UUID, String>> renderedPlayerListNames = new HashMap<>();
+    private final Map<UUID, Set<UUID>> clearedPlayerListNames = new HashMap<>();
     private final Map<UUID, Map<UUID, Player>> pendingPlayerListRestores = new HashMap<>();
     private final Map<UUID, Scoreboard> previousScoreboards = new HashMap<>();
     private final Map<String, PlayerTab> tabs = new HashMap<>();
@@ -119,7 +121,7 @@ public class Sidebar {
         }
         scoreboards.put(playerId, scoreboard);
         viewers.put(playerId, player);
-        renderedPlayerListNames.computeIfAbsent(playerId, ignored -> new HashMap<>());
+        clearedPlayerListNames.computeIfAbsent(playerId, ignored -> new HashSet<>());
         sidebarManager.claimDisplayNameOwnership(this, player);
         retryPendingPlayerListRestores(player);
         renderPlayerListNames(player, renderedTabs, true);
@@ -233,19 +235,27 @@ public class Sidebar {
 
     public void playerTabRefreshAnimation() {
         List<RenderedPlayerTab> renderedTabs = renderPlayerTabs(tabs.values());
+        List<Player> detachedViewers = new ArrayList<>();
         scoreboards.forEach((viewerId, scoreboard) -> {
             Player viewer = viewers.get(viewerId);
             if (viewer == null || !viewer.isOnline()) return;
+            boolean ownsDisplayNames = SidebarManager.getInstance().ownsDisplayNames(this, viewer);
+            if (ownsDisplayNames
+                    && shouldReattachScoreboard(true, scoreboard, viewer.getScoreboard())) {
+                detachedViewers.add(viewer);
+                return;
+            }
             renderedTabs.forEach(tab -> applyTab(scoreboard, tab));
             retryPendingPlayerListRestores(viewer);
             // A visibility change or another plugin can resend ADD_PLAYER or
             // UPDATE_DISPLAY_NAME after our event update. One batched replay
             // per viewer keeps production clients authoritative without a
             // viewer-by-target packet explosion.
-            if (SidebarManager.getInstance().ownsDisplayNames(this, viewer)) {
+            if (ownsDisplayNames) {
                 renderPlayerListNames(viewer, renderedTabs, true);
             }
         });
+        detachedViewers.forEach(this::add);
     }
 
     public void playerHealthRefreshAnimation() {
@@ -461,15 +471,23 @@ public class Sidebar {
 
     private void applyTabToAll(@NotNull PlayerTab tab, boolean forceDisplayName) {
         RenderedPlayerTab renderedTab = renderPlayerTab(tab);
+        List<Player> detachedViewers = new ArrayList<>();
         scoreboards.forEach((viewerId, scoreboard) -> {
             Player viewer = viewers.get(viewerId);
             if (viewer != null && viewer.isOnline()) {
+                boolean ownsDisplayNames = SidebarManager.getInstance().ownsDisplayNames(this, viewer);
+                if (ownsDisplayNames
+                        && shouldReattachScoreboard(true, scoreboard, viewer.getScoreboard())) {
+                    detachedViewers.add(viewer);
+                    return;
+                }
                 applyTab(scoreboard, renderedTab);
-                if (SidebarManager.getInstance().ownsDisplayNames(this, viewer)) {
+                if (ownsDisplayNames) {
                     renderPlayerListNames(viewer, List.of(renderedTab), forceDisplayName);
                 }
             }
         });
+        detachedViewers.forEach(this::add);
     }
 
     void applyTab(@NotNull Scoreboard scoreboard, @NotNull PlayerTab tab) {
@@ -508,6 +526,13 @@ public class Sidebar {
     }
 
     void forcePlayerListNameRefresh(@NotNull Player viewer) {
+        Scoreboard managedScoreboard = scoreboards.get(viewer.getUniqueId());
+        if (managedScoreboard != null
+                && SidebarManager.getInstance().ownsDisplayNames(this, viewer)
+                && shouldReattachScoreboard(true, managedScoreboard, viewer.getScoreboard())) {
+            add(viewer);
+            return;
+        }
         retryPendingPlayerListRestores(viewer);
         renderPlayerListNames(viewer, renderPlayerTabs(tabs.values()), true);
     }
@@ -523,15 +548,21 @@ public class Sidebar {
 
     void resumeDisplayNameOwnership(@NotNull Player viewer) {
         if (!viewer.isOnline() || !SidebarManager.getInstance().ownsDisplayNames(this, viewer)) return;
+        Scoreboard managedScoreboard = scoreboards.get(viewer.getUniqueId());
+        if (managedScoreboard != null
+                && shouldReattachScoreboard(true, managedScoreboard, viewer.getScoreboard())) {
+            add(viewer);
+            return;
+        }
         retryPendingPlayerListRestores(viewer);
         renderPlayerListNames(viewer, renderPlayerTabs(tabs.values()), true);
     }
 
     private void renderPlayerListNames(@NotNull Player viewer, @NotNull Collection<RenderedPlayerTab> playerTabs,
                                        boolean force) {
-        Map<UUID, String> viewerCache = renderedPlayerListNames.computeIfAbsent(
-                viewer.getUniqueId(), ignored -> new HashMap<>());
-        List<PlayerListDisplayNameRenderer.RenderedName> updates = new ArrayList<>();
+        Set<UUID> viewerCache = clearedPlayerListNames.computeIfAbsent(
+                viewer.getUniqueId(), ignored -> new HashSet<>());
+        List<Player> updates = new ArrayList<>();
         for (RenderedPlayerTab renderedTab : playerTabs) {
             PlayerTab tab = renderedTab.tab();
             UUID targetId = tab.getPlayer().getUniqueId();
@@ -539,15 +570,14 @@ public class Sidebar {
                 releaseCachedPlayerListName(viewer.getUniqueId(), targetId);
                 continue;
             }
-            String rendered = renderedTab.displayName();
-            if (!force && rendered.equals(viewerCache.get(targetId))) continue;
-            updates.add(new PlayerListDisplayNameRenderer.RenderedName(tab.getPlayer(), rendered));
+            if (!force && viewerCache.contains(targetId)) continue;
+            updates.add(tab.getPlayer());
         }
         if (updates.isEmpty()) return;
-        if (displayNameRenderer.render(viewer, updates)) {
+        if (displayNameRenderer.clear(viewer, updates)) {
             updates.forEach(update -> {
-                UUID targetId = update.target().getUniqueId();
-                viewerCache.put(targetId, update.legacyDisplayName());
+                UUID targetId = update.getUniqueId();
+                viewerCache.add(targetId);
                 removePendingPlayerListRestore(viewer.getUniqueId(), targetId);
             });
         }
@@ -570,12 +600,12 @@ public class Sidebar {
 
     private void restorePlayerListTargets(@NotNull Player viewer, @NotNull Collection<Player> candidates) {
         UUID viewerId = viewer.getUniqueId();
-        Map<UUID, String> viewerCache = renderedPlayerListNames.get(viewerId);
+        Set<UUID> viewerCache = clearedPlayerListNames.get(viewerId);
         if (viewerCache == null) return;
         Map<UUID, Player> targets = new LinkedHashMap<>();
         for (Player target : candidates) {
             UUID targetId = target.getUniqueId();
-            if (!viewerCache.containsKey(targetId)) continue;
+            if (!viewerCache.contains(targetId)) continue;
             if (target.isOnline()) {
                 targets.putIfAbsent(targetId, target);
             } else {
@@ -596,7 +626,7 @@ public class Sidebar {
     }
 
     private void releaseCachedPlayerListName(@NotNull UUID viewerId, @NotNull UUID targetId) {
-        Map<UUID, String> viewerCache = renderedPlayerListNames.get(viewerId);
+        Set<UUID> viewerCache = clearedPlayerListNames.get(viewerId);
         if (viewerCache != null) viewerCache.remove(targetId);
         removePendingPlayerListRestore(viewerId, targetId);
     }
@@ -609,7 +639,7 @@ public class Sidebar {
     }
 
     private void discardViewerDisplayNameState(@NotNull UUID viewerId) {
-        renderedPlayerListNames.remove(viewerId);
+        clearedPlayerListNames.remove(viewerId);
         pendingPlayerListRestores.remove(viewerId);
     }
 
@@ -636,12 +666,11 @@ public class Sidebar {
     private static @NotNull RenderedPlayerTab renderPlayerTab(@NotNull PlayerTab tab) {
         String prefix = renderText(tab.getPrefix(), tab.getPlaceholders());
         String suffix = renderText(tab.getSuffix(), tab.getPlaceholders());
-        return new RenderedPlayerTab(tab, prefix, suffix,
-                prefix + tab.getColor() + tab.getPlayer().getName() + suffix);
+        return new RenderedPlayerTab(tab, prefix, suffix);
     }
 
     private record RenderedPlayerTab(@NotNull PlayerTab tab, @NotNull String prefix,
-                                     @NotNull String suffix, @NotNull String displayName) {
+                                     @NotNull String suffix) {
     }
 
     private static void unregisterObjective(@NotNull Scoreboard scoreboard, @NotNull String name) {
@@ -678,6 +707,11 @@ public class Sidebar {
     static boolean shouldCapturePreviousScoreboard(Scoreboard managedScoreboard,
                                                     @NotNull Scoreboard currentScoreboard) {
         return managedScoreboard != currentScoreboard;
+    }
+
+    static boolean shouldReattachScoreboard(boolean ownsDisplayNames, @Nullable Scoreboard managedScoreboard,
+                                             @NotNull Scoreboard currentScoreboard) {
+        return ownsDisplayNames && managedScoreboard != null && managedScoreboard != currentScoreboard;
     }
 
     private static void detachTab(@NotNull PlayerTab tab) {

@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.sidebar;
 
+import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
@@ -48,6 +49,17 @@ class BwTabListTest {
         assertSame(red, BwTabList.resolvePlayerListTeam(arena, active));
         assertSame(red, BwTabList.resolvePlayerListTeam(arena, eliminated));
         assertEquals(null, BwTabList.resolvePlayerListTeam(arena, spectator));
+    }
+
+    @Test
+    void waitingAndStartingPlayersUseTheirPreGameSelection() {
+        ITeam red = team("red", TeamColor.RED);
+        Player selected = player("Selected");
+        IArena waiting = arena(List.of(red), List.of(selected), List.of(), Map.of(), Map.of(), GameState.waiting);
+        IArena starting = arena(List.of(red), List.of(selected), List.of(), Map.of(), Map.of(), GameState.starting);
+
+        assertSame(red, BwTabList.resolvePlayerListTeam(waiting, selected, red));
+        assertSame(red, BwTabList.resolvePlayerListTeam(starting, selected, red));
     }
 
     @Test
@@ -205,7 +217,13 @@ class BwTabListTest {
     }
 
     private static IArena arena(List<ITeam> teams, List<Player> players, List<Player> spectators,
-                                Map<UUID, ITeam> currentTeams, Map<UUID, ITeam> formerTeams) {
+                                 Map<UUID, ITeam> currentTeams, Map<UUID, ITeam> formerTeams) {
+        return arena(teams, players, spectators, currentTeams, formerTeams, GameState.playing);
+    }
+
+    private static IArena arena(List<ITeam> teams, List<Player> players, List<Player> spectators,
+                                Map<UUID, ITeam> currentTeams, Map<UUID, ITeam> formerTeams,
+                                GameState state) {
         return (IArena) Proxy.newProxyInstance(
                 IArena.class.getClassLoader(),
                 new Class<?>[]{IArena.class},
@@ -215,6 +233,7 @@ class BwTabListTest {
                     case "getSpectators" -> spectators;
                     case "getTeam" -> currentTeams.get(((Player) args[0]).getUniqueId());
                     case "getExTeam" -> formerTeams.get((UUID) args[0]);
+                    case "getStatus" -> state;
                     default -> throw new UnsupportedOperationException(method.getName());
                 }
         );

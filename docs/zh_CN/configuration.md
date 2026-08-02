@@ -45,8 +45,8 @@ TAB 相关常用项：
 - `scoreboard-settings.tab-header-footer.enable`：显示 TAB 顶部和底部内容，默认开启，且不依赖右侧大厅计分板。
 - `scoreboard-settings.tab-header-footer.lobby-header`：仅配置大厅 TAB 顶部文字。空列表沿用语言文件中的默认内容；非空时逐行填写，系统仍会自动保留内置宽度行。支持 `&` 颜色代码和 `{serverIp}`、`{on}` 等占位符，大厅页尾及竞技场各状态不会被覆盖。
 - `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，默认开启。
-- `scoreboard-settings.player-list.names-refresh-interval`：TAB 动态文字刷新周期，默认 `1200` tick（60 秒），小于 1 时关闭周期刷新。scoreboard team 元数据仍只在真正变化时写入；玩家行平时按事件和内容缓存增量更新，周期到达时则为每个查看者合并发送一个完整显示名数据包，用于修复其他插件或 PlayerInfo 重建造成的覆盖。关闭周期刷新不会关闭登录、切换可见性和游戏状态变化时的即时同步。
-- 游戏进行时恢复原仓库的 `{teamColor}{teamName} ` 队伍前缀，并针对每个查看者把“队伍前缀 + 明确的队伍颜色 + 玩家名 + 后缀”作为完整 TAB 名称发送；头顶名牌则由该查看者的 scoreboard team 独立着色。即使关闭对应状态的完整 TAB 格式，竞技场仍保留不带前后缀的队伍色玩家名和头顶名牌。队伍按红→黄→绿→深绿→青→蓝→粉排列，非光谱色白→灰→深灰置后。同队的存活与淘汰玩家始终连续，并在整组内按完整玩家名字典序排列；纯旁观者最后。最终淘汰会立即同步给当前竞技场的所有 TAB 查看者。旧 `teammate-color` 配置会自动删除；简体中文语言配置架构 14 只迁移此前内置的空前缀，其他自定义文本保持不变。
+- `scoreboard-settings.player-list.names-refresh-interval`：TAB 动态文字刷新周期，默认 `1200` tick（60 秒），小于 1 时关闭周期刷新。scoreboard Team 元数据仍只在真正变化时写入；玩家行平时由登录、切换可见性、选队和游戏状态变化等事件即时同步，周期刷新只重放可能被其他插件或 PlayerInfo 重建覆盖的 nullable 名称状态，并检查实际绑定的 scoreboard 是否发生漂移。关闭周期刷新不会关闭这些事件同步。
+- 游戏进行时恢复原仓库的 `{teamColor}{teamName} ` 队伍前缀。受管 PlayerInfo 的自定义名称保持为空，由每个查看者的 scoreboard Team 同时渲染 TAB 的“队伍前缀 + 队伍色玩家名 + 后缀”和头顶名牌，避免两条状态互相覆盖。即使关闭侧边栏、页首页尾及对应状态的完整 TAB 格式，竞技场仍建立不带可选前后缀的最小队伍色 Team。等待或倒计时阶段的 GUI/`/bw team` 预选会立即更新颜色与排序。队伍按红→黄→绿→深绿→青→蓝→粉排列，非光谱色白→灰→深灰置后。同队的存活与淘汰玩家始终连续，并在整组内按完整玩家名字典序排列；纯旁观者最后。最终淘汰会立即同步给当前竞技场的所有 TAB 查看者。旧 `teammate-color` 配置会自动删除；简体中文语言配置架构 14 只迁移此前内置的空前缀，其他自定义文本保持不变。
 - `scoreboard-settings.health.display-in-tab`：在 TAB 中额外显示生命值数字；默认关闭，避免与原版网络延迟图标混淆。头顶生命值由 `scoreboard-settings.health.enable` 单独控制；旁观玩家在两处都不显示生命值。
 - 正式开局时就为空的队伍不会出现在游戏中或重置阶段的侧边栏；参战后被淘汰的队伍仍保留。这同时适用于通用 `{team}` 行和显式 `{Team<队伍>...}` 占位符行。
 

@@ -6,14 +6,13 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collection;
 
 /**
- * Writes the display-name field of one player-list entry for one viewer.
+ * Controls the nullable PlayerInfo display name for one viewer. Managed rows
+ * keep that field clear so Minecraft renders the scoreboard team's prefix,
+ * suffix and color, exactly like BedWars1058/SidebarLib.
  */
 interface PlayerListDisplayNameRenderer {
 
-    boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names);
+    boolean clear(@NotNull Player viewer, @NotNull Collection<Player> targets);
 
     boolean restore(@NotNull Player viewer, @NotNull Collection<Player> targets);
-
-    record RenderedName(@NotNull Player target, @NotNull String legacyDisplayName) {
-    }
 }

@@ -29,6 +29,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionManager;
 import com.andrei1058.spigot.sidebar.PlayerTab;
 import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
@@ -296,7 +297,7 @@ public class BwTabList {
         GameState status = arena.getStatus();
         if (status != GameState.playing) {
 
-            ITeam team = arena.getTeam(player);
+            ITeam team = resolvePlayerListTeam(arena, player);
 
             switch (status) {
                 case waiting:
@@ -326,7 +327,7 @@ public class BwTabList {
 
         // if status is playing and player is alive
 
-        ITeam team = arena.getTeam(player);
+        ITeam team = resolvePlayerListTeam(arena, player);
         // tab list of playing state
         HashMap<String, String> replacements = getTeamReplacements(team);
 
@@ -380,8 +381,21 @@ public class BwTabList {
     }
 
     static @Nullable ITeam resolvePlayerListTeam(@NotNull IArena arena, @NotNull Player player) {
+        GameState state = arena.getStatus();
+        ITeam selectedTeam = state == GameState.waiting || state == GameState.starting
+                ? PreGameTeamSelectionManager.getInstance().getSelection(arena, player)
+                : null;
+        return resolvePlayerListTeam(arena, player, selectedTeam);
+    }
+
+    static @Nullable ITeam resolvePlayerListTeam(@NotNull IArena arena, @NotNull Player player,
+                                                  @Nullable ITeam selectedTeam) {
         ITeam currentTeam = arena.getTeam(player);
-        return currentTeam == null ? arena.getExTeam(player.getUniqueId()) : currentTeam;
+        if (currentTeam != null) return currentTeam;
+        GameState state = arena.getStatus();
+        if ((state == GameState.waiting || state == GameState.starting)
+                && selectedTeam != null) return selectedTeam;
+        return arena.getExTeam(player.getUniqueId());
     }
 
     private void synchronizeTabs(@NotNull Map<UUID, Player> desiredPlayers, boolean fullFormatting) {
@@ -492,7 +506,7 @@ public class BwTabList {
         List<Player> unassigned = new ArrayList<>();
         for (Player player : arena.getPlayers()) {
             if (!seenPlayers.add(player.getUniqueId())) continue;
-            ITeam team = arena.getTeam(player);
+            ITeam team = resolvePlayerListTeam(arena, player);
             List<Player> members = team == null ? null : teamMembers.get(team.getIdentity());
             if (members == null) {
                 unassigned.add(player);
@@ -502,7 +516,7 @@ public class BwTabList {
         }
         for (Player player : arena.getSpectators()) {
             if (!seenPlayers.add(player.getUniqueId())) continue;
-            ITeam formerTeam = arena.getExTeam(player.getUniqueId());
+            ITeam formerTeam = resolvePlayerListTeam(arena, player);
             List<Player> members = formerTeam == null ? null : teamMembers.get(formerTeam.getIdentity());
             if (members == null) {
                 unassigned.add(player);
