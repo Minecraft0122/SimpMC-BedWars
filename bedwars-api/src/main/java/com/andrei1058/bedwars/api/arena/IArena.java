@@ -419,7 +419,8 @@ public interface IArena {
     void addSign(Location loc);
 
     /**
-     * Refresh signs.
+     * Refresh join signs in chunks that are already loaded. Implementations
+     * may defer other signs until their chunk is loaded.
      */
     void refreshSigns();
 

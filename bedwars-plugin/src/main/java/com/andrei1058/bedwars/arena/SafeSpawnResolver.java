@@ -30,6 +30,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Set;
 
 public final class SafeSpawnResolver {
@@ -64,7 +65,15 @@ public final class SafeSpawnResolver {
             return new Result(configured.clone(), false);
         }
 
-        Result exact = inspect(world, configured.getBlockX(), configured.getBlockY(), configured.getBlockZ(), configured);
+        int configuredX = configured.getBlockX();
+        int configuredY = configured.getBlockY();
+        int configuredZ = configured.getBlockZ();
+        Set<Long> loadedChunks = captureLoadedSearchChunks(world, configuredX, configuredZ);
+        if (loadedChunks.isEmpty()) {
+            return new Result(configured.clone(), false);
+        }
+
+        Result exact = inspect(world, configuredX, configuredY, configuredZ, configured, loadedChunks);
         if (exact != null) return exact;
 
         for (int radius = 1; radius <= SEARCH_RADIUS; radius++) {
@@ -74,10 +83,11 @@ public final class SafeSpawnResolver {
                     for (int yOffset : Y_OFFSETS) {
                         Result candidate = inspect(
                                 world,
-                                configured.getBlockX() + xOffset,
-                                configured.getBlockY() + yOffset,
-                                configured.getBlockZ() + zOffset,
-                                configured
+                                configuredX + xOffset,
+                                configuredY + yOffset,
+                                configuredZ + zOffset,
+                                configured,
+                                loadedChunks
                         );
                         if (candidate != null) return candidate;
                     }
@@ -102,7 +112,37 @@ public final class SafeSpawnResolver {
         });
     }
 
-    private static Result inspect(World world, int x, int y, int z, Location configured) {
+    /**
+     * Snapshot the chunks which are already available to the current tick. Calling
+     * {@link World#getBlockAt(int, int, int)} for an unloaded chunk can synchronously
+     * start a region read, which is especially expensive from a respawn event.
+     */
+    private static Set<Long> captureLoadedSearchChunks(World world, int centerX, int centerZ) {
+        int minChunkX = Math.floorDiv(centerX - SEARCH_RADIUS, 16);
+        int maxChunkX = Math.floorDiv(centerX + SEARCH_RADIUS, 16);
+        int minChunkZ = Math.floorDiv(centerZ - SEARCH_RADIUS, 16);
+        int maxChunkZ = Math.floorDiv(centerZ + SEARCH_RADIUS, 16);
+        int chunkCount = (maxChunkX - minChunkX + 1) * (maxChunkZ - minChunkZ + 1);
+        Set<Long> loadedChunks = new HashSet<>(chunkCount);
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                if (world.isChunkLoaded(chunkX, chunkZ)) {
+                    loadedChunks.add(chunkKey(chunkX, chunkZ));
+                }
+            }
+        }
+        return loadedChunks;
+    }
+
+    private static long chunkKey(int chunkX, int chunkZ) {
+        return ((long) chunkX << 32) ^ (chunkZ & 0xffffffffL);
+    }
+
+    private static Result inspect(World world, int x, int y, int z, Location configured,
+                                  Set<Long> loadedChunks) {
+        if (!loadedChunks.contains(chunkKey(Math.floorDiv(x, 16), Math.floorDiv(z, 16)))) {
+            return null;
+        }
         Block feet = world.getBlockAt(x, y, z);
         Block floor = world.getBlockAt(x, y - 1, z);
         if (!feet.isPassable() || feet.isLiquid() || UNSAFE_BLOCKS.contains(feet.getType())

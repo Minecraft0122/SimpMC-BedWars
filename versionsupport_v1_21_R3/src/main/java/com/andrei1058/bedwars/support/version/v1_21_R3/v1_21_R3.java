@@ -604,7 +604,13 @@ public class v1_21_R3 extends VersionSupport {
     @Override
     public void setJoinSignBackground(BlockState blockState, Material material) {
         if (blockState.getBlockData() instanceof WallSign wallSign) {
-            blockState.getBlock().getRelative(wallSign.getFacing().getOppositeFace()).setType(material);
+            Block sign = blockState.getBlock();
+            BlockFace supportFace = wallSign.getFacing().getOppositeFace();
+            int supportX = sign.getX() + supportFace.getModX();
+            int supportZ = sign.getZ() + supportFace.getModZ();
+            World world = sign.getWorld();
+            if (!world.isChunkLoaded(supportX >> 4, supportZ >> 4)) return;
+            sign.getRelative(supportFace).setType(material);
         }
     }
 

@@ -23,7 +23,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static com.andrei1058.bedwars.BedWars.config;
 import static com.andrei1058.bedwars.api.language.Language.getScoreboard;
@@ -40,6 +43,8 @@ public class SidebarService implements ISidebarService {
     private final HashMap<UUID, BwSidebar> sidebars = new HashMap<>();
     private final HashMap<UUID, BukkitTask> delayedSidebarTasks = new HashMap<>();
     private final HashSet<UUID> pendingWorldResynchronizations = new HashSet<>();
+    private final Map<IArena, LinkedHashMap<UUID, Player>> pendingEliminationRefreshes =
+            new IdentityHashMap<>();
 
     public static boolean init(JavaPlugin plugin) {
         if (null == instance) {
@@ -337,7 +342,23 @@ public class SidebarService implements ISidebarService {
     void handlePlayerShown(@NotNull Player viewer, @NotNull Player target) {
         if (!viewer.isOnline() || !target.isOnline()) return;
         BwSidebar sidebar = sidebars.get(viewer.getUniqueId());
-        if (sidebar != null) sidebar.replayPlayerListEntry(target);
+        if (sidebar != null && shouldReplayPlayerShown(
+                sidebar.getArena(), target.getUniqueId(), pendingEliminationRefreshes)) {
+            sidebar.replayPlayerListEntry(target);
+        }
+    }
+
+    /**
+     * An elimination already owns the target row until its coalesced arena
+     * refresh runs. Paper's showPlayer callback would otherwise replay the
+     * same row once for every visibility pair in the death path.
+     */
+    static boolean shouldReplayPlayerShown(
+            @Nullable IArena viewerArena, @NotNull UUID targetId,
+            @NotNull Map<IArena, ? extends Map<UUID, Player>> pendingRefreshes) {
+        if (viewerArena == null) return true;
+        Map<UUID, Player> pendingPlayers = pendingRefreshes.get(viewerArena);
+        return pendingPlayers == null || !pendingPlayers.containsKey(targetId);
     }
 
     /**
@@ -407,6 +428,7 @@ public class SidebarService implements ISidebarService {
 
     /** Remove scoreboards that still reference an arena being destroyed. */
     public void removeArena(@NotNull IArena arena) {
+        pendingEliminationRefreshes.remove(arena);
         List<BwSidebar> stale = sidebars.values().stream()
                 .filter(sidebar -> sidebar.getArena() == arena)
                 .toList();
@@ -418,6 +440,7 @@ public class SidebarService implements ISidebarService {
         delayedSidebarTasks.values().forEach(BukkitTask::cancel);
         delayedSidebarTasks.clear();
         pendingWorldResynchronizations.clear();
+        pendingEliminationRefreshes.clear();
         List<BwSidebar> activeSidebars = new ArrayList<>(sidebars.values());
         for (BwSidebar sidebar : activeSidebars) {
             try {
@@ -550,10 +573,73 @@ public class SidebarService implements ISidebarService {
         }
     }
 
-    /** Refresh an eliminated player's TAB entry on every other arena scoreboard. */
+    /**
+     * Refresh elimination state after the arena has moved the player out of
+     * its active team. Multiple eliminations from the same arena and tick are
+     * collapsed into one placeholder pass and one TAB-row update per player.
+     */
     public void handleElimination(@NotNull IArena arena, @NotNull Player player) {
+        if (sidebarHandler == null) return;
+        scheduleArenaEliminationRefresh(
+                pendingEliminationRefreshes,
+                arena,
+                player,
+                task -> Bukkit.getScheduler().runTask(BedWars.plugin, task),
+                this::flushArenaEliminationRefresh
+        );
+    }
+
+    static void scheduleArenaEliminationRefresh(
+            @NotNull Map<IArena, LinkedHashMap<UUID, Player>> pendingRefreshes,
+            @NotNull IArena arena,
+            @NotNull Player player,
+            @NotNull Consumer<Runnable> scheduler,
+            @NotNull BiConsumer<IArena, Collection<Player>> refresh) {
+        LinkedHashMap<UUID, Player> players = pendingRefreshes.get(arena);
+        boolean scheduleRefresh = players == null;
+        if (players == null) {
+            players = new LinkedHashMap<>();
+            pendingRefreshes.put(arena, players);
+        }
+        players.put(player.getUniqueId(), player);
+        if (scheduleRefresh) {
+            scheduler.accept(() -> {
+                LinkedHashMap<UUID, Player> queuedPlayers = pendingRefreshes.remove(arena);
+                if (queuedPlayers != null && !queuedPlayers.isEmpty()) {
+                    refresh.accept(arena, List.copyOf(queuedPlayers.values()));
+                }
+            });
+        }
+    }
+
+    private void flushArenaEliminationRefresh(@NotNull IArena arena,
+                                               @NotNull Collection<Player> eliminatedPlayers) {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
-        updateArenaPlayerTabs(sidebars.values(), arena, player, true);
+
+        List<BwSidebar> arenaSidebars = sidebars.values().stream()
+                .filter(sidebar -> sidebar.getArena() == arena)
+                .toList();
+        refreshEliminationState(
+                eliminatedPlayers,
+                player -> isCurrentElimination(arena, player, Arena::getArenaByPlayer),
+                () -> arenaSidebars.forEach(sidebar -> {
+                    if (sidebar.getHandle() != null) sidebar.getHandle().refreshPlaceholders();
+                }),
+                player -> updateArenaPlayerTabs(arenaSidebars, arena, player, true)
+        );
+    }
+
+    static boolean isCurrentElimination(@NotNull IArena arena, @NotNull Player player,
+                                        @NotNull Function<Player, IArena> arenaLookup) {
+        return player.isOnline() && arenaLookup.apply(player) == arena && arena.isSpectator(player);
+    }
+
+    static void refreshEliminationState(@NotNull Collection<Player> queuedPlayers,
+                                        @NotNull Predicate<Player> currentPlayer,
+                                        @NotNull Runnable refreshPlaceholders,
+                                        @NotNull Consumer<Player> refreshTabRow) {
+        refreshPlaceholders.run();
+        queuedPlayers.stream().filter(currentPlayer).forEach(refreshTabRow);
     }
 
     static void updateArenaPlayerTabs(@NotNull Collection<? extends ISidebar> sidebars,

@@ -56,6 +56,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.andrei1058.bedwars.BedWars.*;
@@ -407,45 +408,14 @@ public class BedWarsTeam implements ITeam {
                 p.addPotionEffect(ef, true);
             }
         }
-        if (!getBowsEnchantments().isEmpty()) {
-            for (ItemStack i : p.getInventory().getContents()) {
-                if (i == null) continue;
-                if (i.getType() == Material.BOW) {
-                    ItemMeta im = i.getItemMeta();
-                    for (TeamEnchant e : getBowsEnchantments()) {
-                        im.addEnchant(e.getEnchantment(), e.getAmplifier(), true);
-                    }
-                    i.setItemMeta(im);
-                }
-                p.updateInventory();
-            }
-        }
-        if (!getSwordsEnchantments().isEmpty()) {
-            for (ItemStack i : p.getInventory().getContents()) {
-                if (i == null) continue;
-                if (nms.isSword(i)) {
-                    ItemMeta im = i.getItemMeta();
-                    for (TeamEnchant e : getSwordsEnchantments()) {
-                        im.addEnchant(e.getEnchantment(), e.getAmplifier(), true);
-                    }
-                    i.setItemMeta(im);
-                }
-                p.updateInventory();
-            }
-        }
-        if (!getArmorsEnchantments().isEmpty()) {
-            for (ItemStack i : p.getInventory().getArmorContents()) {
-                if (i == null) continue;
-                if (nms.isArmor(i)) {
-                    ItemMeta im = i.getItemMeta();
-                    for (TeamEnchant e : getArmorsEnchantments()) {
-                        im.addEnchant(e.getEnchantment(), e.getAmplifier(), true);
-                    }
-                    i.setItemMeta(im);
-                }
-                p.updateInventory();
-            }
-        }
+        applyRespawnEnchantments(
+                p,
+                getBowsEnchantments(),
+                getSwordsEnchantments(),
+                getArmorsEnchantments(),
+                nms::isSword,
+                nms::isArmor
+        );
         Bukkit.getPluginManager().callEvent(new PlayerReSpawnEvent(p, getArena(), this));
         nms.sendPlayerSpawnPackets(p, getArena());
         for (Player invisible : getArena().getShowTime().keySet()) {
@@ -453,6 +423,45 @@ public class BedWarsTeam implements ITeam {
         }
 
         Sounds.playSound("player-re-spawn", p);
+    }
+
+    /**
+     * Applies every team enchantment before issuing at most one full inventory
+     * synchronization. Calling {@link Player#updateInventory()} inside the slot
+     * loops turns one respawn into dozens of complete inventory packets.
+     */
+    static boolean applyRespawnEnchantments(@NotNull Player player,
+                                            @NotNull Collection<? extends TeamEnchant> bowEnchantments,
+                                            @NotNull Collection<? extends TeamEnchant> swordEnchantments,
+                                            @NotNull Collection<? extends TeamEnchant> armorEnchantments,
+                                            @NotNull Predicate<ItemStack> swordMatcher,
+                                            @NotNull Predicate<ItemStack> armorMatcher) {
+        ItemStack[] contents = player.getInventory().getContents();
+        boolean changed = applyEnchantments(contents, bowEnchantments, item -> item.getType() == Material.BOW);
+        changed |= applyEnchantments(contents, swordEnchantments, swordMatcher);
+        changed |= applyEnchantments(player.getInventory().getArmorContents(), armorEnchantments, armorMatcher);
+        if (changed) player.updateInventory();
+        return changed;
+    }
+
+    private static boolean applyEnchantments(ItemStack[] items,
+                                             Collection<? extends TeamEnchant> enchantments,
+                                             Predicate<ItemStack> matcher) {
+        if (enchantments.isEmpty()) return false;
+
+        boolean inventoryChanged = false;
+        for (ItemStack item : items) {
+            if (item == null || !matcher.test(item)) continue;
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) continue;
+
+            boolean itemChanged = false;
+            for (TeamEnchant enchantment : enchantments) {
+                itemChanged |= meta.addEnchant(enchantment.getEnchantment(), enchantment.getAmplifier(), true);
+            }
+            if (itemChanged && item.setItemMeta(meta)) inventoryChanged = true;
+        }
+        return inventoryChanged;
     }
 
     /**

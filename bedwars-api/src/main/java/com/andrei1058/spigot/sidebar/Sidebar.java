@@ -1,5 +1,6 @@
 package com.andrei1058.spigot.sidebar;
 
+import io.papermc.paper.scoreboard.numbers.FixedFormat;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -23,6 +24,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -230,7 +232,9 @@ public class Sidebar {
     }
 
     public void refreshPlaceholders() {
-        renderAll();
+        if (scoreboards.isEmpty()) return;
+        RenderedSidebar rendered = renderSidebar();
+        scoreboards.values().forEach(scoreboard -> refreshRenderedContent(scoreboard, rendered));
     }
 
     public void playerTabRefreshAnimation() {
@@ -388,41 +392,139 @@ public class Sidebar {
         if (scoreboards.isEmpty()) {
             return;
         }
-        scoreboards.values().forEach(this::render);
+        RenderedSidebar rendered = renderSidebar();
+        scoreboards.values().forEach(scoreboard -> render(scoreboard, rendered));
     }
 
     private void render(@NotNull Scoreboard scoreboard) {
+        render(scoreboard, renderSidebar());
+    }
+
+    private void render(@NotNull Scoreboard scoreboard, @NotNull RenderedSidebar rendered) {
         removeLineTeams(scoreboard);
         unregisterObjective(scoreboard, SIDEBAR_OBJECTIVE);
 
-        String renderedTitle = renderText(title, placeholders);
-        if (lines.isEmpty() && renderedTitle.isBlank()) {
+        if (rendered.empty()) {
             return;
         }
 
         Objective objective = scoreboard.registerNewObjective(
                 SIDEBAR_OBJECTIVE,
                 Criteria.DUMMY,
-                component(renderedTitle)
+                rendered.title()
         );
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.numberFormat(NumberFormat.blank());
 
-        int visibleLines = Math.min(lines.size(), LINE_ENTRIES.length);
+        int visibleLines = rendered.lines().size();
         for (int index = 0; index < visibleLines; index++) {
-            SidebarLine line = lines.get(index);
-            String entry = LINE_ENTRIES[index];
+            RenderedSidebarLine line = rendered.lines().get(index);
             Team team = scoreboard.registerNewTeam(LINE_TEAM_PREFIX + index);
-            team.addEntry(entry);
-            team.prefix(component(renderText(line, placeholders)));
+            team.addEntry(line.entry());
+            team.prefix(line.text());
 
-            Score score = objective.getScore(entry);
+            Score score = objective.getScore(line.entry());
             score.setScore(visibleLines - index);
-            if (line instanceof ScoredLine scoredLine && scoredLine.getScore() != null) {
-                String fixedScore = replacePlaceholders(scoredLine.getScore(), placeholders);
-                score.numberFormat(NumberFormat.fixed(component(fixedScore)));
+            if (line.numberFormat() != null) score.numberFormat(line.numberFormat());
+        }
+    }
+
+    /**
+     * Placeholder refreshes do not change the sidebar shape. Reuse the
+     * existing objective and line teams so a final kill only sends the values
+     * that actually changed. If another plugin removed part of our structure,
+     * rebuild once to restore a complete, authoritative model.
+     */
+    private void refreshRenderedContent(@NotNull Scoreboard scoreboard,
+                                        @NotNull RenderedSidebar rendered) {
+        Objective objective = scoreboard.getObjective(SIDEBAR_OBJECTIVE);
+        if (!hasCompleteStructure(scoreboard, objective, rendered)) {
+            render(scoreboard, rendered);
+            return;
+        }
+        if (rendered.empty()) return;
+
+        if (!Objects.equals(objective.displayName(), rendered.title())) {
+            objective.displayName(rendered.title());
+        }
+        for (int index = 0; index < rendered.lines().size(); index++) {
+            RenderedSidebarLine line = rendered.lines().get(index);
+            Team team = scoreboard.getTeam(LINE_TEAM_PREFIX + index);
+            if (!Objects.equals(team.prefix(), line.text())) {
+                team.prefix(line.text());
+            }
+
+            Score score = objective.getScore(line.entry());
+            if (!sameNumberFormat(score.numberFormat(), line.numberFormat())) {
+                score.numberFormat(line.numberFormat());
             }
         }
+    }
+
+    private static boolean hasCompleteStructure(@NotNull Scoreboard scoreboard,
+                                                @Nullable Objective objective,
+                                                @NotNull RenderedSidebar rendered) {
+        if (rendered.empty()) {
+            if (objective != null) return false;
+            for (int index = 0; index < LINE_ENTRIES.length; index++) {
+                if (scoreboard.getTeam(LINE_TEAM_PREFIX + index) != null) return false;
+            }
+            return true;
+        }
+        if (objective == null || objective.getDisplaySlot() != DisplaySlot.SIDEBAR) return false;
+
+        int visibleLines = rendered.lines().size();
+        for (int index = 0; index < LINE_ENTRIES.length; index++) {
+            Team team = scoreboard.getTeam(LINE_TEAM_PREFIX + index);
+            if (index >= visibleLines) {
+                if (team != null) return false;
+                continue;
+            }
+            RenderedSidebarLine line = rendered.lines().get(index);
+            if (team == null || !team.hasEntry(line.entry())) return false;
+            Score score = objective.getScore(line.entry());
+            if (!score.isScoreSet() || score.getScore() != visibleLines - index) return false;
+        }
+        return true;
+    }
+
+    private @NotNull RenderedSidebar renderSidebar() {
+        String renderedTitle = renderText(title, placeholders);
+        int visibleLines = Math.min(lines.size(), LINE_ENTRIES.length);
+        List<RenderedSidebarLine> renderedLines = new ArrayList<>(visibleLines);
+        for (int index = 0; index < visibleLines; index++) {
+            SidebarLine line = lines.get(index);
+            NumberFormat numberFormat = null;
+            if (line instanceof ScoredLine scoredLine && scoredLine.getScore() != null) {
+                String fixedScore = replacePlaceholders(scoredLine.getScore(), placeholders);
+                numberFormat = NumberFormat.fixed(component(fixedScore));
+            }
+            renderedLines.add(new RenderedSidebarLine(
+                    LINE_ENTRIES[index], component(renderText(line, placeholders)), numberFormat));
+        }
+        return new RenderedSidebar(
+                component(renderedTitle), renderedLines,
+                renderedLines.isEmpty() && renderedTitle.isBlank());
+    }
+
+    private static boolean sameNumberFormat(@Nullable NumberFormat current,
+                                            @Nullable NumberFormat expected) {
+        if (current == expected) return true;
+        if (current == null || expected == null) return false;
+        if (current instanceof FixedFormat currentFixed
+                && expected instanceof FixedFormat expectedFixed) {
+            return currentFixed.component().equals(expectedFixed.component());
+        }
+        return current.equals(expected);
+    }
+
+    private record RenderedSidebar(@NotNull Component title,
+                                   @NotNull List<RenderedSidebarLine> lines,
+                                   boolean empty) {
+    }
+
+    private record RenderedSidebarLine(@NotNull String entry, @NotNull Component text,
+                                       @Nullable NumberFormat numberFormat) {
     }
 
     private void renderHealth(@NotNull Scoreboard scoreboard) {

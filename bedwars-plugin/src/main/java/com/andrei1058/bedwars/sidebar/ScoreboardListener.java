@@ -158,12 +158,4 @@ public class ScoreboardListener implements Listener {
         SidebarService.getInstance().refreshPlaceholders(e.getArena());
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onFinalKill(@NotNull PlayerKillEvent e) {
-        if (!e.getCause().isFinalKill()) {
-            return;
-        }
-        // refresh placeholders in case placeholders refresh is disabled
-        SidebarService.getInstance().refreshPlaceholders(e.getArena());
-    }
 }

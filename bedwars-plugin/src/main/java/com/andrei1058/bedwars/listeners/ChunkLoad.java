@@ -21,6 +21,9 @@
 package com.andrei1058.bedwars.listeners;
 
 import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.listeners.blockstatus.BlockStatusListener;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.ArmorStand;
@@ -28,6 +31,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
+
+import java.util.ArrayList;
 
 public class ChunkLoad implements Listener {
 
@@ -55,6 +60,11 @@ public class ChunkLoad implements Listener {
                         }
                     }
                 }
+            }
+            for (IArena arena : new ArrayList<>(Arena.getArenas())) {
+                if (!(arena instanceof Arena concreteArena)) continue;
+                concreteArena.refreshSigns(e.getChunk());
+                BlockStatusListener.updateBlock(concreteArena, e.getChunk());
             }
         });
     }

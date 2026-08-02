@@ -7,8 +7,12 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -99,6 +103,104 @@ class SidebarServiceTest {
     }
 
     @Test
+    void eliminationsInOneArenaAndTickShareOneRefresh() {
+        IArena firstArena = arena();
+        IArena secondArena = arena();
+        Player alice = player("alice");
+        Player bob = player("bob");
+        Map<IArena, LinkedHashMap<UUID, Player>> pending = new IdentityHashMap<>();
+        List<Runnable> scheduled = new ArrayList<>();
+        List<IArena> refreshedArenas = new ArrayList<>();
+        List<Collection<Player>> refreshedPlayers = new ArrayList<>();
+
+        SidebarService.scheduleArenaEliminationRefresh(
+                pending, firstArena, alice, scheduled::add,
+                (arena, players) -> {
+                    refreshedArenas.add(arena);
+                    refreshedPlayers.add(players);
+                });
+        SidebarService.scheduleArenaEliminationRefresh(
+                pending, firstArena, alice, scheduled::add,
+                (arena, players) -> {
+                    refreshedArenas.add(arena);
+                    refreshedPlayers.add(players);
+                });
+        SidebarService.scheduleArenaEliminationRefresh(
+                pending, firstArena, bob, scheduled::add,
+                (arena, players) -> {
+                    refreshedArenas.add(arena);
+                    refreshedPlayers.add(players);
+                });
+        SidebarService.scheduleArenaEliminationRefresh(
+                pending, secondArena, bob, scheduled::add,
+                (arena, players) -> {
+                    refreshedArenas.add(arena);
+                    refreshedPlayers.add(players);
+                });
+
+        assertEquals(2, scheduled.size(), "each arena must own one next-tick refresh");
+        scheduled.getFirst().run();
+        assertEquals(List.of(firstArena), refreshedArenas);
+        assertEquals(List.of(alice, bob), List.copyOf(refreshedPlayers.getFirst()));
+        assertFalse(pending.containsKey(firstArena));
+        assertTrue(pending.containsKey(secondArena));
+
+        scheduled.get(1).run();
+        assertEquals(List.of(firstArena, secondArena), refreshedArenas);
+        assertEquals(List.of(bob), List.copyOf(refreshedPlayers.get(1)));
+        assertTrue(pending.isEmpty());
+    }
+
+    @Test
+    void showPlayerDoesNotReplayAnEliminationRowAlreadyQueuedForTheArena() {
+        IArena arena = arena();
+        IArena otherArena = arena();
+        Player eliminated = player("eliminated");
+        Map<IArena, LinkedHashMap<UUID, Player>> pending = new IdentityHashMap<>();
+        pending.computeIfAbsent(arena, ignored -> new LinkedHashMap<>())
+                .put(eliminated.getUniqueId(), eliminated);
+
+        assertFalse(SidebarService.shouldReplayPlayerShown(
+                arena, eliminated.getUniqueId(), pending));
+        assertTrue(SidebarService.shouldReplayPlayerShown(
+                otherArena, eliminated.getUniqueId(), pending));
+        assertTrue(SidebarService.shouldReplayPlayerShown(
+                null, eliminated.getUniqueId(), pending));
+        assertTrue(SidebarService.shouldReplayPlayerShown(
+                arena, player("other").getUniqueId(), pending));
+    }
+
+    @Test
+    void delayedEliminationRefreshRejectsOfflineLeftAndTransferredPlayers() {
+        IArena originalArena = arena(true);
+        IArena otherArena = arena(true);
+        Player online = player("online");
+        Player offline = player("offline", false);
+
+        assertTrue(SidebarService.isCurrentElimination(originalArena, online, ignored -> originalArena));
+        assertFalse(SidebarService.isCurrentElimination(originalArena, offline, ignored -> originalArena));
+        assertFalse(SidebarService.isCurrentElimination(originalArena, online, ignored -> null));
+        assertFalse(SidebarService.isCurrentElimination(originalArena, online, ignored -> otherArena));
+        assertFalse(SidebarService.isCurrentElimination(arena(false), online, ignored -> originalArena));
+    }
+
+    @Test
+    void staleEliminationStillRefreshesArenaPlaceholdersWithoutRestoringTabRow() {
+        AtomicInteger placeholderRefreshes = new AtomicInteger();
+        AtomicInteger tabRefreshes = new AtomicInteger();
+
+        SidebarService.refreshEliminationState(
+                List.of(player("left")),
+                ignored -> false,
+                placeholderRefreshes::incrementAndGet,
+                ignored -> tabRefreshes.incrementAndGet()
+        );
+
+        assertEquals(1, placeholderRefreshes.get());
+        assertEquals(0, tabRefreshes.get());
+    }
+
+    @Test
     void preGameSelectionRefreshesAffectedRowsForEveryArenaViewerIncludingSelf() {
         IArena arena = arena();
         IArena otherArena = arena();
@@ -120,20 +222,29 @@ class SidebarServiceTest {
     }
 
     private static IArena arena() {
+        return arena(null);
+    }
+
+    private static IArena arena(Boolean spectator) {
         return (IArena) Proxy.newProxyInstance(IArena.class.getClassLoader(),
                 new Class<?>[]{IArena.class},
                 (proxy, method, args) -> {
+                    if (method.getName().equals("isSpectator") && spectator != null) return spectator;
                     throw new UnsupportedOperationException(method.getName());
                 });
     }
 
     private static Player player(String name) {
+        return player(name, true);
+    }
+
+    private static Player player(String name, boolean online) {
         UUID identity = UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         return (Player) Proxy.newProxyInstance(Player.class.getClassLoader(),
                 new Class<?>[]{Player.class},
                 (proxy, method, args) -> {
                     if (method.getName().equals("getUniqueId")) return identity;
-                    if (method.getName().equals("isOnline")) return true;
+                    if (method.getName().equals("isOnline")) return online;
                     throw new UnsupportedOperationException(method.getName());
                 });
     }

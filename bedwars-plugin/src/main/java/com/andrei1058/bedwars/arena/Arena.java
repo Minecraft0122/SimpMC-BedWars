@@ -121,7 +121,7 @@ public class Arena implements IArena {
 
     private List<Player> players = new ArrayList<>();
     private List<Player> spectators = new ArrayList<>();
-    private List<Block> signs = new ArrayList<>();
+    private final ArenaSignRegistry signs = new ArenaSignRegistry();
     private GameState status = GameState.restarting;
     private YamlConfiguration yml;
     private ArenaConfig cm;
@@ -137,6 +137,7 @@ public class Arena implements IArena {
     private List<Region> regionsList = new ArrayList<>();
     private int renderDistance;
     private boolean destroyed;
+    private boolean arenaIndicatorRefreshScheduled;
 
     private final List<Player> leaving = new ArrayList<>();
 
@@ -692,7 +693,7 @@ public class Arena implements IArena {
 
                 p.getInventory().setArmorContents(null);
                 if (playerBefore) {
-                    refreshArenaIndicators();
+                    requestArenaIndicatorRefresh();
                 } else {
                     refreshSpectatorHolograms(p);
                 }
@@ -752,6 +753,20 @@ public class Arena implements IArena {
     private void refreshArenaIndicators() {
         refreshSigns();
         JoinNPC.updateNPCs(group);
+    }
+
+    /**
+     * Join signs and NPC counters are not part of the player's respawn state.
+     * Move them out of the spectator packet batch and collapse repeated arena
+     * population changes into one update.
+     */
+    private void requestArenaIndicatorRefresh() {
+        if (destroyed || arenaIndicatorRefreshScheduled) return;
+        arenaIndicatorRefreshScheduled = true;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            arenaIndicatorRefreshScheduled = false;
+            if (!destroyed) refreshArenaIndicators();
+        });
     }
 
     /**
@@ -1496,6 +1511,16 @@ public class Arena implements IArena {
         return signs;
     }
 
+    /** Registered sign blocks whose coordinates are inside the supplied chunk. */
+    public List<Block> getSignsInChunk(@NotNull Chunk chunk) {
+        return signs.inChunk(chunk);
+    }
+
+    /** Sign blocks which may be attached to a block in this chunk. */
+    public List<Block> getSignsNearChunk(@NotNull Chunk chunk) {
+        return signs.inChunkAndNeighbors(chunk);
+    }
+
     /**
      * Get the island radius
      */
@@ -1674,12 +1699,13 @@ public class Arena implements IArena {
      * Add a join sign for the arena.
      */
     public void addSign(Location loc) {
-        if (loc == null) return;
-        if (loc.getBlock().getType().toString().endsWith("_SIGN") || loc.getBlock().getType().toString().endsWith("_WALL_SIGN")) {
-            signs.add(loc.getBlock());
-            refreshSigns();
-            BlockStatusListener.updateBlock(this);
-        }
+        if (loc == null || loc.getWorld() == null) return;
+        Block block = loc.getBlock();
+        if (signs.contains(block)) return;
+        if (BlockStatusListener.canReadSign(block, null) && !(block.getState() instanceof Sign)) return;
+        signs.add(block);
+        refreshSigns();
+        BlockStatusListener.updateBlock(this);
     }
 
     /**
@@ -1695,16 +1721,19 @@ public class Arena implements IArena {
      * Refresh signs.
      */
     public synchronized void refreshSigns() {
-        for (Block b : getSigns()) {
-            if (b == null) continue;
-            if (!(b.getType().toString().endsWith("_SIGN") || b.getType().toString().endsWith("_WALL_SIGN"))) continue;
-            if (!(b.getState() instanceof Sign)) continue;
-            Sign s = (Sign) b.getState();
-            if (s == null) return;
+        refreshSigns(null);
+    }
+
+    /** Refresh only signs in a chunk which Paper has already loaded. */
+    public synchronized void refreshSigns(@Nullable Chunk loadedChunk) {
+        List<Block> candidates = loadedChunk == null ? getSigns() : getSignsInChunk(loadedChunk);
+        for (Block b : candidates) {
+            if (!BlockStatusListener.canReadSign(b, loadedChunk)) continue;
+            if (!(b.getState() instanceof Sign s)) continue;
             int line = 0;
             for (String string : BedWars.signs.getList("format")) {
+                if (line >= 4) break;
                 if (string == null) continue;
-                if (getPlayers() == null) continue;
                 s.setLine(line, string.replace("[on]", String.valueOf(getPlayers().size()))
                         .replace("[max]", String.valueOf(getMaxPlayers())).replace("[arena]", getDisplayName())
                         .replace("[status]", getDisplayStatus(Language.getDefaultLanguage()))
@@ -1712,9 +1741,10 @@ public class Arena implements IArena {
                 line++;
             }
             try {
-                s.update(true);
+                s.update(true, false);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                plugin.getLogger().log(Level.WARNING,
+                        "无法刷新竞技场 " + getArenaName() + " 的加入告示牌。", ex);
             }
         }
     }
@@ -2265,10 +2295,14 @@ public class Arena implements IArena {
                             plugin.getLogger().severe("Could not load sign at: " + data.toString());
                             continue;
                         }
-                        addSign(l);
+                        if (l.getWorld() != null) {
+                            Block sign = l.getBlock();
+                            if (!signs.contains(sign)) signs.add(sign);
+                        }
                     }
                 }
             }
+            refreshSigns();
         }
     }
 
@@ -2481,6 +2515,7 @@ public class Arena implements IArena {
     public void destroyData() {
         if (destroyed) return;
         destroyed = true;
+        arenaIndicatorRefreshScheduled = false;
 
         if (startingTask != null) startingTask.cancel();
         if (playingTask != null) playingTask.cancel();
