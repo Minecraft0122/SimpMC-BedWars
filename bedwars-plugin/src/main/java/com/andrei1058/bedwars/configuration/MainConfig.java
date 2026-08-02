@@ -31,6 +31,7 @@ import com.andrei1058.bedwars.arena.Misc;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
@@ -40,7 +41,12 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 25;
+    private static final int CONFIG_VERSION = 26;
+    private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
+    private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
+    private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
+    private static final Set<String> BUILT_IN_LOBBY_ITEM_FIELDS =
+            Set.of("command", "material", "data", "enchanted", "slot");
     private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
     private static final double FIREBALL_SPEED_MULTIPLIER_DEFAULT = 16.0;
     private static final double FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT = 1.5;
@@ -226,7 +232,15 @@ public class MainConfig extends ConfigManager {
         yml.options().copyDefaults(true);
         addConfigurationComments();
         ChineseConfigDocumentation.main(this);
-        updateToLatestVersion(CONFIG_VERSION, MainConfig::migrateLegacyConfig);
+        int storedConfigVersion = yml.getInt(CONFIG_VERSION_PATH, 0);
+        LegacyLobbyItemHistory legacyLobbyItemHistory = findLegacyLobbyItemHistory(
+                plugin.getDataFolder(), storedConfigVersion);
+        updateToLatestVersion(CONFIG_VERSION, config -> {
+            if (migrateLegacyConfig(config, legacyLobbyItemHistory)) {
+                plugin.getLogger().info("已从 " + legacyLobbyItemHistory.fileName()
+                        + " 恢复曾被旧版本迁移误删的大厅返回物品配置。");
+            }
+        });
 
         //set default server language
         String whatLang = "en";
@@ -313,7 +327,8 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
                 "多竞技场大厅固定物品。默认提供历史战绩、竞技场选择器和“回到主大厅”红床。",
-                "旧配置升级时只补齐缺失字段，不覆盖管理员已有的自定义材质、命令或槽位。",
+                "已有节点升级时只补齐缺失字段；删除整个节点后不会被后续架构升级重新创建。",
+                "4.0.8 会从架构 15 删除前的最后快照，或架构 15–17 中重新配置过的快照，一次性恢复被误删的自定义 leave 节点。",
                 "leave 节点会写入代理大厅目标标记；等待区和旁观区的 leave 节点则固定返回本服大厅。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE,
                 "竞技场选择菜单设置；默认 54 格、每页显示 45 个竞技场，竞技场更多时自动分页。",
@@ -321,7 +336,8 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.LOBBY_VOID_TELEPORT_ENABLED, "大厅掉入虚空时是否传送回大厅出生点。");
     }
 
-    private static void migrateLegacyConfig(YamlConfiguration yml) {
+    private static boolean migrateLegacyConfig(YamlConfiguration yml, LegacyLobbyItemHistory legacyLobbyItemHistory) {
+        int storedConfigVersion = yml.getInt(CONFIG_VERSION_PATH, 0);
         migrateFireballDefaults(yml, yml.getInt(CONFIG_VERSION_PATH, 0));
         removeRetiredFullArmorSetting(yml);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 45.0, 60.0);
@@ -361,9 +377,7 @@ public class MainConfig extends ConfigManager {
         moveIfAbsent(yml, "allow-parties", ConfigPath.GENERAL_CONFIGURATION_ALLOW_PARTIES);
         yml.set("use-experimental-team-assigner", null);
 
-        ensureLobbyItem(yml, "stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
-        ensureLobbyItem(yml, "arena-selector", "bw gui", true, "CHEST", 5, 4);
-        ensureLobbyItem(yml, "leave", "bw leave", false, "RED_BED", 0, 8);
+        boolean restoredLobbyItem = migrateLobbyItems(yml, storedConfigVersion, legacyLobbyItemHistory);
 
         for (String obsoletePath : List.of("arenaGui", "statsGUI", "startItems", "generators",
                 "bedsDestroyCountdown", "dragonSpawnCountdown", "gameEndCountdown", "npcLoc", "blockedCmds",
@@ -374,6 +388,170 @@ public class MainConfig extends ConfigManager {
         }
         migrateLobbyLocation(yml);
         migrateNpcLocations(yml);
+        return restoredLobbyItem;
+    }
+
+    /**
+     * Complete existing lobby item definitions without recreating nodes an
+     * administrator deliberately removed. Versions 15-17 are the sole
+     * exception: schema 15 deleted the leave node unconditionally, so those
+     * versions need a bounded repair.
+     */
+    static boolean migrateLobbyItems(YamlConfiguration yml, int storedConfigVersion,
+                                     LegacyLobbyItemHistory history) {
+        boolean historicalDeletion = history != null && history.deleted();
+        boolean restored = !historicalDeletion && recoverLegacyLobbyReturnItem(yml,
+                history == null ? null : history.configuration(), storedConfigVersion);
+
+        if (historicalDeletion && storedConfigVersion >= LOBBY_LEAVE_RESTORED_IN_VERSION
+                && isBuiltInLobbyReturnItem(yml)) {
+            yml.set(LOBBY_LEAVE_PATH, null);
+        }
+
+        ensureExistingLobbyItem(yml, "stats", "bw stats", false, "PLAYER_HEAD", 3, 0);
+        ensureExistingLobbyItem(yml, "arena-selector", "bw gui", true, "CHEST", 5, 4);
+        ensureExistingLobbyItem(yml, "leave", "bw leave", false, "RED_BED", 0, 8);
+
+        if (!yml.isConfigurationSection(LOBBY_LEAVE_PATH)
+                && storedConfigVersion >= LOBBY_LEAVE_BROKEN_FROM_VERSION
+                && storedConfigVersion < LOBBY_LEAVE_RESTORED_IN_VERSION
+                && !historicalDeletion
+                && !hasLobbyReturnItem(yml)
+                && !isLobbySlotUsed(yml, 8)) {
+            ensureLobbyItem(yml, "leave", "bw leave", false, "RED_BED", 0, 8);
+        }
+        return restored;
+    }
+
+    private static void ensureExistingLobbyItem(YamlConfiguration yml, String name, String command,
+                                                boolean enchanted, String material, int data, int slot) {
+        String path = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + '.' + name;
+        if (yml.isConfigurationSection(path)) {
+            ensureLobbyItem(yml, name, command, enchanted, material, data, slot);
+        }
+    }
+
+    static boolean recoverLegacyLobbyReturnItem(YamlConfiguration current, YamlConfiguration legacyBackup,
+                                                int storedConfigVersion) {
+        if (legacyBackup == null || storedConfigVersion < LOBBY_LEAVE_BROKEN_FROM_VERSION
+                || !legacyBackup.isConfigurationSection(LOBBY_LEAVE_PATH)
+                || isBuiltInLobbyReturnItem(legacyBackup)) {
+            return false;
+        }
+
+        boolean missing = !current.isConfigurationSection(LOBBY_LEAVE_PATH);
+        boolean missingInBrokenWindow = missing && storedConfigVersion < LOBBY_LEAVE_RESTORED_IN_VERSION;
+        boolean autoRestoredDefault = storedConfigVersion >= LOBBY_LEAVE_RESTORED_IN_VERSION
+                && isBuiltInLobbyReturnItem(current);
+        if (!missingInBrokenWindow && !autoRestoredDefault) return false;
+
+        copyConfigurationSection(legacyBackup, current, LOBBY_LEAVE_PATH);
+        ensureLobbyItem(current, "leave", "bw leave", false, "RED_BED", 0, 8);
+        return true;
+    }
+
+    private static boolean isBuiltInLobbyReturnItem(YamlConfiguration yml) {
+        ConfigurationSection section = yml.getConfigurationSection(LOBBY_LEAVE_PATH);
+        if (section == null || !section.getKeys(false).equals(BUILT_IN_LOBBY_ITEM_FIELDS)) return false;
+        return "RED_BED".equalsIgnoreCase(yml.getString(LOBBY_LEAVE_PATH + ".material", ""))
+                && yml.getInt(LOBBY_LEAVE_PATH + ".data", Integer.MIN_VALUE) == 0
+                && !yml.getBoolean(LOBBY_LEAVE_PATH + ".enchanted", true)
+                && yml.getInt(LOBBY_LEAVE_PATH + ".slot", Integer.MIN_VALUE) == 8
+                && "bw leave".equalsIgnoreCase(yml.getString(LOBBY_LEAVE_PATH + ".command", "").trim());
+    }
+
+    private static boolean hasLobbyReturnItem(YamlConfiguration yml) {
+        ConfigurationSection section = yml.getConfigurationSection(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH);
+        if (section == null) return false;
+        for (String item : section.getKeys(false)) {
+            if (item.equalsIgnoreCase("leave")) return true;
+            String command = section.getString(item + ".command", "");
+            if (command.trim().equalsIgnoreCase("bw leave")) return true;
+        }
+        return false;
+    }
+
+    private static boolean isLobbySlotUsed(YamlConfiguration yml, int slot) {
+        ConfigurationSection section = yml.getConfigurationSection(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH);
+        if (section == null) return false;
+        for (String item : section.getKeys(false)) {
+            String path = item + ".slot";
+            if (section.isInt(path) && section.getInt(path) == slot) return true;
+        }
+        return false;
+    }
+
+    private static void copyConfigurationSection(YamlConfiguration source, YamlConfiguration target, String path) {
+        ConfigurationSection section = source.getConfigurationSection(path);
+        if (section == null) return;
+        target.set(path, null);
+        for (String key : section.getKeys(true)) {
+            if (!section.isConfigurationSection(key)) {
+                target.set(path + '.' + key, section.get(key));
+            }
+        }
+    }
+
+    static LegacyLobbyItemHistory findLegacyLobbyItemHistory(File dataFolder, int storedConfigVersion) {
+        File[] files = dataFolder.listFiles((directory, name) ->
+                name.startsWith("config.yml.v") && name.endsWith(".bak"));
+        if (files == null) return null;
+
+        SortedMap<Integer, File> snapshots = new TreeMap<>();
+        for (File file : files) {
+            int version = backupVersion(file.getName());
+            if (version < 0 || version >= storedConfigVersion) continue;
+            snapshots.put(version, file);
+        }
+
+        LegacyLobbyItemHistory candidate = null;
+        for (Map.Entry<Integer, File> entry : snapshots.entrySet()) {
+            int version = entry.getKey();
+            File file = entry.getValue();
+            YamlConfiguration snapshot = YamlConfiguration.loadConfiguration(file);
+            boolean exists = snapshot.isConfigurationSection(LOBBY_LEAVE_PATH);
+            boolean custom = exists && !isBuiltInLobbyReturnItem(snapshot);
+            LegacyLobbyItemHistory customState = new LegacyLobbyItemHistory(
+                    file.getName(), version, snapshot, false);
+            LegacyLobbyItemHistory deletedState = new LegacyLobbyItemHistory(
+                    file.getName(), version, snapshot, true);
+
+            if (version < LOBBY_LEAVE_BROKEN_FROM_VERSION) {
+                // Every pre-15 snapshot is authoritative. Missing or exact
+                // default state resets still older customization; missing also
+                // records a deletion that later fallback repair must respect.
+                candidate = custom ? customState : exists ? null : deletedState;
+            } else if (version < LOBBY_LEAVE_RESTORED_IN_VERSION) {
+                // Schema 15-17 deleted the item on every migration, so missing
+                // snapshots are neutral. Existing state was explicitly added.
+                if (exists) candidate = custom ? customState : null;
+            } else if (!exists) {
+                // After schema 18, missing state records a new deletion and can
+                // remove a default item recreated by a later old migration.
+                candidate = deletedState;
+            } else if (custom) {
+                // Post-repair customization vetoes historical recovery. If the
+                // current item is now default, it is newer than this snapshot.
+                candidate = null;
+            }
+        }
+        return candidate;
+    }
+
+    static int backupVersion(String fileName) {
+        String prefix = "config.yml.v";
+        String suffix = ".bak";
+        if (fileName == null || !fileName.startsWith(prefix) || !fileName.endsWith(suffix)) return -1;
+        try {
+            return Integer.parseInt(fileName.substring(prefix.length(), fileName.length() - suffix.length()));
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+    }
+
+    record LegacyLobbyItemHistory(String fileName, int version, YamlConfiguration configuration, boolean deleted) {
     }
 
     static void migrateArenaSelectorDefaults(YamlConfiguration yml, int storedConfigVersion) {

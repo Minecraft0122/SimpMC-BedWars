@@ -115,7 +115,10 @@ public class QuitAndTeleportListener implements Listener {
             if (!e.getPlayer().isOnline()) {
                 LobbyAnnouncements.playerLeftLobby(e.getPlayer());
             } else if (LobbyAnnouncements.isLobbyPlayer(e.getPlayer())) {
-                LobbyAnnouncements.playerEntered(e.getPlayer());
+                // Portals and add-ons can move a player into the lobby without
+                // going through the arena leave callback. Apply the same state
+                // and proxy-return item as a normal BedWars transition.
+                Arena.enterLobby(e.getPlayer());
             } else {
                 LobbyAnnouncements.playerLeftLobby(e.getPlayer());
             }

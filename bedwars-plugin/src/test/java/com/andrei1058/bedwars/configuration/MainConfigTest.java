@@ -4,11 +4,16 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.ArenaSelectorPagination;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MainConfigTest {
@@ -194,6 +199,245 @@ class MainConfigTest {
         assertEquals(0, configuration.getInt(path + ".data"));
         assertEquals(8, configuration.getInt(path + ".slot"));
         assertFalse(configuration.getBoolean(path + ".enchanted"));
+    }
+
+    @Test
+    void doesNotRecreateLobbyItemsDeletedFromANewerSchema() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".custom.command", "server hub");
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".custom.slot", 8);
+
+        MainConfig.migrateLobbyItems(configuration, 25, null);
+
+        assertFalse(configuration.isConfigurationSection(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave"));
+        assertEquals("server hub", configuration.getString(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".custom.command"));
+    }
+
+    @Test
+    void repairsOnlyTheSchemaWindowThatDeletedTheLobbyReturnItem() {
+        YamlConfiguration broken = new YamlConfiguration();
+        YamlConfiguration older = new YamlConfiguration();
+
+        MainConfig.migrateLobbyItems(broken, 16, null);
+        MainConfig.migrateLobbyItems(older, 14, null);
+
+        String leave = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
+        assertEquals("RED_BED", broken.getString(leave + ".material"));
+        assertEquals(8, broken.getInt(leave + ".slot"));
+        assertFalse(older.isConfigurationSection(leave));
+    }
+
+    @Test
+    void brokenSchemaDoesNotDuplicateARenamedReturnItemOrOccupyACustomSlot() {
+        String items = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH;
+        YamlConfiguration renamed = new YamlConfiguration();
+        renamed.set(items + ".hub.command", " BW LEAVE ");
+        renamed.set(items + ".hub.slot", 6);
+        YamlConfiguration occupied = new YamlConfiguration();
+        occupied.set(items + ".custom.command", "menu open");
+        occupied.set(items + ".custom.slot", 8);
+
+        MainConfig.migrateLobbyItems(renamed, 16, null);
+        MainConfig.migrateLobbyItems(occupied, 16, null);
+
+        assertFalse(renamed.isConfigurationSection(items + ".leave"));
+        assertFalse(occupied.isConfigurationSection(items + ".leave"));
+    }
+
+    @Test
+    void restoresCustomLobbyReturnItemFromPreDeletionBackup() {
+        String leave = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
+        YamlConfiguration current = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(current, "leave", "bw leave", false, "RED_BED", 0, 8);
+        YamlConfiguration backup = new YamlConfiguration();
+        backup.set(leave + ".command", "server main-lobby");
+        backup.set(leave + ".material", "ENDER_PEARL");
+        backup.set(leave + ".data", 0);
+        backup.set(leave + ".enchanted", true);
+        backup.set(leave + ".slot", 7);
+        backup.set(leave + ".custom-model", 1208);
+
+        assertTrue(MainConfig.recoverLegacyLobbyReturnItem(current, backup, 25));
+
+        assertEquals("server main-lobby", current.getString(leave + ".command"));
+        assertEquals("ENDER_PEARL", current.getString(leave + ".material"));
+        assertTrue(current.getBoolean(leave + ".enchanted"));
+        assertEquals(7, current.getInt(leave + ".slot"));
+        assertEquals(1208, current.getInt(leave + ".custom-model"));
+        assertFalse(MainConfig.recoverLegacyLobbyReturnItem(current, backup, 25));
+    }
+
+    @Test
+    void recoveryDoesNotReplaceANewerCustomLobbyReturnItem() {
+        String leave = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
+        YamlConfiguration current = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(current, "leave", "bw leave", false, "BLUE_BED", 0, 5);
+        YamlConfiguration backup = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(backup, "leave", "server old-hub", true, "ENDER_PEARL", 0, 7);
+
+        assertFalse(MainConfig.recoverLegacyLobbyReturnItem(current, backup, 25));
+        assertEquals("BLUE_BED", current.getString(leave + ".material"));
+        assertEquals(5, current.getInt(leave + ".slot"));
+    }
+
+    @Test
+    void recoveryRespectsCurrentDeletionAndExplicitDefault() {
+        YamlConfiguration backup = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(backup, "leave", "server old-hub", true, "ENDER_PEARL", 0, 7);
+        YamlConfiguration deletedAfterRepair = new YamlConfiguration();
+        YamlConfiguration explicitDefaultInBrokenWindow = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(explicitDefaultInBrokenWindow,
+                "leave", "bw leave", false, "RED_BED", 0, 8);
+
+        assertFalse(MainConfig.recoverLegacyLobbyReturnItem(deletedAfterRepair, backup, 25));
+        assertFalse(MainConfig.recoverLegacyLobbyReturnItem(explicitDefaultInBrokenWindow, backup, 16));
+    }
+
+    @Test
+    void recoveryPreservesExtraFieldsOnAnOtherwiseDefaultCurrentItem() {
+        String leave = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
+        YamlConfiguration current = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(current, "leave", "bw leave", false, "RED_BED", 0, 8);
+        current.set(leave + ".custom-model", 42);
+        YamlConfiguration backup = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(backup, "leave", "server old-hub", true, "ENDER_PEARL", 0, 7);
+
+        assertFalse(MainConfig.recoverLegacyLobbyReturnItem(current, backup, 25));
+        assertEquals(42, current.getInt(leave + ".custom-model"));
+    }
+
+    @Test
+    void recoveryTreatsExtraBackupFieldsAsCustomization() {
+        String leave = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
+        YamlConfiguration current = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(current, "leave", "bw leave", false, "RED_BED", 0, 8);
+        YamlConfiguration backup = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(backup, "leave", "bw leave", false, "RED_BED", 0, 8);
+        backup.set(leave + ".custom-model", 73);
+
+        assertTrue(MainConfig.recoverLegacyLobbyReturnItem(current, backup, 25));
+        assertEquals(73, current.getInt(leave + ".custom-model"));
+    }
+
+    @Test
+    void parsesOnlyVersionedMainConfigBackupNames() {
+        assertEquals(14, MainConfig.backupVersion("config.yml.v14.bak"));
+        assertEquals(-1, MainConfig.backupVersion("config.yml.bak"));
+        assertEquals(-1, MainConfig.backupVersion("zh_cn.yml.v14.bak"));
+    }
+
+    @Test
+    void selectsTheNewestCustomSnapshotAcrossTheKnownDeletionWindow(@TempDir Path directory) throws IOException {
+        saveLobbyReturnBackup(directory, 14, "ENDER_PEARL", "server old-hub");
+        saveLobbyReturnBackup(directory, 15, "NETHER_STAR", "server current-hub");
+        new YamlConfiguration().save(directory.resolve("config.yml.v16.bak").toFile());
+
+        MainConfig.LegacyLobbyItemHistory backup = MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 25);
+
+        assertNotNull(backup);
+        assertFalse(backup.deleted());
+        assertEquals(15, backup.version());
+        assertEquals("NETHER_STAR", backup.configuration().getString(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave.material"));
+    }
+
+    @Test
+    void doesNotFallBackPastTheLastPreDeletionSnapshot(@TempDir Path directory) throws IOException {
+        saveLobbyReturnBackup(directory, 13, "ENDER_PEARL", "server obsolete-hub");
+        new YamlConfiguration().save(directory.resolve("config.yml.v14.bak").toFile());
+
+        MainConfig.LegacyLobbyItemHistory history =
+                MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 25);
+
+        assertNotNull(history);
+        assertTrue(history.deleted());
+    }
+
+    @Test
+    void brokenWindowMissingSnapshotsKeepThePreDeletionCandidate(@TempDir Path directory) throws IOException {
+        saveLobbyReturnBackup(directory, 14, "ENDER_PEARL", "server old-hub");
+        new YamlConfiguration().save(directory.resolve("config.yml.v15.bak").toFile());
+        new YamlConfiguration().save(directory.resolve("config.yml.v16.bak").toFile());
+        new YamlConfiguration().save(directory.resolve("config.yml.v17.bak").toFile());
+
+        MainConfig.LegacyLobbyItemHistory backup = MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 25);
+
+        assertNotNull(backup);
+        assertEquals(14, backup.version());
+    }
+
+    @Test
+    void explicitDefaultInsideBrokenWindowClearsTheOldCandidate(@TempDir Path directory) throws IOException {
+        saveLobbyReturnBackup(directory, 14, "ENDER_PEARL", "server old-hub");
+        saveBuiltInLobbyReturnBackup(directory, 15);
+        new YamlConfiguration().save(directory.resolve("config.yml.v16.bak").toFile());
+
+        assertNull(MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 25));
+    }
+
+    @Test
+    void postRepairDeletionBlocksHistoricalRecovery(@TempDir Path directory) throws IOException {
+        saveLobbyReturnBackup(directory, 14, "ENDER_PEARL", "server old-hub");
+        new YamlConfiguration().save(directory.resolve("config.yml.v18.bak").toFile());
+
+        MainConfig.LegacyLobbyItemHistory history =
+                MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 25);
+
+        assertNotNull(history);
+        assertTrue(history.deleted());
+    }
+
+    @Test
+    void ignoresSnapshotsFromTheCurrentOrANewerSchema(@TempDir Path directory) throws IOException {
+        saveLobbyReturnBackup(directory, 14, "ENDER_PEARL", "server old-hub");
+        new YamlConfiguration().save(directory.resolve("config.yml.v17.bak").toFile());
+
+        MainConfig.LegacyLobbyItemHistory backup = MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 16);
+
+        assertNotNull(backup);
+        assertEquals(14, backup.version());
+    }
+
+    @Test
+    void preDeletionTombstoneBlocksBrokenWindowDefaultRepair(@TempDir Path directory) throws IOException {
+        new YamlConfiguration().save(directory.resolve("config.yml.v14.bak").toFile());
+        MainConfig.LegacyLobbyItemHistory history =
+                MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 16);
+        YamlConfiguration current = new YamlConfiguration();
+
+        MainConfig.migrateLobbyItems(current, 16, history);
+
+        assertFalse(current.isConfigurationSection(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave"));
+    }
+
+    @Test
+    void postRepairTombstoneRemovesAnAutomaticallyRecreatedDefault(@TempDir Path directory) throws IOException {
+        new YamlConfiguration().save(directory.resolve("config.yml.v18.bak").toFile());
+        MainConfig.LegacyLobbyItemHistory history =
+                MainConfig.findLegacyLobbyItemHistory(directory.toFile(), 25);
+        YamlConfiguration current = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(current, "leave", "bw leave", false, "RED_BED", 0, 8);
+
+        MainConfig.migrateLobbyItems(current, 25, history);
+
+        assertFalse(current.isConfigurationSection(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave"));
+    }
+
+    private static void saveLobbyReturnBackup(Path directory, int version, String material,
+                                              String command) throws IOException {
+        YamlConfiguration configuration = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(configuration, "leave", command, false, material, 0, 7);
+        configuration.save(directory.resolve("config.yml.v" + version + ".bak").toFile());
+    }
+
+    private static void saveBuiltInLobbyReturnBackup(Path directory, int version) throws IOException {
+        YamlConfiguration configuration = new YamlConfiguration();
+        MainConfig.ensureLobbyItem(configuration, "leave", "bw leave", false, "RED_BED", 0, 8);
+        configuration.save(directory.resolve("config.yml.v" + version + ".bak").toFile());
     }
 
     @Test

@@ -41,7 +41,7 @@ public class LangListener implements Listener {
             UUID playerId = e.getPlayer().getUniqueId();
             String newLanguage = e.getNewLang();
             Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
-                Arena.sendLobbyCommandItems(e.getPlayer());
+                Arena.refreshLobbyCommandItems(e.getPlayer());
                 SidebarService.getInstance().giveSidebar(e.getPlayer(), Arena.getArenaByPlayer(e.getPlayer()), false);
 
                 // save to db

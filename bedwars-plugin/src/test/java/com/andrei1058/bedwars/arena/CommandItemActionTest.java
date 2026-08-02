@@ -14,6 +14,9 @@ class CommandItemActionTest {
         assertTrue(CommandItemAction.isLeaveItemDefinition("leave", "custom command", "bw"));
         assertTrue(CommandItemAction.isLeaveItemDefinition("custom", " BW LEAVE ", "bw"));
         assertFalse(CommandItemAction.isLeaveItemDefinition("stats", "bw stats", "bw"));
+        assertEquals(2, CommandItemAction.returnItemPriority("leave", "custom command", "bw"));
+        assertEquals(1, CommandItemAction.returnItemPriority("custom", "bw leave", "bw"));
+        assertEquals(0, CommandItemAction.returnItemPriority("stats", "bw stats", "bw"));
     }
 
     @Test

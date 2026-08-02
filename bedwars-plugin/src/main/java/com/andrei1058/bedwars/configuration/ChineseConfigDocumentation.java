@@ -71,7 +71,8 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内合成台、附魔台、熔炉、酿造台和铁砧的禁用设置。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
                 "MULTIARENA 大厅物品：默认包含历史战绩、竞技场选择器和返回主大厅红床。",
-                "每项可配置命令、材质、数据值、附魔外观和背包槽位；升级只补缺失字段，不覆盖自定义值。",
+                "每项可配置命令、材质、数据值、附魔外观和背包槽位；已有节点只补缺失字段，删除整个节点后不会重建。",
+                "4.0.8 会从架构 15 删除前的最后快照，或架构 15–17 中重新配置过的快照，恢复曾被旧版本误删且后来仍为默认值的自定义 leave 节点。",
                 "leave 节点固定标记为代理大厅；等待区和旁观区的 leave 节点固定返回本服 BedWars 大厅。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_PRE_GAME_ITEMS_PATH, "竞技场等待阶段物品；格式与大厅物品相同。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_SPECTATOR_ITEMS_PATH, "观战状态物品；格式与大厅物品相同。");

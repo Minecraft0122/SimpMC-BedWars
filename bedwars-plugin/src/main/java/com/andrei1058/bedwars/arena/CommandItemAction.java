@@ -38,11 +38,23 @@ public final class CommandItemAction {
         return parseTarget(BedWars.nms.getTag(itemStack, TARGET_TAG));
     }
 
+    static boolean isCommandItem(@Nullable ItemStack itemStack) {
+        if (itemStack == null || !BedWars.nms.isCustomBedWarsItem(itemStack)) return false;
+        String customData = BedWars.nms.getCustomData(itemStack);
+        return customData != null && customData.startsWith("RUNCOMMAND_");
+    }
+
     static boolean isLeaveItemDefinition(@Nullable String itemId, @Nullable String command,
                                          @Nullable String mainCommand) {
-        if (itemId != null && itemId.equalsIgnoreCase("leave")) return true;
+        return returnItemPriority(itemId, command, mainCommand) > 0;
+    }
+
+    /** Stable leave ids outrank legacy command-only definitions on slot conflicts. */
+    static int returnItemPriority(@Nullable String itemId, @Nullable String command,
+                                  @Nullable String mainCommand) {
+        if (itemId != null && itemId.equalsIgnoreCase("leave")) return 2;
         return command != null && mainCommand != null
-                && command.trim().equalsIgnoreCase(mainCommand.trim() + " leave");
+                && command.trim().equalsIgnoreCase(mainCommand.trim() + " leave") ? 1 : 0;
     }
 
     @Nullable

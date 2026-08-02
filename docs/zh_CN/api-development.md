@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>4.0.7</version>
+    <version>4.0.8</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -136,7 +136,7 @@ String stored = ConfigManager.serializeConfigLocation(location);
 api.getArenaUtil().applyLobbyState(player);
 ```
 
-该方法应用冒险模式、飞行/拾取状态和大厅物品。调用前应确保玩家已经成功传送到配置的大厅世界。仅刷新物品可使用兼容方法 `sendLobbyCommandItems`。
+该方法应用冒险模式、飞行/拾取状态和大厅物品。调用前应确保玩家已经成功传送到配置的大厅世界。4.0.8 起，主线程调用会立即刷新，并在 15 tick 后执行一次受实时上下文保护的选择性复核；非主线程调用会安全转交主线程。正常大厅流程只移除旧的 BedWars 命令物品，并会拒绝已经进入竞技场、设置会话或离开真实大厅的过期调用。旧方法 `sendLobbyCommandItems` 为兼容既有附属插件，仍保持“延迟 15 tick、清空整个背包后再发放”的公开契约；新代码应优先在传送成功后调用 `applyLobbyState`。
 
 ## 常用事件
 

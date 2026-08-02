@@ -114,6 +114,8 @@ public class Arena implements IArena {
     private static final HashMap<String, IArena> arenaByIdentifier = new HashMap<>();
     private static final LinkedList<IArena> arenas = new LinkedList<>();
     private static final Set<String> restoringArenas = ConcurrentHashMap.newKeySet();
+    private static final Set<String> warnedLobbyItemProblems = ConcurrentHashMap.newKeySet();
+    private static final Map<UUID, Integer> lobbyItemRecheckGenerations = new ConcurrentHashMap<>();
     private static int gamesBeforeRestart = config.getInt(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_MODE_GAMES_BEFORE_RESTART);
     public static HashMap<UUID, Integer> afkCheck = new HashMap<>();
     public static HashMap<UUID, Integer> magicMilk = new HashMap<>();
@@ -1777,13 +1779,27 @@ public class Arena implements IArena {
      * not a periodic enforcement task.
      */
     public static void enterLobby(Player p) {
-        if (!p.isOnline()) return;
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(plugin, () -> enterLobby(p));
+            return;
+        }
+        if (!isCurrentLobbyPlayer(p)) return;
         p.setGameMode(GameMode.ADVENTURE);
         p.setFlying(false);
         p.setAllowFlight(false);
         p.setCanPickupItems(true);
-        sendLobbyCommandItems(p);
+        refreshLobbyCommandItems(p);
+        scheduleLobbyItemRecheck(p);
         LobbyAnnouncements.playerEntered(p);
+    }
+
+    private static void scheduleLobbyItemRecheck(Player player) {
+        UUID playerId = player.getUniqueId();
+        int generation = lobbyItemRecheckGenerations.merge(playerId, 1, Integer::sum);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!lobbyItemRecheckGenerations.remove(playerId, generation)) return;
+            refreshLobbyCommandItems(player);
+        }, 15L);
     }
 
     private void broadcastArenaJoin(Player joined) {
@@ -1811,51 +1827,131 @@ public class Arena implements IArena {
     /**
      * This will give the lobby items to the player.
      * Not used in serverType BUNGEE.
-     * This will clear the inventory first.
+     * The compatibility API clears the inventory before applying the items.
      */
     public static void sendLobbyCommandItems(Player p) {
+        // Public compatibility API: callers have historically relied on the
+        // delayed full clear documented by BedWars.ArenaUtil. Internal lobby
+        // transitions use refreshLobbyCommandItems instead.
         if (!config.getYml().isConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH)) return;
-
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!p.isOnline() || !BedWars.config.getLobbyWorldName().equalsIgnoreCase(p.getWorld().getName())) return;
+            if (!isCurrentLobbyPlayer(p)) return;
             p.getInventory().clear();
-            for (String item : config.getYml().getConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH).getKeys(false)) {
-
-                if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_MATERIAL.replace("%path%", item)) == null) {
-                    BedWars.plugin.getLogger().severe(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_MATERIAL.replace("%path%", item) + " is not set!");
-                    continue;
-                }
-                if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_DATA.replace("%path%", item)) == null) {
-                    BedWars.plugin.getLogger().severe(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_DATA.replace("%path%", item) + " is not set!");
-                    continue;
-                }
-                if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_SLOT.replace("%path%", item)) == null) {
-                    BedWars.plugin.getLogger().severe(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_SLOT.replace("%path%", item) + " is not set!");
-                    continue;
-                }
-                if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_ENCHANTED.replace("%path%", item)) == null) {
-                    BedWars.plugin.getLogger().severe(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_ENCHANTED.replace("%path%", item) + " is not set!");
-                    continue;
-                }
-                if (config.getYml().get(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_COMMAND.replace("%path%", item)) == null) {
-                    BedWars.plugin.getLogger().severe(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_COMMAND.replace("%path%", item) + " is not set!");
-                    continue;
-                }
-                String command = config.getYml().getString(
-                        ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_COMMAND.replace("%path%", item));
-                ItemStack i = Misc.createItem(Material.valueOf(config.getYml().getString(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_MATERIAL.replace("%path%", item))),
-                        (byte) config.getInt(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_DATA.replace("%path%", item)),
-                        config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_ENCHANTED.replace("%path%", item)),
-                        SupportPAPI.getSupportPAPI().replace(p, getMsg(p, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_NAME.replace("%path%", item))),
-                        SupportPAPI.getSupportPAPI().replace(p, getList(p, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_LORE.replace("%path%", item))),
-                        p, "RUNCOMMAND", command);
-
-                i = CommandItemAction.tagReturnItem(i, item, command,
-                        BedWars.mainCmd, CommandItemAction.Target.PROXY_LOBBY);
-
-                p.getInventory().setItem(config.getInt(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_SLOT.replace("%path%", item)), i);
-            }
+            refreshLobbyCommandItems(p);
         }, 15L);
+    }
+
+    /** Internal immediate refresh used after the lobby transition is confirmed. */
+    public static void refreshLobbyCommandItems(Player p) {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(plugin, () -> refreshLobbyCommandItems(p));
+            return;
+        }
+        if (!isCurrentLobbyPlayer(p)) return;
+
+        removeBedWarsCommandItems(p);
+        List<LobbyCommandItem> configuredItems = readLobbyCommandItems();
+        Map<String, LobbyCommandItem> byId = new LinkedHashMap<>();
+        configuredItems.forEach(item -> byId.put(item.id(), item));
+        LobbyItemLayout.Result layout = LobbyItemLayout.resolve(configuredItems.stream()
+                .map(item -> new LobbyItemLayout.Item(item.id(), item.slot(), item.returnPriority()))
+                .toList());
+        for (LobbyItemLayout.Conflict conflict : layout.conflicts()) {
+            LobbyCommandItem selected = byId.get(conflict.selectedId());
+            String resolution = selected != null && selected.returnPriority() > 0
+                    ? "为保证返回代理大厅物品可用"
+                    : "按配置中的既有后写顺序";
+            warnLobbyItemProblem("slot:" + conflict.slot() + ':' + conflict.replacedId() + ':' + conflict.selectedId(),
+                    "大厅物品槽位 " + (conflict.slot() + 1) + " 同时配置了 " + conflict.replacedId()
+                            + " 和 " + conflict.selectedId() + "；" + resolution + "，使用 "
+                            + conflict.selectedId() + "。请修改 config.yml 消除冲突。");
+        }
+
+        for (LobbyItemLayout.Item selected : layout.items()) {
+            LobbyCommandItem item = byId.get(selected.id());
+            if (item == null) continue;
+            try {
+                ItemStack stack = Misc.createItem(item.material(), item.data(), item.enchanted(),
+                        SupportPAPI.getSupportPAPI().replace(p,
+                                getMsg(p, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_NAME
+                                        .replace("%path%", item.id()))),
+                        SupportPAPI.getSupportPAPI().replace(p,
+                                getList(p, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_LORE
+                                        .replace("%path%", item.id()))),
+                        p, "RUNCOMMAND", item.command());
+                stack = CommandItemAction.tagReturnItem(stack, item.id(), item.command(),
+                        BedWars.mainCmd, CommandItemAction.Target.PROXY_LOBBY);
+                p.getInventory().setItem(item.slot(), stack);
+            } catch (RuntimeException exception) {
+                warnLobbyItemProblem("build:" + item.id(), "无法创建大厅物品 " + item.id()
+                        + "，已跳过该物品：" + exception.getMessage());
+            }
+        }
+    }
+
+    private static boolean isCurrentLobbyPlayer(Player player) {
+        String playerWorld = player.getWorld() == null ? null : player.getWorld().getName();
+        return LobbyInventoryPolicy.shouldApply(player.isOnline(), isInArena(player),
+                SetupSession.isInSetupSession(player.getUniqueId()), playerWorld,
+                BedWars.config.getLobbyWorldName());
+    }
+
+    private static void removeBedWarsCommandItems(Player player) {
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            ItemStack item = player.getInventory().getItem(slot);
+            if (CommandItemAction.isCommandItem(item)) {
+                player.getInventory().setItem(slot, null);
+            }
+        }
+    }
+
+    private static List<LobbyCommandItem> readLobbyCommandItems() {
+        if (!config.getYml().isConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH)) {
+            return List.of();
+        }
+
+        List<LobbyCommandItem> items = new ArrayList<>();
+        for (String id : Objects.requireNonNull(config.getYml().getConfigurationSection(
+                ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH)).getKeys(false)) {
+            String base = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + '.' + id;
+            List<String> required = List.of("material", "data", "slot", "enchanted", "command");
+            String missing = required.stream().filter(field -> !config.getYml().isSet(base + '.' + field))
+                    .findFirst().orElse(null);
+            if (missing != null) {
+                warnLobbyItemProblem("missing:" + id + ':' + missing,
+                        "大厅物品 " + id + " 缺少配置 " + base + '.' + missing + "，已跳过。");
+                continue;
+            }
+
+            Material material;
+            try {
+                material = Material.valueOf(config.getYml().getString(base + ".material", "")
+                        .trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException exception) {
+                warnLobbyItemProblem("material:" + id, "大厅物品 " + id + " 的材质无效，已跳过："
+                        + config.getYml().getString(base + ".material"));
+                continue;
+            }
+            int slot = config.getYml().getInt(base + ".slot");
+            if (slot < 0 || slot >= 41) {
+                warnLobbyItemProblem("slot-range:" + id, "大厅物品 " + id
+                        + " 的槽位必须在 0 到 40 之间，当前为 " + slot + "，已跳过。");
+                continue;
+            }
+            String command = config.getYml().getString(base + ".command", "");
+            items.add(new LobbyCommandItem(id, material, (byte) config.getYml().getInt(base + ".data"),
+                    config.getYml().getBoolean(base + ".enchanted"), slot, command,
+                    CommandItemAction.returnItemPriority(id, command, BedWars.mainCmd)));
+        }
+        return items;
+    }
+
+    private static void warnLobbyItemProblem(String key, String message) {
+        if (warnedLobbyItemProblems.add(key)) plugin.getLogger().warning(message);
+    }
+
+    private record LobbyCommandItem(String id, Material material, byte data, boolean enchanted,
+                                    int slot, String command, int returnPriority) {
     }
 
     /**
