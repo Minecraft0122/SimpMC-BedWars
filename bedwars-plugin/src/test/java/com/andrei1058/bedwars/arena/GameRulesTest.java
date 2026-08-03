@@ -3,8 +3,6 @@ package com.andrei1058.bedwars.arena;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameRulesTest {
 
@@ -14,18 +12,18 @@ class GameRulesTest {
     }
 
     @Test
-    void allowsOnlyTimeSkipsThatEndAtTheFixedTime() {
-        assertTrue(GameRules.reachesBedWarsFixedTime(18000L, 12000L));
-        assertTrue(GameRules.reachesBedWarsFixedTime(6000L, 24000L));
-        assertFalse(GameRules.reachesBedWarsFixedTime(18000L, 6000L));
-        assertFalse(GameRules.reachesBedWarsFixedTime(6000L, 1L));
+    void redirectsEveryTimeChangeToTheFixedTime() {
+        assertEquals(12000L, GameRules.skipAmountToFixedTime(18000L));
+        assertEquals(0L, GameRules.skipAmountToFixedTime(6000L));
+        assertEquals(23999L, GameRules.skipAmountToFixedTime(6001L));
     }
 
     @Test
-    void evaluatesExtremeTimeSkipsWithoutOverflow() {
-        long skipToFixedTime = Math.floorMod(6000L - Math.floorMod(Long.MAX_VALUE, 24000L), 24000L);
-        assertTrue(GameRules.reachesBedWarsFixedTime(Long.MAX_VALUE, skipToFixedTime));
-        assertFalse(GameRules.reachesBedWarsFixedTime(Long.MAX_VALUE, Long.MIN_VALUE));
+    void calculatesExtremeTimeCorrectionsWithoutOverflow() {
+        assertSkipLandsAtNoon(Long.MAX_VALUE);
+        assertSkipLandsAtNoon(Long.MAX_VALUE - 1L);
+        assertSkipLandsAtNoon(Long.MIN_VALUE);
+        assertSkipLandsAtNoon(Long.MIN_VALUE + 1L);
     }
 
     @Test
@@ -33,6 +31,16 @@ class GameRulesTest {
         assertEquals("locator_bar", GameRules.toRegistryKey("locatorBar"));
         assertEquals("locator_bar", GameRules.toRegistryKey("locator_bar"));
         assertEquals("locator_bar", GameRules.toRegistryKey("minecraft:locatorBar"));
+    }
+
+    @Test
+    void mapsLegacyEnvironmentNamesToPaper12111RegistryKeys() {
+        assertEquals("advance_time", GameRules.toRegistryKey("doDaylightCycle"));
+        assertEquals("advance_weather", GameRules.toRegistryKey("do_weather_cycle"));
+        assertEquals("spawn_mobs", GameRules.toRegistryKey("doMobSpawning"));
+        assertEquals("show_advancement_messages", GameRules.toRegistryKey("announceAdvancements"));
+        assertEquals("spawn_phantoms", GameRules.toRegistryKey("doInsomnia"));
+        assertEquals("immediate_respawn", GameRules.toRegistryKey("doImmediateRespawn"));
     }
 
     @Test
@@ -44,5 +52,10 @@ class GameRulesTest {
     @Test
     void resolvesRandomTickSpeedRegistryKey() {
         assertEquals("random_tick_speed", GameRules.toRegistryKey("randomTickSpeed"));
+    }
+
+    private static void assertSkipLandsAtNoon(long currentFullTime) {
+        long correctedFullTime = currentFullTime + GameRules.skipAmountToFixedTime(currentFullTime);
+        assertEquals(GameRules.VANILLA_NOON_TIME, Math.floorMod(correctedFullTime, 24000L));
     }
 }

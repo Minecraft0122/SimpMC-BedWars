@@ -313,7 +313,6 @@ public class Arena implements IArena {
         if (!autoscale) {
             if (getArenaByName(arenaName) != null) return;
         }
-        removeFromEnableQueue(this);
         this.world = world;
         this.worldName = world.getName();
         getConfig().setName(worldName);
@@ -367,6 +366,9 @@ public class Arena implements IArena {
         arenas.add(this);
         arenaByName.put(getArenaName(), this);
         arenaByIdentifier.put(worldName, this);
+        // Keep the queue identity until the world is indexed. Environment
+        // guards must recognize it throughout initialization in SHARED mode.
+        removeFromEnableQueue(this);
         clearRestoring(getArenaName());
         world.getWorldBorder().setCenter(cm.getArenaLoc("waiting.Loc"));
         world.getWorldBorder().setSize(yml.getInt("worldBorder"));

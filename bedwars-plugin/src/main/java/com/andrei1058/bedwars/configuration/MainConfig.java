@@ -291,7 +291,7 @@ public class MainConfig extends ConfigManager {
     }
 
     private void addConfigurationComments() {
-        setComments("serverType", "服务器运行模式：MULTIARENA、SHARED 或 BUNGEE。", "修改后需要完整重启服务器。");
+        setComments("serverType", "服务器运行模式：MULTIARENA、SHARED 或 BUNGEE。", "MULTIARENA/BUNGEE 会把实例内全部世界固定为正午和晴天；SHARED 只处理竞技场、设置世界和配置大厅。", "修改后需要完整重启服务器。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER,
                 "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
                 "名称必须与代理配置一致；Velocity 还需在 velocity.toml 的 [advanced] 中启用 bungee-plugin-message-channel。",

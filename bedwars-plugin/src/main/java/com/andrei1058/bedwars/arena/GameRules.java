@@ -32,19 +32,11 @@ public final class GameRules {
         }
     }
 
-    static void setBoolean(World world, String name, boolean value) {
-        if (world == null || name == null) return;
-        GameRule<?> rule = get(name);
-        if (rule != null && Boolean.class.equals(rule.getType())) {
-            setTyped(world, rule, value);
-        }
-    }
-
     /**
      * Locator Bar reveals player positions and is never part of BedWars gameplay.
      */
     public static void disableLocatorBar(World world) {
-        setBoolean(world, "locatorBar", false);
+        if (world != null) setTyped(world, org.bukkit.GameRules.LOCATOR_BAR, false);
     }
 
     /**
@@ -52,19 +44,34 @@ public final class GameRules {
      */
     public static void enforceFixedTime(World world) {
         if (world == null) return;
-        setBoolean(world, "doDaylightCycle", false);
+        setTyped(world, org.bukkit.GameRules.ADVANCE_TIME, false);
         if (world.getTime() != VANILLA_NOON_TIME) world.setTime(VANILLA_NOON_TIME);
     }
 
     /**
-     * Return whether a proposed time skip ends at the fixed BedWars time.
-     * Both operands are reduced before addition so corrupt extreme values
-     * cannot overflow and accidentally bypass the time lock.
+     * Keep a BedWars world at the brightest vanilla daytime state.
+     * Weather and daylight progression are disabled once; later attempts to
+     * change them are rejected by the corresponding event listeners.
      */
-    public static boolean reachesBedWarsFixedTime(long currentFullTime, long skipAmount) {
+    public static void enforceBrightNoon(World world) {
+        if (world == null) return;
+        setTyped(world, org.bukkit.GameRules.ADVANCE_WEATHER, false);
+        enforceFixedTime(world);
+        if (world.hasStorm()) world.setStorm(false);
+        if (world.isThundering()) world.setThundering(false);
+    }
+
+    /**
+     * Calculate a skip that lands exactly on the fixed BedWars time.
+     * Near {@link Long#MAX_VALUE}, use the equivalent previous-day offset so
+     * Paper can add the skip to the full-time value without overflowing.
+     */
+    public static long skipAmountToFixedTime(long currentFullTime) {
         long currentDayTime = Math.floorMod(currentFullTime, TICKS_PER_DAY);
-        long skipWithinDay = Math.floorMod(skipAmount, TICKS_PER_DAY);
-        return (currentDayTime + skipWithinDay) % TICKS_PER_DAY == VANILLA_NOON_TIME;
+        long forwardSkip = Math.floorMod(VANILLA_NOON_TIME - currentDayTime, TICKS_PER_DAY);
+        return forwardSkip > 0L && currentFullTime > Long.MAX_VALUE - forwardSkip
+                ? forwardSkip - TICKS_PER_DAY
+                : forwardSkip;
     }
 
     /**
@@ -72,7 +79,7 @@ public final class GameRules {
      * grass or mushroom spread. Player-driven block mechanics remain enabled.
      */
     public static void disableNaturalBlockTicks(World world) {
-        set(world, "randomTickSpeed", "0");
+        if (world != null) setTyped(world, org.bukkit.GameRules.RANDOM_TICK_SPEED, 0);
     }
 
     /**
@@ -80,14 +87,11 @@ public final class GameRules {
      */
     public static void enforceArenaEnvironment(World world) {
         if (world == null) return;
-        setBoolean(world, "doMobSpawning", false);
-        setBoolean(world, "doWeatherCycle", false);
+        setTyped(world, org.bukkit.GameRules.SPAWN_MOBS, false);
         disableNaturalBlockTicks(world);
-        enforceFixedTime(world);
+        enforceBrightNoon(world);
         disableFireSpread(world);
         disableLocatorBar(world);
-        if (world.hasStorm()) world.setStorm(false);
-        if (world.isThundering()) world.setThundering(false);
     }
 
     /**
@@ -95,11 +99,12 @@ public final class GameRules {
      * A zero radius prevents arena fire from spreading around players.
      */
     public static void disableFireSpread(World world) {
-        set(world, "fireSpreadRadiusAroundPlayer", "0");
+        if (world != null) setTyped(world, org.bukkit.GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER, 0);
     }
 
     private static GameRule<?> get(String name) {
-        return Registry.GAME_RULE.get(NamespacedKey.minecraft(toRegistryKey(name)));
+        String registryKey = toRegistryKey(name);
+        return registryKey.isEmpty() ? null : Registry.GAME_RULE.get(NamespacedKey.minecraft(registryKey));
     }
 
     @SuppressWarnings("unchecked")
@@ -132,6 +137,16 @@ public final class GameRules {
                 key.append(Character.toLowerCase(c));
             }
         }
-        return key.toString();
+        return switch (key.toString()) {
+            // Paper 1.21.11 renamed these registry keys. Arena files keep
+            // accepting their long-standing Bukkit names for compatibility.
+            case "do_daylight_cycle" -> "advance_time";
+            case "do_weather_cycle" -> "advance_weather";
+            case "do_mob_spawning" -> "spawn_mobs";
+            case "announce_advancements" -> "show_advancement_messages";
+            case "do_insomnia" -> "spawn_phantoms";
+            case "do_immediate_respawn" -> "immediate_respawn";
+            default -> key.toString();
+        };
     }
 }

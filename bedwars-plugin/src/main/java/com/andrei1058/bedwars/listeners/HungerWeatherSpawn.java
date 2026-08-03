@@ -31,6 +31,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
@@ -84,24 +85,18 @@ public class HungerWeatherSpawn implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onWeatherChange(WeatherChangeEvent e) {
-        if (e.toWeatherState() && isWeatherLocked(e.getWorld())) e.setCancelled(true);
+        if (isWeatherLocked(e.getWorld())) e.setCancelled(e.toWeatherState());
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onThunderChange(ThunderChangeEvent e) {
-        if (e.toThunderState() && isWeatherLocked(e.getWorld())) e.setCancelled(true);
+        if (isWeatherLocked(e.getWorld())) e.setCancelled(e.toThunderState());
     }
 
     private static boolean isWeatherLocked(World world) {
-        String worldName = world.getName();
-        return shouldLockWeather(getServerType(), Arena.getArenaByIdentifier(worldName) != null,
-                SetupSession.isSetupWorld(worldName));
-    }
-
-    static boolean shouldLockWeather(ServerType serverType, boolean arenaWorld, boolean setupWorld) {
-        return serverType != ServerType.SHARED || arenaWorld || setupWorld;
+        return BedWarsWorldEnvironment.shouldForceBrightNoon(world);
     }
 
     @EventHandler

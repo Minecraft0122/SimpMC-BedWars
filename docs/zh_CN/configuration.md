@@ -64,7 +64,7 @@ TAB 相关常用项：
 - `allowSpectate`、`worldBorder`、`y-kill-height`、最大建造高度。
 - 出生、商店、升级、生成器保护半径。
 - `island-radius`：自动找床、治疗池和陷阱检测范围。
-- `game-rules`：`规则:值` 列表。竞技场初始化时执行原版 `/time set noon` 的等价 API 操作，一次性设置正午 `6000 tick`、晴天、`doDaylightCycle:false`、`doWeatherCycle:false`、`doMobSpawning:false` 和 `randomTickSpeed:0`。不再每秒遍历竞技场或反复读写游戏规则；后续偏离 6000 tick 的时间跳跃、开始下雨和开始打雷均由对应事件直接取消，清除天气的事件允许通过。树叶腐烂、作物生长、草地/蘑菇蔓延、结冰融化等自然方块变化仍会被阻止。Locator Bar 仍在插件启动及所有世界初始化、加载时强制关闭。
+- `game-rules`：`规则:值` 列表。Paper 1.21.11 使用 `advance_time`、`advance_weather` 和 `spawn_mobs`；旧配置中的 `doDaylightCycle`、`doWeatherCycle`、`doMobSpawning`、`announceAdvancements`、`doInsomnia` 和 `doImmediateRespawn` 会在运行时显式映射到现代注册键，无需手动改写。竞技场初始化时设置正午 `6000 tick`、晴天、关闭昼夜与天气推进，并禁用生物自然生成和随机方块刻。后续 `/time`、睡眠、插件跳时、`/gamerule`、下雨和雷暴均由事件守卫改回固定状态，不进行周期扫描。树叶腐烂、作物生长、草地/蘑菇蔓延、结冰融化等竞技场自然方块变化仍会被阻止。正午与晴天保证普通主世界露天的最高自然天光，不等于洞穴、下界或末地 Fullbright。
 - `waiting`、`spectator-loc`：等待和观战标点。
 - `Team`：所有队伍的颜色、出生点、床、NPC 和岛屿生成器。
 - `generator.Diamond`、`generator.Emerald`：中央生成器列表。

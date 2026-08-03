@@ -23,10 +23,11 @@ package com.andrei1058.bedwars.listeners;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.GameRules;
-import com.andrei1058.bedwars.arena.SetupSession;
+import io.papermc.paper.event.world.WorldGameRuleChangeEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFadeEvent;
 import org.bukkit.event.block.BlockFormEvent;
@@ -41,17 +42,18 @@ import java.util.LinkedList;
 
 public class WorldLoadListener implements Listener {
 
-    public WorldLoadListener() {
+    /** Apply the environment after this listener has been registered. */
+    public void enforceLoadedWorlds() {
         for (World world : Bukkit.getWorlds()) {
             GameRules.disableLocatorBar(world);
-            if (isManagedWorld(world)) GameRules.enforceArenaEnvironment(world);
+            enforceEnvironment(world);
         }
     }
 
     @EventHandler
     public void onInit(WorldInitEvent event) {
         GameRules.disableLocatorBar(event.getWorld());
-        if (isManagedWorld(event.getWorld())) GameRules.enforceArenaEnvironment(event.getWorld());
+        enforceEnvironment(event.getWorld());
     }
 
     @EventHandler
@@ -64,51 +66,57 @@ public class WorldLoadListener implements Listener {
                 return;
             }
         }
-        if (SetupSession.isSetupWorld(e.getWorld().getName())) {
-            GameRules.enforceArenaEnvironment(e.getWorld());
+        enforceEnvironment(e.getWorld());
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onTimeSkip(TimeSkipEvent event) {
+        if (BedWarsWorldEnvironment.shouldForceBrightNoon(event.getWorld())) {
+            event.setSkipAmount(GameRules.skipAmountToFixedTime(event.getWorld().getFullTime()));
+            event.setCancelled(false);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onTimeSkip(TimeSkipEvent event) {
-        if (isManagedWorld(event.getWorld())) {
-            // Paper fires this before applying World#setTime. Calling the
-            // environment guard here would publish the same event recursively.
-            event.setCancelled(!GameRules.reachesBedWarsFixedTime(
-                    event.getWorld().getFullTime(), event.getSkipAmount()));
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onGameRuleChange(WorldGameRuleChangeEvent event) {
+        if (!BedWarsWorldEnvironment.shouldForceBrightNoon(event.getWorld())) return;
+        if (event.getGameRule().equals(org.bukkit.GameRules.ADVANCE_TIME)
+                || event.getGameRule().equals(org.bukkit.GameRules.ADVANCE_WEATHER)) {
+            event.setValue("false");
+            event.setCancelled(false);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onLeavesDecay(LeavesDecayEvent event) {
-        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockGrow(BlockGrowEvent event) {
-        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockSpread(BlockSpreadEvent event) {
-        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockFade(BlockFadeEvent event) {
-        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockForm(BlockFormEvent event) {
-        if (isManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
-    private static boolean isManagedWorld(World world) {
-        if (world == null) return false;
-        String worldName = world.getName();
-        return Arena.getArenaByIdentifier(worldName) != null
-                || Arena.getEnableQueue().stream().anyMatch(arena -> arena.getWorldName().equalsIgnoreCase(worldName))
-                || SetupSession.isSetupWorld(worldName);
+    private static void enforceEnvironment(World world) {
+        if (BedWarsWorldEnvironment.isArenaManagedWorld(world)) {
+            GameRules.enforceArenaEnvironment(world);
+        } else {
+            BedWarsWorldEnvironment.enforceBrightNoon(world);
+        }
     }
 }

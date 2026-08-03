@@ -30,7 +30,7 @@ jobs:
       - name: 使用 Maven 构建并测试
         run: mvn -B -U verify -s ci_settings.xml
 
-      - name: 验证 Paper 1.21.11 TAB 数据包桥
+      - name: 验证 Paper 1.21.11 运行契约
         shell: bash
         env:
           PAPER_URL: https://fill-data.papermc.io/v1/objects/5ffef465eeeb5f2a3c23a24419d97c51afd7dbb4923ff42df9a3f58bba1ccfba/paper-1.21.11-132.jar
@@ -55,6 +55,8 @@ jobs:
 
           java -cp "$classpath" \
             com.andrei1058.spigot.sidebar.PlayerListDisplayNamePacketsRuntimeProbe
+          java -cp "$classpath" \
+            com.andrei1058.bedwars.api.PaperGameRulesRuntimeProbe
 
       - name: 上传插件 JAR
         uses: actions/upload-artifact@v7

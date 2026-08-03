@@ -296,7 +296,9 @@ public class BedWars extends JavaPlugin {
             }
         }
 
-        registerEvents(new WorldLoadListener());
+        WorldLoadListener worldLoadListener = new WorldLoadListener();
+        registerEvents(worldLoadListener);
+        worldLoadListener.enforceLoadedWorlds();
 
         if (!(getServerType() == ServerType.BUNGEE && autoscale)) {
             registerEvents(new JoinHandlerCommon());

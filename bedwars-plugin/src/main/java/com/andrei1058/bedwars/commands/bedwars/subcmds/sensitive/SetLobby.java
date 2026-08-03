@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
+import com.andrei1058.bedwars.listeners.BedWarsWorldEnvironment;
 import net.md_5.bungee.api.chat.ClickEvent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -61,6 +62,7 @@ public class SetLobby extends SubCommand {
         p.sendMessage("§6 ▪ §7大厅位置已设置！");
         config.reload();
         BedWars.setLobbyWorld(p.getLocation().getWorld().getName());
+        BedWarsWorldEnvironment.enforceBrightNoon(p.getWorld());
         return true;
     }
 

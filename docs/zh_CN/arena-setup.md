@@ -158,7 +158,7 @@ MULTIARENA 首次使用时，在希望玩家出现的位置面向目标方向执
 /bw setType <Solo|Doubles|3v3v3v3|4v4v4v4>
 ```
 
-`setType` 会设置竞技场分组及对应的每队容量，但不会修改 `minPlayers`；需要调整全场开局门槛时使用 `/bw setMinPlayers`。世界边界、虚空高度和保护半径可在保存后编辑 `Arenas/<世界名>.yml`。竞技场初始化时执行原版 `/time set noon` 的等价 API 操作，固定为正午 6000 tick，关闭昼夜、天气和随机方块刻；后续时间、下雨与雷暴变化由事件阻止，不使用周期遍历。
+`setType` 会设置竞技场分组及对应的每队容量，但不会修改 `minPlayers`；需要调整全场开局门槛时使用 `/bw setMinPlayers`。世界边界、虚空高度和保护半径可在保存后编辑 `Arenas/<世界名>.yml`。竞技场初始化时执行原版 `/time set noon` 的等价 API 操作，固定为正午 6000 tick，关闭 Paper 1.21.11 的 `advance_time`、`advance_weather` 和随机方块刻；后续命令、插件、睡眠、游戏规则修改、下雨与雷暴变化均由事件守卫恢复固定状态，不使用周期遍历。
 
 ## 9. 保存并启用
 

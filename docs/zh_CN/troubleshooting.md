@@ -64,6 +64,14 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 
 当前版本在总人数达到 `minPlayers` 后尝试分队，并强制至少两支非空队伍、每队不超过 `maxInTeam`。一个人数未超过容量的完整小队不会被拆成两队制造对手。若第三方附属插件取消全部 `TeamAssignEvent` 或使用错误的自定义分配器，开局会停止并在控制台打印警告。只有管理员明确执行 `/bw start debug` 时才允许单队测试。
 
+## 世界没有保持正午或仍在下雨
+
+- 先确认实际加载的是 6.0.0 或更新 JAR，并完整重启；Paper 1.21.11 的现代规则名是 `advance_time` 与 `advance_weather`，旧版本按 `do_daylight_cycle` 查找会静默失效。
+- 在控制台执行 `time query daytime` 应得到 `6000`，`gamerule advance_time` 和 `gamerule advance_weather` 应为 `false`。尝试 `/time set night` 或重新开启规则后，事件守卫仍会把结果恢复为正午和关闭状态。
+- `MULTIARENA`/`BUNGEE` 会处理实例中的全部世界；`SHARED` 只处理竞技场、待加载竞技场、设置世界和 `/bw setLobby` 保存的大厅。SHARED 的其他玩法世界保持管理员原有时间与天气。
+- 已经下雨的世界切换晴天后，原版雨量视觉最多需要约 100 tick 完成淡出。正午晴天只保证普通主世界露天的最高自然天空亮度，不会照亮洞穴、屋内、下界或末地。
+- 若只有个别玩家仍看到不同时间或天气，检查其他插件是否调用了玩家专属的 `setPlayerTime`/`setPlayerWeather`；这类客户端覆盖不属于世界状态。
+
 ## 火球飞不远或潜行没有加速
 
 - 完整重启后检查 `config.yml`：默认应为 `fireball.speed-multiplier: 16`、`sneak-speed-multiplier: 1.5`、`flight-range.min: 200`、`flight-range.max: 300`。
