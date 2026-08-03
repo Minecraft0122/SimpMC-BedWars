@@ -10,6 +10,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.sidebar.ISidebar;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.ElapsedTimeFormatter;
 import com.andrei1058.bedwars.arena.stats.StatisticsOrdered;
 import com.andrei1058.bedwars.levels.internal.PlayerLevel;
 import com.andrei1058.bedwars.stats.PlayerStats;
@@ -347,6 +348,8 @@ public class BwSidebar implements ISidebar {
             providers.add(new PlaceholderProvider("{on}", () -> String.valueOf(arena.getPlayers().size())));
             providers.add(new PlaceholderProvider("{max}", () -> String.valueOf(arena.getMaxPlayers())));
             providers.add(new PlaceholderProvider("{nextEvent}", this::getNextEventName));
+            providers.add(new PlaceholderProvider("{gameTime}",
+                    () -> ElapsedTimeFormatter.format(arena.getStartTime())));
 
             if (arena.isSpectator(player)) {
                 Language lang = getPlayerLanguage(player);
@@ -593,6 +596,8 @@ public class BwSidebar implements ISidebar {
             headerLines = selectLobbyHeader(config.getYml().getStringList(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER),
                     headerLines);
         } else {
+            headerLines = insertGameTimeLine(headerLines,
+                    language.m(Messages.FORMATTING_SB_TAB_GAME_TIME), arena.getStatus());
             headerLines = ensureTabWidth(headerLines);
         }
 
@@ -628,6 +633,27 @@ public class BwSidebar implements ISidebar {
         widenedHeader.add(TAB_WIDTH_SPACER);
         widenedHeader.addAll(selected);
         return widenedHeader;
+    }
+
+    static List<String> insertGameTimeLine(List<String> header, String gameTimeLine, GameState state) {
+        if (state != GameState.playing || header == null || gameTimeLine == null || gameTimeLine.isBlank()) {
+            return header;
+        }
+        if (header.stream().anyMatch(line -> line != null && line.contains("{gameTime}"))) {
+            return header;
+        }
+
+        List<String> withGameTime = new ArrayList<>(header);
+        int nextEventLine = -1;
+        for (int index = 0; index < withGameTime.size(); index++) {
+            String line = withGameTime.get(index);
+            if (line != null && line.contains("{nextEvent}")) {
+                nextEventLine = index;
+                break;
+            }
+        }
+        withGameTime.add(nextEventLine < 0 ? withGameTime.size() : nextEventLine, gameTimeLine);
+        return withGameTime;
     }
 
     static boolean shouldResynchronizeTabContext(@Nullable IArena previousArena,

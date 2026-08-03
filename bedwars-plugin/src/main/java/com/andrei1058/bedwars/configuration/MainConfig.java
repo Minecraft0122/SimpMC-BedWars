@@ -41,7 +41,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 27;
+    private static final int CONFIG_VERSION = 28;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -106,7 +106,6 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BEDS_DESTROY_COUNTDOWN, 360);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DRAGON_SPAWN_COUNTDOWN, 600);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_GAME_END_COUNTDOWN, 120);
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, 30);
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "simpmc.org");
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_POWERED_BY, "SimpMC-BedWars");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, "bw1");
@@ -310,6 +309,9 @@ public class MainConfig extends ConfigManager {
                 "刷新只写入真正变化的文字、颜色或名称可见性；静态内容不会重复发送队伍数据包。");
         setComments(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_IN_TAB,
                 "是否在 TAB 玩家列表中额外显示生命值数字。默认关闭，只保留原版网络延迟图标，避免被误认为两个 ping。");
+        setComments(ConfigPath.SB_CONFIG_TAB_HEADER_FOOTER_REFRESH_INTERVAL,
+                "TAB 页首页尾动态内容刷新周期，单位为 tick；默认 20 tick（1 秒）。",
+                "本局游戏时间复用该任务和内容缓存，不会创建额外计时器或扫描全服玩家；小于 1 时关闭动态刷新。");
         setComments(ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER,
                 "仅覆盖大厅 TAB 顶部文字；支持 & 颜色代码及 {serverIp}、{on} 等占位符。",
                 "空列表使用语言文件中的加宽大厅页首；自定义文字也会自动保留内置宽度行，页尾不受影响。");
@@ -339,6 +341,9 @@ public class MainConfig extends ConfigManager {
 
     private static boolean migrateLegacyConfig(YamlConfiguration yml, LegacyLobbyItemHistory legacyLobbyItemHistory) {
         int storedConfigVersion = yml.getInt(CONFIG_VERSION_PATH, 0);
+        if (migrateSchema28Only(yml, storedConfigVersion)) {
+            return false;
+        }
         migrateFireballDefaults(yml, yml.getInt(CONFIG_VERSION_PATH, 0));
         removeRetiredFullArmorSetting(yml);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 45.0, 60.0);
@@ -346,6 +351,7 @@ public class MainConfig extends ConfigManager {
             yml.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30);
         }
         migrateTabDisplayDefaults(yml);
+        removeShoutCooldownSetting(yml);
         moveIfAbsent(yml, "formatChat", ConfigPath.GENERAL_CHAT_FORMATTING);
         moveIfAbsent(yml, "globalChat", ConfigPath.GENERAL_CHAT_GLOBAL);
         moveIfAbsent(yml, "bungee-settings.lobby-servers", ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS);
@@ -390,6 +396,22 @@ public class MainConfig extends ConfigManager {
         migrateLobbyLocation(yml);
         migrateNpcLocations(yml);
         return restoredLobbyItem;
+    }
+
+    /**
+     * Apply the only schema 28 removal without replaying historical migrations
+     * against an already current schema 27 configuration.
+     */
+    static boolean migrateSchema28Only(YamlConfiguration yml, int storedConfigVersion) {
+        if (storedConfigVersion < 27) {
+            return false;
+        }
+        removeShoutCooldownSetting(yml);
+        return true;
+    }
+
+    static void removeShoutCooldownSetting(YamlConfiguration yml) {
+        yml.set(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, null);
     }
 
     /**

@@ -49,6 +49,43 @@ class BwSidebarTest {
     }
 
     @Test
+    void playingHeadersInsertGameTimeBeforeTheNextEvent() {
+        String gameTime = "&7游戏时间：&a{gameTime}";
+        List<String> alive = List.of("地图", "{nextEvent} {time}");
+        List<String> eliminated = List.of("地图", "{nextEvent} {time}", "已淘汰");
+        List<String> spectator = List.of("地图", "{nextEvent} {time}", "旁观中");
+
+        assertEquals(List.of("地图", gameTime, "{nextEvent} {time}"),
+                BwSidebar.insertGameTimeLine(alive, gameTime, GameState.playing));
+        assertEquals(List.of("地图", gameTime, "{nextEvent} {time}", "已淘汰"),
+                BwSidebar.insertGameTimeLine(eliminated, gameTime, GameState.playing));
+        assertEquals(List.of("地图", gameTime, "{nextEvent} {time}", "旁观中"),
+                BwSidebar.insertGameTimeLine(spectator, gameTime, GameState.playing));
+        assertEquals(List.of("地图", "{nextEvent} {time}"), alive,
+                "the configured language list must remain unchanged");
+    }
+
+    @Test
+    void nonPlayingHeadersAndIntegratedCustomHeadersStayUnchanged() {
+        List<String> starting = List.of("{time} 秒后开始");
+        List<String> custom = List.of("本局 {gameTime}", "{nextEvent}");
+
+        assertSame(starting, BwSidebar.insertGameTimeLine(
+                starting, "游戏时间 {gameTime}", GameState.starting));
+        assertSame(custom, BwSidebar.insertGameTimeLine(
+                custom, "游戏时间 {gameTime}", GameState.playing));
+    }
+
+    @Test
+    void insertedGameTimeKeepsTheWidthSpacerFirst() {
+        List<String> selected = BwSidebar.ensureTabWidth(BwSidebar.insertGameTimeLine(
+                List.of("地图", "{nextEvent}"), "游戏时间 {gameTime}", GameState.playing));
+
+        assertEquals(BwSidebar.TAB_MIN_WIDTH, selected.getFirst().length());
+        assertEquals(List.of("地图", "游戏时间 {gameTime}", "{nextEvent}"), selected.subList(1, 4));
+    }
+
+    @Test
     void resynchronizesTeamsWhenArenaOrGameStateChanges() {
         IArena firstArena = arena();
         IArena secondArena = arena();

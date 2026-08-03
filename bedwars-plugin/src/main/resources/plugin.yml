@@ -134,9 +134,6 @@ permissions:
   bw.cmd.bypass:
     description: 绕过竞技场内的命令限制
     default: false
-  bw.shout.bypass:
-    description: 绕过全场喊话冷却
-    default: false
   'bw.*':
     description: 官方 BedWars 全命令权限
     default: op

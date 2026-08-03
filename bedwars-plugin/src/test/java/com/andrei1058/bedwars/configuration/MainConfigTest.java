@@ -20,6 +20,46 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MainConfigTest {
 
     @Test
+    void removesTheObsoleteShoutCooldownRegardlessOfItsValue() {
+        YamlConfiguration defaultValue = new YamlConfiguration();
+        YamlConfiguration customValue = new YamlConfiguration();
+        defaultValue.set(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, 30);
+        customValue.set(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, 90);
+
+        MainConfig.removeShoutCooldownSetting(defaultValue);
+        MainConfig.removeShoutCooldownSetting(customValue);
+
+        assertFalse(defaultValue.isSet(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN));
+        assertFalse(customValue.isSet(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN));
+    }
+
+    @Test
+    void schemaTwentyEightPreservesCurrentAdministratorValues() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigManager.CONFIG_VERSION_PATH, 27);
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, 90);
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300);
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_RESTART, 45);
+        configuration.set("custom-administrator-value", "keep-me");
+
+        assertTrue(MainConfig.migrateSchema28Only(configuration, 27));
+
+        assertFalse(configuration.isSet(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN));
+        assertEquals(300, configuration.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME));
+        assertEquals(45, configuration.getInt(ConfigPath.GENERAL_CONFIGURATION_RESTART));
+        assertEquals("keep-me", configuration.getString("custom-administrator-value"));
+    }
+
+    @Test
+    void olderSchemasContinueThroughTheHistoricalMigrationPath() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, 90);
+
+        assertFalse(MainConfig.migrateSchema28Only(configuration, 26));
+        assertEquals(90, configuration.getInt(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN));
+    }
+
+    @Test
     void expandsOnlyTheUnchangedArenaSelectorLayout() {
         YamlConfiguration defaults = new YamlConfiguration();
         defaults.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, 27);

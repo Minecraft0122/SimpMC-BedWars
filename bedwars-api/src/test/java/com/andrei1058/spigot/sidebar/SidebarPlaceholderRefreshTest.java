@@ -23,6 +23,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class SidebarPlaceholderRefreshTest {
 
     @Test
+    void unusedPlaceholdersDoNotEvaluateTheirSuppliers() {
+        AtomicInteger evaluations = new AtomicInteger();
+        PlaceholderProvider unused = new PlaceholderProvider("{unused}", () -> {
+            evaluations.incrementAndGet();
+            return "value";
+        });
+
+        assertEquals("static text", Sidebar.replacePlaceholders("static text", List.of(unused)));
+        assertEquals(0, evaluations.get());
+    }
+
+    @Test
     void unchangedPlaceholderRefreshDoesNotWriteOrRebuildScoreboardState() {
         AtomicReference<String> alive = new AtomicReference<>("1");
         Fixture fixture = fixture(alive);

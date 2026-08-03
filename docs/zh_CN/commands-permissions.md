@@ -20,7 +20,7 @@
 | `/bw upgradesmenu` | 无 | 打开本队升级菜单；主要由 NPC 调用 |
 | `/bw arenaList` | 无 | 查看竞技场列表 |
 | `/party ...` | 无 | 使用插件内置组队命令 |
-| `/shout <消息>`、`!消息` | `bw.shout`（默认授予） | 游戏内全体喊话；普通玩家默认可用，两种入口使用相同权限检查 |
+| `/shout <消息>`、`!消息` | `bw.shout`（默认授予） | 游戏内全体喊话；普通玩家默认可用，两种入口使用相同权限检查且没有插件冷却 |
 | `/rejoin` | `bw.rejoin` | 在有效窗口内重连 |
 
 `bw.player` 不再是普通玩家使用基础命令的前置条件。`bw.shout` 自 2.11.0 起默认授予所有玩家，权限插件仍可显式设为 `false`；`bw.rejoin` 仍需单独授予。
@@ -89,6 +89,5 @@
 | `bw.vip` | VIP 满服加入和相关特权 |
 | `bw.chatcolor` | 允许在聊天消息中使用 `&` 颜色代码 |
 | `bw.cmd.bypass` | 绕过游戏内命令限制 |
-| `bw.shout.bypass` | 绕过喊话冷却；仍然必须拥有 `bw.shout` 或兼容命令权限 |
 
-不要把 `bw.*` 或 `bw.command.*` 授予普通玩家。`bw.shout` 已默认开放；通常只需按需授予 `bw.rejoin` 等受限节点。
+7.0.0 起喊话没有冷却，旧 `bw.shout.bypass` 节点已删除。不要把 `bw.*` 或 `bw.command.*` 授予普通玩家。`bw.shout` 已默认开放；通常只需按需授予 `bw.rejoin` 等受限节点。

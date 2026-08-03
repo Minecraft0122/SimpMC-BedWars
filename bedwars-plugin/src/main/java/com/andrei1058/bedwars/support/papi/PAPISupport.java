@@ -27,7 +27,8 @@ import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.commands.shout.ShoutCommand;
+import com.andrei1058.bedwars.arena.ElapsedTimeFormatter;
+import com.andrei1058.bedwars.commands.shout.ShoutFormattingContext;
 import com.andrei1058.bedwars.stats.PlayerStats;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
@@ -35,7 +36,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.time.Instant;
 
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -179,7 +179,7 @@ public class PAPISupport extends PlaceholderExpansion {
                 break;
             case "player_team":
                 if (a != null) {
-                    if (ShoutCommand.isShout(player)) {
+                    if (ShoutFormattingContext.isFormatting(player)) {
                         response += Language.getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_SHOUT);
                     }
                     if (a.isPlayer(player)) {
@@ -252,15 +252,7 @@ public class PAPISupport extends PlaceholderExpansion {
                 break;
             case "elapsed_time":
                 if (a != null) {
-                    Instant startTime = a.getStartTime();
-                    if (null != startTime){
-                        Duration time = Duration.ofMillis(Instant.now().minusMillis(startTime.toEpochMilli()).toEpochMilli());
-                        if (time.toHours() == 0){
-                            response = String.format("%02d:%02d", time.toMinutes(), time.toSeconds());
-                        } else {
-                            response = String.format("%02d:%02d:%02d", time.toHours(), time.toMinutes(), time.toSeconds());
-                        }
-                    } else response = "";
+                    response = ElapsedTimeFormatter.format(a.getStartTime());
                 }
                 break;
         }

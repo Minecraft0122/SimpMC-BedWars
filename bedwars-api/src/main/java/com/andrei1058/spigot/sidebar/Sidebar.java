@@ -828,6 +828,7 @@ public class Sidebar {
     static String replacePlaceholders(String text, @NotNull Collection<PlaceholderProvider> placeholders) {
         String result = text == null ? "" : text;
         for (PlaceholderProvider placeholder : placeholders) {
+            if (!result.contains(placeholder.getPlaceholder())) continue;
             String value = placeholder.getValue();
             result = result.replace(placeholder.getPlaceholder(), value == null ? "" : value);
         }

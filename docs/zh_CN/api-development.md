@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>6.0.0</version>
+    <version>7.0.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -97,6 +97,8 @@ sidebars.giveSidebar(player, arenaSnapshot, false);
 `giveSidebar` 的竞技场参数是调用时快照；实现会在应用前与实时玩家竞技场注册表核对，避免延迟任务把新竞技场面板覆盖成大厅面板。附属插件不应在竞技场内持续调用 `Player#setScoreboard` 与 BedWars 争抢同一面板；若只需扩展内容，应监听 `PlayerSidebarInitEvent` 操作公开的 `ISidebar`。SimpMC-BedWars 离开上下文时会恢复接管前最后观察到的外部 scoreboard。
 
 TAB 队伍色由每个查看者的 scoreboard Team 同时控制 TAB 和头顶名牌。插件只向对应查看者发送 nullable PlayerInfo 名称，不修改目标玩家的全局 `playerListName`，因此附属插件不应再把非空 PlayerInfo 名称强制发送给竞技场查看者，否则客户端会绕过 Team 颜色。
+
+游戏进行中的 TAB 页首使用 `{gameTime}` 显示从 `IArena#getStartTime()` 计算的本局已进行时间；`{time}` 仍是下一事件倒计时。附属插件若直接使用 PlaceholderAPI，可读取 `%bw1058_elapsed_time%`，其格式与 TAB 一致：不足一小时为 `MM:SS`，一小时以上为 `HH:MM:SS`。开始时间缺失时返回空文本。
 
 ## 配置 API
 

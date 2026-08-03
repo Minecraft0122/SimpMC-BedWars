@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.language;
 
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.language.Messages;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,38 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimplifiedChineseMigrationTest {
+
+    @Test
+    void schemaFifteenAddsGameTimeWithoutRewritingCurrentCustomMessages() {
+        YamlConfiguration language = new YamlConfiguration();
+        String customChat = "&d自定义格式 {player}：{message}";
+        String customGameTime = "&b本局 {gameTime}";
+        language.set(ConfigManager.CONFIG_VERSION_PATH, 14);
+        language.set(Messages.FORMATTING_CHAT_SHOUT, customChat);
+        language.set(Messages.FORMATTING_SB_TAB_GAME_TIME, customGameTime);
+        language.addDefault(Messages.FORMATTING_SB_TAB_GAME_TIME, "&7游戏时间：&a{gameTime}");
+
+        assertTrue(ConfigManager.applyVersionedMigration(language, 15,
+                SimplifiedChinese::migrateSchema15));
+
+        assertEquals(customChat, language.getString(Messages.FORMATTING_CHAT_SHOUT));
+        assertEquals(customGameTime, language.getString(Messages.FORMATTING_SB_TAB_GAME_TIME));
+        assertEquals(15, language.getInt(ConfigManager.CONFIG_VERSION_PATH));
+    }
+
+    @Test
+    void schemaFifteenPersistsTheMissingGameTimeDefault() {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(ConfigManager.CONFIG_VERSION_PATH, 14);
+        language.addDefault(Messages.FORMATTING_SB_TAB_GAME_TIME, "&7游戏时间：&a{gameTime}");
+
+        assertTrue(ConfigManager.applyVersionedMigration(language, 15,
+                SimplifiedChinese::migrateSchema15));
+
+        assertTrue(language.contains(Messages.FORMATTING_SB_TAB_GAME_TIME, true));
+        assertEquals("&7游戏时间：&a{gameTime}",
+                language.getString(Messages.FORMATTING_SB_TAB_GAME_TIME));
+    }
 
     @Test
     void arenaTabKeepsUpstreamWidthWhileLobbyIsWider() {

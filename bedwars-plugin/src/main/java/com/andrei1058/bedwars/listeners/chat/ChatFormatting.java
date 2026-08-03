@@ -29,7 +29,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.commands.shout.ShoutCommand;
+import com.andrei1058.bedwars.commands.shout.ShoutFormattingContext;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
 import org.bukkit.ChatColor;
@@ -99,14 +99,6 @@ public class ChatFormatting implements Listener {
                     p.sendMessage(language.m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
                     return;
                 }
-                if (ShoutCommand.isShoutCooldown(p)) {
-                    e.setCancelled(true);
-                    p.sendMessage(language.m(Messages.COMMAND_COOLDOWN)
-                            .replace("{seconds}", String.valueOf(Math.round(ShoutCommand.getShoutCooldown(p))))
-                    );
-                    return;
-                }
-                ShoutCommand.updateShout(p);
                 setRecipients(e, a.getPlayers(), a.getSpectators());
                 msg = clearShout(msg, language);
                 if (msg.isEmpty()) {
@@ -114,12 +106,13 @@ public class ChatFormatting implements Listener {
                     return;
                 }
                 e.setMessage(msg);
-                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team));
+                e.setFormat(ShoutFormattingContext.format(p,
+                        () -> parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team)));
                 return;
             }
 
             // A team that started alone has nobody to receive private chat.
-            // Use public arena chat without requiring /shout or applying its cooldown.
+            // Use public arena chat without requiring /shout.
             if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
                 setRecipients(e, a.getPlayers(), a.getSpectators());
                 e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team));

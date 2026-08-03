@@ -134,6 +134,12 @@ public class ConfigPath {
     public static final String GENERAL_CONFIGURATION_REJOIN_TIME = "rejoin-time";
     public static final String GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY = "re-spawn-invulnerability";
 
+    /**
+     * @deprecated Shout messages no longer have a cooldown. Retained so
+     * existing add-ons can still load and the main-config migrator can remove
+     * the obsolete setting.
+     */
+    @Deprecated(since = "7.0.0", forRemoval = false)
     public static final String GENERAL_CONFIGURATION_SHOUT_COOLDOWN = "shout-cmd-cooldown";
 
     public static final String GENERAL_CONFIGURATION_NPC_LOC_STORAGE = "join-npc-locations";

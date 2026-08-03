@@ -20,9 +20,7 @@
 
 package com.andrei1058.bedwars.commands.shout;
 
-import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
-import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
@@ -32,12 +30,7 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.defaults.BukkitCommand;
 import org.bukkit.entity.Player;
 
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class ShoutCommand extends BukkitCommand {
-
-    private static final ConcurrentHashMap<UUID, Long> shoutCooldown = new ConcurrentHashMap<>();
 
     public ShoutCommand(String name) {
         super(name);
@@ -63,31 +56,5 @@ public class ShoutCommand extends BukkitCommand {
 
         p.chat("!" + sb);
         return true;
-    }
-
-    public static void updateShout(Player player) {
-        if (player.hasPermission("bw.shout.bypass")) return;
-        shoutCooldown.put(player.getUniqueId(), System.currentTimeMillis()
-                + (BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN) * 1000L));
-    }
-
-    public static boolean isShoutCooldown(Player player) {
-        if (player.hasPermission("bw.shout.bypass")) return false;
-        Long expiresAt = shoutCooldown.get(player.getUniqueId());
-        if (expiresAt == null) return false;
-        if (expiresAt <= System.currentTimeMillis()) {
-            shoutCooldown.remove(player.getUniqueId(), expiresAt);
-            return false;
-        }
-        return true;
-    }
-
-    public static double getShoutCooldown(Player p) {
-        return Math.max(0, (shoutCooldown.getOrDefault(p.getUniqueId(), 0L) - System.currentTimeMillis()) / 1000f);
-    }
-
-    public static boolean isShout(Player p) {
-        if (!shoutCooldown.containsKey(p.getUniqueId())) return false;
-        return shoutCooldown.get(p.getUniqueId()) + 1000 > System.currentTimeMillis();
     }
 }

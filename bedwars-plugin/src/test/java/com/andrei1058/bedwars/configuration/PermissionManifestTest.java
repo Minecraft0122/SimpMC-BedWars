@@ -57,7 +57,8 @@ class PermissionManifestTest {
                 "bw.*", "bw.rejoin", "bw.shout", "bw.forcestart", "bw.tp", "bw.groups",
                 "bw.build", "bw.clone", "bw.delete", "bw.disable", "bw.enable", "bw.npc",
                 "bw.reload", "bw.setup", "bw.level", "bw.vip", "bw.chatcolor",
-                "bw.cmd.bypass", "bw.shout.bypass")));
+                "bw.cmd.bypass")));
+        assertFalse(permissions.contains("bw.shout.bypass"));
         assertFalse(permissions.contains("bw.command.start.debug"));
     }
 
