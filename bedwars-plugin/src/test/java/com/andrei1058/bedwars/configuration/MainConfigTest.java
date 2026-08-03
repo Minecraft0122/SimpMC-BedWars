@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.configuration;
 
+import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.ArenaSelectorPagination;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -127,6 +128,20 @@ class MainConfigTest {
         MainConfig.migrateFireballDefaults(configuration, 23);
 
         assertEquals(10.0, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER));
+    }
+
+    @Test
+    void addsFireballFlightRangeDefaultsWithoutOverwritingCustomValues() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigManager.CONFIG_VERSION_PATH, 26);
+        configuration.set(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MAX, 275.0D);
+        MainConfig.addFireballFlightRangeDefaults(configuration);
+
+        assertTrue(ConfigManager.applyVersionedMigration(configuration, 27, ignored -> { }));
+
+        assertEquals(200.0D, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MIN));
+        assertEquals(275.0D, configuration.getDouble(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MAX));
+        assertEquals(27, configuration.getInt(ConfigManager.CONFIG_VERSION_PATH));
     }
 
     @Test

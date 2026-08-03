@@ -53,10 +53,14 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
                 "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER,
-                "普通投掷的火球初速度倍率；默认 16，对应 1.6 格/tick。", "开阔且区块已加载时通常足以覆盖约 100–200 格；碰撞和服务端视距仍会影响实际距离。");
+                "普通投掷的火球初速度倍率；默认 16，对应 1.6 格/tick。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
                 "按住潜行键投掷的额外初速度倍率；默认 1.5，对应 2.4 格/tick。", "插件同时检查 Paper 当前输入与潜行姿态，确保潜行加速生效。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, "潜行投掷时给予发射者的水平后坐速度；默认 0.05，插件硬限制最大 0.08。", "按原版空气阻力的低摩擦情况估算，单次后坐约半格且不足一格；不创建逐 tick 跟踪任务。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MIN,
+                "每颗火球随机最大射程的下限，单位为格；默认 200。", "射程按相邻 tick 的实际三维路径累计，不按存活时间估算。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MAX,
+                "每颗火球随机最大射程的上限，单位为格；默认 300。", "上下限写反时会自动交换；插件不会为了远距离飞行强制加载区块。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, "潜行投掷时给予发射者的水平后坐速度；默认 0.05，插件硬限制最大 0.08。", "按原版空气阻力的低摩擦情况估算，单次后坐约半格且不足一格；后坐本身不创建跟踪任务。");
         comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否在命中处生成火焰；竞技场始终禁止火势向周围蔓延。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.20 默认值略微降低为 1.15。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, "火球垂直击退强度；2.10.20 默认值略微降低为 0.75。");
@@ -204,7 +208,7 @@ public final class ChineseConfigDocumentation {
 
     public static void upgrades(ConfigManager config) {
         comment(config, "default-upgrades-settings", "升级菜单布局和陷阱规则：menu-content 为 元素,槽位；价格货币支持 iron、gold、diamond、emerald 或 Vault。");
-        comment(config, "upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 4、6、9、14 钻石，后一级约为前一级的 1.5 倍。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
+        comment(config, "upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 2、4、8、14 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
         comment(config, "upgrade-armor", "护甲保护升级。");
         comment(config, "upgrade-miner", "挖掘急迫升级。");
         comment(config, "upgrade-forge", "岛屿资源生成器升级。");

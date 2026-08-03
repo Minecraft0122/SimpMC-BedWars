@@ -29,16 +29,20 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class LastHit {
 
-    private UUID victim;
-    private Entity damager;
-    private long time;
-    private static ConcurrentHashMap<UUID, LastHit> lastHit = new ConcurrentHashMap<>();
+    private final UUID victim;
+    private volatile Entity damager;
+    private volatile long time;
+    private static final ConcurrentHashMap<UUID, LastHit> LAST_HITS = new ConcurrentHashMap<>();
 
     public LastHit(@NotNull Player victim, Entity damager, long time) {
-        this.victim = victim.getUniqueId();
+        this(victim.getUniqueId(), damager, time);
+        LAST_HITS.put(this.victim, this);
+    }
+
+    private LastHit(UUID victim, Entity damager, long time) {
+        this.victim = victim;
         this.damager = damager;
         this.time = time;
-        lastHit.put(victim.getUniqueId(), this);
     }
 
     public void setTime(long time) {
@@ -58,14 +62,27 @@ public class LastHit {
     }
 
     public void remove() {
-        lastHit.remove(victim);
+        LAST_HITS.remove(victim, this);
     }
 
     public long getTime() {
         return time;
     }
 
+    public static LastHit record(@NotNull Player victim, Entity damager, long time) {
+        return record(victim.getUniqueId(), damager, time);
+    }
+
+    static LastHit record(UUID victim, Entity damager, long time) {
+        return LAST_HITS.compute(victim, (ignored, current) -> {
+            if (current == null) return new LastHit(victim, damager, time);
+            current.damager = damager;
+            current.time = time;
+            return current;
+        });
+    }
+
     public static LastHit getLastHit(@NotNull Player player) {
-        return lastHit.getOrDefault(player.getUniqueId(), null);
+        return LAST_HITS.get(player.getUniqueId());
     }
 }

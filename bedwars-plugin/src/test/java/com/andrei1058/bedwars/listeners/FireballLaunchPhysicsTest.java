@@ -3,6 +3,8 @@ package com.andrei1058.bedwars.listeners;
 import org.bukkit.util.Vector;
 import org.junit.jupiter.api.Test;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,13 +31,34 @@ class FireballLaunchPhysicsTest {
     }
 
     @Test
-    void defaultsCoverTheRequestedOpenAreaDistanceWithoutChangingAcceleration() {
-        double regularDistance = unobstructedDistance(1.6D, 80);
-        double sneakingDistance = unobstructedDistance(2.4D, 80);
+    void samplesEachDefaultFlightDistanceInsideTheConfiguredRange() {
+        Random random = new Random(1058L);
+        for (int sample = 0; sample < 1_000; sample++) {
+            double distance = FireballLaunchPhysics.randomFlightDistance(200D, 300D, random);
+            assertTrue(distance >= 200D && distance < 300D);
+        }
+    }
 
-        assertTrue(regularDistance >= 100D && regularDistance <= 200D);
-        assertTrue(sneakingDistance > regularDistance);
-        assertTrue(sneakingDistance <= 200D);
+    @Test
+    void normalizesReversedAndInvalidFlightRanges() {
+        assertEquals(new FireballLaunchPhysics.FlightRange(200D, 300D),
+                FireballLaunchPhysics.normalizeFlightRange(300D, 200D));
+        assertEquals(new FireballLaunchPhysics.FlightRange(200D, 300D),
+                FireballLaunchPhysics.normalizeFlightRange(Double.NaN, Double.POSITIVE_INFINITY));
+        assertEquals(new FireballLaunchPhysics.FlightRange(240D, 240D),
+                FireballLaunchPhysics.normalizeFlightRange(240D, 240D));
+        assertEquals(240D,
+                FireballLaunchPhysics.randomFlightDistance(240D, 240D, new Random(1L)));
+    }
+
+    @Test
+    void accumulatesTheTravelledPathInsteadOfTicksOrStraightLineDisplacement() {
+        double travelled = FireballLaunchPhysics.accumulateTravelledDistance(
+                0D, 0D, 0D, 0D, 3D, 0D, 0D);
+        travelled = FireballLaunchPhysics.accumulateTravelledDistance(
+                travelled, 3D, 0D, 0D, 3D, 4D, 0D);
+
+        assertEquals(7D, travelled, 1.0E-9D);
     }
 
     @Test
@@ -54,13 +77,4 @@ class FireballLaunchPhysicsTest {
         assertEquals(new Vector(), FireballLaunchPhysics.sneakRecoil(new Vector(0D, -1D, 0D), 0.05D));
     }
 
-    private static double unobstructedDistance(double initialVelocity, int ticks) {
-        double velocity = initialVelocity;
-        double distance = 0D;
-        for (int tick = 0; tick < ticks; tick++) {
-            distance += velocity;
-            velocity = (velocity + FireballLaunchPhysics.DEFAULT_ACCELERATION) * 0.95D;
-        }
-        return distance;
-    }
 }

@@ -7,17 +7,24 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.tag.DamageTypeTags;
 import org.bukkit.util.Vector;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 import static com.andrei1058.bedwars.BedWars.config;
 
@@ -31,6 +38,7 @@ public class FireballListener implements Listener {
     private final double damageSelf;
     private final double damageEnemy;
     private final double damageTeammates;
+    private final Set<DamageKey> activeCustomExplosions = new HashSet<>();
 
     public FireballListener() {
         this.fireballExplosionSize = Math.max(0.1,
@@ -48,10 +56,10 @@ public class FireballListener implements Listener {
 
     @EventHandler
     public void fireballHit(ProjectileHitEvent e) {
-        if (!(e.getEntity() instanceof Fireball)) return;
-        Location location = e.getEntity().getLocation();
+        if (!(e.getEntity() instanceof Fireball fireball)) return;
+        Location location = fireball.getLocation();
 
-        ProjectileSource projectileSource = e.getEntity().getShooter();
+        ProjectileSource projectileSource = fireball.getShooter();
         if (!(projectileSource instanceof Player source)) return;
 
         IArena arena = Arena.getArenaByPlayer(source);
@@ -65,44 +73,51 @@ public class FireballListener implements Listener {
                 player -> Arena.getArenaByPlayer(player) == arena && arena.isPlayer(player));
         Vector explosionPosition = location.toVector();
         long hitTime = System.currentTimeMillis();
+        DamageSource playerExplosion = DamageSource.builder(DamageType.PLAYER_EXPLOSION)
+                .withCausingEntity(source)
+                .withDirectEntity(fireball)
+                .build();
+        DamageSource unattributedExplosion = DamageSource.builder(DamageType.EXPLOSION).build();
         for (Player player : nearbyPlayers) {
 
             player.setVelocity(calculateKnockback(explosionPosition,
                     new Vector(player.getX(), player.getY(), player.getZ()),
                     fireballHorizontal, fireballVertical));
 
+            boolean self = player.equals(source);
             boolean teammate = sourceTeam != null && sourceTeam.equals(arena.getTeam(player));
-            if (!player.equals(source) && !teammate) {
-                LastHit lastHit = LastHit.getLastHit(player);
-                if (lastHit != null) {
-                    lastHit.setDamager(source);
-                    lastHit.setTime(hitTime);
-                } else {
-                    new LastHit(player, source, hitTime);
-                }
+            if (shouldCreditShooter(self, teammate)) {
+                LastHit.record(player, source, hitTime);
             }
 
-            if (player.equals(source)) {
+            if (self) {
                 if (damageSelf > 0) {
-                    player.damage(damageSelf); // damage shooter
+                    player.damage(damageSelf, unattributedExplosion); // damage shooter without kill credit
                 }
             } else if (teammate) {
                 if (damageTeammates > 0) {
-                    player.damage(damageTeammates); // damage teammates
+                    player.damage(damageTeammates, unattributedExplosion); // do not credit friendly fire
                 }
             } else {
                 if (damageEnemy > 0) {
-                    player.damage(damageEnemy); // damage enemies
+                    damageEnemy(player, fireball, playerExplosion);
                 }
             }
         }
     }
 
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void fireballDirectHit(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Fireball fireball)) return;
         if (!(e.getEntity() instanceof Player target)) return;
+        // The custom area damage also names the fireball as its direct entity.
+        // Only its synchronous, explicitly marked damage call is allowed through;
+        // the projectile's native contact and native explosion damage stay cancelled.
+        DamageKey damageKey = new DamageKey(fireball.getUniqueId(), target.getUniqueId());
+        boolean explosionDamage = DamageTypeTags.IS_EXPLOSION.isTagged(
+                e.getDamageSource().getDamageType());
+        if (!shouldCancelDirectHit(explosionDamage, activeCustomExplosions.contains(damageKey))) return;
         if (!(fireball.getShooter() instanceof Player source)) return;
         IArena arena = Arena.getArenaByPlayer(source);
         if (arena == null || Arena.getArenaByPlayer(target) != arena) return;
@@ -130,6 +145,27 @@ public class FireballListener implements Listener {
         if (y < 0) y += 1.5;
         y = y <= 0.5 ? vertical * 1.5 : y * vertical * 1.5;
         return knockback.setY(y);
+    }
+
+    static boolean shouldCreditShooter(boolean self, boolean teammate) {
+        return !self && !teammate;
+    }
+
+    static boolean shouldCancelDirectHit(boolean explosionDamage, boolean activeCustomExplosion) {
+        return !explosionDamage || !activeCustomExplosion;
+    }
+
+    private void damageEnemy(Player target, Fireball fireball, DamageSource source) {
+        DamageKey damageKey = new DamageKey(fireball.getUniqueId(), target.getUniqueId());
+        boolean firstSettlement = activeCustomExplosions.add(damageKey);
+        try {
+            target.damage(damageEnemy, source);
+        } finally {
+            if (firstSettlement) activeCustomExplosions.remove(damageKey);
+        }
+    }
+
+    private record DamageKey(UUID fireball, UUID target) {
     }
 
 }

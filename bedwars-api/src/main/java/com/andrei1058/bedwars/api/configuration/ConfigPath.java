@@ -258,6 +258,9 @@ public class ConfigPath {
     public static final String GENERAL_FIREBALL_EXPLOSION_SIZE = GENERAL_FIREBALL_PATH + ".explosion-size";
     public static final String GENERAL_FIREBALL_SPEED_MULTIPLIER = GENERAL_FIREBALL_PATH + ".speed-multiplier";
     public static final String GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER = GENERAL_FIREBALL_PATH + ".sneak-speed-multiplier";
+    private static final String GENERAL_FIREBALL_FLIGHT_RANGE_PATH = GENERAL_FIREBALL_PATH + ".flight-range";
+    public static final String GENERAL_FIREBALL_FLIGHT_RANGE_MIN = GENERAL_FIREBALL_FLIGHT_RANGE_PATH + ".min";
+    public static final String GENERAL_FIREBALL_FLIGHT_RANGE_MAX = GENERAL_FIREBALL_FLIGHT_RANGE_PATH + ".max";
     public static final String GENERAL_FIREBALL_SNEAK_RECOIL = GENERAL_FIREBALL_PATH + ".sneak-recoil";
     public static final String GENERAL_FIREBALL_MAKE_FIRE = GENERAL_FIREBALL_PATH + ".make-fire";
     private static final String GENERAL_FIREBALL_KNOCKBACK_PATH = GENERAL_FIREBALL_PATH + ".knockback";

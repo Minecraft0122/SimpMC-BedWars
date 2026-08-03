@@ -41,7 +41,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 26;
+    private static final int CONFIG_VERSION = 27;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -143,6 +143,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, FIREBALL_SPEED_MULTIPLIER_DEFAULT);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
                 FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT);
+        addFireballFlightRangeDefaults(yml);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, 0.05);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, false);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT);
@@ -599,6 +600,11 @@ public class MainConfig extends ConfigManager {
             upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, 1.25,
                     FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT);
         }
+    }
+
+    static void addFireballFlightRangeDefaults(YamlConfiguration yml) {
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MIN, 200.0D);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MAX, 300.0D);
     }
 
     static void removeRetiredFullArmorSetting(YamlConfiguration yml) {

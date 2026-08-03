@@ -58,6 +58,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.tag.DamageTypeTags;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
@@ -228,13 +229,7 @@ public class DamageDeathMove implements Listener {
                         } else return;
                     }
                 } else if ((e.getDamager() instanceof Silverfish) || (e.getDamager() instanceof IronGolem)) {
-                    LastHit lh = LastHit.getLastHit(p);
-                    if (lh != null) {
-                        lh.setDamager(e.getDamager());
-                        lh.setTime(System.currentTimeMillis());
-                    } else {
-                        new LastHit(p, e.getDamager(), System.currentTimeMillis());
-                    }
+                    LastHit.record(p, e.getDamager(), System.currentTimeMillis());
                 }
                 if (damager != null) {
                     if (a.isSpectator(damager) || a.isReSpawning(damager.getUniqueId())) {
@@ -258,13 +253,7 @@ public class DamageDeathMove implements Listener {
                     // but if the damageR is the re-spawning player remove protection
                     BedWarsTeam.reSpawnInvulnerability.remove(damager.getUniqueId());
 
-                    LastHit lh = LastHit.getLastHit(p);
-                    if (lh != null) {
-                        lh.setDamager(damager);
-                        lh.setTime(System.currentTimeMillis());
-                    } else {
-                        new LastHit(p, damager, System.currentTimeMillis());
-                    }
+                    LastHit.record(p, damager, System.currentTimeMillis());
 
                     // #274
                     // if player gets hit show him
@@ -393,13 +382,13 @@ public class DamageDeathMove implements Listener {
                 cause = victimsTeam.isBedDestroyed() ? PlayerKillEvent.PlayerKillCause.VOID_FINAL_KILL
                         : PlayerKillEvent.PlayerKillCause.VOID;
             } else if (damageEvent != null) {
-                if (damageEvent.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+                if (isExplosionDamage(damageEvent)) {
                     LastHit lh = getLastHit(victim);
-                    if (lh != null) {
-                        if (lh.getTime() >= System.currentTimeMillis() - 15000) {
-                            if (lh.getDamager() instanceof Player) killer = (Player) lh.getDamager();
-                            if (killer != null && killer.getUniqueId().equals(victim.getUniqueId())) killer = null;
-                        }
+                    killer = causingPlayer(damageEvent, victim);
+                    if (killer == null && isRecent(lh, System.currentTimeMillis(), 15000)
+                            && lh.getDamager() instanceof Player lastDamager
+                            && !lastDamager.getUniqueId().equals(victim.getUniqueId())) {
+                        killer = lastDamager;
                     }
                     if (killer == null) {
                         message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_EXPLOSION_WITHOUT_SOURCE_FINAL_KILL : Messages.PLAYER_DIE_EXPLOSION_WITHOUT_SOURCE_REGULAR;
@@ -696,6 +685,30 @@ public class DamageDeathMove implements Listener {
         return from.getWorld() != to.getWorld()
                 || (from.getBlockX() >> 4) != (to.getBlockX() >> 4)
                 || (from.getBlockZ() >> 4) != (to.getBlockZ() >> 4);
+    }
+
+    private static boolean isExplosionDamage(EntityDamageEvent event) {
+        return isExplosionDamage(event.getCause(),
+                DamageTypeTags.IS_EXPLOSION.isTagged(event.getDamageSource().getDamageType()));
+    }
+
+    static boolean isExplosionDamage(EntityDamageEvent.DamageCause cause, boolean explosionDamageType) {
+        return cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION
+                || cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION
+                || explosionDamageType;
+    }
+
+    private static Player causingPlayer(EntityDamageEvent event, Player victim) {
+        if (!(event.getDamageSource().getCausingEntity() instanceof Player player)) return null;
+        return player.getUniqueId().equals(victim.getUniqueId()) ? null : player;
+    }
+
+    static boolean isRecent(LastHit lastHit, long now, long maximumAge) {
+        return lastHit != null && isRecent(lastHit.getTime(), now, maximumAge);
+    }
+
+    static boolean isRecent(long hitTime, long now, long maximumAge) {
+        return hitTime >= now - maximumAge && hitTime <= now;
     }
 
     private static boolean isMultiArenaLobby(org.bukkit.World world) {

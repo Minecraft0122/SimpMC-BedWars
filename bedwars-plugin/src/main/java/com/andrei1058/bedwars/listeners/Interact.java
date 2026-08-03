@@ -62,6 +62,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -73,6 +74,8 @@ public class Interact implements Listener {
     private final double fireballSpeedMultiplier;
     private final double fireballSneakSpeedMultiplier;
     private final double fireballSneakRecoil;
+    private final double fireballMinimumFlightDistance;
+    private final double fireballMaximumFlightDistance;
     private final double fireballCooldown;
     private final float fireballExplosionSize;
     private final boolean craftingDisabled;
@@ -86,6 +89,11 @@ public class Interact implements Listener {
         this.fireballSneakSpeedMultiplier = config.getYml().getDouble(
                 ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER);
         this.fireballSneakRecoil = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL);
+        FireballLaunchPhysics.FlightRange flightRange = FireballLaunchPhysics.normalizeFlightRange(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MIN),
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MAX));
+        this.fireballMinimumFlightDistance = flightRange.min();
+        this.fireballMaximumFlightDistance = flightRange.max();
         this.fireballCooldown = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_COOLDOWN);
         this.fireballExplosionSize = (float) config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE);
         this.craftingDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING);
@@ -321,6 +329,9 @@ public class Interact implements Listener {
                             boolean sneaking = p.isSneaking() || p.getCurrentInput().isSneak();
                             Vector launchVelocity = FireballLaunchPhysics.launchVelocity(
                                     direction, fireballSpeedMultiplier, sneaking, fireballSneakSpeedMultiplier);
+                            double flightDistance = FireballLaunchPhysics.randomFlightDistance(
+                                    fireballMinimumFlightDistance, fireballMaximumFlightDistance,
+                                    ThreadLocalRandom.current());
                             Fireball fb = p.launchProjectile(Fireball.class, launchVelocity);
                             // Keep vanilla acceleration so the 1.21.11 client predicts the projectile smoothly.
                             fb.setAcceleration(FireballLaunchPhysics.launchAcceleration(direction));
@@ -331,6 +342,7 @@ public class Interact implements Listener {
                             //fb.setIsIncendiary(false); // apparently this on <12 makes the fireball not explode on hit. wtf bukkit?
                             fb.setYield(fireballExplosionSize);
                             fb.setMetadata("bw1058", new FixedMetadataValue(plugin, "ceva"));
+                            FireballFlightTracker.start(plugin, fb, flightDistance);
                             nms.minusAmount(p, inHand, 1);
                         }
 
