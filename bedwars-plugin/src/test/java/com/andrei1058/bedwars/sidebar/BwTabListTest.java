@@ -4,6 +4,7 @@ import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
+import com.andrei1058.spigot.sidebar.PlayerTab;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,28 @@ class BwTabListTest {
         assertSame(red, BwTabList.resolvePlayerListTeam(arena, active));
         assertSame(red, BwTabList.resolvePlayerListTeam(arena, eliminated));
         assertEquals(null, BwTabList.resolvePlayerListTeam(arena, spectator));
+    }
+
+    @Test
+    void minimalFormattingStillCreatesPureSpectatorRows() {
+        ITeam red = team("red", TeamColor.RED);
+
+        assertSame(PlayerTab.PlayerListMode.ACTUAL,
+                BwTabList.resolveMinimalPlayerListMode(red, false));
+        assertSame(PlayerTab.PlayerListMode.SPECTATOR,
+                BwTabList.resolveMinimalPlayerListMode(red, true));
+        assertSame(PlayerTab.PlayerListMode.SPECTATOR,
+                BwTabList.resolveMinimalPlayerListMode(null, true));
+        assertEquals(null, BwTabList.resolveMinimalPlayerListMode(null, false));
+    }
+
+    @Test
+    void playerRowsRemoveOnlyTeamIdentityMarkers() {
+        assertEquals(
+                "{teamColor} {vPrefix}&7[观察者] {vSuffix}",
+                BwTabList.removePlayerRowTeamMarkers(
+                        "{teamColor}{teamName} {vPrefix}&7[观察者] {teamLetter}{vSuffix}")
+        );
     }
 
     @Test

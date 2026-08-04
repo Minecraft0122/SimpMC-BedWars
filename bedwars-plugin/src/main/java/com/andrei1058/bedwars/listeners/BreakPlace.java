@@ -109,7 +109,7 @@ public class BreakPlace implements Listener {
     public void onBurn(@NotNull BlockBurnEvent event) {
         IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
         if (arena == null) return;
-        if (!arena.isAllowMapBreak()) {
+        if (!arena.isAllowMapBreak() && !arena.isBlockPlaced(event.getBlock())) {
             event.setCancelled(true);
             return;
         }
@@ -382,21 +382,19 @@ public class BreakPlace implements Listener {
             }
 
             boolean placedBlock = a.isBlockPlaced(e.getBlock());
-            for (Region r : a.getRegionsList()) {
-                if (r.isInRegion(e.getBlock().getLocation()) && r.isProtected()
-                        && !(placedBlock && isSpawnProtectedLocation(a, e.getBlock().getLocation()))) {
-                    e.setCancelled(true);
-                    p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
-                    return;
+            boolean protectedRegion = false;
+            if (!placedBlock) {
+                for (Region region : a.getRegionsList()) {
+                    if (region.isProtected() && region.isInRegion(e.getBlock().getLocation())) {
+                        protectedRegion = true;
+                        break;
+                    }
                 }
             }
-
-            if (!a.isAllowMapBreak()) {
-                if (!placedBlock) {
-                    p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
-                    e.setCancelled(true);
-                    return;
-                }
+            if (isProtectedMapBlock(placedBlock, protectedRegion, a.isAllowMapBreak())) {
+                p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
+                e.setCancelled(true);
+                return;
             }
         }
     }
@@ -627,14 +625,6 @@ public class BreakPlace implements Listener {
         return location.getBlockY() >= a.getConfig().getInt(ConfigPath.ARENA_CONFIGURATION_MAX_BUILD_Y);
     }
 
-    private boolean isSpawnProtectedLocation(@NotNull IArena a, @NotNull Location location) {
-        int radius = a.getConfig().getInt(ConfigPath.ARENA_SPAWN_PROTECTION);
-        for (ITeam team : a.getTeams()) {
-            if (ConfigManager.isSameWorldWithin(location, team.getSpawn(), radius)) return true;
-        }
-        return false;
-    }
-
     private boolean isShopUpgradeOrGeneratorProtected(@NotNull IArena a, @NotNull Location location) {
         int shopRadius = Math.max(1, a.getConfig().getInt(ConfigPath.ARENA_SHOP_PROTECTION));
         int upgradeRadius = Math.max(1, a.getConfig().getInt(ConfigPath.ARENA_UPGRADES_PROTECTION));
@@ -650,6 +640,15 @@ public class BreakPlace implements Listener {
             if (ConfigManager.isSameWorldWithin(location, generator.getLocation(), generatorRadius)) return true;
         }
         return false;
+    }
+
+    /**
+     * Player-created blocks take precedence over map protection. A protected
+     * region describes original arena terrain; it must never turn a block that
+     * was successfully created during this game into a permanent block.
+     */
+    static boolean isProtectedMapBlock(boolean placedBlock, boolean protectedRegion, boolean allowMapBreak) {
+        return !placedBlock && (protectedRegion || !allowMapBreak);
     }
 
     private boolean hasProtectedPlacedBlock(@NotNull IArena arena, @NotNull BlockPlaceEvent event) {

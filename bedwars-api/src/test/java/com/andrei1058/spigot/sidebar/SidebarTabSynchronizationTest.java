@@ -138,6 +138,41 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
+    void spectatorRowsKeepTheirScoreboardColorAndOnlyAdvertiseClientSpectatorMode() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("EliminatedAlice");
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(team(state));
+        PlayerTab tab = new PlayerTab("eliminated-alice", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+
+        sidebar.applyTab(scoreboard, tab);
+        sidebar.renderPlayerListName(viewer, tab);
+
+        assertSame(ChatColor.RED, state.color,
+                "spectator styling must not replace the former team's name color");
+        assertTrue(state.entries.contains(target.getName()));
+        assertEquals(1, renderer.cleared.size());
+        assertEquals(1, renderer.spectatorModes.size());
+        assertSame(viewer, renderer.spectatorModes.getFirst().viewer());
+        assertSame(target, renderer.spectatorModes.getFirst().target());
+        assertTrue(renderer.restoredGameModes.isEmpty());
+    }
+
+    @Test
+    void legacyPlayerTabConstructorKeepsTheTargetsActualGameMode() {
+        PlayerTab tab = new PlayerTab("legacy", player("Legacy"),
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.WHITE, PlayerTab.NameTagVisibility.ALWAYS);
+
+        assertSame(PlayerTab.PlayerListMode.ACTUAL, tab.getPlayerListMode());
+    }
+
+    @Test
     void creatingATabRowNeverMutatesTheTargetsGlobalPlayerListName() {
         Sidebar sidebar = sidebar();
         AtomicBoolean globalNameMutated = new AtomicBoolean();
@@ -203,7 +238,7 @@ class SidebarTabSynchronizationTest {
         Player target = player("OfflineAlice", () -> online[0]);
         PlayerTab tab = new PlayerTab("offline-alice", target, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
-                PlayerTab.NameTagVisibility.ALWAYS);
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.SPECTATOR);
 
         sidebar.renderPlayerListName(viewer, tab);
         online[0] = false;
@@ -213,6 +248,8 @@ class SidebarTabSynchronizationTest {
 
         assertEquals(2, renderer.cleared.size(),
                 "removing an offline target must release its cached row");
+        assertEquals(2, renderer.spectatorModes.size(),
+                "offline cleanup must release the cached spectator mode too");
         assertTrue(renderer.restored.isEmpty(),
                 "an offline target no longer has a PlayerInfo row to restore");
     }
@@ -231,6 +268,167 @@ class SidebarTabSynchronizationTest {
 
         assertEquals(2, renderer.cleared.size(),
                 "a later ADD_PLAYER or third-party update must be repairable even when text did not change");
+    }
+
+    @Test
+    void forcedReplayRepairsBothTheNullableNameAndSpectatorMode() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("SpectatorAlice");
+        PlayerTab tab = sidebar.playerTabCreate("spectator-alice", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                new ConcurrentLinkedQueue<>(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+
+        sidebar.renderPlayerListName(viewer, tab);
+        sidebar.forcePlayerListNameRefresh(viewer);
+
+        assertEquals(2, renderer.clearCalls);
+        assertEquals(2, renderer.spectatorModeCalls,
+                "a PlayerInfo replay must also repair overwritten spectator styling");
+    }
+
+    @Test
+    void failedGameModeWritesRetryWithoutPoisoningEitherModeCache() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("SpectatorAlice");
+        PlayerTab tab = new PlayerTab("spectator-alice", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+
+        renderer.spectatorModeResult = false;
+        sidebar.renderPlayerListName(viewer, tab);
+        renderer.spectatorModeResult = true;
+        sidebar.renderPlayerListName(viewer, tab);
+        sidebar.renderPlayerListName(viewer, tab);
+        assertEquals(2, renderer.spectatorModeCalls,
+                "a failed spectator write must retry once and cache only the success");
+
+        tab.setPlayerListMode(PlayerTab.PlayerListMode.ACTUAL);
+        renderer.restoreGameModeResult = false;
+        sidebar.renderPlayerListName(viewer, tab);
+        renderer.restoreGameModeResult = true;
+        sidebar.renderPlayerListName(viewer, tab);
+        sidebar.renderPlayerListName(viewer, tab);
+        assertEquals(2, renderer.restoreGameModeCalls,
+                "a failed actual-mode restore must retry once and cache only the success");
+    }
+
+    @Test
+    void spectatorModeWinsAcrossDuplicateRowsUntilTheLastSpectatorRowIsRemoved() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("DuplicateAlice");
+        PlayerTab spectatorTab = sidebar.playerTabCreate("duplicate-spectator", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                new ConcurrentLinkedQueue<>(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+        PlayerTab actualTab = sidebar.playerTabCreate("duplicate-actual", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                new ConcurrentLinkedQueue<>(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.ACTUAL);
+
+        sidebar.renderPlayerListName(viewer, spectatorTab);
+        sidebar.renderPlayerListName(viewer, actualTab);
+        assertEquals(1, renderer.spectatorModeCalls);
+        assertEquals(0, renderer.restoreGameModeCalls,
+                "one actual duplicate must not override another managed spectator row");
+
+        sidebar.removeTab("duplicate-spectator");
+        sidebar.renderPlayerListName(viewer, actualTab);
+        assertEquals(1, renderer.restoreGameModeCalls,
+                "the real game mode is restored after the last spectator row disappears");
+    }
+
+    @Test
+    void combinedRestoreRunsWhenOnlySpectatorModeWasSuccessfullyManaged() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        renderer.clearResult = false;
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("SpectatorAlice");
+        PlayerTab tab = new PlayerTab("spectator-alice", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+
+        sidebar.renderPlayerListName(viewer, tab);
+        sidebar.restorePlayerListName(viewer, tab);
+
+        assertEquals(1, renderer.clearCalls);
+        assertEquals(1, renderer.spectatorModeCalls);
+        assertEquals(1, renderer.restoreCalls,
+                "cleanup must restore mode even if the nullable-name write never succeeded");
+        assertSame(target, renderer.restored.getFirst().target());
+    }
+
+    @Test
+    void successfulNameWriteCannotDiscardAPendingModeRestore() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        renderer.clearResult = false;
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("SpectatorAlice");
+        PlayerTab tab = new PlayerTab("spectator-alice", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+
+        sidebar.renderPlayerListName(viewer, tab);
+        renderer.restoreResult = false;
+        sidebar.restorePlayerListName(viewer, tab);
+
+        renderer.clearResult = true;
+        renderer.restoreGameModeResult = false;
+        tab.setPlayerListMode(PlayerTab.PlayerListMode.ACTUAL);
+        sidebar.renderPlayerListName(viewer, tab);
+
+        Map<java.util.UUID, Map<java.util.UUID, Player>> pending =
+                fieldMap(sidebar, "pendingPlayerListRestores");
+        assertTrue(pending.get(viewer.getUniqueId()).containsKey(target.getUniqueId()),
+                "a successful nullable-name write must not hide a failed combined mode restore");
+
+        renderer.restoreResult = true;
+        sidebar.forcePlayerListNameRefresh(viewer);
+        assertEquals(2, renderer.restoreCalls,
+                "the next explicit refresh must retry the complete restore");
+        assertTrue(fieldMap(sidebar, "pendingPlayerListRestores").isEmpty());
+    }
+
+    @Test
+    void completeNewTakeoverSupersedesAStalePendingRestore() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        Player target = player("SpectatorAlice");
+        PlayerTab tab = new PlayerTab("spectator-alice", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+
+        sidebar.renderPlayerListName(viewer, tab);
+        renderer.restoreResult = false;
+        sidebar.restorePlayerListName(viewer, tab);
+        assertEquals(1, renderer.restoreCalls);
+
+        sidebar.renderPlayerListName(viewer, tab);
+
+        assertEquals(2, renderer.clearCalls,
+                "a stale pending cleanup requires a fresh nullable-name takeover");
+        assertEquals(2, renderer.spectatorModeCalls,
+                "a stale pending cleanup requires a fresh spectator-mode takeover");
+        assertTrue(fieldMap(sidebar, "pendingPlayerListRestores").isEmpty(),
+                "both successful writes supersede the stale cleanup request");
+
+        renderer.restoreResult = true;
+        sidebar.forcePlayerListNameRefresh(viewer);
+        assertEquals(1, renderer.restoreCalls,
+                "a later refresh must not restore state superseded by the new row");
     }
 
     @Test
@@ -265,6 +463,38 @@ class SidebarTabSynchronizationTest {
         assertFalse(manager.releaseDisplayNameOwnership(oldSidebar, viewer));
         assertTrue(manager.ownsDisplayNames(currentSidebar, viewer));
         assertTrue(manager.releaseDisplayNameOwnership(currentSidebar, viewer));
+    }
+
+    @Test
+    void suspendedOwnerCannotRetryAPendingRestoreOverTheCurrentOwner() {
+        SidebarManager manager = SidebarManager.getInstance();
+        RecordingRenderer previousRenderer = new RecordingRenderer();
+        Sidebar previous = sidebar(previousRenderer);
+        Sidebar current = sidebar(new RecordingRenderer());
+        Player viewer = player("OwnershipViewer");
+        Player target = player("PreviousSpectator");
+        PlayerTab previousTab = previous.playerTabCreate("previous-spectator", target,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                new ConcurrentLinkedQueue<>(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+        fieldMap(previous, "scoreboards").put(viewer.getUniqueId(), scoreboard(team(new TeamState())));
+        fieldMap(previous, "viewers").put(viewer.getUniqueId(), viewer);
+
+        manager.claimDisplayNameOwnership(previous, viewer);
+        try {
+            previous.renderPlayerListName(viewer, previousTab);
+            previousRenderer.restoreResult = false;
+            manager.claimDisplayNameOwnership(current, viewer);
+            assertEquals(1, previousRenderer.restoreCalls);
+
+            previous.playerTabRefreshAnimation();
+
+            assertEquals(1, previousRenderer.restoreCalls,
+                    "a suspended layer must not overwrite the current owner's PlayerInfo rows");
+        } finally {
+            manager.releaseDisplayNameOwnership(previous, viewer);
+            manager.releaseDisplayNameOwnership(current, viewer);
+        }
     }
 
     @Test
@@ -316,7 +546,8 @@ class SidebarTabSynchronizationTest {
         Player currentTarget = player("CurrentTarget");
         PlayerTab previousTab = previous.playerTabCreate("previous", previousTarget,
                 new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
-                new ConcurrentLinkedQueue<>(), ChatColor.RED);
+                new ConcurrentLinkedQueue<>(), ChatColor.RED, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
         PlayerTab currentTab = current.playerTabCreate("current", currentTarget,
                 new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
                 new ConcurrentLinkedQueue<>(), ChatColor.BLUE);
@@ -337,6 +568,8 @@ class SidebarTabSynchronizationTest {
                     "releasing the newer Sidebar must reactivate the still-attached previous owner");
             assertEquals(2, previousRenderer.cleared.size(),
                     "reactivating the previous owner must replay its complete player list state");
+            assertEquals(2, previousRenderer.spectatorModeCalls,
+                    "reactivating the previous owner must replay spectator styling too");
         } finally {
             manager.releaseDisplayNameOwnership(current, viewer);
             manager.releaseDisplayNameOwnership(previous, viewer);
@@ -590,10 +823,16 @@ class SidebarTabSynchronizationTest {
 
     private static final class RecordingRenderer implements PlayerListDisplayNameRenderer {
         private final java.util.ArrayList<CapturedTarget> cleared = new java.util.ArrayList<>();
+        private final java.util.ArrayList<CapturedTarget> spectatorModes = new java.util.ArrayList<>();
+        private final java.util.ArrayList<CapturedTarget> restoredGameModes = new java.util.ArrayList<>();
         private final java.util.ArrayList<CapturedTarget> restored = new java.util.ArrayList<>();
         private boolean clearResult = true;
+        private boolean spectatorModeResult = true;
+        private boolean restoreGameModeResult = true;
         private boolean restoreResult = true;
         private int clearCalls;
+        private int spectatorModeCalls;
+        private int restoreGameModeCalls;
         private int restoreCalls;
 
         @Override
@@ -601,6 +840,20 @@ class SidebarTabSynchronizationTest {
             clearCalls++;
             targets.forEach(target -> cleared.add(new CapturedTarget(viewer, target)));
             return clearResult;
+        }
+
+        @Override
+        public boolean setSpectatorMode(Player viewer, java.util.Collection<Player> targets) {
+            spectatorModeCalls++;
+            targets.forEach(target -> spectatorModes.add(new CapturedTarget(viewer, target)));
+            return spectatorModeResult;
+        }
+
+        @Override
+        public boolean restoreGameMode(Player viewer, java.util.Collection<Player> targets) {
+            restoreGameModeCalls++;
+            targets.forEach(target -> restoredGameModes.add(new CapturedTarget(viewer, target)));
+            return restoreGameModeResult;
         }
 
         @Override

@@ -16,4 +16,17 @@ class BlastProtectionUtilTest {
         assertTrue(BlastProtectionUtil.isExplosionRayTransparent(Material.SOUL_FIRE));
         assertFalse(BlastProtectionUtil.isExplosionRayTransparent(Material.WHITE_WOOL));
     }
+
+    @Test
+    void placedBlocksAreNotMadeBlastProofByMapRegions() {
+        assertFalse(BlastProtectionUtil.isProtectedTarget(true, true, false));
+        assertFalse(BlastProtectionUtil.isProtectedTarget(true, false, false));
+        assertTrue(BlastProtectionUtil.isProtectedTarget(false, true, false));
+    }
+
+    @Test
+    void teamBedsRemainBlastProofEvenIfTrackedAsPlaced() {
+        assertTrue(BlastProtectionUtil.isProtectedTarget(true, false, true));
+        assertTrue(BlastProtectionUtil.isProtectedTarget(false, false, true));
+    }
 }

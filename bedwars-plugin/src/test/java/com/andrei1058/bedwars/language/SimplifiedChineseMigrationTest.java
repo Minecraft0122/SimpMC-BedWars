@@ -1,6 +1,7 @@
 package com.andrei1058.bedwars.language;
 
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
+import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SimplifiedChineseMigrationTest {
 
     @Test
-    void schemaFifteenAddsGameTimeWithoutRewritingCurrentCustomMessages() {
+    void schemaSixteenKeepsGameTimeAndCustomMessages() {
         YamlConfiguration language = new YamlConfiguration();
         String customChat = "&d自定义格式 {player}：{message}";
         String customGameTime = "&b本局 {gameTime}";
@@ -22,22 +23,22 @@ class SimplifiedChineseMigrationTest {
         language.set(Messages.FORMATTING_SB_TAB_GAME_TIME, customGameTime);
         language.addDefault(Messages.FORMATTING_SB_TAB_GAME_TIME, "&7游戏时间：&a{gameTime}");
 
-        assertTrue(ConfigManager.applyVersionedMigration(language, 15,
-                SimplifiedChinese::migrateSchema15));
+        assertTrue(ConfigManager.applyVersionedMigration(language, 16,
+                SimplifiedChinese::migrateSchema16));
 
         assertEquals(customChat, language.getString(Messages.FORMATTING_CHAT_SHOUT));
         assertEquals(customGameTime, language.getString(Messages.FORMATTING_SB_TAB_GAME_TIME));
-        assertEquals(15, language.getInt(ConfigManager.CONFIG_VERSION_PATH));
+        assertEquals(16, language.getInt(ConfigManager.CONFIG_VERSION_PATH));
     }
 
     @Test
-    void schemaFifteenPersistsTheMissingGameTimeDefault() {
+    void schemaSixteenPersistsTheMissingGameTimeDefault() {
         YamlConfiguration language = new YamlConfiguration();
         language.set(ConfigManager.CONFIG_VERSION_PATH, 14);
         language.addDefault(Messages.FORMATTING_SB_TAB_GAME_TIME, "&7游戏时间：&a{gameTime}");
 
-        assertTrue(ConfigManager.applyVersionedMigration(language, 15,
-                SimplifiedChinese::migrateSchema15));
+        assertTrue(ConfigManager.applyVersionedMigration(language, 16,
+                SimplifiedChinese::migrateSchema16));
 
         assertTrue(language.contains(Messages.FORMATTING_SB_TAB_GAME_TIME, true));
         assertEquals("&7游戏时间：&a{gameTime}",
@@ -139,7 +140,7 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
-    void migratesOnlyBuiltInArenaJoinAndRestoresUpstreamTeamPrefixes() {
+    void migratesOnlyBuiltInArenaJoinAndRemovesBuiltInTeamLabels() {
         YamlConfiguration language = new YamlConfiguration();
         language.set(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG,
                 "{prefix}&7{player}&e加入了游戏(&b{on}&e/&b{max}&e)！");
@@ -155,9 +156,9 @@ class SimplifiedChineseMigrationTest {
                 language.getString(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG));
         assertEquals("&f你属于 {teamColor}{teamName}队",
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER).get(1));
-        assertEquals(List.of("{teamColor}{teamName} "),
+        assertEquals(List.of(""),
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
-        assertEquals(List.of("&6&l⭐ {teamColor}{teamName} "),
+        assertEquals(List.of(""),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
     }
 
@@ -178,25 +179,28 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
-    void restoresEveryBuiltInTeamPrefixRemovedByThePreviousMigration() {
+    void removesEveryKnownBuiltInTeamLabel() {
         YamlConfiguration language = new YamlConfiguration();
         for (String path : List.of(
                 Messages.FORMATTING_SB_TAB_PLAYING_PREFIX,
                 Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX,
                 Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX,
                 Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX)) {
-            language.set(path, List.of(""));
+            language.set(path, path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX)
+                    || path.equals(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX)
+                    ? List.of("&6&l⭐ {teamColor}{teamName} ")
+                    : List.of("{teamColor}{teamName} "));
         }
 
-        SimplifiedChinese.migrateBuiltInTeamNamePrefixes(language);
+        Language.migrateBuiltInTabPlayerRows(language);
 
-        assertEquals(List.of("{teamColor}{teamName} "),
+        assertEquals(List.of(""),
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
-        assertEquals(List.of("{teamColor}{teamName} "),
+        assertEquals(List.of(""),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX));
-        assertEquals(List.of("&6&l⭐ {teamColor}{teamName} "),
+        assertEquals(List.of(""),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
-        assertEquals(List.of("&6&l⭐ {teamColor}{teamName} "),
+        assertEquals(List.of(""),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX));
     }
 

@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>7.0.0</version>
+    <version>7.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -96,7 +96,9 @@ sidebars.giveSidebar(player, arenaSnapshot, false);
 
 `giveSidebar` 的竞技场参数是调用时快照；实现会在应用前与实时玩家竞技场注册表核对，避免延迟任务把新竞技场面板覆盖成大厅面板。附属插件不应在竞技场内持续调用 `Player#setScoreboard` 与 BedWars 争抢同一面板；若只需扩展内容，应监听 `PlayerSidebarInitEvent` 操作公开的 `ISidebar`。SimpMC-BedWars 离开上下文时会恢复接管前最后观察到的外部 scoreboard。
 
-TAB 队伍色由每个查看者的 scoreboard Team 同时控制 TAB 和头顶名牌。插件只向对应查看者发送 nullable PlayerInfo 名称，不修改目标玩家的全局 `playerListName`，因此附属插件不应再把非空 PlayerInfo 名称强制发送给竞技场查看者，否则客户端会绕过 Team 颜色。
+TAB 队伍色由每个查看者的 scoreboard Team 同时控制 TAB 和头顶名牌；竞技场玩家行不再附加队伍名称或字母。插件只向对应查看者发送 nullable PlayerInfo 名称，不修改目标玩家的全局 `playerListName`，因此附属插件不应再把非空 PlayerInfo 名称强制发送给竞技场查看者，否则客户端会绕过 Team 颜色。
+
+7.1.0 新增 `PlayerTab.PlayerListMode`。`ACTUAL` 保留目标当前真实模式；`SPECTATOR` 只向当前 Sidebar 的查看者发送 `UPDATE_GAME_MODE=SPECTATOR`，不会调用 `Player#setGameMode`，适合需要保留 ADVENTURE 交互的自定义旁观行。旧构造器和旧 `Sidebar#playerTabCreate` 重载默认使用 `ACTUAL`；可通过带 `PlayerListMode` 的新重载创建，或对已有行调用 `setPlayerListMode`。Sidebar 释放、被覆盖或删除该行时会从 Paper 当前状态恢复真实模式和第三方 nullable 名称。
 
 游戏进行中的 TAB 页首使用 `{gameTime}` 显示从 `IArena#getStartTime()` 计算的本局已进行时间；`{time}` 仍是下一事件倒计时。附属插件若直接使用 PlaceholderAPI，可读取 `%bw1058_elapsed_time%`，其格式与 TAB 一致：不足一小时为 `MM:SS`，一小时以上为 `HH:MM:SS`。开始时间缺失时返回空文本。
 
@@ -187,6 +189,8 @@ Set<Vector> placedBlocks = arena.getPlacedBlocksSnapshot();
 ```
 
 返回值是与竞技场内部索引分离的只读快照。旧方法 `getPlaced()` 已弃用，修改其返回列表不会再改变竞技场状态；这样可以避免附属插件误把地图原生方块标记成玩家方块。所有 Bukkit 方块操作和所有权更新都应在主线程完成。
+
+玩家通过正常 Bukkit 事件放置、破坏、炸毁、燃烧或移动方块时，插件会在下一 tick 按事件最终取消状态与真实 `BlockData` 对账所有权，兼容在 BedWars 的 `MONITOR` 之后才取消事件的反作弊/保护插件。附属插件直接调用 `addPlacedBlock`/`removePlacedBlock` 仍是即时操作，应在自身世界修改成功后调用。被正确登记的玩家方块优先于地图保护区域，可以由玩家或 BedWars 爆炸正常破坏；队伍床始终例外。
 
 ## API 兼容原则
 

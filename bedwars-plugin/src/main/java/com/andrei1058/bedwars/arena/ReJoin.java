@@ -196,16 +196,8 @@ public class ReJoin {
         if (bwt != null) {
             bwt.getMembersCache().removeIf(cached -> cached.getUniqueId().equals(player));
         }
-        boolean hasOtherPendingTeammate = false;
-        if (bwt != null) {
-            for (ReJoin pending : reJoinList) {
-                if (pending != this && pending.bwt == bwt) {
-                    hasOtherPendingTeammate = true;
-                    break;
-                }
-            }
-        }
-        boolean eliminateTeam = bwt != null && bwt.getMembers().isEmpty() && !hasOtherPendingTeammate;
+        boolean eliminateTeam = bwt != null && ArenaAbandonPolicy.eliminatesTeam(
+                bwt.getMembers().size(), hasPendingForTeam(bwt, this));
         destroy(eliminateTeam);
         if (arena != null && arena.getStatus() == GameState.playing
                 && arena.getPlayers().isEmpty() && !hasPendingForArena(arena)) {
@@ -214,9 +206,18 @@ public class ReJoin {
     }
 
     public static boolean hasPendingForTeam(ITeam team) {
+        return hasPendingForTeam(team, null);
+    }
+
+    /**
+     * Check whether a team has a reconnect reservation other than the supplied
+     * lifecycle. This lets one abandonment or expiry be finalized without
+     * invalidating another disconnected teammate's still-valid reservation.
+     */
+    static boolean hasPendingForTeam(ITeam team, @Nullable ReJoin excluded) {
         if (team == null || team.isBedDestroyed()) return false;
         for (ReJoin reJoin : reJoinList) {
-            if (reJoin.bwt == team) return true;
+            if (reJoin != excluded && reJoin.bwt == team) return true;
         }
         return false;
     }

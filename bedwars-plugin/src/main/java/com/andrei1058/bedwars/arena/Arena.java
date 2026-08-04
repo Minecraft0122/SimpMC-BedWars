@@ -483,7 +483,7 @@ public class Arena implements IArena {
             }
         }
 
-        leaving.remove(p);
+        ArenaDepartureGuard.restore(leaving, p);
 
         if (status == GameState.waiting || (status == GameState.starting && (startingTask != null && startingTask.getCountdown() > 1))) {
             if (players.size() >= maxPlayers && !isVip(p)) {
@@ -628,7 +628,7 @@ public class Arena implements IArena {
                 reJoin.destroy(true);
             }
 
-            leaving.remove(p);
+            ArenaDepartureGuard.restore(leaving, p);
 
             p.closeInventory();
             spectators.add(p);
@@ -703,7 +703,7 @@ public class Arena implements IArena {
                 }
             });
 
-            leaving.remove(p);
+            ArenaDepartureGuard.restore(leaving, p);
 
             p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_MSG).replace("{arena}", this.getDisplayName()));
 
@@ -719,7 +719,7 @@ public class Arena implements IArena {
 
     private boolean isCurrentSpectator(Player player) {
         return player.isOnline() && spectators.contains(player)
-                && getArenaByPlayer(player) == this && !leaving.contains(player);
+                && getArenaByPlayer(player) == this && !ArenaDepartureGuard.contains(leaving, player);
     }
 
     /** 将淘汰后的数据包更新集中到下一 tick，避免阻塞 PlayerRespawnEvent。 */
@@ -780,11 +780,7 @@ public class Arena implements IArena {
      * @param disconnect True if the player was disconnected
      */
     public void removePlayer(@NotNull Player p, boolean disconnect) {
-        if (leaving.contains(p)) {
-            return;
-        } else {
-            leaving.add(p);
-        }
+        if (!ArenaDepartureGuard.tryBegin(leaving, p)) return;
         debug("Player removed: " + p.getName() + " arena: " + getArenaName());
         respawnSessions.remove(p);
 
@@ -1030,11 +1026,7 @@ public class Arena implements IArena {
     public void removeSpectator(@NotNull Player p, boolean disconnect) {
         debug("Spectator removed: " + p.getName() + " arena: " + getArenaName());
 
-        if (leaving.contains(p)) {
-            return;
-        } else {
-            leaving.add(p);
-        }
+        if (!ArenaDepartureGuard.tryBegin(leaving, p)) return;
 
         Bukkit.getPluginManager().callEvent(new PlayerLeaveArenaEvent(p, this, null));
         spectators.remove(p);
@@ -1144,6 +1136,10 @@ public class Arena implements IArena {
         }
 
         p.closeInventory();
+        // The previous Player instance remains equal by UUID after reconnecting.
+        // End that departure lifecycle immediately before restoring arena
+        // membership so a later quit cannot be swallowed by the guard.
+        ArenaDepartureGuard.restore(leaving, p);
         players.add(p);
         for (Player on : players) {
             on.sendMessage(getMsg(on, Messages.COMMAND_REJOIN_PLAYER_RECONNECTED).replace("{playername}", p.getName()).replace("{player}", p.getDisplayName()).replace("{on}", String.valueOf(getPlayers().size())).replace("{max}", String.valueOf(getMaxPlayers())));
@@ -2884,8 +2880,14 @@ public class Arena implements IArena {
             team.getMembersCache().removeIf(cachedPlayer -> cachedPlayer.getUniqueId().equals(player.getUniqueId()));
             ReJoin rejoin = ReJoin.getPlayer(player);
             if (rejoin != null) {
-                rejoin.destroy(team.getMembers().isEmpty());
+                boolean eliminateTeam = ArenaAbandonPolicy.eliminatesTeam(
+                        team.getMembers().size(), ReJoin.hasPendingForTeam(team, rejoin));
+                rejoin.destroy(eliminateTeam);
             }
+            // destroy(false) intentionally keeps a multi-player team alive and
+            // therefore does not check for a winner itself. Always re-evaluate
+            // after the abandoned player's reconnect reservation is removed.
+            if (status == GameState.playing) checkWinner();
         }
     }
 

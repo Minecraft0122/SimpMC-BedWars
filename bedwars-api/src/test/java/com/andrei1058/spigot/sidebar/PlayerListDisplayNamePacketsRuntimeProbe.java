@@ -14,7 +14,8 @@ public final class PlayerListDisplayNamePacketsRuntimeProbe {
         bootstrapMinecraftRegistries();
         PlayerListDisplayNamePackets.verifyCompatibility();
         if (!PlayerListDisplayNamePackets.isCompatible()) {
-            throw new IllegalStateException("Paper 1.21.11 TAB packet bridge is unavailable");
+            throw new IllegalStateException(
+                    "Paper 1.21.11 TAB display-name/game-mode packet bridge is unavailable");
         }
     }
 

@@ -28,11 +28,15 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
     private final Method packetActions;
     private final Method packetEntries;
     private final Method entryProfileId;
+    private final Method entryGameMode;
     private final Method entryDisplayName;
     private final Constructor<?> snapshotPacket;
     private final Constructor<?> entryConstructor;
     private final Constructor<?> entriesPacket;
     private final EnumSet<?> displayNameAction;
+    private final EnumSet<?> gameModeAction;
+    private final EnumSet<?> restoreActions;
+    private final Object spectatorGameType;
     private boolean packetFailureLogged;
 
     private PlayerListDisplayNamePackets() throws ReflectiveOperationException {
@@ -61,8 +65,12 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
         packetActions = playerInfoPacket.getMethod("actions");
         packetEntries = playerInfoPacket.getMethod("entries");
         entryProfileId = playerInfoEntry.getMethod("profileId");
+        entryGameMode = playerInfoEntry.getMethod("gameMode");
         entryDisplayName = playerInfoEntry.getMethod("displayName");
-        displayNameAction = displayNameAction(playerInfoAction);
+        displayNameAction = actions(playerInfoAction, "UPDATE_DISPLAY_NAME");
+        gameModeAction = actions(playerInfoAction, "UPDATE_GAME_MODE");
+        restoreActions = actions(playerInfoAction, "UPDATE_DISPLAY_NAME", "UPDATE_GAME_MODE");
+        spectatorGameType = enumConstant(gameType, "SPECTATOR");
         verifyPacketConstruction();
     }
 
@@ -103,14 +111,43 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
     }
 
     @Override
+    public boolean setSpectatorMode(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+        if (targets.isEmpty()) return true;
+        try {
+            ArrayList<Object> entries = new ArrayList<>(targets.size());
+            for (Player target : targets) {
+                entries.add(entryConstructor.newInstance(
+                        target.getUniqueId(), null, false, 0, spectatorGameType,
+                        null, false, 0, null));
+            }
+            send(viewer, entriesPacket.newInstance(gameModeAction, entries));
+            return true;
+        } catch (ReflectiveOperationException exception) {
+            logPacketFailure(viewer, exception);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean restoreGameMode(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+        return sendSnapshot(viewer, targets, gameModeAction);
+    }
+
+    @Override
     public boolean restore(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+        return sendSnapshot(viewer, targets, restoreActions);
+    }
+
+    private boolean sendSnapshot(@NotNull Player viewer, @NotNull Collection<Player> targets,
+                                 @NotNull EnumSet<?> packetActions) {
         if (targets.isEmpty()) return true;
         try {
             ArrayList<Object> targetHandles = new ArrayList<>(targets.size());
             for (Player target : targets) targetHandles.add(craftPlayerGetHandle.invoke(target));
             // The normal packet constructor reads Paper's current nullable
-            // player-list name, so third-party display names are restored too.
-            Object packet = snapshotPacket.newInstance(displayNameAction, targetHandles);
+            // player-list name and real game mode, so third-party state is
+            // restored rather than replaced with a stale snapshot.
+            Object packet = snapshotPacket.newInstance(packetActions, targetHandles);
             send(viewer, packet);
             return true;
         } catch (ReflectiveOperationException exception) {
@@ -132,36 +169,56 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
      */
     private void verifyPacketConstruction() throws ReflectiveOperationException {
         UUID expectedId = new UUID(0L, 1L);
-        Object entry = entryConstructor.newInstance(
+        Object displayEntry = entryConstructor.newInstance(
                 expectedId, null, false, 0, null, null, false, 0, null);
-        Object packet = entriesPacket.newInstance(displayNameAction, List.of(entry));
+        Object displayPacket = entriesPacket.newInstance(displayNameAction, List.of(displayEntry));
 
-        Object actions = packetActions.invoke(packet);
-        Object entries = packetEntries.invoke(packet);
-        if (!(actions instanceof Collection<?> packetActionValues)
+        Object displayActions = packetActions.invoke(displayPacket);
+        Object displayEntries = packetEntries.invoke(displayPacket);
+        if (!(displayActions instanceof Collection<?> packetActionValues)
                 || !packetActionValues.containsAll(displayNameAction)
-                || !(entries instanceof List<?> packetEntryValues)
+                || !(displayEntries instanceof List<?> packetEntryValues)
                 || packetEntryValues.size() != 1
                 || !expectedId.equals(entryProfileId.invoke(packetEntryValues.getFirst()))
                 || entryDisplayName.invoke(packetEntryValues.getFirst()) != null) {
             throw new ReflectiveOperationException(
                     "Paper 1.21.11 PlayerInfo UPDATE_DISPLAY_NAME packet contract changed");
         }
+
+        Object spectatorEntry = entryConstructor.newInstance(
+                expectedId, null, false, 0, spectatorGameType, null, false, 0, null);
+        Object spectatorPacket = entriesPacket.newInstance(gameModeAction, List.of(spectatorEntry));
+        Object spectatorActions = packetActions.invoke(spectatorPacket);
+        Object spectatorEntries = packetEntries.invoke(spectatorPacket);
+        if (!(spectatorActions instanceof Collection<?> spectatorActionValues)
+                || !spectatorActionValues.containsAll(gameModeAction)
+                || !(spectatorEntries instanceof List<?> spectatorEntryValues)
+                || spectatorEntryValues.size() != 1
+                || !expectedId.equals(entryProfileId.invoke(spectatorEntryValues.getFirst()))
+                || entryGameMode.invoke(spectatorEntryValues.getFirst()) != spectatorGameType) {
+            throw new ReflectiveOperationException(
+                    "Paper 1.21.11 PlayerInfo UPDATE_GAME_MODE packet contract changed");
+        }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static EnumSet<?> displayNameAction(Class<?> actionType) {
+    private static EnumSet<?> actions(Class<?> actionType, String... names) {
         Class<? extends Enum> enumType = actionType.asSubclass(Enum.class);
         EnumSet actions = EnumSet.noneOf(enumType);
-        actions.add(Enum.valueOf(enumType, "UPDATE_DISPLAY_NAME"));
+        for (String name : names) actions.add(Enum.valueOf(enumType, name));
         return actions;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Object enumConstant(Class<?> enumType, String name) {
+        return Enum.valueOf(enumType.asSubclass(Enum.class), name);
     }
 
     private void logPacketFailure(Player viewer, Exception cause) {
         if (packetFailureLogged) return;
         packetFailureLogged = true;
         Bukkit.getLogger().log(Level.SEVERE, "SimpMC-BedWars 无法更新 " + viewer.getName()
-                + " 看到的 TAB 名称；已保留 scoreboard 降级显示。", cause);
+                + " 看到的 TAB 名称或观察者状态；已保留 scoreboard 降级显示。", cause);
     }
 
     private static final class LazyRenderer implements PlayerListDisplayNameRenderer {
@@ -170,6 +227,16 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
         @Override
         public boolean clear(@NotNull Player viewer, @NotNull Collection<Player> targets) {
             return delegate().clear(viewer, targets);
+        }
+
+        @Override
+        public boolean setSpectatorMode(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+            return delegate().setSpectatorMode(viewer, targets);
+        }
+
+        @Override
+        public boolean restoreGameMode(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+            return delegate().restoreGameMode(viewer, targets);
         }
 
         @Override
@@ -191,7 +258,8 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
                 return new PlayerListDisplayNamePackets();
             } catch (ReflectiveOperationException exception) {
                 Bukkit.getLogger().log(Level.SEVERE,
-                        "SimpMC-BedWars 无法初始化 Paper 1.21.11 TAB 数据包支持；玩家名颜色不会生效。",
+                        "SimpMC-BedWars 无法初始化 Paper 1.21.11 TAB 数据包支持；"
+                                + "玩家名颜色和观察者样式不会完整生效。",
                         exception);
                 return UnavailableRenderer.INSTANCE;
             }
@@ -203,6 +271,16 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
 
         @Override
         public boolean clear(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+            return false;
+        }
+
+        @Override
+        public boolean setSpectatorMode(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+            return false;
+        }
+
+        @Override
+        public boolean restoreGameMode(@NotNull Player viewer, @NotNull Collection<Player> targets) {
             return false;
         }
 

@@ -58,7 +58,7 @@ public class QuitAndTeleportListener implements Listener {
         IArena a = Arena.getArenaByPlayer(p);
         if (a != null) {
             if (a.isPlayer(p)) {
-                a.removePlayer(p, true);
+                removeArenaPlayerOnQuit(a, p, e.getReason());
             } else if (a.isSpectator(p)) {
                 a.removeSpectator(p, true);
             }
@@ -100,6 +100,11 @@ public class QuitAndTeleportListener implements Listener {
 
         CmdStats.getStatsCoolDown().remove(e.getPlayer().getUniqueId());
         ArenaInviteManager.getInstance().clearPlayer(e.getPlayer().getUniqueId());
+    }
+
+    static void removeArenaPlayerOnQuit(IArena arena, Player player, PlayerQuitEvent.QuitReason reason) {
+        arena.removePlayer(player, true);
+        if (PlayerQuitPolicy.abandonsGame(reason)) arena.abandonGame(player);
     }
 
     /**

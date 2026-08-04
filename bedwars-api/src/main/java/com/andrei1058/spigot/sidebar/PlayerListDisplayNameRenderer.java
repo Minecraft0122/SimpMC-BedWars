@@ -14,5 +14,12 @@ interface PlayerListDisplayNameRenderer {
 
     boolean clear(@NotNull Player viewer, @NotNull Collection<Player> targets);
 
+    /** Advertise spectator mode for these rows without changing Bukkit game mode. */
+    boolean setSpectatorMode(@NotNull Player viewer, @NotNull Collection<Player> targets);
+
+    /** Restore the targets' current server-side game mode for this viewer. */
+    boolean restoreGameMode(@NotNull Player viewer, @NotNull Collection<Player> targets);
+
+    /** Restore both nullable display names and real game modes. */
     boolean restore(@NotNull Player viewer, @NotNull Collection<Player> targets);
 }

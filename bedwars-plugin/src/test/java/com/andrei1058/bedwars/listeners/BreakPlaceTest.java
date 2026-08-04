@@ -40,6 +40,20 @@ class BreakPlaceTest {
         assertFalse(BreakPlace.isFireSpread(BlockIgniteEvent.IgniteCause.EXPLOSION));
     }
 
+    @Test
+    void playerBlocksAlwaysTakePrecedenceOverMapProtection() {
+        assertFalse(BreakPlace.isProtectedMapBlock(true, true, false));
+        assertFalse(BreakPlace.isProtectedMapBlock(true, false, false));
+        assertFalse(BreakPlace.isProtectedMapBlock(true, true, true));
+    }
+
+    @Test
+    void originalMapBlocksStillRespectRegionsAndMapBreakRule() {
+        assertTrue(BreakPlace.isProtectedMapBlock(false, true, true));
+        assertTrue(BreakPlace.isProtectedMapBlock(false, false, false));
+        assertFalse(BreakPlace.isProtectedMapBlock(false, false, true));
+    }
+
     private static World world(String name) {
         return (World) Proxy.newProxyInstance(World.class.getClassLoader(), new Class<?>[]{World.class},
                 (proxy, method, args) -> switch (method.getName()) {

@@ -40,7 +40,9 @@ public class BlastProtectionUtil {
      */
     public boolean isProtected(@NotNull IArena arena, Location pov, @NotNull Block block, double step) {
 
-        if (arena.isProtected(block.getLocation()) || arena.isTeamBed(block.getLocation())) {
+        boolean placedBlock = arena.isBlockPlaced(block);
+        boolean protectedRegion = !placedBlock && arena.isProtected(block.getLocation());
+        if (isProtectedTarget(placedBlock, protectedRegion, arena.isTeamBed(block.getLocation()))) {
             return true;
         }
 
@@ -95,6 +97,15 @@ public class BlastProtectionUtil {
         });
 
         return totalRays - protectedTimes.get() < 6;
+    }
+
+    /**
+     * Protected regions safeguard original map terrain, not blocks created by
+     * players during the current game. Team beds remain protected regardless
+     * of the placed-block index.
+     */
+    static boolean isProtectedTarget(boolean placedBlock, boolean protectedRegion, boolean teamBed) {
+        return teamBed || (!placedBlock && protectedRegion);
     }
 
     /**

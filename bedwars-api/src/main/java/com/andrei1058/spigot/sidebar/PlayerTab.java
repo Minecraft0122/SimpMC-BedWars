@@ -20,6 +20,15 @@ public class PlayerTab {
         NEVER
     }
 
+    /**
+     * Controls only the game-mode style advertised for this player-list row.
+     * The target player's real Bukkit game mode is never changed.
+     */
+    public enum PlayerListMode {
+        ACTUAL,
+        SPECTATOR
+    }
+
     private final String identifier;
     private final Player player;
     private final SidebarLine prefix;
@@ -27,6 +36,7 @@ public class PlayerTab {
     private final PushingRule pushingRule;
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
     private NameTagVisibility nameTagVisibility = NameTagVisibility.ALWAYS;
+    private PlayerListMode playerListMode = PlayerListMode.ACTUAL;
     private ChatColor color = ChatColor.WHITE;
     private Consumer<PlayerTab> updateCallback = tab -> {
     };
@@ -46,6 +56,15 @@ public class PlayerTab {
                      @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
                      @NotNull Collection<PlaceholderProvider> placeholders, @NotNull ChatColor color,
                      @NotNull NameTagVisibility nameTagVisibility) {
+        this(identifier, player, prefix, suffix, pushingRule, placeholders, color,
+                nameTagVisibility, PlayerListMode.ACTUAL);
+    }
+
+    public PlayerTab(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
+                     @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
+                     @NotNull Collection<PlaceholderProvider> placeholders, @NotNull ChatColor color,
+                     @NotNull NameTagVisibility nameTagVisibility,
+                     @NotNull PlayerListMode playerListMode) {
         this.identifier = identifier;
         this.player = player;
         this.prefix = prefix;
@@ -54,6 +73,7 @@ public class PlayerTab {
         this.placeholders.addAll(placeholders);
         this.color = color;
         this.nameTagVisibility = nameTagVisibility;
+        this.playerListMode = playerListMode;
     }
 
     @NotNull
@@ -74,6 +94,17 @@ public class PlayerTab {
     @NotNull
     public NameTagVisibility getNameTagVisibility() {
         return nameTagVisibility;
+    }
+
+    public void setPlayerListMode(@NotNull PlayerListMode playerListMode) {
+        if (this.playerListMode == playerListMode) return;
+        this.playerListMode = playerListMode;
+        updateCallback.accept(this);
+    }
+
+    @NotNull
+    public PlayerListMode getPlayerListMode() {
+        return playerListMode;
     }
 
     public void setColor(@NotNull ChatColor color) {

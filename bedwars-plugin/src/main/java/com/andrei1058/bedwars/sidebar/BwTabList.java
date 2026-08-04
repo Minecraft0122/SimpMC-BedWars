@@ -208,7 +208,7 @@ public class BwTabList {
 
         if (!skipStateCheck) {
             if (this.isTabFormattingDisabled()) {
-                giveUpdateTeamColor(player);
+                giveUpdateTeamColor(player, spectator);
                 return;
             }
         }
@@ -218,8 +218,8 @@ public class BwTabList {
         Sidebar handle = sidebar.getHandle();
 
         if (null == arena) {
-            prefix = getTabText(Messages.FORMATTING_SB_TAB_LOBBY_PREFIX, player, null);
-            suffix = getTabText(Messages.FORMATTING_SB_TAB_LOBBY_SUFFIX, player, null);
+            prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_LOBBY_PREFIX, player, null);
+            suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_LOBBY_SUFFIX, player, null);
 
             PlayerTab tab = handle.playerTabCreate(
                     playerTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
@@ -243,21 +243,22 @@ public class BwTabList {
 
                 if (arena.getStatus() == GameState.restarting && null != arena.getWinner()) {
                     if (arena.getWinner().equals(exTeam)) {
-                        prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, player, replacements);
-                        suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, player, replacements);
+                        prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, player, replacements);
+                        suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX, player, replacements);
                     } else {
-                        prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, player, replacements);
-                        suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, player, replacements);
+                        prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, player, replacements);
+                        suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX, player, replacements);
                     }
                 } else {
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, player, replacements);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, player, replacements);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, player, replacements);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, player, replacements);
                 }
 
                 PlayerTab tab = handle.playerTabCreate(
                         playerTabId,
                         player, prefix, suffix, PlayerTab.PushingRule.NEVER,
-                        this.sidebar.getPlaceholders(player), getPlayerListColor(exTeam)
+                        this.sidebar.getPlaceholders(player), getPlayerListColor(exTeam),
+                        PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.SPECTATOR
                 );
                 deployedPerPlayerTabList.put(player.getUniqueId(), tab);
                 return;
@@ -265,20 +266,20 @@ public class BwTabList {
 
             switch (arena.getStatus()) {
                 case waiting:
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC, player, null);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC, player, null);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC, player, null);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC, player, null);
                     break;
                 case starting:
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC, player, null);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC, player, null);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC, player, null);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC, player, null);
                     break;
                 case playing:
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX, player, null);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX, player, null);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX, player, null);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX, player, null);
                     break;
                 case restarting:
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX, player, null);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_SUFFIX, player, null);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX, player, null);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_SUFFIX, player, null);
                     break;
                 default:
                     throw new RuntimeException("Unhandled game state..");
@@ -287,7 +288,8 @@ public class BwTabList {
             PlayerTab tab = handle.playerTabCreate(
                     playerTabId,
                     player, prefix, suffix, PlayerTab.PushingRule.NEVER,
-                    this.sidebar.getPlaceholders(player)
+                    this.sidebar.getPlaceholders(player), ChatColor.WHITE,
+                    PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.SPECTATOR
             );
             deployedPerPlayerTabList.put(player.getUniqueId(), tab);
             return;
@@ -301,18 +303,18 @@ public class BwTabList {
 
             switch (status) {
                 case waiting:
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_WAITING_PREFIX, player, null);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX, player, null);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_WAITING_PREFIX, player, null);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_WAITING_SUFFIX, player, null);
                     break;
                 case starting:
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_STARTING_PREFIX, player, null);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX, player, null);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_STARTING_PREFIX, player, null);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX, player, null);
                     break;
                 case restarting:
                     HashMap<String, String> replacements = getTeamReplacements(team);
 
-                    prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, player, replacements);
-                    suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, player, replacements);
+                    prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, player, replacements);
+                    suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, player, replacements);
                     break;
                 default:
                     throw new IllegalStateException("Unhandled game status!");
@@ -331,8 +333,8 @@ public class BwTabList {
         // tab list of playing state
         HashMap<String, String> replacements = getTeamReplacements(team);
 
-        prefix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, player, replacements);
-        suffix = getTabText(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, player, replacements);
+        prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, player, replacements);
+        suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, player, replacements);
 
         PlayerTab teamTab = handle.playerTabCreate(
                 playerTabId,
@@ -356,7 +358,7 @@ public class BwTabList {
         removeDeployedTab(playerId);
     }
 
-    private void giveUpdateTeamColor(@NotNull Player player) {
+    private void giveUpdateTeamColor(@NotNull Player player, @Nullable Boolean spectatorOverride) {
         IArena arena = sidebar.getArena();
         Sidebar handle = sidebar.getHandle();
         if (arena == null || handle == null) {
@@ -365,19 +367,30 @@ public class BwTabList {
         }
 
         ITeam team = resolvePlayerListTeam(arena, player);
-        if (team == null) {
+        boolean spectator = arena.isSpectator(player) || Boolean.TRUE.equals(spectatorOverride);
+        PlayerTab.PlayerListMode playerListMode = resolveMinimalPlayerListMode(team, spectator);
+        if (playerListMode == null) {
             removeDeployedTab(player.getUniqueId());
             return;
         }
+        boolean spectatorRow = playerListMode == PlayerTab.PlayerListMode.SPECTATOR;
 
         PlayerTab tab = handle.playerTabCreate(
                 player.getUniqueId().toString(), player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, sidebar.getPlaceholders(player),
+                spectatorRow ? PlayerTab.PushingRule.NEVER : PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
+                sidebar.getPlaceholders(player),
                 getPlayerListColor(team), player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
-                        : PlayerTab.NameTagVisibility.ALWAYS
+                        : PlayerTab.NameTagVisibility.ALWAYS,
+                playerListMode
         );
         deployedPerPlayerTabList.put(player.getUniqueId(), tab);
+    }
+
+    static @Nullable PlayerTab.PlayerListMode resolveMinimalPlayerListMode(
+            @Nullable ITeam team, boolean spectator) {
+        if (spectator) return PlayerTab.PlayerListMode.SPECTATOR;
+        return team == null ? null : PlayerTab.PlayerListMode.ACTUAL;
     }
 
     static @Nullable ITeam resolvePlayerListTeam(@NotNull IArena arena, @NotNull Player player) {
@@ -413,7 +426,7 @@ public class BwTabList {
                     if (fullFormatting) {
                         giveUpdateTabFormat(player, true, null);
                     } else {
-                        giveUpdateTeamColor(player);
+                        giveUpdateTeamColor(player, null);
                     }
                 });
     }
@@ -430,7 +443,8 @@ public class BwTabList {
     }
 
     @NotNull
-    private SidebarLine getTabText(String path, Player targetPlayer, @Nullable HashMap<String, String> replacements) {
+    private SidebarLine getPlayerRowText(String path, Player targetPlayer,
+                                         @Nullable HashMap<String, String> replacements) {
         List<String> strings = Language.getList(sidebar.getPlayer(), path);
         if (strings.isEmpty()) {
             return new SidebarLine() {
@@ -444,7 +458,8 @@ public class BwTabList {
 
         strings = new ArrayList<>();
         for (String string : Language.getList(sidebar.getPlayer(), path)) {
-            String parsed = string.replace("{vPrefix}", BedWars.getChatSupport().getPrefix(targetPlayer))
+            String parsed = removePlayerRowTeamMarkers(string)
+                    .replace("{vPrefix}", BedWars.getChatSupport().getPrefix(targetPlayer))
                     .replace("{vSuffix}", BedWars.getChatSupport().getSuffix(targetPlayer));
 
             if (null != replacements) {
@@ -472,6 +487,10 @@ public class BwTabList {
             lines[i] = strings.get(i);
         }
         return new SidebarLineAnimated(lines);
+    }
+
+    static @NotNull String removePlayerRowTeamMarkers(@NotNull String template) {
+        return template.replace("{teamName}", "").replace("{teamLetter}", "");
     }
 
     @NotNull HashMap<String, String> getTeamReplacements(@Nullable ITeam team) {

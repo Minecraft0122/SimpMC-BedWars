@@ -508,6 +508,46 @@ public class Language extends ConfigManager {
                 "Compact Pop-up Tower", "tower");
     }
 
+    /**
+     * Migrate only the player-row values shipped by the plugin itself. An
+     * administrator's custom TAB prefix or suffix is deliberately preserved.
+     */
+    public static void migrateBuiltInTabPlayerRows(@NotNull YamlConfiguration yml) {
+        migrateLegacyTowerShopItem(yml);
+        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of(""), List.of(
+                List.of("{teamColor}{teamName} "),
+                List.of("{teamColor}[{teamLetter}] ")
+        ));
+        for (String path : List.of(
+                Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX,
+                Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX)) {
+            replaceKnownList(yml, path, List.of(""), List.of(
+                    List.of("&6&l⭐ {teamColor}{teamName} "),
+                    List.of("&6★ {teamColor}[{teamLetter}] ")
+            ));
+        }
+        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, List.of(""), List.of(
+                List.of("{teamColor}{teamName} "),
+                List.of("{teamColor}[{teamLetter}] ")
+        ));
+        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX,
+                List.of(" &c&oEliminated", " {teamColor}&oEliminated {vPrefix}",
+                        "{teamColor}&oEliminated {level}"),
+                List.of(List.of(" &c&oEliminated {teamColor}&o{teamName}",
+                        " {teamColor}&oEliminated {vPrefix}",
+                        "{teamColor}&oEliminated {level}")));
+        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX,
+                List.of(""),
+                List.of(List.of(" &c&o已淘汰 {teamColor}&o{teamName}",
+                        " {teamColor}&o已淘汰 {vPrefix}",
+                        "{teamColor}&o已淘汰 {level}")));
+    }
+
+    private static void replaceKnownList(YamlConfiguration yml, String path, List<String> replacement,
+                                         List<List<String>> knownValues) {
+        if (knownValues.contains(yml.getStringList(path))) yml.set(path, replacement);
+    }
+
     static void migrateShopContentKey(YamlConfiguration yml, String category, String oldContent, String newContent) {
         String oldName = Messages.SHOP_CONTENT_TIER_ITEM_NAME
                 .replace("%category%", category).replace("%content%", oldContent);
