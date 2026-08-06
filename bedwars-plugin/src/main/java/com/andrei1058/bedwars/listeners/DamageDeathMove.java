@@ -36,6 +36,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.RestartingPlayerState;
 import com.andrei1058.bedwars.arena.LastHit;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.SetupSession;
@@ -520,6 +521,13 @@ public class DamageDeathMove implements Listener {
                 e.setRespawnLocation(e.getPlayer().getWorld().getSpawnLocation());
             }
         } else {
+            if (a.getStatus() == GameState.restarting) {
+                e.setRespawnLocation(a.isSpectator(e.getPlayer())
+                        ? a.getSpectatorLocation()
+                        : e.getPlayer().getLocation());
+                RestartingPlayerState.preparePlayer(a, e.getPlayer());
+                return;
+            }
             if (a.isSpectator(e.getPlayer())) {
                 e.setRespawnLocation(a.getSpectatorLocation());
                 a.sendSpectatorCommandItems(e.getPlayer());

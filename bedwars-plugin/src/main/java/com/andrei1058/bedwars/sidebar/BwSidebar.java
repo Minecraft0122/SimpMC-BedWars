@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Supplier;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.*;
@@ -84,14 +85,11 @@ public class BwSidebar implements ISidebar {
         GameState nextArenaState = arena == null ? null : arena.getStatus();
         boolean tabContextChanged = handle != null && shouldResynchronizeTabContext(
                 this.arena, renderedArenaState, arena, nextArenaState);
+        this.topStatistics = resolveTopStatistics(this.arena, arena, nextArenaState, this.topStatistics,
+                () -> createRestartingTopStatistics(arena));
         this.arena = arena;
         SidebarLine title = this.normalizeTitle(titleArray);
         List<SidebarLine> lines = this.normalizeLines(lineArray);
-
-        if (null == arena) {
-            // clean up
-            setTopStatistics(null);
-        }
 
         ConcurrentLinkedQueue<PlaceholderProvider> placeholders = this.getPlaceholders(this.getPlayer());
         placeholders.addAll(this.persistentProviders);
@@ -220,20 +218,12 @@ public class BwSidebar implements ISidebar {
                         }
                     }
                 }
-                if (arena.getWinner() != null) {
-                    String winnerDisplayName = arena.getWinner().getDisplayName(Language.getPlayerLanguage(getPlayer()));
-                    line = line
-                            .replace(
-                                    "{winnerTeamName}",
-                                    winnerDisplayName
-                            ).replace(
-                                    "{winnerTeamLetter}",
-                                    arena.getWinner().getColor().chat() + (winnerDisplayName.substring(0, 1))
-                            ).replace(
-                                    "{winnerTeamColor}",
-                                    arena.getWinner().getColor().chat().toString()
-                            );
-                }
+                ITeam winner = arena.getWinner();
+                line = replaceWinnerPlaceholders(
+                        line,
+                        winner == null ? null : winner.getDisplayName(language),
+                        winner == null ? null : winner.getColor().chat(),
+                        language.m(Messages.MEANING_NOBODY));
 
                 if (null != this.topStatistics && null != statParser) {
                     line = statParser.parseString(line, language, language.m(Messages.MEANING_NOBODY));
@@ -702,6 +692,49 @@ public class BwSidebar implements ISidebar {
 
     public void setTopStatistics(@Nullable StatisticsOrdered topStatistics) {
         this.topStatistics = topStatistics;
+    }
+
+    /**
+     * Keep game-end statistics owned by the sidebar lifecycle. Chat output can
+     * be disabled independently and must not decide whether scoreboard
+     * placeholders receive their rendering context.
+     */
+    static @Nullable StatisticsOrdered resolveTopStatistics(
+            @Nullable IArena previousArena,
+            @Nullable IArena nextArena,
+            @Nullable GameState state,
+            @Nullable StatisticsOrdered current,
+            @NotNull Supplier<@Nullable StatisticsOrdered> restartingFactory) {
+        if (state != GameState.restarting) return null;
+        return current == null || previousArena != nextArena ? restartingFactory.get() : current;
+    }
+
+    static @NotNull String replaceWinnerPlaceholders(
+            @NotNull String line,
+            @Nullable String winnerDisplayName,
+            @Nullable ChatColor winnerColor,
+            @NotNull String noWinner) {
+        String displayName = winnerDisplayName == null || winnerDisplayName.isBlank()
+                ? noWinner : winnerDisplayName;
+        String color = winnerColor == null ? "" : winnerColor.toString();
+        String letter = winnerDisplayName == null || winnerDisplayName.isEmpty()
+                ? "" : color + winnerDisplayName.substring(0, 1);
+        return line.replace("{winnerTeamName}", displayName)
+                .replace("{winnerTeamLetter}", letter)
+                .replace("{winnerTeamColor}", color);
+    }
+
+    private static @Nullable StatisticsOrdered createRestartingTopStatistics(@Nullable IArena arena) {
+        if (!(arena instanceof Arena activeArena) || activeArena.getStatsHolder() == null) return null;
+
+        StatisticsOrdered statistics = new StatisticsOrdered(activeArena,
+                activeArena.getConfig().getGameOverridableString(
+                        ConfigPath.GENERAL_GAME_END_SB_TOP_STATISTIC));
+        if (activeArena.getConfig().getGameOverridableBoolean(
+                ConfigPath.GENERAL_GAME_END_SB_TOP_HIDE_MISSING)) {
+            statistics.setBoundsPolicy(StatisticsOrdered.BoundsPolicy.SKIP);
+        }
+        return statistics;
     }
 
     @NotNull

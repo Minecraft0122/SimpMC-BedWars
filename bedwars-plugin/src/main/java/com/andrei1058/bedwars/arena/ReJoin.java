@@ -34,7 +34,6 @@ import com.andrei1058.bedwars.lobbysocket.ArenaSocket;
 import com.andrei1058.bedwars.shop.ShopCache;
 import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -148,13 +147,15 @@ public class ReJoin {
         Sounds.playSound("rejoin-allowed", player);
         player.sendMessage(Language.getMsg(player, Messages.REJOIN_ALLOWED).replace("{arena}", getArena().getDisplayName()));
 
-        if (player.getGameMode() != GameMode.SURVIVAL) {
-            Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
-                player.setGameMode(GameMode.SURVIVAL);
-                player.setAllowFlight(true);
-                player.setFlying(true);
-            }, 20L);
-        }
+        return resumeThroughArenaLifecycle(arena, player);
+    }
+
+    /**
+     * Keep the arena respawn lifecycle as the single owner of game-mode and
+     * flight transitions. A separate delayed SURVIVAL write can otherwise
+     * race the longer SPECTATOR respawn session after reconnecting.
+     */
+    static boolean resumeThroughArenaLifecycle(@NotNull IArena arena, @NotNull Player player) {
         return arena.reJoin(player);
     }
 

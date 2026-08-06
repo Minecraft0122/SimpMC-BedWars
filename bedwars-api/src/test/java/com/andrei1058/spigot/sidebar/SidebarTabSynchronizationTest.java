@@ -164,6 +164,45 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
+    void spectatorRowNeverFakesTheViewersOwnGameMode() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("SelfSpectator");
+        PlayerTab tab = new PlayerTab("self-spectator", viewer,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.GRAY, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+
+        sidebar.renderPlayerListName(viewer, tab);
+
+        assertEquals(1, renderer.clearCalls,
+                "the self row still needs a null display name for scoreboard color");
+        assertEquals(0, renderer.spectatorModeCalls,
+                "a cosmetic TAB row must never change the viewer's own PlayerInfo game mode");
+        assertEquals(0, renderer.restoreGameModeCalls);
+    }
+
+    @Test
+    void spectatorSelfRowRestoresAnyPreviouslyCachedFakeMode() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("CachedSelfSpectator");
+        PlayerTab tab = new PlayerTab("cached-self-spectator", viewer,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                List.of(), ChatColor.GRAY, PlayerTab.NameTagVisibility.ALWAYS,
+                PlayerTab.PlayerListMode.SPECTATOR);
+        fieldMap(sidebar, "spectatorPlayerListModes").put(
+                viewer.getUniqueId(), new HashSet<>(Set.of(viewer.getUniqueId())));
+
+        sidebar.renderPlayerListName(viewer, tab);
+
+        assertEquals(0, renderer.spectatorModeCalls);
+        assertEquals(1, renderer.restoreGameModeCalls,
+                "a self row inherited from the old behavior must be repaired immediately");
+        assertSame(viewer, renderer.restoredGameModes.getFirst().target());
+    }
+
+    @Test
     void legacyPlayerTabConstructorKeepsTheTargetsActualGameMode() {
         PlayerTab tab = new PlayerTab("legacy", player("Legacy"),
                 new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,

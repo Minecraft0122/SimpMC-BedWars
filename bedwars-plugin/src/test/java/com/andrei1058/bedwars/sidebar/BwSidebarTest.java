@@ -2,13 +2,24 @@ package com.andrei1058.bedwars.sidebar;
 
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.stats.GameStatistic;
+import com.andrei1058.bedwars.api.arena.stats.GameStatisticProvider;
+import com.andrei1058.bedwars.api.arena.stats.GameStatsHolder;
+import com.andrei1058.bedwars.api.language.Language;
+import com.andrei1058.bedwars.arena.stats.StatisticsOrdered;
+import org.bukkit.ChatColor;
+import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -100,11 +111,103 @@ class BwSidebarTest {
                 firstArena, GameState.restarting, null, null));
     }
 
+    @Test
+    void restartingSidebarResolvesTopPlaceholdersWithoutDependingOnGameEndChat() {
+        IArena arena = arena();
+        StatisticsOrdered statistics = emptyStatistics();
+        AtomicInteger creations = new AtomicInteger();
+
+        StatisticsOrdered resolved = BwSidebar.resolveTopStatistics(
+                null, arena, GameState.restarting, null, () -> {
+                    creations.incrementAndGet();
+                    return statistics;
+                });
+
+        assertSame(statistics, resolved);
+        assertEquals(1, creations.get());
+        assertEquals("Nobody - 0", resolved.newParser().parseString(
+                "{topTeamColor}{topPlayerDisplayName} - {topValue}", null, "Nobody"));
+
+        assertSame(statistics, BwSidebar.resolveTopStatistics(
+                arena, arena, GameState.restarting, statistics, () -> {
+                    creations.incrementAndGet();
+                    return null;
+                }));
+        assertEquals(1, creations.get(), "an attached game-end snapshot must be reused");
+        assertNull(BwSidebar.resolveTopStatistics(
+                arena, arena, GameState.playing, statistics, () -> statistics));
+    }
+
+    @Test
+    void restartingSidebarDoesNotReuseStatisticsFromAnotherArena() {
+        IArena firstArena = arena();
+        IArena secondArena = arena();
+        StatisticsOrdered firstStatistics = emptyStatistics();
+        StatisticsOrdered secondStatistics = emptyStatistics();
+
+        assertSame(secondStatistics, BwSidebar.resolveTopStatistics(
+                firstArena, secondArena, GameState.restarting, firstStatistics,
+                () -> secondStatistics));
+    }
+
+    @Test
+    void restartingSidebarNeverLeaksWinnerPlaceholdersWhenAGameHasNoWinner() {
+        String template = "{winnerTeamColor}{winnerTeamName} / {winnerTeamLetter}";
+
+        assertEquals("Nobody / ",
+                BwSidebar.replaceWinnerPlaceholders(template, null, null, "Nobody"));
+        assertEquals(ChatColor.RED + "Red / " + ChatColor.RED + "R",
+                BwSidebar.replaceWinnerPlaceholders(template, "Red", ChatColor.RED, "Nobody"));
+    }
+
     private static IArena arena() {
         return (IArena) Proxy.newProxyInstance(IArena.class.getClassLoader(),
                 new Class<?>[]{IArena.class},
                 (proxy, method, args) -> {
                     throw new UnsupportedOperationException(method.getName());
                 });
+    }
+
+    private static StatisticsOrdered emptyStatistics() {
+        AtomicReference<GameStatsHolder> holderReference = new AtomicReference<>();
+        IArena arena = (IArena) Proxy.newProxyInstance(IArena.class.getClassLoader(),
+                new Class<?>[]{IArena.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getStatsHolder" -> holderReference.get();
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        GameStatisticProvider<GameStatistic<?>> provider = new GameStatisticProvider<>() {
+            @Override
+            public String getIdentifier() {
+                return "kills";
+            }
+
+            @Override
+            public Plugin getOwner() {
+                return null;
+            }
+
+            @Override
+            public GameStatistic<?> getDefault() {
+                return null;
+            }
+
+            @Override
+            public String getVoidReplacement(Language language) {
+                return "0";
+            }
+        };
+        GameStatsHolder holder = (GameStatsHolder) Proxy.newProxyInstance(
+                GameStatsHolder.class.getClassLoader(), new Class<?>[]{GameStatsHolder.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "hasStatistic" -> true;
+                    case "getOrderedBy" -> List.<Optional<com.andrei1058.bedwars.api.arena.stats.PlayerGameStats>>of();
+                    case "getRegistered" -> List.of("kills");
+                    case "getProvider" -> provider;
+                    case "getArena" -> arena;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        holderReference.set(holder);
+        return new StatisticsOrdered(arena, "kills");
     }
 }

@@ -47,7 +47,6 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Region;
 import com.andrei1058.bedwars.api.server.ServerType;
-import com.andrei1058.bedwars.api.sidebar.ISidebar;
 import com.andrei1058.bedwars.api.tasks.PlayingTask;
 import com.andrei1058.bedwars.api.tasks.RestartingTask;
 import com.andrei1058.bedwars.api.tasks.StartingTask;
@@ -69,7 +68,6 @@ import com.andrei1058.bedwars.listeners.dropshandler.PlayerDrops;
 import com.andrei1058.bedwars.money.internal.MoneyPerMinuteTask;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import com.andrei1058.bedwars.shop.ShopCache;
-import com.andrei1058.bedwars.sidebar.BwSidebar;
 import com.andrei1058.bedwars.sidebar.SidebarService;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
@@ -1594,6 +1592,9 @@ public class Arena implements IArena {
         }
         updateActiveTeamSnapshot(status);
         this.status = status;
+        if (status == GameState.restarting) {
+            RestartingPlayerState.prepare(this);
+        }
         Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, status, status));
         refreshSigns();
         if (status == GameState.playing) {
@@ -2147,16 +2148,6 @@ public class Arena implements IArena {
                         }
                     }
 
-                    // this is assigned to scoreboards
-                    StatisticsOrdered topInSidebar = new StatisticsOrdered(
-                            this, getConfig().getGameOverridableString(ConfigPath.GENERAL_GAME_END_SB_TOP_STATISTIC)
-                    );
-
-                    // hide stats row completely when placeholders cannot be replaced
-                    if (getConfig().getGameOverridableBoolean(ConfigPath.GENERAL_GAME_END_SB_TOP_HIDE_MISSING)) {
-                        topInSidebar.setBoundsPolicy(StatisticsOrdered.BoundsPolicy.SKIP);
-                    }
-
                     List<Player> receivers = new ArrayList<>(getPlayers().size() + getSpectators().size());
                     receivers.addAll(getPlayers());
                     receivers.addAll(getSpectators());
@@ -2202,10 +2193,6 @@ public class Arena implements IArena {
                                 receiver.sendMessage(SupportPAPI.getSupportPAPI().replace(receiver, msg));
                             }
 
-                            ISidebar sidebar = SidebarService.getInstance().getSidebar(receiver);
-                            if (sidebar instanceof BwSidebar) {
-                                ((BwSidebar) sidebar).setTopStatistics(topInSidebar);
-                            }
                         }
                     }
 
@@ -2739,6 +2726,12 @@ public class Arena implements IArena {
 
     @Override
     public boolean startReSpawnSession(Player player, int seconds) {
+        if (status != GameState.playing) {
+            if (status == GameState.restarting) {
+                RestartingPlayerState.preparePlayer(this, player);
+            }
+            return false;
+        }
         if (respawnSessions.get(player) == null) {
             IArena arena = Arena.getArenaByPlayer(player);
             if (arena == null) {

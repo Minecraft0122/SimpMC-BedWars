@@ -755,7 +755,15 @@ public class Sidebar {
                 releaseCachedPlayerListState(viewerId, targetId);
                 continue;
             }
-            if (desiredSpectators.contains(targetId)) {
+            // UPDATE_GAME_MODE for the viewer's own PlayerInfo entry is not a
+            // cosmetic-only change. The vanilla 1.21.11 client invokes
+            // LocalPlayer#onGameModeChanged for that UUID, which can alter
+            // movement even though Bukkit still reports the real mode. Keep
+            // self state authoritative; other rows can safely use the
+            // spectator value as TAB-only presentation.
+            boolean spectatorPresentation = desiredSpectators.contains(targetId)
+                    && !viewerId.equals(targetId);
+            if (spectatorPresentation) {
                 if (force || hasPendingPlayerListRestore(viewerId, targetId)
                         || !spectatorCache.contains(targetId)) {
                     setSpectator.add(target);

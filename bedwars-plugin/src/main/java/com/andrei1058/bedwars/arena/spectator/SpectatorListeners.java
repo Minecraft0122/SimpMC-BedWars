@@ -202,6 +202,10 @@ public class SpectatorListeners implements Listener {
     public void onTeleport(PlayerTeleportEvent e) {
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
         if (a == null) return;
+        if (a.isReSpawning(e.getPlayer()) && e.getCause() == PlayerTeleportEvent.TeleportCause.SPECTATE) {
+            e.setCancelled(true);
+            return;
+        }
         if (a.isSpectator(e.getPlayer())){
             if (!(e.getTo().getWorld().equals(e.getPlayer().getWorld())) && e.getCause() == PlayerTeleportEvent.TeleportCause.SPECTATE) {
                 Player p = e.getPlayer();
