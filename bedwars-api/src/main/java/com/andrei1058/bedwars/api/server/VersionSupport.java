@@ -439,6 +439,11 @@ public abstract class VersionSupport {
      */
     public abstract Fireball setFireballDirection(Fireball fireball, Vector vector);
 
+    /** 设置火球的持续加速度，并保留已经写入的发射初速度。 */
+    public Fireball setFireballAcceleration(Fireball fireball, Vector acceleration) {
+        throw new UnsupportedOperationException("Fireball acceleration is not supported by this server version");
+    }
+
     public abstract void playRedStoneDot(Player player);
 
     public abstract void clearArrowsFromPlayerBody(Player player);

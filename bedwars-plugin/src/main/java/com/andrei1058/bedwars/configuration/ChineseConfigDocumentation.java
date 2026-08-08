@@ -56,15 +56,17 @@ public final class ChineseConfigDocumentation {
                 "普通投掷的火球初速度倍率；默认 16，对应 1.6 格/tick。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
                 "按住潜行键投掷的额外初速度倍率；默认 1.5，对应 2.4 格/tick。", "插件同时检查 Paper 当前输入与潜行姿态，确保潜行加速生效。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_ACCELERATION_MULTIPLIER,
+                "潜行火球相对普通火球的持续加速度倍率；默认 2.0，对应每 tick 0.2。", "该参数不会覆盖潜行火球已经获得的 2.4 格/tick 初速度。");
         comment(config, ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MIN,
                 "每颗火球随机最大射程的下限，单位为格；默认 200。", "射程按相邻 tick 的实际三维路径累计，不按存活时间估算。");
         comment(config, ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MAX,
                 "每颗火球随机最大射程的上限，单位为格；默认 300。", "上下限写反时会自动交换；插件不会为了远距离飞行强制加载区块。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, "潜行投掷时给予发射者的水平后坐速度；默认 0.05，插件硬限制最大 0.08。", "按原版空气阻力的低摩擦情况估算，单次后坐约半格且不足一格；后坐本身不创建跟踪任务。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, "潜行投掷时给予发射者的三维后坐速度；默认 0.10，插件硬限制最大 0.20。", "方向始终与火球发射速度完全相反，包括火球向上或向下飞行时的垂直分量。");
         comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否在命中处生成火焰；竞技场始终禁止火势向周围蔓延。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.20 默认值略微降低为 1.15。");
         comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, "火球垂直击退强度；2.10.20 默认值略微降低为 0.75。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_COOLDOWN, "连续使用火球的冷却时间，单位为秒。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_COOLDOWN, "连续使用火球的冷却时间，单位为秒；默认 0.4，持续射速约每秒 2.5 发。", "按发射时刻计算，一个 1 秒窗口内通常可以发射 2 至 3 个火球。");
         comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, "火球对发射者造成的伤害。");
         comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, "火球对敌人造成的伤害；2.10.20 默认值略微降低为 3.5。");
         comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES, "火球对队友造成的伤害；0 表示不伤害队友。");

@@ -59,6 +59,9 @@ import org.bukkit.util.Vector;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -74,6 +77,26 @@ import java.util.logging.Level;
 public class v1_21_R3 extends VersionSupport {
 
     private static final double NPC_POSITION_EPSILON_SQUARED = 1.0E-6D;
+    private static final ClassValue<Method> FIREBALL_HANDLE_GETTERS = new ClassValue<>() {
+        @Override
+        protected Method computeValue(Class<?> type) {
+            try {
+                return type.getMethod("getHandle");
+            } catch (NoSuchMethodException e) {
+                throw new IllegalStateException("Could not access the Paper fireball handle", e);
+            }
+        }
+    };
+    private static final ClassValue<Field> FIREBALL_ACCELERATION_FIELDS = new ClassValue<>() {
+        @Override
+        protected Field computeValue(Class<?> type) {
+            try {
+                return type.getField("accelerationPower");
+            } catch (NoSuchFieldException e) {
+                throw new IllegalStateException("Could not access the Paper fireball acceleration power", e);
+            }
+        }
+    };
     private static final float NPC_ROTATION_EPSILON = 0.01F;
     private final Map<UUID, LockedShopkeeper> lockedShopkeepers = new HashMap<>();
 
@@ -629,9 +652,32 @@ public class v1_21_R3 extends VersionSupport {
         if (vector.lengthSquared() > 0D) {
             Vector normalized = vector.clone().normalize();
             fireball.setDirection(normalized);
-            fireball.setAcceleration(normalized.multiply(0.1D));
+            setFireballAcceleration(fireball, normalized.multiply(0.1D));
         }
         return fireball;
+    }
+
+    @Override
+    public Fireball setFireballAcceleration(Fireball fireball, Vector acceleration) {
+        if (acceleration == null || acceleration.lengthSquared() == 0D) {
+            return fireball;
+        }
+        try {
+            Object handle = FIREBALL_HANDLE_GETTERS.get(fireball.getClass()).invoke(fireball);
+            setAccelerationPower(handle, acceleration.length());
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalStateException("Could not access the Paper fireball handle", e);
+        }
+        return fireball;
+    }
+
+    static void setAccelerationPower(Object handle, double accelerationPower) {
+        try {
+            Field field = FIREBALL_ACCELERATION_FIELDS.get(handle.getClass());
+            field.setDouble(handle, accelerationPower);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Could not set the Paper fireball acceleration power", e);
+        }
     }
 
     @Override

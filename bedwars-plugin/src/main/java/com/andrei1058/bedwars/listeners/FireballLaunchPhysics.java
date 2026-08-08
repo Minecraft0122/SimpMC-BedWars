@@ -20,7 +20,7 @@ final class FireballLaunchPhysics {
 
     /** Vanilla fireball acceleration magnitude used by the client predictor. */
     static final double DEFAULT_ACCELERATION = 0.1D;
-    static final double MAX_SNEAK_RECOIL = 0.08D;
+    static final double MAX_SNEAK_RECOIL = 0.2D;
     static final double DEFAULT_MIN_FLIGHT_DISTANCE = 200.0D;
     static final double DEFAULT_MAX_FLIGHT_DISTANCE = 300.0D;
 
@@ -38,8 +38,9 @@ final class FireballLaunchPhysics {
         return normalized.multiply(launchSpeed(baseSpeed, sneaking, sneakMultiplier));
     }
 
-    static Vector launchAcceleration(Vector direction) {
-        return normalized(direction).multiply(DEFAULT_ACCELERATION);
+    static Vector launchAcceleration(Vector direction, boolean sneaking, double sneakMultiplier) {
+        double multiplier = sneaking ? Math.max(1.0D, sneakMultiplier) : 1.0D;
+        return normalized(direction).multiply(DEFAULT_ACCELERATION * multiplier);
     }
 
     static FlightRange normalizeFlightRange(double configuredMin, double configuredMax) {
@@ -64,10 +65,15 @@ final class FireballLaunchPhysics {
 
     static Vector sneakRecoil(Vector launchDirection, double configuredStrength) {
         if (launchDirection == null) return new Vector();
-        Vector horizontal = new Vector(-launchDirection.getX(), 0D, -launchDirection.getZ());
-        if (horizontal.lengthSquared() < 1.0E-8D) return new Vector();
+        Vector reverseDirection = launchDirection.clone().multiply(-1D);
+        if (reverseDirection.lengthSquared() < 1.0E-8D) return new Vector();
         double strength = Math.min(MAX_SNEAK_RECOIL, Math.max(0D, configuredStrength));
-        return horizontal.normalize().multiply(strength);
+        return reverseDirection.normalize().multiply(strength);
+    }
+
+    static boolean cooldownElapsed(long nowMillis, long previousLaunchMillis, double cooldownSeconds) {
+        double safeCooldownSeconds = Double.isFinite(cooldownSeconds) ? Math.max(0D, cooldownSeconds) : 0D;
+        return nowMillis - previousLaunchMillis >= safeCooldownSeconds * 1_000D;
     }
 
     private static Vector normalized(Vector direction) {

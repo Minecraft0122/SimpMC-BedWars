@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>7.1.1</version>
+    <version>8.0.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -115,6 +115,8 @@ ConfigManager sounds = api.getConfigs().getSoundsConfig();
 ```
 
 这些对象在 SimpMC-BedWars 完成 `onEnable` 后可用。写配置时使用 `set`/`save`，不要直接操作磁盘上的 YAML。
+
+8.0.0 新增 `ConfigPath.GENERAL_FIREBALL_SNEAK_ACCELERATION_MULTIPLIER`，用于读取 `fireball.sneak-acceleration-multiplier`。该值只调整潜行火球的持续加速度，不替代 `sneak-speed-multiplier` 初速度倍率。`VersionSupport#setFireballAcceleration` 是服务端版本适配入口，可在不覆盖当前初速度的前提下设置持续加速度；普通附属插件通常不应直接调用版本支持层。
 
 需要在世界尚未加载时读取通用坐标中的世界名，可使用：
 

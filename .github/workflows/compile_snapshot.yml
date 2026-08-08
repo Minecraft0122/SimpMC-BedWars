@@ -48,7 +48,7 @@ jobs:
 
           patched_server="$runtime/versions/1.21.11/paper-1.21.11.jar"
           test -f "$patched_server"
-          classpath="bedwars-api/target/test-classes:bedwars-api/target/classes:$patched_server"
+          classpath="bedwars-api/target/test-classes:bedwars-api/target/classes:versionsupport_common/target/classes:versionsupport_v1_21_R3/target/test-classes:versionsupport_v1_21_R3/target/classes:$patched_server"
           while IFS= read -r library; do
             classpath="$classpath:$library"
           done < <(find "$runtime/libraries" -type f -name '*.jar' | sort)
@@ -57,6 +57,8 @@ jobs:
             com.andrei1058.spigot.sidebar.PlayerListDisplayNamePacketsRuntimeProbe
           java -cp "$classpath" \
             com.andrei1058.bedwars.api.PaperGameRulesRuntimeProbe
+          java -cp "$classpath" \
+            com.andrei1058.bedwars.support.version.v1_21_R3.FireballAccelerationRuntimeProbe
 
       - name: 上传插件 JAR
         uses: actions/upload-artifact@v7

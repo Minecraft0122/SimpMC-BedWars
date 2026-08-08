@@ -73,6 +73,7 @@ public class Interact implements Listener {
 
     private final double fireballSpeedMultiplier;
     private final double fireballSneakSpeedMultiplier;
+    private final double fireballSneakAccelerationMultiplier;
     private final double fireballSneakRecoil;
     private final double fireballMinimumFlightDistance;
     private final double fireballMaximumFlightDistance;
@@ -88,6 +89,8 @@ public class Interact implements Listener {
         this.fireballSpeedMultiplier = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER);
         this.fireballSneakSpeedMultiplier = config.getYml().getDouble(
                 ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER);
+        this.fireballSneakAccelerationMultiplier = config.getYml().getDouble(
+                ConfigPath.GENERAL_FIREBALL_SNEAK_ACCELERATION_MULTIPLIER);
         this.fireballSneakRecoil = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL);
         FireballLaunchPhysics.FlightRange flightRange = FireballLaunchPhysics.normalizeFlightRange(
                 config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MIN),
@@ -323,21 +326,24 @@ public class Interact implements Listener {
 
                         e.setCancelled(true);
 
-                        if(System.currentTimeMillis() - a.getFireballCooldowns().getOrDefault(p.getUniqueId(), 0L) > (fireballCooldown*1000)) {
-                            a.getFireballCooldowns().put(p.getUniqueId(), System.currentTimeMillis());
+                        long launchTime = System.currentTimeMillis();
+                        if (FireballLaunchPhysics.cooldownElapsed(launchTime,
+                                a.getFireballCooldowns().getOrDefault(p.getUniqueId(), 0L), fireballCooldown)) {
+                            a.getFireballCooldowns().put(p.getUniqueId(), launchTime);
                             Vector direction = p.getEyeLocation().getDirection();
                             boolean sneaking = p.isSneaking() || p.getCurrentInput().isSneak();
                             Vector launchVelocity = FireballLaunchPhysics.launchVelocity(
                                     direction, fireballSpeedMultiplier, sneaking, fireballSneakSpeedMultiplier);
+                            Vector launchAcceleration = FireballLaunchPhysics.launchAcceleration(
+                                    direction, sneaking, fireballSneakAccelerationMultiplier);
                             double flightDistance = FireballLaunchPhysics.randomFlightDistance(
                                     fireballMinimumFlightDistance, fireballMaximumFlightDistance,
                                     ThreadLocalRandom.current());
                             Fireball fb = p.launchProjectile(Fireball.class, launchVelocity);
-                            // Keep vanilla acceleration so the 1.21.11 client predicts the projectile smoothly.
-                            fb.setAcceleration(FireballLaunchPhysics.launchAcceleration(direction));
+                            nms.setFireballAcceleration(fb, launchAcceleration);
                             if (sneaking) {
                                 p.setVelocity(p.getVelocity().add(
-                                        FireballLaunchPhysics.sneakRecoil(direction, fireballSneakRecoil)));
+                                        FireballLaunchPhysics.sneakRecoil(launchVelocity, fireballSneakRecoil)));
                             }
                             //fb.setIsIncendiary(false); // apparently this on <12 makes the fireball not explode on hit. wtf bukkit?
                             fb.setYield(fireballExplosionSize);

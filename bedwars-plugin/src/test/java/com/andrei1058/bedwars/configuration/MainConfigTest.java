@@ -185,6 +185,24 @@ class MainConfigTest {
     }
 
     @Test
+    void increasesOnlyThePreviousDefaultSneakRecoilAndFireRate() {
+        YamlConfiguration defaults = new YamlConfiguration();
+        defaults.set(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, 0.05D);
+        defaults.set(ConfigPath.GENERAL_FIREBALL_COOLDOWN, 0.5D);
+        YamlConfiguration customized = new YamlConfiguration();
+        customized.set(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, 0.07D);
+        customized.set(ConfigPath.GENERAL_FIREBALL_COOLDOWN, 0.6D);
+
+        MainConfig.migrateFireballDefaults(defaults, 28);
+        MainConfig.migrateFireballDefaults(customized, 28);
+
+        assertEquals(0.1D, defaults.getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL));
+        assertEquals(0.4D, defaults.getDouble(ConfigPath.GENERAL_FIREBALL_COOLDOWN));
+        assertEquals(0.07D, customized.getDouble(ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL));
+        assertEquals(0.6D, customized.getDouble(ConfigPath.GENERAL_FIREBALL_COOLDOWN));
+    }
+
+    @Test
     void migratesPreEnhancementDefaultsForOldConfigs() {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.set(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0);

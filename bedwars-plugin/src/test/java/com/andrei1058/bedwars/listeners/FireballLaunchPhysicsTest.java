@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FireballLaunchPhysicsTest {
@@ -22,11 +23,13 @@ class FireballLaunchPhysicsTest {
 
         Vector regular = FireballLaunchPhysics.launchVelocity(aim, 16D, false, 1.5D);
         Vector sneaking = FireballLaunchPhysics.launchVelocity(aim, 16D, true, 1.5D);
-        Vector acceleration = FireballLaunchPhysics.launchAcceleration(aim);
+        Vector regularAcceleration = FireballLaunchPhysics.launchAcceleration(aim, false, 2D);
+        Vector sneakingAcceleration = FireballLaunchPhysics.launchAcceleration(aim, true, 2D);
 
         assertEquals(1.6D, regular.length(), 1.0E-9D);
         assertEquals(2.4D, sneaking.length(), 1.0E-9D);
-        assertEquals(FireballLaunchPhysics.DEFAULT_ACCELERATION, acceleration.length(), 1.0E-9D);
+        assertEquals(FireballLaunchPhysics.DEFAULT_ACCELERATION, regularAcceleration.length(), 1.0E-9D);
+        assertEquals(0.2D, sneakingAcceleration.length(), 1.0E-9D);
         assertEquals(aim, new Vector(4D, 0D, 3D));
     }
 
@@ -63,18 +66,28 @@ class FireballLaunchPhysicsTest {
 
     @Test
     void recoilPointsAwayFromTheShotAndStaysSmall() {
-        Vector recoil = FireballLaunchPhysics.sneakRecoil(new Vector(1D, -0.5D, 0D), 0.05D);
+        Vector direction = new Vector(1D, -0.5D, 0D);
+        Vector recoil = FireballLaunchPhysics.sneakRecoil(direction, 0.1D);
 
         assertTrue(recoil.getX() < 0D);
-        assertEquals(0D, recoil.getY());
-        assertEquals(0.05D, recoil.length(), 1.0E-9D);
+        assertTrue(recoil.getY() > 0D);
+        assertEquals(-1D, recoil.clone().normalize().dot(direction.clone().normalize()), 1.0E-9D);
+        assertEquals(0.1D, recoil.length(), 1.0E-9D);
     }
 
     @Test
     void capsConfiguredRecoilAndHandlesVerticalShots() {
         assertEquals(FireballLaunchPhysics.MAX_SNEAK_RECOIL,
                 FireballLaunchPhysics.sneakRecoil(new Vector(0D, 0D, 1D), 4D).length(), 1.0E-9D);
-        assertEquals(new Vector(), FireballLaunchPhysics.sneakRecoil(new Vector(0D, -1D, 0D), 0.05D));
+        assertEquals(new Vector(0D, 0.1D, 0D),
+                FireballLaunchPhysics.sneakRecoil(new Vector(0D, -1D, 0D), 0.1D));
+    }
+
+    @Test
+    void allowsTwoAndAHalfFireballsPerSecondAtTheDefaultCooldown() {
+        assertFalse(FireballLaunchPhysics.cooldownElapsed(10_399L, 10_000L, 0.4D));
+        assertTrue(FireballLaunchPhysics.cooldownElapsed(10_400L, 10_000L, 0.4D));
+        assertTrue(FireballLaunchPhysics.cooldownElapsed(10_000L, 10_000L, 0D));
     }
 
 }
