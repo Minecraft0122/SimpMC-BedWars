@@ -1028,6 +1028,7 @@ public class English extends Language {
         addContentMessages(yml, "sponge", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}Sponge", Arrays.asList("&7Cost: {cost} {currency}", "", "&7Great for soaking up water.",
                 "", "{quick_buy}", "{buy_status}"));
         addContentMessages(yml, "tower", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}Compact Pop-up Tower", Arrays.asList("&7Cost: {cost} {currency}", "", "&7Place a compact pop-up", "&7tower defense!", "", "{quick_buy}", "{buy_status}"));
+        addContentMessages(yml, "recall-scroll", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}Recall Scroll", Arrays.asList("&7Cost: {cost} {currency}", "", "&7Right-click and channel for 5", "&7seconds to return to your team", "&7spawn. Cannot be reused while", "&7channeling.", "", "{quick_buy}", "{buy_status}"));
 
         //
         yml.addDefault(Messages.MEANING_NO_TRAP, "No trap!");
@@ -1113,7 +1114,7 @@ public class English extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&lAlarm trap set off by &7&l{player} &c&lfrom {color}&l{team} &c&lteam!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&lALARM!!!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "&fAlarm trap set off by {color}{team} &fteam!");
-        updateToLatestVersion(6, Language::migrateBuiltInTabPlayerRows);
+        updateToLatestVersion(7, Language::migrateBuiltInTabPlayerRows);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }

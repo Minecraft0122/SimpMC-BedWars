@@ -150,6 +150,8 @@ blocks-category:
 
 例如 TNT 默认路径是 `utility-category.category-content.tnt.content-tiers.tier1.tier-settings.cost`。修改 `cost` 后完整重启服务器。
 
+回城卷轴的商品 ID 是 `recall-scroll`，默认价格为 3 个钻石，价格路径为 `utility-category.category-content.recall-scroll.content-tiers.tier1.tier-settings.cost`。购买物品中的 `bedwars-item: recall-scroll` 是核心行为标识；可以修改价格、槽位、显示材质和名称，但不要删除或改写该标识。
+
 袖珍弹出塔的商品 ID 是 `tower`，默认价格路径为 `utility-category.category-content.tower.content-tiers.tier1.tier-settings.cost`。它的显示名称和说明位于语言文件 `shop-items-messages.utility-category.content-item-tower-name` 与 `shop-items-messages.utility-category.content-item-tower-lore`。2.10.40 会自动删除错误的旧 `Compact Pop-up Tower` 语言节点，并把其中的文本迁移到 `tower`；系统生成的 `Name not set`/`Lore not set` 会被正确默认值替换，管理员已经写在正确路径的自定义文本保持不变。
 
 商店永久护甲固定只发放护腿和靴子。玩家开局时仍穿戴完整的本队颜色皮革套装，购买链甲、铁甲或钻石甲后，队伍色皮革头盔与胸甲会继续保留。旧 `config.yml` 中的 `shop-settings.sell-full-armor` 会自动删除；`shop.yml` 升级到架构 5 时会清理所有护甲分类中的头盔、胸甲和鞘翅商品，价格与下半身自定义商品保持不变。
@@ -209,7 +211,7 @@ Vault 金币奖励。没有 Vault 或没有向 Vault 注册的经济服务提供
 - `{player}`、`{message}`、`{TeamName}` 等占位符不能删除或改名。
 - 聊天运行时统一为 `&f> &7消息`。
 - `.bak` 是自动迁移备份，不会加载为语言。
-- 语言配置架构 2 会迁移袖珍弹出塔的旧商品文本键。7.1.0 的简体中文内置文件使用架构 16，其他内置语言使用架构 6；自定义语言文件仍使用通用架构 4，不会被强制套用内置玩家行模板。
+- 语言配置架构 2 会迁移袖珍弹出塔的旧商品文本键。8.1.0 的简体中文内置文件使用架构 17，其他内置语言使用架构 7；自定义语言文件使用通用架构 5，不会被强制套用内置玩家行模板。
 - 架构 16/6 只会把完全等于已知历史内置值的 TAB 玩家行前缀或后缀迁移为“不显示队伍名称/首字母”的新默认值，包括游戏中、胜利、失败和淘汰样式。只要某一列表与内置旧值不完全相同，就视为管理员自定义并在磁盘上原样保留；运行时仅把玩家行中的 `{teamName}`、`{teamLetter}` 解析为空，其他文字、颜色和占位符继续生效。`format-tab.playing.game-time`、自定义聊天、未知键和其他自定义模板不会被覆盖。迁移前仍会生成 `.bak` 备份。
 
 ## 配置修改原则

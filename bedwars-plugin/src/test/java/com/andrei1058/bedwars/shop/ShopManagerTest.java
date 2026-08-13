@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ShopManagerTest {
@@ -65,6 +66,52 @@ class ShopManagerTest {
         ShopManager.migrateLowerBodyArmorOnly(yml);
 
         assertEquals("NETHER_STAR", yml.getString(itemPath));
+    }
+
+    @Test
+    void migrationAddsRecallScrollToAnExistingUtilityCategory() {
+        YamlConfiguration yml = new YamlConfiguration();
+        yml.createSection(ConfigPath.SHOP_PATH_CATEGORY_UTILITY);
+
+        ShopManager.migrateRecallScroll(yml);
+
+        String content = ConfigPath.SHOP_PATH_CATEGORY_UTILITY + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                + ".recall-scroll";
+        String tier = content + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + ".tier1";
+        String item = tier + "." + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH + ".scroll";
+        assertEquals(32, yml.getInt(content + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT));
+        assertEquals(3, yml.getInt(tier + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_COST));
+        assertEquals("diamond", yml.getString(tier + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_CURRENCY));
+        assertEquals("PAPER", yml.getString(item + ".material"));
+        assertEquals("recall-scroll", yml.getString(item + "." + ConfigPath.SHOP_CONTENT_BUY_ITEM_IDENTIFIER));
+    }
+
+    @Test
+    void migrationPreservesAnExistingRecallScroll() {
+        YamlConfiguration yml = new YamlConfiguration();
+        String content = ConfigPath.SHOP_PATH_CATEGORY_UTILITY + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                + ".recall-scroll";
+        yml.set(content + ".custom-setting", "keep-me");
+
+        ShopManager.migrateRecallScroll(yml);
+
+        assertEquals("keep-me", yml.getString(content + ".custom-setting"));
+        assertNull(yml.get(content + ".content-tiers"));
+    }
+
+    @Test
+    void migrationAvoidsAnAdministratorOccupiedDefaultSlot() {
+        YamlConfiguration yml = new YamlConfiguration();
+        String utility = ConfigPath.SHOP_PATH_CATEGORY_UTILITY;
+        yml.set(utility + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".custom."
+                + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT, 32);
+
+        ShopManager.migrateRecallScroll(yml);
+
+        assertEquals(33, yml.getInt(utility + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                + ".recall-scroll." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT));
+        assertEquals(32, yml.getInt(utility + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                + ".custom." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT));
     }
 
     private static String armorTierPath(String content, String tier) {

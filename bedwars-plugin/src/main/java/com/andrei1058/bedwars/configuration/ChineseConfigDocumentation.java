@@ -241,7 +241,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_TOOLS, "工具分类；permanent/downgradable 控制永久保留和死亡降级。");
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_RANGED, "弓箭分类。");
         comment(config, ConfigPath.SHOP_PATH_CATEGORY_POTIONS, "药水分类；potion 格式为 效果,持续秒数,等级。");
-        comment(config, ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "实用道具分类，包括 TNT、火球、珍珠、搭桥蛋和袖珍弹出塔。", "袖珍弹出塔的稳定商品 ID 为 tower；显示名称与说明在语言文件的对应 tower 路径中修改。");
+        comment(config, ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "实用道具分类，包括 TNT、火球、珍珠、搭桥蛋、袖珍弹出塔和回城卷轴。", "回城卷轴默认位于槽位 32，价格为 3 钻石；bedwars-item 标识用于绑定核心行为，请勿删除。");
     }
 
     private static void comment(ConfigManager config, String path, String... lines) {

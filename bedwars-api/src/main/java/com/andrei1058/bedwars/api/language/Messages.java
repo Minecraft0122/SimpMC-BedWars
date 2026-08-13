@@ -441,6 +441,12 @@ public class Messages {
     public static String SHOP_UTILITY_NPC_IRON_GOLEM_NAME = "shop-utility-iron-golem";
     public static String SHOP_INSUFFICIENT_MONEY = "shop-insuff-money";
     public static String SHOP_ALREADY_BOUGHT = "shop-already-bought";
+    public static final String RECALL_SCROLL_COUNTDOWN = "recall-scroll.countdown";
+    public static final String RECALL_SCROLL_ALREADY_CHANNELING = "recall-scroll.already-channeling";
+    public static final String RECALL_SCROLL_UNAVAILABLE = "recall-scroll.unavailable";
+    public static final String RECALL_SCROLL_CANCELLED = "recall-scroll.cancelled";
+    public static final String RECALL_SCROLL_COMPLETED = "recall-scroll.completed";
+    public static final String RECALL_SCROLL_FAILED = "recall-scroll.failed";
     public static final String SHOP_PATH = "shop-items-messages";
     public static final String SHOP_LORE_STATUS_CANT_AFFORD = "shop-lore-status-cant-afford";
     public static final String SHOP_LORE_STATUS_CAN_BUY = "shop-lore-status-can-buy";

@@ -943,6 +943,12 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.SHOP_INSUFFICIENT_MONEY, "{prefix}&c你没有足够的{currency}！ 还需要 {amount} 个{currency}！");
         yml.addDefault(Messages.SHOP_NEW_PURCHASE, "{prefix}&a购买&6{item}");
         yml.addDefault(Messages.SHOP_ALREADY_BOUGHT, "{prefix}&c你已经购买过了！");
+        yml.addDefault(Messages.RECALL_SCROLL_COUNTDOWN, "&b回城引导中：&f{time}&b 秒");
+        yml.addDefault(Messages.RECALL_SCROLL_ALREADY_CHANNELING, "&c回城卷轴正在引导中，请等待当前传送结束。");
+        yml.addDefault(Messages.RECALL_SCROLL_UNAVAILABLE, "&c你现在无法使用回城卷轴。");
+        yml.addDefault(Messages.RECALL_SCROLL_CANCELLED, "&c你已不再是本局存活玩家，回城引导已取消。");
+        yml.addDefault(Messages.RECALL_SCROLL_COMPLETED, "&a已返回队伍出生点。");
+        yml.addDefault(Messages.RECALL_SCROLL_FAILED, "&c传送失败，回城引导已结束。");
         yml.addDefault(Messages.SHOP_UTILITY_NPC_SILVERFISH_NAME, "{TeamColor}&l{TeamName} &r{TeamColor}蠹虫");
         yml.addDefault(Messages.SHOP_UTILITY_NPC_IRON_GOLEM_NAME, "{TeamColor}{despawn}秒 &8[ {TeamColor}{health}&8]");
         yml.addDefault(Messages.SHOP_SEPARATOR_NAME, "&8⇧ 分类");
@@ -1033,6 +1039,13 @@ public class SimplifiedChinese extends Language {
                 "&7用来吸水不错", "", "{quick_buy}", "{buy_status}"));
         addContentMessages(yml, "tower", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}袖珍弹出塔", Arrays.asList("&7花费：{cost} {currency}", "",
                 "&7放置后自动生成一座", "&7带梯子的队伍色防御塔。", "", "{quick_buy}", "{buy_status}"));
+        addContentMessages(yml, "recall-scroll", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}回城卷轴", Arrays.asList("&7花费：{cost} {currency}", "",
+                "&7右键使用，等待 5 秒后", "&7传送到本队出生点。", "&7引导期间不能再次使用。", "", "{quick_buy}", "{buy_status}"));
+        yml.addDefault(Messages.SHOP_CONTENT_TIER_ITEM_NAME.replace("%category%", ConfigPath.SHOP_PATH_CATEGORY_UTILITY)
+                .replace("%content%", "recall-scroll"), "{color}回城卷轴");
+        yml.addDefault(Messages.SHOP_CONTENT_TIER_ITEM_LORE.replace("%category%", ConfigPath.SHOP_PATH_CATEGORY_UTILITY)
+                .replace("%content%", "recall-scroll"), Arrays.asList("&7花费：{cost} {currency}", "",
+                "&7右键使用，等待 5 秒后", "&7传送到本队出生点。", "&7引导期间不能再次使用。", "", "{quick_buy}", "{buy_status}"));
 
         yml.addDefault(Messages.MEANING_NO_TRAP, "无陷阱！");
         yml.addDefault(Messages.FORMAT_SPECTATOR_TARGET, "{targetTeamColor}{targetDisplayName}");
@@ -1117,7 +1130,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(16, SimplifiedChinese::migrateSchema16);
+        updateToLatestVersion(17, SimplifiedChinese::migrateSchema16);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }

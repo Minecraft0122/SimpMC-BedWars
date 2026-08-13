@@ -42,7 +42,7 @@ import org.bukkit.plugin.PluginManager;
 @SuppressWarnings("WeakerAccess")
 public class ShopManager extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 6;
+    private static final int CONFIG_VERSION = 7;
 
     public static ShopIndex shop;
 
@@ -358,6 +358,11 @@ public class ShopManager extends ConfigManager {
             addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "tower", "tier1", "tower", "CHEST",
                     0, 1, "", "", "", false);
 
+            adCategoryContentTier(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "recall-scroll", 32, "tier1",
+                    "PAPER", 0, 1, true, 3, "diamond", false, false);
+            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "recall-scroll", "tier1", "scroll", "PAPER",
+                    0, 1, "", "", "&b回城卷轴", false, ShopItemIdentifier.RECALL_SCROLL);
+
         }
 
         if (getYml().get(ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".diamond-armor") != null) {
@@ -389,7 +394,10 @@ public class ShopManager extends ConfigManager {
         setComments(ConfigPath.SHOP_QUICK_DEFAULTS_PATH, "新玩家默认快捷购买栏的物品路径与槽位。");
         setComments(ConfigPath.SHOP_PATH_CATEGORY_BLOCKS, "商店分类及商品；可自定义价格、货币、数量和购买效果。");
         ChineseConfigDocumentation.shop(this);
-        updateToLatestVersion(CONFIG_VERSION, ShopManager::migrateLowerBodyArmorOnly);
+        updateToLatestVersion(CONFIG_VERSION, config -> {
+            migrateLowerBodyArmorOnly(config);
+            migrateRecallScroll(config);
+        });
     }
 
     static void migrateLowerBodyArmorOnly(YamlConfiguration config) {
@@ -415,6 +423,52 @@ public class ShopManager extends ConfigManager {
                 }
             }
         }
+    }
+
+    static void migrateRecallScroll(YamlConfiguration config) {
+        String utilityPath = ConfigPath.SHOP_PATH_CATEGORY_UTILITY;
+        String contentPath = utilityPath + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".recall-scroll";
+        if (!config.isConfigurationSection(utilityPath) || config.get(contentPath) != null) return;
+
+        int slot = findAvailableUtilitySlot(config);
+        if (slot < 0) return;
+
+        config.set(contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT, slot);
+        config.set(contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_IS_PERMANENT, false);
+        config.set(contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_IS_DOWNGRADABLE, false);
+
+        String tierPath = contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + ".tier1";
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_MATERIAL, "PAPER");
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_DATA, 0);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_AMOUNT, 1);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_ENCHANTED, true);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_COST, 3);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_CURRENCY, "diamond");
+
+        String itemPath = tierPath + "." + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH + ".scroll";
+        config.set(itemPath + ".material", "PAPER");
+        config.set(itemPath + ".data", 0);
+        config.set(itemPath + ".amount", 1);
+        config.set(itemPath + ".name", "&b回城卷轴");
+        config.set(itemPath + "." + ConfigPath.SHOP_CONTENT_BUY_ITEM_IDENTIFIER,
+                ShopItemIdentifier.RECALL_SCROLL);
+    }
+
+    private static int findAvailableUtilitySlot(YamlConfiguration config) {
+        java.util.Set<Integer> occupied = new java.util.HashSet<>();
+        ConfigurationSection contents = config.getConfigurationSection(
+                ConfigPath.SHOP_PATH_CATEGORY_UTILITY + ConfigPath.SHOP_CATEGORY_CONTENT_PATH);
+        if (contents != null) {
+            for (String content : contents.getKeys(false)) {
+                occupied.add(config.getInt(contents.getCurrentPath() + "." + content + "."
+                        + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT, -1));
+            }
+        }
+        int[] slots = {32, 33, 34, 37, 38, 39, 40, 41, 42, 43, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31};
+        for (int slot : slots) {
+            if (!occupied.contains(slot)) return slot;
+        }
+        return -1;
     }
 
     private void loadShop() {
@@ -527,6 +581,13 @@ public class ShopManager extends ConfigManager {
      * Add buy items to a content tier
      */
     public void addBuyItem(String path, String contentName, String tierName, String item, String material, int data, int amount, String enchant, String potion, String itemName, boolean autoEquip) {
+        addBuyItem(path, contentName, tierName, item, material, data, amount, enchant, potion, itemName,
+                autoEquip, null);
+    }
+
+    private void addBuyItem(String path, String contentName, String tierName, String item, String material,
+                            int data, int amount, String enchant, String potion, String itemName,
+                            boolean autoEquip, String itemIdentifier) {
         path += ConfigPath.SHOP_CATEGORY_CONTENT_PATH + "." + contentName + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + "." + tierName + "." + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH + "." + item + ".";
         getYml().addDefault(path + "material", material);
         getYml().addDefault(path + "data", data);
@@ -542,6 +603,9 @@ public class ShopManager extends ConfigManager {
         }
         if (!itemName.isEmpty()) {
             getYml().addDefault(path + "name", itemName);
+        }
+        if (itemIdentifier != null && !itemIdentifier.isBlank()) {
+            getYml().addDefault(path + ConfigPath.SHOP_CONTENT_BUY_ITEM_IDENTIFIER, itemIdentifier);
         }
     }
 
@@ -577,5 +641,6 @@ public class ShopManager extends ConfigManager {
         pm.registerEvents(new ShopOpenListener(), BedWars.plugin);
         pm.registerEvents(new PlayerDropListener(), BedWars.plugin);
         pm.registerEvents(new SpecialsListener(this), BedWars.plugin);
+        pm.registerEvents(new RecallScrollListener(), BedWars.plugin);
     }
 }

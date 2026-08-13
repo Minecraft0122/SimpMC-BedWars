@@ -55,6 +55,22 @@ public class Language extends ConfigManager {
                 "{color}Compact Pop-up Tower",
                 List.of("&7Cost: {cost} {currency}", "", "&7Place a compact pop-up",
                         "&7tower defense!", "", "{quick_buy}", "{buy_status}"));
+        addContentMessages(getYml(), "recall-scroll", ConfigPath.SHOP_PATH_CATEGORY_UTILITY,
+                "{color}Recall Scroll",
+                List.of("&7Cost: {cost} {currency}", "", "&7Use to return to your team",
+                        "&7spawn after a 5-second channel.", "", "{quick_buy}", "{buy_status}"));
+        getYml().addDefault(Messages.RECALL_SCROLL_COUNTDOWN,
+                "&bReturning to base in &f{time}&b seconds...");
+        getYml().addDefault(Messages.RECALL_SCROLL_ALREADY_CHANNELING,
+                "&cA recall scroll is already channeling.");
+        getYml().addDefault(Messages.RECALL_SCROLL_UNAVAILABLE,
+                "&cYou cannot use a recall scroll right now.");
+        getYml().addDefault(Messages.RECALL_SCROLL_CANCELLED,
+                "&cRecall cancelled because you are no longer an active player.");
+        getYml().addDefault(Messages.RECALL_SCROLL_COMPLETED,
+                "&aReturned to your team spawn.");
+        getYml().addDefault(Messages.RECALL_SCROLL_FAILED,
+                "&cRecall teleport failed.");
         getYml().addDefault(Messages.ARENA_RESTART_COUNTDOWN,
                 "&eArena resets in &c{time}&e seconds.");
         getYml().addDefault(Messages.FORMATTING_SB_TAB_GAME_TIME,
@@ -115,7 +131,7 @@ public class Language extends ConfigManager {
         // after registering their defaults.
         addChineseDocumentation();
         if (getClass() == Language.class) {
-            updateToLatestVersion(4, Language::migrateLegacyTowerShopItem);
+            updateToLatestVersion(5, Language::migrateLegacyTowerShopItem);
             save();
         }
         languages.add(this);

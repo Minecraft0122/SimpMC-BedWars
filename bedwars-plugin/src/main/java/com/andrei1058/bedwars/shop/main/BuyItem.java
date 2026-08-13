@@ -26,6 +26,7 @@ import com.andrei1058.bedwars.api.arena.shop.IBuyItem;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamEnchant;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
+import com.andrei1058.bedwars.shop.ShopItemIdentifier;
 import com.andrei1058.bedwars.configuration.Sounds;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -77,6 +78,11 @@ public class BuyItem implements IBuyItem {
                 im.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&r"+yml.getString(path + ".name")));
                 itemStack.setItemMeta(im);
             }
+        }
+
+        String itemIdentifier = yml.getString(path + "." + ConfigPath.SHOP_CONTENT_BUY_ITEM_IDENTIFIER, "").trim();
+        if (!itemIdentifier.isEmpty()) {
+            itemStack = ShopItemIdentifier.mark(itemStack, itemIdentifier);
         }
 
         if (yml.get(path + ".enchants") != null && itemStack.getItemMeta() != null) {
