@@ -25,6 +25,7 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
     private final Method craftPlayerGetHandle;
     private final Field serverPlayerConnection;
     private final Method connectionSend;
+    private final Method legacyComponent;
     private final Method packetActions;
     private final Method packetEntries;
     private final Method entryProfileId;
@@ -54,9 +55,11 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
         Class<?> component = Class.forName("net.minecraft.network.chat.Component");
         Class<?> chatSessionData = Class.forName("net.minecraft.network.chat.RemoteChatSession$Data");
         Class<?> connection = Class.forName("net.minecraft.server.network.ServerGamePacketListenerImpl");
+        Class<?> craftChatMessage = Class.forName("org.bukkit.craftbukkit.util.CraftChatMessage");
         craftPlayerGetHandle = craftPlayer.getMethod("getHandle");
         serverPlayerConnection = serverPlayer.getField("connection");
         connectionSend = connection.getMethod("send", packet);
+        legacyComponent = craftChatMessage.getMethod("fromStringOrEmpty", String.class);
         snapshotPacket = playerInfoPacket.getConstructor(EnumSet.class, Collection.class);
         entryConstructor = playerInfoEntry.getConstructor(
                 UUID.class, gameProfile, boolean.class, int.class, gameType,
@@ -90,17 +93,15 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
     }
 
     @Override
-    public boolean clear(@NotNull Player viewer, @NotNull Collection<Player> targets) {
-        if (targets.isEmpty()) return true;
+    public boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names) {
+        if (names.isEmpty()) return true;
         try {
-            ArrayList<Object> entries = new ArrayList<>(targets.size());
-            for (Player target : targets) {
-                // A null PlayerInfo display name makes the 1.21.11 client call
-                // PlayerTeam.formatNameForTeam. Non-null names bypass the
-                // scoreboard team and split TAB from the overhead name tag.
+            ArrayList<Object> entries = new ArrayList<>(names.size());
+            for (RenderedName name : names) {
+                Object renderedName = legacyComponent.invoke(null, name.legacyDisplayName());
                 entries.add(entryConstructor.newInstance(
-                        target.getUniqueId(), null, false, 0, null,
-                        null, false, 0, null));
+                        name.target().getUniqueId(), null, false, 0, null,
+                        renderedName, false, 0, null));
             }
             send(viewer, entriesPacket.newInstance(displayNameAction, entries));
             return true;
@@ -169,8 +170,9 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
      */
     private void verifyPacketConstruction() throws ReflectiveOperationException {
         UUID expectedId = new UUID(0L, 1L);
+        Object expectedDisplayName = legacyComponent.invoke(null, "\u00a7cSimpMC");
         Object displayEntry = entryConstructor.newInstance(
-                expectedId, null, false, 0, null, null, false, 0, null);
+                expectedId, null, false, 0, null, expectedDisplayName, false, 0, null);
         Object displayPacket = entriesPacket.newInstance(displayNameAction, List.of(displayEntry));
 
         Object displayActions = packetActions.invoke(displayPacket);
@@ -180,7 +182,7 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
                 || !(displayEntries instanceof List<?> packetEntryValues)
                 || packetEntryValues.size() != 1
                 || !expectedId.equals(entryProfileId.invoke(packetEntryValues.getFirst()))
-                || entryDisplayName.invoke(packetEntryValues.getFirst()) != null) {
+                || entryDisplayName.invoke(packetEntryValues.getFirst()) != expectedDisplayName) {
             throw new ReflectiveOperationException(
                     "Paper 1.21.11 PlayerInfo UPDATE_DISPLAY_NAME packet contract changed");
         }
@@ -225,8 +227,8 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
         private volatile PlayerListDisplayNameRenderer delegate;
 
         @Override
-        public boolean clear(@NotNull Player viewer, @NotNull Collection<Player> targets) {
-            return delegate().clear(viewer, targets);
+        public boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names) {
+            return delegate().render(viewer, names);
         }
 
         @Override
@@ -270,7 +272,7 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
         INSTANCE;
 
         @Override
-        public boolean clear(@NotNull Player viewer, @NotNull Collection<Player> targets) {
+        public boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names) {
             return false;
         }
 

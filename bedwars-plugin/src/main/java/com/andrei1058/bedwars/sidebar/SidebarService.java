@@ -645,10 +645,8 @@ public class SidebarService implements ISidebarService {
     static void updateArenaPlayerTabs(@NotNull Collection<? extends ISidebar> sidebars,
                                       @NotNull IArena arena, @NotNull Player player,
                                       @Nullable Boolean spectator) {
-        UUID playerId = player.getUniqueId();
         for (ISidebar sidebar : sidebars) {
-            if (sidebar == null || sidebar.getArena() != arena
-                    || sidebar.getPlayer().getUniqueId().equals(playerId)) continue;
+            if (sidebar == null || sidebar.getArena() != arena) continue;
             sidebar.giveUpdateTabFormat(player, false, spectator);
         }
     }

@@ -79,7 +79,7 @@ class SidebarServiceTest {
     }
 
     @Test
-    void eliminationRefreshesEveryOtherViewerInTheSameArena() {
+    void eliminationRefreshesEveryViewerInTheSameArenaIncludingSelf() {
         IArena arena = arena();
         IArena otherArena = arena();
         Player eliminated = player("eliminated");
@@ -95,7 +95,7 @@ class SidebarServiceTest {
         ), arena, eliminated, true);
 
         assertEquals(1, arenaUpdates.get());
-        assertEquals(0, targetUpdates.get());
+        assertEquals(1, targetUpdates.get());
         assertEquals(0, otherArenaUpdates.get());
         assertSame(eliminated, updateArguments.get()[0]);
         assertEquals(false, updateArguments.get()[1]);
