@@ -4,7 +4,6 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
-import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashSet;
@@ -90,17 +89,14 @@ public final class RestartingPlayerState {
             player.setFlying(false);
             player.setAllowFlight(false);
             player.setCollidable(true);
-            if (restoreRespawnSideEffects) {
+            if (restoreRespawnSideEffects || arena.getShowTime().containsKey(player)) {
                 respawnSideEffectCleaner.accept(arena, player);
             }
         }
     }
 
     private static void clearRespawnSideEffects(IArena arena, Player player) {
-        player.removePotionEffect(PotionEffectType.INVISIBILITY);
-        // showTime belongs to the old playing lifecycle and must not survive
-        // into the restarting countdown.
-        arena.getShowTime().remove(player);
+        InvisibilityManager.remove(arena, player);
     }
 
     private static void logFailure(String message, RuntimeException exception) {

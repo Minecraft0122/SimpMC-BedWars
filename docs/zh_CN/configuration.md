@@ -172,7 +172,7 @@ blocks-category:
 
 每个 tier 还需要 `cost`、`currency` 和 `display-item`。陷阱按队列顺序触发，队列上限和价格增量位于 `default-upgrades-settings`。
 
-`upgrade-swords.tier-1` 到 `tier-4` 对应锋利 I–IV，按顺序购买。默认价格为 2、4、8、14 钻石。`upgrades2.yml` 架构 9 会根据旧文件的架构，只把四级整组仍为上一版内置价格 4、6、9、14 或更早内置价格 4、8、16、32 的配置迁移到新价格；只要任一级被自定义，整组价格都保持不变。
+`upgrade-swords.tier-1` 到 `tier-4` 对应锋利 I–IV，默认价格为 2、4、8、16 钻石；`upgrade-armor.tier-1` 到 `tier-4` 对应保护 I–IV，默认价格为 2、4、10、24 钻石。`upgrades2.yml` 架构 10 会把仍为内置整组值的锋利和保护价格分别迁移到新价格；两类升级独立判断，只要某一类的任一级被自定义，该类四级价格就全部保持不变。
 
 ## sounds.yml
 

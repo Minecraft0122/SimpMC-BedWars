@@ -629,6 +629,7 @@ public class Arena implements IArena {
             ArenaDepartureGuard.restore(leaving, p);
 
             p.closeInventory();
+            InvisibilityManager.remove(this, p);
             spectators.add(p);
             players.remove(p);
 
@@ -710,7 +711,6 @@ public class Arena implements IArena {
             return false;
         }
 
-        showTime.remove(p);
         if (!playerBefore) refreshArenaIndicators();
         return true;
     }
@@ -786,6 +786,8 @@ public class Arena implements IArena {
 
         Arena.afkCheck.remove(p.getUniqueId());
         BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
+
+        InvisibilityManager.remove(this, p);
 
         if (status == GameState.playing) {
             for (ITeam t : getTeams()) {
@@ -991,8 +993,6 @@ public class Arena implements IArena {
                 Bukkit.getScheduler().cancelTask(taskId);
             }
         }
-
-        showTime.remove(p);
 
         refreshSigns();
         JoinNPC.updateNPCs(getGroup());
@@ -2755,9 +2755,7 @@ public class Arena implements IArena {
                     }
                     player.setSpectatorTarget(null);
                     nms.setCollide(player, this, false);
-                    for (Player invisible : getShowTime().keySet()) {
-                        BedWars.nms.hideArmor(invisible, player);
-                    }
+                    InvisibilityManager.synchronizeViewer(this, player);
                     updateSpectatorCollideRule(player, false);
                 });
             } else {

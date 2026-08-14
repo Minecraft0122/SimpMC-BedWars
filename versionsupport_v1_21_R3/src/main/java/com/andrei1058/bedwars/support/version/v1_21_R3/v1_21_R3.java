@@ -62,6 +62,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -75,6 +76,15 @@ import java.util.logging.Level;
 
 @SuppressWarnings("unused")
 public class v1_21_R3 extends VersionSupport {
+
+    private static final List<EquipmentSlot> EQUIPMENT_SLOTS = List.of(
+            EquipmentSlot.HAND,
+            EquipmentSlot.OFF_HAND,
+            EquipmentSlot.HEAD,
+            EquipmentSlot.CHEST,
+            EquipmentSlot.LEGS,
+            EquipmentSlot.FEET
+    );
 
     private static final double NPC_POSITION_EPSILON_SQUARED = 1.0E-6D;
     private static final ClassValue<Method> FIREBALL_HANDLE_GETTERS = new ClassValue<>() {
@@ -343,22 +353,33 @@ public class v1_21_R3 extends VersionSupport {
     @Override
     public void hideArmor(Player victim, Player receiver) {
         ItemStack air = new ItemStack(Material.AIR);
-        EnumMap<EquipmentSlot, ItemStack> equipment = new EnumMap<>(EquipmentSlot.class);
-        equipment.put(EquipmentSlot.HEAD, air);
-        equipment.put(EquipmentSlot.CHEST, air);
-        equipment.put(EquipmentSlot.LEGS, air);
-        equipment.put(EquipmentSlot.FEET, air);
-        receiver.sendEquipmentChange(victim, equipment);
+        receiver.sendEquipmentChange(victim, equipmentChanges(air, air, air, air, air, air));
     }
 
     @Override
     public void showArmor(Player victim, Player receiver) {
+        receiver.sendEquipmentChange(victim, equipmentChanges(
+                victim.getInventory().getItemInMainHand(),
+                victim.getInventory().getItemInOffHand(),
+                victim.getInventory().getHelmet(),
+                victim.getInventory().getChestplate(),
+                victim.getInventory().getLeggings(),
+                victim.getInventory().getBoots()));
+    }
+
+    static EnumMap<EquipmentSlot, ItemStack> equipmentChanges(ItemStack hand, ItemStack offHand,
+                                                               ItemStack head, ItemStack chest,
+                                                               ItemStack legs, ItemStack feet) {
         EnumMap<EquipmentSlot, ItemStack> equipment = new EnumMap<>(EquipmentSlot.class);
-        equipment.put(EquipmentSlot.HEAD, emptyIfNull(victim.getInventory().getHelmet()));
-        equipment.put(EquipmentSlot.CHEST, emptyIfNull(victim.getInventory().getChestplate()));
-        equipment.put(EquipmentSlot.LEGS, emptyIfNull(victim.getInventory().getLeggings()));
-        equipment.put(EquipmentSlot.FEET, emptyIfNull(victim.getInventory().getBoots()));
-        receiver.sendEquipmentChange(victim, equipment);
+        List<ItemStack> items = Arrays.asList(hand, offHand, head, chest, legs, feet);
+        for (int index = 0; index < EQUIPMENT_SLOTS.size(); index++) {
+            equipment.put(EQUIPMENT_SLOTS.get(index), emptyIfNull(items.get(index)));
+        }
+        return equipment;
+    }
+
+    static List<EquipmentSlot> equipmentSlots() {
+        return EQUIPMENT_SLOTS;
     }
 
     @Override
@@ -576,12 +597,14 @@ public class v1_21_R3 extends VersionSupport {
     public void sendPlayerSpawnPackets(Player respawned, IArena arena) {
         if (respawned == null || arena == null || !arena.isPlayer(respawned)) return;
         if (arena.getRespawnSessions().containsKey(respawned)) return;
+        ITeam respawnedTeam = arena.getTeam(respawned);
 
         for (Player player : arena.getPlayers()) {
             if (player == null || player.equals(respawned)) continue;
             player.showPlayer(getPlugin(), respawned);
             respawned.showPlayer(getPlugin(), player);
-            if (respawned.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+            if (arena.getShowTime().containsKey(respawned) && respawnedTeam != null
+                    && !respawnedTeam.equals(arena.getTeam(player))) {
                 hideArmor(respawned, player);
             } else {
                 showArmor(respawned, player);
@@ -592,6 +615,9 @@ public class v1_21_R3 extends VersionSupport {
             if (spectator == null || spectator.equals(respawned)) continue;
             spectator.showPlayer(getPlugin(), respawned);
             respawned.hidePlayer(getPlugin(), spectator);
+            if (arena.getShowTime().containsKey(respawned)) {
+                hideArmor(respawned, spectator);
+            }
         }
     }
 
@@ -952,7 +978,7 @@ public class v1_21_R3 extends VersionSupport {
         };
     }
 
-    private ItemStack emptyIfNull(ItemStack itemStack) {
+    private static ItemStack emptyIfNull(ItemStack itemStack) {
         return itemStack == null ? new ItemStack(Material.AIR) : itemStack;
     }
 }

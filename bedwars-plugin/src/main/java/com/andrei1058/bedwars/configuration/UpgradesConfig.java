@@ -31,12 +31,16 @@ import static com.andrei1058.bedwars.BedWars.plugin;
 
 public class UpgradesConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 9;
-    private static final int PREVIOUS_SWORD_PRICE_SCHEMA = 8;
+    private static final int CONFIG_VERSION = 10;
+    private static final int PREVIOUS_SWORD_PRICE_SCHEMA = 9;
     private static final int MAX_SWORD_TIER = 4;
-    private static final List<Integer> SWORD_TIER_COSTS = List.of(2, 4, 8, 14);
-    private static final List<Integer> PREVIOUS_SWORD_TIER_COSTS = List.of(4, 6, 9, 14);
+    private static final int MAX_ARMOR_TIER = 4;
+    private static final List<Integer> SWORD_TIER_COSTS = List.of(2, 4, 8, 16);
+    private static final List<Integer> PREVIOUS_SWORD_TIER_COSTS = List.of(2, 4, 8, 14);
+    private static final List<Integer> SCHEMA_EIGHT_SWORD_TIER_COSTS = List.of(4, 6, 9, 14);
     private static final List<Integer> LEGACY_SWORD_TIER_COSTS = List.of(4, 8, 16, 32);
+    private static final List<Integer> ARMOR_TIER_COSTS = List.of(2, 4, 10, 24);
+    private static final List<Integer> PREVIOUS_ARMOR_TIER_COSTS = List.of(2, 4, 8, 16);
 
     public UpgradesConfig(String name, String dir) {
         super(plugin, name, dir);
@@ -52,28 +56,9 @@ public class UpgradesConfig extends ConfigManager {
         yml.addDefault("default-upgrades-settings.trap-queue-limit", 3);
 
         addDefaultSwordTiers(yml);
+        addDefaultArmorTiers(yml);
 
         if (isFirstTime()) {
-            yml.addDefault("upgrade-armor.tier-1.currency", "diamond");
-            yml.addDefault("upgrade-armor.tier-1.cost", 2);
-            addDefaultDisplayItem("upgrade-armor.tier-1", "IRON_CHESTPLATE", 0, 1, false);
-            yml.addDefault("upgrade-armor.tier-1.receive", Collections.singletonList("enchant-item: PROTECTION_ENVIRONMENTAL,1,armor"));
-
-            yml.addDefault("upgrade-armor.tier-2.currency", "diamond");
-            yml.addDefault("upgrade-armor.tier-2.cost", 4);
-            addDefaultDisplayItem("upgrade-armor.tier-2", "IRON_CHESTPLATE", 0, 2, false);
-            yml.addDefault("upgrade-armor.tier-2.receive", Collections.singletonList("enchant-item: PROTECTION_ENVIRONMENTAL,2,armor"));
-
-            yml.addDefault("upgrade-armor.tier-3.currency", "diamond");
-            yml.addDefault("upgrade-armor.tier-3.cost", 8);
-            addDefaultDisplayItem("upgrade-armor.tier-3", "IRON_CHESTPLATE", 0, 3, false);
-            yml.addDefault("upgrade-armor.tier-3.receive", Collections.singletonList("enchant-item: PROTECTION_ENVIRONMENTAL,3,armor"));
-
-            yml.addDefault("upgrade-armor.tier-4.currency", "diamond");
-            yml.addDefault("upgrade-armor.tier-4.cost", 16);
-            addDefaultDisplayItem("upgrade-armor.tier-4", "IRON_CHESTPLATE", 0, 4, false);
-            yml.addDefault("upgrade-armor.tier-4.receive", Collections.singletonList("enchant-item: PROTECTION_ENVIRONMENTAL,4,armor"));
-
             yml.addDefault("upgrade-miner.tier-1.currency", "diamond");
             yml.addDefault("upgrade-miner.tier-1.cost", 2);
             addDefaultDisplayItem("upgrade-miner.tier-1", "GOLDEN_PICKAXE", 0, 1, false);
@@ -149,7 +134,8 @@ public class UpgradesConfig extends ConfigManager {
         }
         yml.options().copyDefaults(true);
         setComments("default-upgrades-settings", "队伍升级菜单布局、陷阱价格和队列上限。");
-        setComments("upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 2、4、8、14 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
+        setComments("upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 2、4、8、16 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
+        setComments("upgrade-armor", "保护 I–IV 逐级购买；默认价格为 2、4、10、24 钻石。");
         setComments("category-traps", "陷阱分类菜单内容及槽位。");
         ChineseConfigDocumentation.upgrades(this);
         int storedVersion = yml.getInt(CONFIG_VERSION_PATH, 0);
@@ -170,11 +156,32 @@ public class UpgradesConfig extends ConfigManager {
         }
     }
 
+    static void addDefaultArmorTiers(YamlConfiguration yml) {
+        for (int tier = 1; tier <= MAX_ARMOR_TIER; tier++) {
+            String path = "upgrade-armor.tier-" + tier;
+            yml.addDefault(path + ".cost", defaultArmorTierCost(tier));
+            yml.addDefault(path + ".currency", "diamond");
+            yml.addDefault(path + ".display-item.material", "IRON_CHESTPLATE");
+            yml.addDefault(path + ".display-item.data", 0);
+            yml.addDefault(path + ".display-item.amount", tier);
+            yml.addDefault(path + ".display-item.enchanted", false);
+            yml.addDefault(path + ".receive",
+                    Collections.singletonList("enchant-item: PROTECTION_ENVIRONMENTAL," + tier + ",armor"));
+        }
+    }
+
     static int defaultSwordTierCost(int tier) {
         if (tier < 1 || tier > MAX_SWORD_TIER) {
             throw new IllegalArgumentException("Sword tier must be between 1 and " + MAX_SWORD_TIER);
         }
         return SWORD_TIER_COSTS.get(tier - 1);
+    }
+
+    static int defaultArmorTierCost(int tier) {
+        if (tier < 1 || tier > MAX_ARMOR_TIER) {
+            throw new IllegalArgumentException("Armor tier must be between 1 and " + MAX_ARMOR_TIER);
+        }
+        return ARMOR_TIER_COSTS.get(tier - 1);
     }
 
     static void migrateLegacyForgeDefaults(YamlConfiguration yml) {
@@ -195,8 +202,14 @@ public class UpgradesConfig extends ConfigManager {
     static void migrateDefaults(YamlConfiguration yml, int storedVersion) {
         migrateLegacyForgeDefaults(yml);
         migrateLegacySwordTierCosts(yml, storedVersion);
-        for (int tier = 1; tier <= MAX_SWORD_TIER; tier++) {
-            String root = "upgrade-swords.tier-" + tier;
+        migrateLegacyArmorTierCosts(yml, storedVersion);
+        materializeTiers(yml, "upgrade-swords", MAX_SWORD_TIER);
+        materializeTiers(yml, "upgrade-armor", MAX_ARMOR_TIER);
+    }
+
+    private static void materializeTiers(YamlConfiguration yml, String section, int maximumTier) {
+        for (int tier = 1; tier <= maximumTier; tier++) {
+            String root = section + ".tier-" + tier;
             for (String child : List.of("cost", "currency", "display-item.material", "display-item.data",
                     "display-item.amount", "display-item.enchanted", "receive")) {
                 String path = root + "." + child;
@@ -211,12 +224,17 @@ public class UpgradesConfig extends ConfigManager {
         if (storedVersion > PREVIOUS_SWORD_PRICE_SCHEMA) {
             return;
         }
-        List<Integer> oldDefaults = storedVersion == PREVIOUS_SWORD_PRICE_SCHEMA
-                ? PREVIOUS_SWORD_TIER_COSTS
-                : LEGACY_SWORD_TIER_COSTS;
+        List<Integer> oldDefaults;
+        if (storedVersion == PREVIOUS_SWORD_PRICE_SCHEMA) {
+            oldDefaults = PREVIOUS_SWORD_TIER_COSTS;
+        } else if (storedVersion == 8) {
+            oldDefaults = SCHEMA_EIGHT_SWORD_TIER_COSTS;
+        } else {
+            oldDefaults = LEGACY_SWORD_TIER_COSTS;
+        }
         // A single value equal to an old default may still be an administrator's
         // deliberate choice. Only an unchanged built-in four-tier sequence is safe to migrate.
-        if (!hasExactSwordTierCosts(yml, oldDefaults)) {
+        if (!hasExactTierCosts(yml, "upgrade-swords", MAX_SWORD_TIER, oldDefaults)) {
             return;
         }
         for (int tier = 1; tier <= MAX_SWORD_TIER; tier++) {
@@ -225,9 +243,20 @@ public class UpgradesConfig extends ConfigManager {
         }
     }
 
-    private static boolean hasExactSwordTierCosts(YamlConfiguration yml, List<Integer> expectedCosts) {
-        for (int tier = 1; tier <= MAX_SWORD_TIER; tier++) {
-            String path = "upgrade-swords.tier-" + tier + ".cost";
+    static void migrateLegacyArmorTierCosts(YamlConfiguration yml, int storedVersion) {
+        if (storedVersion > PREVIOUS_SWORD_PRICE_SCHEMA
+                || !hasExactTierCosts(yml, "upgrade-armor", MAX_ARMOR_TIER, PREVIOUS_ARMOR_TIER_COSTS)) {
+            return;
+        }
+        for (int tier = 1; tier <= MAX_ARMOR_TIER; tier++) {
+            yml.set("upgrade-armor.tier-" + tier + ".cost", defaultArmorTierCost(tier));
+        }
+    }
+
+    private static boolean hasExactTierCosts(YamlConfiguration yml, String section, int maximumTier,
+                                             List<Integer> expectedCosts) {
+        for (int tier = 1; tier <= maximumTier; tier++) {
+            String path = section + ".tier-" + tier + ".cost";
             if (!yml.contains(path, true) || yml.getInt(path) != expectedCosts.get(tier - 1)) {
                 return false;
             }

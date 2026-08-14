@@ -37,7 +37,7 @@ class UpgradesConfigTest {
         assertEquals(2, configuration.getInt("upgrade-swords.tier-1.cost"));
         assertEquals(99, configuration.getInt("upgrade-swords.tier-2.cost"));
         assertEquals(8, configuration.getInt("upgrade-swords.tier-3.cost"));
-        assertEquals(14, configuration.getInt("upgrade-swords.tier-4.cost"));
+        assertEquals(16, configuration.getInt("upgrade-swords.tier-4.cost"));
         assertEquals(List.of("enchant-item: DAMAGE_ALL,4,sword"),
                 configuration.getStringList("upgrade-swords.tier-4.receive"));
         assertEquals(4, configuration.getInt("upgrade-swords.tier-4.display-item.amount"));
@@ -62,10 +62,66 @@ class UpgradesConfigTest {
 
     @Test
     void usesConfiguredDefaultSharpnessPrices() {
-        assertEquals(List.of(2, 4, 8, 14), java.util.stream.IntStream.rangeClosed(1, 4)
+        assertEquals(List.of(2, 4, 8, 16), java.util.stream.IntStream.rangeClosed(1, 4)
                 .map(UpgradesConfig::defaultSwordTierCost)
                 .boxed()
                 .toList());
+    }
+
+    @Test
+    void usesRaisedProtectionThreeAndFourPrices() {
+        assertEquals(List.of(2, 4, 10, 24), java.util.stream.IntStream.rangeClosed(1, 4)
+                .map(UpgradesConfig::defaultArmorTierCost)
+                .boxed()
+                .toList());
+    }
+
+    @Test
+    void suppliesFourProtectionTiers() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        UpgradesConfig.addDefaultArmorTiers(configuration);
+        configuration.options().copyDefaults(true);
+
+        assertEquals(List.of(2, 4, 10, 24), costs(configuration, "upgrade-armor"));
+        assertEquals(List.of("enchant-item: PROTECTION_ENVIRONMENTAL,4,armor"),
+                configuration.getStringList("upgrade-armor.tier-4.receive"));
+        assertEquals("IRON_CHESTPLATE", configuration.getString("upgrade-armor.tier-4.display-item.material"));
+    }
+
+    @Test
+    void migratesSchemaNineDefaultPricesIndependently() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        setCosts(configuration, "upgrade-swords", List.of(2, 4, 8, 14));
+        setCosts(configuration, "upgrade-armor", List.of(2, 4, 8, 16));
+
+        UpgradesConfig.migrateLegacySwordTierCosts(configuration, 9);
+        UpgradesConfig.migrateLegacyArmorTierCosts(configuration, 9);
+
+        assertEquals(List.of(2, 4, 8, 16), costs(configuration, "upgrade-swords"));
+        assertEquals(List.of(2, 4, 10, 24), costs(configuration, "upgrade-armor"));
+    }
+
+    @Test
+    void preservesTheWholeProtectionPriceSetWhenOneTierIsCustomized() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        setCosts(configuration, "upgrade-armor", List.of(2, 4, 99, 16));
+
+        UpgradesConfig.migrateLegacyArmorTierCosts(configuration, 9);
+
+        assertEquals(List.of(2, 4, 99, 16), costs(configuration, "upgrade-armor"));
+    }
+
+    @Test
+    void migratesDefaultProtectionWhilePreservingCustomSharpness() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        setCosts(configuration, "upgrade-swords", List.of(2, 99, 8, 14));
+        setCosts(configuration, "upgrade-armor", List.of(2, 4, 8, 16));
+
+        UpgradesConfig.migrateLegacySwordTierCosts(configuration, 9);
+        UpgradesConfig.migrateLegacyArmorTierCosts(configuration, 9);
+
+        assertEquals(List.of(2, 99, 8, 14), costs(configuration, "upgrade-swords"));
+        assertEquals(List.of(2, 4, 10, 24), costs(configuration, "upgrade-armor"));
     }
 
     @Test
@@ -81,7 +137,7 @@ class UpgradesConfigTest {
         assertEquals(2, configuration.getInt("upgrade-swords.tier-1.cost"));
         assertEquals(4, configuration.getInt("upgrade-swords.tier-2.cost"));
         assertEquals(8, configuration.getInt("upgrade-swords.tier-3.cost"));
-        assertEquals(14, configuration.getInt("upgrade-swords.tier-4.cost"));
+        assertEquals(16, configuration.getInt("upgrade-swords.tier-4.cost"));
     }
 
     @Test
@@ -97,7 +153,7 @@ class UpgradesConfigTest {
         assertEquals(2, configuration.getInt("upgrade-swords.tier-1.cost"));
         assertEquals(4, configuration.getInt("upgrade-swords.tier-2.cost"));
         assertEquals(8, configuration.getInt("upgrade-swords.tier-3.cost"));
-        assertEquals(14, configuration.getInt("upgrade-swords.tier-4.cost"));
+        assertEquals(16, configuration.getInt("upgrade-swords.tier-4.cost"));
     }
 
     @Test
@@ -156,11 +212,24 @@ class UpgradesConfigTest {
         configuration.set("upgrade-swords.tier-3.cost", 9);
         configuration.set("upgrade-swords.tier-4.cost", 14);
 
-        UpgradesConfig.migrateLegacySwordTierCosts(configuration, 9);
+        UpgradesConfig.migrateLegacySwordTierCosts(configuration, 10);
 
         assertEquals(List.of(4, 6, 9, 14), java.util.stream.IntStream.rangeClosed(1, 4)
                 .map(tier -> configuration.getInt("upgrade-swords.tier-" + tier + ".cost"))
                 .boxed()
                 .toList());
+    }
+
+    private static void setCosts(YamlConfiguration configuration, String section, List<Integer> costs) {
+        for (int tier = 1; tier <= costs.size(); tier++) {
+            configuration.set(section + ".tier-" + tier + ".cost", costs.get(tier - 1));
+        }
+    }
+
+    private static List<Integer> costs(YamlConfiguration configuration, String section) {
+        return java.util.stream.IntStream.rangeClosed(1, 4)
+                .map(tier -> configuration.getInt(section + ".tier-" + tier + ".cost"))
+                .boxed()
+                .toList();
     }
 }

@@ -29,7 +29,6 @@ import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.entity.Despawnable;
-import com.andrei1058.bedwars.api.events.player.PlayerInvisibilityPotionEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerKillEvent;
 import com.andrei1058.bedwars.api.events.team.TeamEliminatedEvent;
 import com.andrei1058.bedwars.api.language.Language;
@@ -38,6 +37,7 @@ import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.RestartingPlayerState;
 import com.andrei1058.bedwars.arena.LastHit;
+import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
@@ -57,7 +57,6 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.tag.DamageTypeTags;
 import org.bukkit.util.Vector;
@@ -256,21 +255,6 @@ public class DamageDeathMove implements Listener {
 
                     LastHit.record(p, damager, System.currentTimeMillis());
 
-                    // #274
-                    // if player gets hit show him
-                    if (a.getShowTime().containsKey(p)) {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            for (Player on : a.getWorld().getPlayers()) {
-                                BedWars.nms.showArmor(p, on);
-                                //BedWars.nms.showPlayer(p, on);
-                            }
-                            a.getShowTime().remove(p);
-                            p.removePotionEffect(PotionEffectType.INVISIBILITY);
-                            p.sendMessage(getMsg(p, Messages.INTERACT_INVISIBILITY_REMOVED_DAMGE_TAKEN));
-                            Bukkit.getPluginManager().callEvent(new PlayerInvisibilityPotionEvent(PlayerInvisibilityPotionEvent.Type.REMOVED, victimTeam, p, a));
-                        });
-                    }
-                    //
                 }
             }
         } else if (nms.isDespawnable(e.getEntity())) {
@@ -319,6 +303,23 @@ public class DamageDeathMove implements Listener {
                 }
             }
         }*/
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onInvisibilityDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) return;
+        IArena arena = Arena.getArenaByPlayer(victim);
+        if (arena == null || !arena.getShowTime().containsKey(victim)) return;
+        Player damager = getResponsiblePlayer(event.getDamager());
+        if (!isEnemyAttack(arena, victim, damager)) return;
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!dealtDamage(event.isCancelled(), event.getFinalDamage())) return;
+            if (!victim.isOnline() || Arena.getArenaByPlayer(victim) != arena) return;
+            if (InvisibilityManager.remove(arena, victim)) {
+                victim.sendMessage(getMsg(victim, Messages.INTERACT_INVISIBILITY_REMOVED_DAMGE_TAKEN));
+            }
+        });
     }
 
     @EventHandler
@@ -621,21 +622,7 @@ public class DamageDeathMove implements Listener {
 
                 // hide armor for those with invisibility potions
                 if (!a.getShowTime().isEmpty()) {
-                    // generic hide packets
-                    for (Map.Entry<Player, Integer> entry : a.getShowTime().entrySet()) {
-                        if (entry.getValue() > 1) {
-                            BedWars.nms.hideArmor(entry.getKey(), e.getPlayer());
-                        }
-                    }
-                    // if the moving player has invisible armor
-                    if (a.getShowTime().containsKey(player)) {
-                        for (Player p : a.getPlayers()) {
-                            nms.hideArmor(player, p);
-                        }
-                        for (Player p : a.getSpectators()) {
-                            nms.hideArmor(player, p);
-                        }
-                    }
+                    InvisibilityManager.synchronizeViewer(a, player);
                 }
             }
 
@@ -730,6 +717,19 @@ public class DamageDeathMove implements Listener {
         if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) return player;
         if (damager instanceof TNTPrimed tnt && tnt.getSource() instanceof Player player) return player;
         return null;
+    }
+
+    static boolean isEnemyAttack(IArena arena, Player victim, Player damager) {
+        if (arena == null || victim == null || damager == null || victim.equals(damager)) return false;
+        if (!arena.isPlayer(victim) || !arena.isPlayer(damager)) return false;
+        if (arena.isSpectator(damager) || arena.isReSpawning(damager.getUniqueId())) return false;
+        ITeam victimTeam = arena.getTeam(victim);
+        ITeam damagerTeam = arena.getTeam(damager);
+        return victimTeam != null && damagerTeam != null && !victimTeam.equals(damagerTeam);
+    }
+
+    static boolean dealtDamage(boolean cancelled, double finalDamage) {
+        return !cancelled && finalDamage > 0;
     }
 
     private static boolean isRespawnProtected(Player player) {

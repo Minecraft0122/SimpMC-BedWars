@@ -63,6 +63,26 @@ class RestartingPlayerStateTest {
         assertInteractiveSpectator(spectatorState);
     }
 
+    @Test
+    void clearsTrackedInvisibilityForAWinningPlayerWhoWasNotRespawning() {
+        PlayerState winnerState = new PlayerState("Winner", GameMode.SPECTATOR);
+        Player winner = player(winnerState);
+        ConcurrentHashMap<Player, Integer> showTime = new ConcurrentHashMap<>();
+        showTime.put(winner, 12);
+        List<Player> itemRecipients = new ArrayList<>();
+        IArena arena = arena(List.of(winner), List.of(), new ConcurrentHashMap<>(), showTime,
+                null, itemRecipients);
+
+        RestartingPlayerState.prepare(arena, (preparedArena, preparedPlayer) -> {
+            winnerState.invisibilityRemoved = true;
+            preparedArena.getShowTime().remove(preparedPlayer);
+        });
+
+        assertTrue(showTime.isEmpty());
+        assertInteractiveWinner(winnerState);
+        assertEquals(List.of(winner), itemRecipients);
+    }
+
     private static void assertInteractiveWinner(PlayerState state) {
         assertEquals(GameMode.ADVENTURE, state.gameMode);
         assertTrue(state.spectatorTargetCleared);

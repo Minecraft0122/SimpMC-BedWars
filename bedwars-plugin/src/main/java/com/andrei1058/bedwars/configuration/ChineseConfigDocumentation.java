@@ -210,8 +210,8 @@ public final class ChineseConfigDocumentation {
 
     public static void upgrades(ConfigManager config) {
         comment(config, "default-upgrades-settings", "升级菜单布局和陷阱规则：menu-content 为 元素,槽位；价格货币支持 iron、gold、diamond、emerald 或 Vault。");
-        comment(config, "upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 2、4、8、14 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
-        comment(config, "upgrade-armor", "护甲保护升级。");
+        comment(config, "upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 2、4、8、16 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
+        comment(config, "upgrade-armor", "保护 I–IV 逐级购买；默认价格为 2、4、10、24 钻石。");
         comment(config, "upgrade-miner", "挖掘急迫升级。");
         comment(config, "upgrade-forge", "岛屿资源生成器升级。");
         comment(config, "upgrade-heal-pool", "基地治疗池升级。");

@@ -28,7 +28,6 @@ import com.andrei1058.bedwars.api.arena.team.TeamEnchant;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.shop.ShopItemIdentifier;
 import com.andrei1058.bedwars.configuration.Sounds;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -242,15 +241,6 @@ public class BuyItem implements IBuyItem {
             if (synchronizeInventory) player.updateInventory();
             Sounds.playSound("shop-auto-equip", player);
 
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                // #274
-                if (player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-                    for (Player p : arena.getPlayers()) {
-                        BedWars.nms.hideArmor(player, p);
-                    }
-                }
-                //
-            }, 20L);
             return;
         } else {
 

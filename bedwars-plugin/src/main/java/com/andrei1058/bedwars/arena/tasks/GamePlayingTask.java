@@ -26,7 +26,7 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
-import com.andrei1058.bedwars.api.events.player.PlayerInvisibilityPotionEvent;
+import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.tasks.PlayingTask;
@@ -35,7 +35,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Map;
@@ -235,13 +234,7 @@ public class GamePlayingTask implements Runnable, PlayingTask {
         if (!getArena().getShowTime().isEmpty()) {
             for (Map.Entry<Player, Integer> e : getArena().getShowTime().entrySet()) {
                 if (e.getValue() <= 0) {
-                    for (Player p : e.getKey().getWorld().getPlayers()) {
-                        nms.showArmor(e.getKey(), p);
-                        //nms.showPlayer(e.getKey(), p);
-                    }
-                    e.getKey().removePotionEffect(PotionEffectType.INVISIBILITY);
-                    getArena().getShowTime().remove(e.getKey());
-                    Bukkit.getPluginManager().callEvent(new PlayerInvisibilityPotionEvent(PlayerInvisibilityPotionEvent.Type.REMOVED, getArena().getTeam(e.getKey()), e.getKey(), getArena()));
+                    InvisibilityManager.remove(getArena(), e.getKey());
                 } else {
                     getArena().getShowTime().replace(e.getKey(), e.getValue() - 1);
                 }

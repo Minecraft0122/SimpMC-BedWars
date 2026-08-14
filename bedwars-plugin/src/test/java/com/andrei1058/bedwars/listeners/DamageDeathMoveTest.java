@@ -1,8 +1,16 @@
 package com.andrei1058.bedwars.listeners;
 
+import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.team.ITeam;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Proxy;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,5 +41,61 @@ class DamageDeathMoveTest {
         assertTrue(DamageDeathMove.isRecent(100_000, 100_000, 15_000));
         assertFalse(DamageDeathMove.isRecent(84_999, 100_000, 15_000));
         assertFalse(DamageDeathMove.isRecent(100_001, 100_000, 15_000));
+    }
+
+    @Test
+    void breaksInvisibilityOnlyForSuccessfulEnemyDamage() {
+        Player victim = player("victim");
+        Player teammate = player("teammate");
+        Player opponent = player("opponent");
+        Player respawningOpponent = player("respawning");
+        ITeam red = team("red");
+        ITeam blue = team("blue");
+        IArena arena = arena(
+                Set.of(victim, teammate, opponent, respawningOpponent),
+                Set.of(respawningOpponent),
+                Map.of(victim, red, teammate, red, opponent, blue, respawningOpponent, blue));
+
+        assertTrue(DamageDeathMove.isEnemyAttack(arena, victim, opponent));
+        assertFalse(DamageDeathMove.isEnemyAttack(arena, victim, teammate));
+        assertFalse(DamageDeathMove.isEnemyAttack(arena, victim, victim));
+        assertFalse(DamageDeathMove.isEnemyAttack(arena, victim, respawningOpponent));
+        assertTrue(DamageDeathMove.dealtDamage(false, 0.5));
+        assertFalse(DamageDeathMove.dealtDamage(true, 5));
+        assertFalse(DamageDeathMove.dealtDamage(false, 0));
+    }
+
+    private static IArena arena(Set<Player> players, Set<Player> respawning, Map<Player, ITeam> teams) {
+        return (IArena) Proxy.newProxyInstance(IArena.class.getClassLoader(), new Class<?>[]{IArena.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isPlayer" -> players.contains(args[0]);
+                    case "isSpectator" -> false;
+                    case "isReSpawning" -> respawning.stream()
+                            .anyMatch(player -> player.getUniqueId().equals(args[0]));
+                    case "getTeam" -> teams.get(args[0]);
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
+    private static ITeam team(String name) {
+        return (ITeam) Proxy.newProxyInstance(ITeam.class.getClassLoader(), new Class<?>[]{ITeam.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "toString" -> name;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
+    private static Player player(String name) {
+        UUID id = UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return (Player) Proxy.newProxyInstance(Player.class.getClassLoader(), new Class<?>[]{Player.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getUniqueId" -> id;
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "toString" -> name;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
     }
 }

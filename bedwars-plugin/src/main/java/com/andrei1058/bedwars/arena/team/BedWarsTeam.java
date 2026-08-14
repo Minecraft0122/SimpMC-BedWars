@@ -35,6 +35,7 @@ import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Cuboid;
 import com.andrei1058.bedwars.api.upgrades.EnemyBaseEnterTrap;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.OreGenerator;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
@@ -384,7 +385,7 @@ public class BedWarsTeam implements ITeam {
         p.setCanPickupItems(true);
         SafeSpawnResolver.teleport(p, getSpawn());
         p.setVelocity(new Vector(0, 0, 0));
-        p.removePotionEffect(PotionEffectType.INVISIBILITY);
+        InvisibilityManager.remove(getArena(), p);
         nms.setCollide(p, arena, true);
         p.setAllowFlight(false);
         p.setFlying(false);
@@ -418,9 +419,7 @@ public class BedWarsTeam implements ITeam {
         );
         Bukkit.getPluginManager().callEvent(new PlayerReSpawnEvent(p, getArena(), this));
         nms.sendPlayerSpawnPackets(p, getArena());
-        for (Player invisible : getArena().getShowTime().keySet()) {
-            BedWars.nms.hideArmor(invisible, p);
-        }
+        InvisibilityManager.synchronizeViewer(getArena(), p);
 
         Sounds.playSound("player-re-spawn", p);
     }
@@ -670,12 +669,7 @@ public class BedWarsTeam implements ITeam {
         Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
             for (Player m : getMembers()) {
                 if (m.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-                    for (Player p : getArena().getPlayers()) {
-                        BedWars.nms.hideArmor(m, p);
-                    }
-                    for (Player p : getArena().getSpectators()) {
-                        BedWars.nms.hideArmor(m, p);
-                    }
+                    InvisibilityManager.synchronizePlayerEquipment(getArena(), m);
                 }
             }
         }, 20L);

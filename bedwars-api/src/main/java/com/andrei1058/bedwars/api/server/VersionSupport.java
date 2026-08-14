@@ -188,12 +188,12 @@ public abstract class VersionSupport {
     public abstract void voidKill(Player p);
 
     /**
-     * Hide player armor to a player
+     * Hide player equipment to a player. The legacy method name is retained for API compatibility.
      */
     public abstract void hideArmor(Player victim, Player receiver);
 
     /**
-     * Show a player armor
+     * Show player equipment to a player. The legacy method name is retained for API compatibility.
      */
     public abstract void showArmor(Player victim, Player receiver);
 
