@@ -23,19 +23,34 @@ package com.andrei1058.bedwars.arena.despawnables;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.team.ITeam;
+import com.andrei1058.bedwars.api.entity.Despawnable;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.support.version.common.DespawnableTargeting;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 
 public class TargetListener implements Listener {
 
-    @EventHandler
-    public void onTarget(EntityTargetLivingEntityEvent e){
-        if (!(e.getTarget() instanceof Player)) return;
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onTarget(EntityTargetLivingEntityEvent e) {
+        Despawnable despawnable = BedWars.nms.getDespawnablesList().get(e.getEntity().getUniqueId());
+        if (despawnable != null) {
+            ITeam ownerTeam = despawnable.getTeam();
+            IArena arena = ownerTeam == null ? null : ownerTeam.getArena();
+            Player target = arena == null ? null : DespawnableTargeting.resolveTarget(
+                    arena, ownerTeam, e.getTarget(), e.getEntity().getLocation(), arena.getPlayers());
+            if (e.getTarget() != target) {
+                e.setTarget(target);
+            }
+            return;
+        }
+
+        if (!(e.getTarget() instanceof Player p)) return;
         IArena arena = Arena.getArenaByIdentifier(e.getEntity().getWorld().getName());
-        Player p = (Player) e.getTarget();
         if (arena == null) return;
         if (!arena.isPlayer(p)) {
             e.setCancelled(true);
@@ -43,12 +58,6 @@ public class TargetListener implements Listener {
         }
         if (arena.getStatus() != GameState.playing){
             e.setCancelled(true);
-            return;
-        }
-        if (BedWars.nms.isDespawnable(e.getEntity())){
-            if (arena.getTeam(p) == BedWars.nms.getDespawnablesList().get(e.getEntity().getUniqueId()).getTeam()){
-                e.setCancelled(true);
-            }
         }
     }
 }

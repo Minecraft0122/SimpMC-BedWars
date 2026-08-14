@@ -9,6 +9,7 @@ import com.andrei1058.bedwars.api.events.player.PlayerKillEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.VersionSupport;
+import com.andrei1058.bedwars.support.version.common.DespawnableTargeting;
 import com.andrei1058.bedwars.support.version.common.VersionCommon;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
@@ -296,7 +297,7 @@ public class v1_21_R3 extends VersionSupport {
         if (loc == null || loc.getWorld() == null || team == null) return;
         Silverfish silverfish = loc.getWorld().spawn(loc, Silverfish.class);
         configureDespawnable(silverfish, speed, health, damage);
-        new Despawnable(
+        Despawnable despawnable = new Despawnable(
                 silverfish,
                 team,
                 despawn,
@@ -304,6 +305,7 @@ public class v1_21_R3 extends VersionSupport {
                 PlayerKillEvent.PlayerKillCause.SILVERFISH_FINAL_KILL,
                 PlayerKillEvent.PlayerKillCause.SILVERFISH
         );
+        refreshDespawnableTarget(despawnable);
     }
 
     @Override
@@ -312,7 +314,7 @@ public class v1_21_R3 extends VersionSupport {
         IronGolem ironGolem = loc.getWorld().spawn(loc, IronGolem.class);
         ironGolem.setPlayerCreated(false);
         configureDespawnable(ironGolem, speed, health, 4D);
-        new Despawnable(
+        Despawnable despawnable = new Despawnable(
                 ironGolem,
                 team,
                 despawn,
@@ -320,6 +322,7 @@ public class v1_21_R3 extends VersionSupport {
                 PlayerKillEvent.PlayerKillCause.IRON_GOLEM_FINAL_KILL,
                 PlayerKillEvent.PlayerKillCause.IRON_GOLEM
         );
+        refreshDespawnableTarget(despawnable);
     }
 
     @Override
@@ -806,31 +809,22 @@ public class v1_21_R3 extends VersionSupport {
 
     private void refreshDespawnableTargets() {
         for (Despawnable despawnable : getDespawnablesList().values()) {
-            LivingEntity entity = despawnable.getEntity();
-            ITeam team = despawnable.getTeam();
-            if (!(entity instanceof Mob mob) || entity.isDead() || team == null || team.getArena() == null) {
-                continue;
-            }
-
-            Player target = null;
-            double bestDistance = Double.MAX_VALUE;
-            for (Player player : team.getArena().getPlayers()) {
-                if (player == null || player.isDead()) continue;
-                if (!player.getWorld().equals(entity.getWorld())) continue;
-                if (team.wasMember(player.getUniqueId())) continue;
-                if (team.getArena().isReSpawning(player.getUniqueId())) continue;
-                if (team.getArena().isSpectator(player.getUniqueId())) continue;
-
-                double distance = player.getLocation().distanceSquared(entity.getLocation());
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    target = player;
-                }
-            }
-
-            mob.setTarget(target);
-            mob.setAggressive(target != null);
+            refreshDespawnableTarget(despawnable);
         }
+    }
+
+    private void refreshDespawnableTarget(Despawnable despawnable) {
+        LivingEntity entity = despawnable.getEntity();
+        ITeam team = despawnable.getTeam();
+        if (!(entity instanceof Mob mob) || entity.isDead() || team == null || team.getArena() == null) return;
+
+        IArena arena = team.getArena();
+        Player target = DespawnableTargeting.resolveTarget(
+                arena, team, mob.getTarget(), entity.getLocation(), arena.getPlayers());
+        if (mob.getTarget() != target) {
+            mob.setTarget(target);
+        }
+        mob.setAggressive(target != null);
     }
 
     /**
