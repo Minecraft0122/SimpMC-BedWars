@@ -458,15 +458,9 @@ public class BwTabList {
 
         strings = new ArrayList<>();
         for (String string : Language.getList(sidebar.getPlayer(), path)) {
-            String parsed = removePlayerRowTeamMarkers(string)
+            String parsed = applyPlayerRowTeamMarkers(string, replacements)
                     .replace("{vPrefix}", BedWars.getChatSupport().getPrefix(targetPlayer))
                     .replace("{vSuffix}", BedWars.getChatSupport().getSuffix(targetPlayer));
-
-            if (null != replacements) {
-                for (Map.Entry<String, String> entry : replacements.entrySet()) {
-                    parsed = parsed.replace(entry.getKey(), entry.getValue());
-                }
-            }
 
             strings.add(parsed);
         }
@@ -489,8 +483,15 @@ public class BwTabList {
         return new SidebarLineAnimated(lines);
     }
 
-    static @NotNull String removePlayerRowTeamMarkers(@NotNull String template) {
-        return template.replace("{teamName}", "").replace("{teamLetter}", "");
+    static @NotNull String applyPlayerRowTeamMarkers(
+            @NotNull String template, @Nullable Map<String, String> replacements) {
+        String rendered = template;
+        if (replacements != null) {
+            for (Map.Entry<String, String> entry : replacements.entrySet()) {
+                rendered = rendered.replace(entry.getKey(), entry.getValue());
+            }
+        }
+        return rendered;
     }
 
     @NotNull HashMap<String, String> getTeamReplacements(@Nullable ITeam team) {

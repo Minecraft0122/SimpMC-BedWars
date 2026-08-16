@@ -139,12 +139,24 @@ public class FireballListener implements Listener {
     }
 
     static Vector calculateKnockback(Vector explosion, Vector player, double horizontal, double vertical) {
-        Vector towardExplosion = explosion.clone().subtract(player).normalize();
-        Vector knockback = towardExplosion.clone().multiply(-horizontal);
+        double safeHorizontal = finiteNonNegative(horizontal);
+        double safeVertical = finiteNonNegative(vertical);
+        Vector towardExplosion = explosion.clone().subtract(player);
+        double lengthSquared = towardExplosion.lengthSquared();
+        if (!Double.isFinite(lengthSquared) || lengthSquared <= 1.0E-12D) {
+            return new Vector(0D, safeVertical * 1.5D, 0D);
+        }
+
+        towardExplosion.multiply(1D / Math.sqrt(lengthSquared));
+        Vector knockback = towardExplosion.clone().multiply(-safeHorizontal);
         double y = towardExplosion.getY();
         if (y < 0) y += 1.5;
-        y = y <= 0.5 ? vertical * 1.5 : y * vertical * 1.5;
+        y = y <= 0.5 ? safeVertical * 1.5D : y * safeVertical * 1.5D;
         return knockback.setY(y);
+    }
+
+    private static double finiteNonNegative(double value) {
+        return Double.isFinite(value) ? Math.max(0D, value) : 0D;
     }
 
     static boolean shouldCreditShooter(boolean self, boolean teammate) {

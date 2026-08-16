@@ -530,19 +530,23 @@ public class Language extends ConfigManager {
      */
     public static void migrateBuiltInTabPlayerRows(@NotNull YamlConfiguration yml) {
         migrateLegacyTowerShopItem(yml);
-        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of(""), List.of(
+        List<String> compactTeamPrefix = List.of("{teamColor}[{teamLetter}] ");
+        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, compactTeamPrefix, List.of(
+                List.of(""),
                 List.of("{teamColor}{teamName} "),
                 List.of("{teamColor}[{teamLetter}] ")
         ));
         for (String path : List.of(
                 Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX,
                 Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX)) {
-            replaceKnownList(yml, path, List.of(""), List.of(
+            replaceKnownList(yml, path, compactTeamPrefix, List.of(
+                    List.of(""),
                     List.of("&6&l⭐ {teamColor}{teamName} "),
                     List.of("&6★ {teamColor}[{teamLetter}] ")
             ));
         }
-        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, List.of(""), List.of(
+        replaceKnownList(yml, Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, compactTeamPrefix, List.of(
+                List.of(""),
                 List.of("{teamColor}{teamName} "),
                 List.of("{teamColor}[{teamLetter}] ")
         ));

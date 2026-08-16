@@ -28,6 +28,26 @@ class FireballListenerTest {
     }
 
     @Test
+    void overlappingFireballAndPlayerProduceFiniteVerticalKnockback() {
+        Vector knockback = FireballListener.calculateKnockback(
+                new Vector(3D, 64D, -2D), new Vector(3D, 64D, -2D), 1.25D, 0.8D);
+
+        assertEquals(new Vector(0D, 1.2D, 0D), knockback);
+        assertTrue(Double.isFinite(knockback.getX()));
+        assertTrue(Double.isFinite(knockback.getY()));
+        assertTrue(Double.isFinite(knockback.getZ()));
+    }
+
+    @Test
+    void nonFiniteKnockbackStrengthsCannotReachBukkitVelocity() {
+        Vector knockback = FireballListener.calculateKnockback(
+                new Vector(0D, 64D, 0D), new Vector(1D, 64D, 0D),
+                Double.NaN, Double.POSITIVE_INFINITY);
+
+        assertEquals(new Vector(0D, 0D, 0D), knockback);
+    }
+
+    @Test
     void creditsOnlyEnemyPlayers() {
         assertTrue(FireballListener.shouldCreditShooter(false, false));
         assertFalse(FireballListener.shouldCreditShooter(true, true));

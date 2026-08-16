@@ -66,11 +66,17 @@ class BwTabListTest {
     }
 
     @Test
-    void playerRowsRemoveOnlyTeamIdentityMarkers() {
+    void playerRowsRenderVisibleTeamIdentityMarkers() {
+        Map<String, String> replacements = Map.of(
+                "{teamColor}", "\u00a7c",
+                "{teamName}", "红队",
+                "{teamLetter}", "\u00a7c红");
+
         assertEquals(
-                "{teamColor} {vPrefix}&7[观察者] {vSuffix}",
-                BwTabList.removePlayerRowTeamMarkers(
-                        "{teamColor}{teamName} {vPrefix}&7[观察者] {teamLetter}{vSuffix}")
+                "\u00a7c[\u00a7c红] 红队 {vPrefix}&7[观察者] {vSuffix}",
+                BwTabList.applyPlayerRowTeamMarkers(
+                        "{teamColor}[{teamLetter}] {teamName} {vPrefix}&7[观察者] {vSuffix}",
+                        replacements)
         );
     }
 
