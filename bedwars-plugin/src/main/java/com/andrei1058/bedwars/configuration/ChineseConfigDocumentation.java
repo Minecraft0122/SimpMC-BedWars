@@ -51,7 +51,8 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_TNT_PROTECTION_END_STONE_BLAST, "TNT 对末地石、玻璃等方块的爆炸抗性参数。");
         comment(config, ConfigPath.GENERAL_TNT_AUTO_IGNITE, "TNT 放置后是否自动点燃，以及引信持续 tick 数。");
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
-                "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25。");
+                "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25，插件限制最大 16 格。",
+                "过大的值会自动限幅，避免一次爆炸扫描过多实体。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER,
                 "普通投掷的火球初速度倍率；默认 16，对应 1.6 格/tick。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
@@ -64,8 +65,8 @@ public final class ChineseConfigDocumentation {
                 "每颗火球随机最大射程的上限，单位为格；默认 300。", "上下限写反时会自动交换；插件不会为了远距离飞行强制加载区块。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_RECOIL, "潜行投掷时给予发射者的三维后坐速度；默认 0.10，插件硬限制最大 0.20。", "方向始终与火球发射速度完全相反，包括火球向上或向下飞行时的垂直分量。");
         comment(config, ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, "火球爆炸后是否在命中处生成火焰；竞技场始终禁止火势向周围蔓延。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.20 默认值略微降低为 1.15。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, "火球垂直击退强度；2.10.20 默认值略微降低为 0.75。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, "火球水平击退强度；2.10.20 默认值略微降低为 1.15，插件限制最大 8。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, "火球垂直击退强度；2.10.20 默认值略微降低为 0.75，插件限制最大 8。");
         comment(config, ConfigPath.GENERAL_FIREBALL_COOLDOWN, "连续使用火球的冷却时间，单位为秒；默认 0.4，持续射速约每秒 2.5 发。", "按发射时刻计算，一个 1 秒窗口内通常可以发射 2 至 3 个火球。");
         comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, "火球对发射者造成的伤害。");
         comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, "火球对敌人造成的伤害；2.10.20 默认值略微降低为 3.5。");

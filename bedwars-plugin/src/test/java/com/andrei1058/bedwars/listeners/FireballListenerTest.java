@@ -48,6 +48,17 @@ class FireballListenerTest {
     }
 
     @Test
+    void excessiveFiniteKnockbackStrengthsRemainFinite() {
+        Vector knockback = FireballListener.calculateKnockback(
+                new Vector(0D, 64D, 0D), new Vector(1D, 64D, 0D),
+                Double.MAX_VALUE, Double.MAX_VALUE);
+
+        assertTrue(Double.isFinite(knockback.getX()));
+        assertTrue(Double.isFinite(knockback.getY()));
+        assertTrue(Double.isFinite(knockback.getZ()));
+    }
+
+    @Test
     void creditsOnlyEnemyPlayers() {
         assertTrue(FireballListener.shouldCreditShooter(false, false));
         assertFalse(FireballListener.shouldCreditShooter(true, true));

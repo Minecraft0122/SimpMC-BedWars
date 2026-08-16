@@ -35,6 +35,7 @@ public class SidebarService implements ISidebarService {
 
     private static final int MIN_GENERAL_REFRESH_INTERVAL = 20;
     private static final int MIN_TITLE_REFRESH_INTERVAL = 4;
+    private static final int TAB_REFRESH_VIEWERS_PER_TICK = 4;
     private static final long JOIN_INITIALIZATION_DELAY_TICKS = 5L;
 
     private static SidebarService instance;
@@ -43,8 +44,10 @@ public class SidebarService implements ISidebarService {
     private final HashMap<UUID, BwSidebar> sidebars = new HashMap<>();
     private final HashMap<UUID, BukkitTask> delayedSidebarTasks = new HashMap<>();
     private final HashSet<UUID> pendingWorldResynchronizations = new HashSet<>();
+    private final ArrayDeque<BwSidebar> pendingTabRefreshes = new ArrayDeque<>();
     private final Map<IArena, LinkedHashMap<UUID, Player>> pendingEliminationRefreshes =
             new IdentityHashMap<>();
+    private BukkitTask tabRefreshBatchTask;
 
     public static boolean init(JavaPlugin plugin) {
         if (null == instance) {
@@ -439,6 +442,9 @@ public class SidebarService implements ISidebarService {
     void shutdown() {
         delayedSidebarTasks.values().forEach(BukkitTask::cancel);
         delayedSidebarTasks.clear();
+        if (tabRefreshBatchTask != null) tabRefreshBatchTask.cancel();
+        tabRefreshBatchTask = null;
+        pendingTabRefreshes.clear();
         pendingWorldResynchronizations.clear();
         pendingEliminationRefreshes.clear();
         List<BwSidebar> activeSidebars = new ArrayList<>(sidebars.values());
@@ -492,8 +498,28 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshTabList() {
-        if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> v.getHandle().playerTabRefreshAnimation());
+        if (sidebarHandler == null || sidebars.isEmpty() || tabRefreshBatchTask != null) return;
+        pendingTabRefreshes.clear();
+        pendingTabRefreshes.addAll(sidebars.values());
+        tabRefreshBatchTask = Bukkit.getScheduler().runTaskTimer(
+                BedWars.plugin, this::refreshTabListBatch, 0L, 1L);
+    }
+
+    private void refreshTabListBatch() {
+        int remaining = TAB_REFRESH_VIEWERS_PER_TICK;
+        while (remaining-- > 0) {
+            BwSidebar sidebar = pendingTabRefreshes.pollFirst();
+            if (sidebar == null) {
+                tabRefreshBatchTask.cancel();
+                tabRefreshBatchTask = null;
+                return;
+            }
+            Player player = sidebar.getPlayer();
+            if (player.isOnline() && sidebars.get(player.getUniqueId()) == sidebar
+                    && sidebar.getHandle() != null) {
+                sidebar.getHandle().playerTabRefreshAnimation();
+            }
+        }
     }
 
     public void refreshTabHeaderFooter() {

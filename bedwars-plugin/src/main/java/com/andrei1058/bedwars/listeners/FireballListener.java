@@ -30,6 +30,10 @@ import static com.andrei1058.bedwars.BedWars.config;
 
 public class FireballListener implements Listener {
 
+    private static final double MIN_FIREBALL_EXPLOSION_SIZE = 0.1D;
+    private static final double MAX_FIREBALL_EXPLOSION_SIZE = 16D;
+    private static final double MAX_FIREBALL_KNOCKBACK = 8D;
+
     private final double fireballExplosionSize;
     private final boolean fireballMakeFire;
     private final double fireballHorizontal;
@@ -41,13 +45,16 @@ public class FireballListener implements Listener {
     private final Set<DamageKey> activeCustomExplosions = new HashSet<>();
 
     public FireballListener() {
-        this.fireballExplosionSize = Math.max(0.1,
-                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE));
+        this.fireballExplosionSize = boundedFiniteNonNegative(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE),
+                MIN_FIREBALL_EXPLOSION_SIZE, MAX_FIREBALL_EXPLOSION_SIZE);
         this.fireballMakeFire = config.getYml().getBoolean(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE);
-        this.fireballHorizontal = Math.max(0,
-                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL));
-        this.fireballVertical = Math.max(0,
-                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL));
+        this.fireballHorizontal = boundedFiniteNonNegative(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL),
+                0D, MAX_FIREBALL_KNOCKBACK);
+        this.fireballVertical = boundedFiniteNonNegative(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL),
+                0D, MAX_FIREBALL_KNOCKBACK);
 
         this.damageSelf = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF);
         this.damageEnemy = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY);
@@ -139,8 +146,8 @@ public class FireballListener implements Listener {
     }
 
     static Vector calculateKnockback(Vector explosion, Vector player, double horizontal, double vertical) {
-        double safeHorizontal = finiteNonNegative(horizontal);
-        double safeVertical = finiteNonNegative(vertical);
+        double safeHorizontal = boundedFiniteNonNegative(horizontal, 0D, MAX_FIREBALL_KNOCKBACK);
+        double safeVertical = boundedFiniteNonNegative(vertical, 0D, MAX_FIREBALL_KNOCKBACK);
         Vector towardExplosion = explosion.clone().subtract(player);
         double lengthSquared = towardExplosion.lengthSquared();
         if (!Double.isFinite(lengthSquared) || lengthSquared <= 1.0E-12D) {
@@ -155,8 +162,8 @@ public class FireballListener implements Listener {
         return knockback.setY(y);
     }
 
-    private static double finiteNonNegative(double value) {
-        return Double.isFinite(value) ? Math.max(0D, value) : 0D;
+    private static double boundedFiniteNonNegative(double value, double minimum, double maximum) {
+        return Double.isFinite(value) ? Math.min(maximum, Math.max(minimum, value)) : minimum;
     }
 
     static boolean shouldCreditShooter(boolean self, boolean teammate) {
