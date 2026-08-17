@@ -12,21 +12,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FireballLaunchPhysicsTest {
 
     @Test
-    void acceleratesOnlySneakingLaunches() {
-        assertEquals(1.6D, FireballLaunchPhysics.launchSpeed(16D, false, 1.5D), 1.0E-9D);
-        assertEquals(2.4D, FireballLaunchPhysics.launchSpeed(16D, true, 1.5D), 1.0E-9D);
+    void givesSneakingLaunchesAStrongInitialSpeedAdvantage() {
+        assertEquals(1.5D, FireballLaunchPhysics.launchSpeed(15D, false, 1.6D), 1.0E-9D);
+        assertEquals(2.4D, FireballLaunchPhysics.launchSpeed(15D, true, 1.6D), 1.0E-9D);
     }
 
     @Test
     void buildsExplicitVelocityAndVanillaAccelerationFromAimDirection() {
         Vector aim = new Vector(4D, 0D, 3D);
 
-        Vector regular = FireballLaunchPhysics.launchVelocity(aim, 16D, false, 1.5D);
-        Vector sneaking = FireballLaunchPhysics.launchVelocity(aim, 16D, true, 1.5D);
+        Vector regular = FireballLaunchPhysics.launchVelocity(aim, 15D, false, 1.6D);
+        Vector sneaking = FireballLaunchPhysics.launchVelocity(aim, 15D, true, 1.6D);
         Vector regularAcceleration = FireballLaunchPhysics.launchAcceleration(aim, false, 2D);
         Vector sneakingAcceleration = FireballLaunchPhysics.launchAcceleration(aim, true, 2D);
 
-        assertEquals(1.6D, regular.length(), 1.0E-9D);
+        assertEquals(1.5D, regular.length(), 1.0E-9D);
         assertEquals(2.4D, sneaking.length(), 1.0E-9D);
         assertEquals(FireballLaunchPhysics.DEFAULT_ACCELERATION, regularAcceleration.length(), 1.0E-9D);
         assertEquals(0.2D, sneakingAcceleration.length(), 1.0E-9D);

@@ -41,15 +41,15 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 29;
+    private static final int CONFIG_VERSION = 30;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
     private static final Set<String> BUILT_IN_LOBBY_ITEM_FIELDS =
             Set.of("command", "material", "data", "enchanted", "slot");
     private static final double FIREBALL_EXPLOSION_SIZE_DEFAULT = 3.25;
-    private static final double FIREBALL_SPEED_MULTIPLIER_DEFAULT = 16.0;
-    private static final double FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT = 1.5;
+    private static final double FIREBALL_SPEED_MULTIPLIER_DEFAULT = 15.0;
+    private static final double FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT = 1.6;
     private static final double FIREBALL_SNEAK_ACCELERATION_MULTIPLIER_DEFAULT = 2.0;
     private static final double FIREBALL_SNEAK_RECOIL_DEFAULT = 0.1;
     private static final double FIREBALL_COOLDOWN_DEFAULT = 0.4;
@@ -633,6 +633,12 @@ public class MainConfig extends ConfigManager {
                     FIREBALL_SNEAK_RECOIL_DEFAULT);
             upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_COOLDOWN, 0.5,
                     FIREBALL_COOLDOWN_DEFAULT);
+        }
+        if (storedConfigVersion < 30) {
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 16.0,
+                    FIREBALL_SPEED_MULTIPLIER_DEFAULT);
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, 1.5,
+                    FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT);
         }
     }
 

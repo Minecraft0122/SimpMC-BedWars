@@ -54,9 +54,9 @@ public final class ChineseConfigDocumentation {
                 "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25，插件限制最大 16 格。",
                 "过大的值会自动限幅，避免一次爆炸扫描过多实体。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER,
-                "普通投掷的火球初速度倍率；默认 16，对应 1.6 格/tick。");
+                "普通投掷的火球初速度倍率；默认 15，对应 1.5 格/tick。潜行投掷默认初速度更高。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
-                "按住潜行键投掷的额外初速度倍率；默认 1.5，对应 2.4 格/tick。", "插件同时检查 Paper 当前输入与潜行姿态，确保潜行加速生效。");
+                "按住潜行键投掷的额外初速度倍率；默认 1.6，对应 2.4 格/tick。", "插件同时检查 Paper 当前输入与潜行姿态，确保潜行加速生效。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_ACCELERATION_MULTIPLIER,
                 "潜行火球相对普通火球的持续加速度倍率；默认 2.0，对应每 tick 0.2。", "该参数不会覆盖潜行火球已经获得的 2.4 格/tick 初速度。");
         comment(config, ConfigPath.GENERAL_FIREBALL_FLIGHT_RANGE_MIN,

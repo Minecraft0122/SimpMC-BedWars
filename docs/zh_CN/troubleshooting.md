@@ -74,8 +74,8 @@ Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
 
 ## 火球飞不远或潜行没有加速
 
-- 完整重启后检查 `config.yml`：默认应为 `fireball.speed-multiplier: 16`、`sneak-speed-multiplier: 1.5`、`sneak-acceleration-multiplier: 2.0`、`sneak-recoil: 0.10`、`cooldown: 0.4`、`flight-range.min: 200`、`flight-range.max: 300`。
-- 普通火球初速度约为 1.6 格/tick、持续加速度为每 tick 0.1；按住潜行键再右键发射时初速度约为 2.4 格/tick、持续加速度为每 tick 0.2，并沿火球运行方向的完整反方向产生 0.10 后坐速度。默认每 0.4 秒可再次发射，持续射速约每秒 2.5 发，一个 1 秒窗口内通常可发 2 至 3 个。
+- 完整重启后检查 `config.yml`：默认应为 `fireball.speed-multiplier: 15`、`sneak-speed-multiplier: 1.6`、`sneak-acceleration-multiplier: 2.0`、`sneak-recoil: 0.10`、`cooldown: 0.4`、`flight-range.min: 200`、`flight-range.max: 300`。
+- 普通火球初速度约为 1.5 格/tick、持续加速度为每 tick 0.1；按住潜行键再右键发射时初速度约为 2.4 格/tick、持续加速度为每 tick 0.2，并沿火球运行方向的完整反方向产生 0.10 后坐速度。默认每 0.4 秒可再次发射，持续射速约每秒 2.5 发，一个 1 秒窗口内通常可发 2 至 3 个。
 - 每颗火球会在 200–300 格之间随机一次最大射程，并按相邻 tick 的实际移动量累计；方块、实体、世界边界、服务端视距和未加载区块仍可能让火球提前停止。若上下限写反，插件会按较小值到较大值计算；负数和非有限值会恢复安全默认值。
 - 插件不会为了火球强制加载远处区块，否则连续发射会造成额外主线程和内存压力。修改参数后不要使用 `/reload`，必须完整重启。
 
