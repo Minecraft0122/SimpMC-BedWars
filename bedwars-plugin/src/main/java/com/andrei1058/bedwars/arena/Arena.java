@@ -528,6 +528,7 @@ public class Arena implements IArena {
 
             /* check if you can start the arena */
             boolean isStatusChange = reevaluateStartEligibility();
+            shortenStartCountdownWhenFull();
 
             //half full arena time shorten
             if (players.size() >= getMaxPlayers() / 2 && players.size() > minPlayers) {
@@ -587,16 +588,6 @@ public class Arena implements IArena {
 
         if (getServerType() == ServerType.BUNGEE) {
             p.getEnderChest().clear();
-        }
-
-        if (getPlayers().size() >= getMaxPlayers()) {
-            if (startingTask != null) {
-                if (Bukkit.getScheduler().isCurrentlyRunning(startingTask.getTask())) {
-                    if (startingTask.getCountdown() > BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_SHORTENED)) {
-                        startingTask.setCountdown(BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_SHORTENED));
-                    }
-                }
-            }
         }
 
         refreshSigns();
@@ -1281,6 +1272,13 @@ public class Arena implements IArena {
             return true;
         }
         return false;
+    }
+
+    private void shortenStartCountdownWhenFull() {
+        if (status != GameState.starting || startingTask == null) return;
+        int shortened = ArenaStartPolicy.shortenCountdownWhenFull(
+                players.size(), maxPlayers, startingTask.getCountdown());
+        if (shortened != startingTask.getCountdown()) startingTask.setCountdown(shortened);
     }
 
     /**

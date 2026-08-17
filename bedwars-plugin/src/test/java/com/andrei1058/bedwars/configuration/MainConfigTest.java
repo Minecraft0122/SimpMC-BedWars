@@ -34,6 +34,18 @@ class MainConfigTest {
     }
 
     @Test
+    void removesTheRetiredFullArenaCountdownWithoutTouchingOtherCountdowns() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set("countdowns.game-start-shortened", 12);
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, 40);
+
+        MainConfig.removeRetiredFullArenaCountdownSetting(configuration);
+
+        assertFalse(configuration.isSet("countdowns.game-start-shortened"));
+        assertEquals(40, configuration.getInt(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR));
+    }
+
+    @Test
     void schemaTwentyEightPreservesCurrentAdministratorValues() {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.set(ConfigManager.CONFIG_VERSION_PATH, 27);

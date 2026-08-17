@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TeamAllocationPlannerTest {
 
     @Test
-    void keepsInvitedSquadTogetherAndBalancesSoloPlayers() {
+    void keepsInvitedSquadTogetherWhilePackingTeams() {
         List<List<String>> allocation = TeamAllocationPlanner.allocate(
                 List.of(List.of("Alice", "Bob"), List.of("Carol"), List.of("Dave"), List.of("Eve")),
                 3, 2, new Random(7));
@@ -44,13 +44,39 @@ class TeamAllocationPlannerTest {
     }
 
     @Test
-    void spreadsSoloPlayersAcrossAsManyConfiguredTeamsAsPossible() {
+    void packsSoloPlayersIntoTheFewestValidTeams() {
         List<List<String>> allocation = TeamAllocationPlanner.allocate(
                 List.of(List.of("A"), List.of("B"), List.of("C"), List.of("D")),
                 8, 4, new Random(19));
 
-        assertEquals(4, allocation.stream().filter(team -> !team.isEmpty()).count());
-        assertTrue(allocation.stream().allMatch(team -> team.size() <= 1));
+        assertEquals(2, allocation.stream().filter(team -> !team.isEmpty()).count());
+        assertEquals(List.of(3, 1), allocation.stream()
+                .map(List::size).filter(size -> size > 0)
+                .sorted(java.util.Comparator.reverseOrder()).toList());
+    }
+
+    @Test
+    void fillsOneTeamBeforeOpeningAnotherWhenCapacityRequiresIt() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocate(
+                List.of(List.of("A", "B"), List.of("C"), List.of("D"), List.of("E")),
+                4, 4, new Random(23));
+
+        assertEquals(List.of(4, 1), allocation.stream()
+                .map(List::size).filter(size -> size > 0)
+                .sorted(java.util.Comparator.reverseOrder()).toList());
+        assertTrue(allocation.stream().anyMatch(team -> team.containsAll(List.of("A", "B"))));
+    }
+
+    @Test
+    void opensAnotherTeamInsteadOfSplittingValidSquads() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocate(
+                List.of(List.of("A", "B", "C"), List.of("D", "E", "F"), List.of("G", "H")),
+                4, 4, new Random(29));
+
+        assertEquals(3, allocation.stream().filter(team -> !team.isEmpty()).count());
+        assertTrue(allocation.stream().anyMatch(team -> team.containsAll(List.of("A", "B", "C"))));
+        assertTrue(allocation.stream().anyMatch(team -> team.containsAll(List.of("D", "E", "F"))));
+        assertTrue(allocation.stream().anyMatch(team -> team.containsAll(List.of("G", "H"))));
     }
 
     @Test

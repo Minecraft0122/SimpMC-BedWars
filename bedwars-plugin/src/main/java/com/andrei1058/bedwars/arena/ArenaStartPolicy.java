@@ -20,6 +20,7 @@ import java.util.Collection;
 public final class ArenaStartPolicy {
 
     public static final int ABSOLUTE_MINIMUM_PLAYERS = 2;
+    public static final int FULL_ARENA_COUNTDOWN_SECONDS = 5;
 
     private ArenaStartPolicy() {
     }
@@ -57,5 +58,14 @@ public final class ArenaStartPolicy {
         if (!canStartWithActiveTeams(activeTeams, allowSingleTeamDebugStart)) return false;
         return allowSingleTeamDebugStart
                 || playerCount >= Math.max(ABSOLUTE_MINIMUM_PLAYERS, minimumPlayers);
+    }
+
+    public static int shortenCountdownWhenFull(int waitingPlayers, int maximumPlayers,
+                                               int currentCountdown) {
+        if (maximumPlayers > 0 && waitingPlayers >= maximumPlayers
+                && currentCountdown > FULL_ARENA_COUNTDOWN_SECONDS) {
+            return FULL_ARENA_COUNTDOWN_SECONDS;
+        }
+        return currentCountdown;
     }
 }

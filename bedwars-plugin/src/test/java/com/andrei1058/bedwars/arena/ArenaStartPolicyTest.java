@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -35,5 +36,13 @@ class ArenaStartPolicyTest {
         assertTrue(ArenaStartPolicy.canStartWithTeamSizes(List.of(1), 8, 4, true));
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(), 8, 4, true));
         assertFalse(ArenaStartPolicy.canStartWithTeamSizes(List.of(5), 8, 4, true));
+    }
+
+    @Test
+    void fullArenaShortensOnlyCountdownsAboveFiveSeconds() {
+        assertEquals(5, ArenaStartPolicy.shortenCountdownWhenFull(8, 8, 40));
+        assertEquals(5, ArenaStartPolicy.shortenCountdownWhenFull(8, 8, 5));
+        assertEquals(3, ArenaStartPolicy.shortenCountdownWhenFull(8, 8, 3));
+        assertEquals(40, ArenaStartPolicy.shortenCountdownWhenFull(7, 8, 40));
     }
 }

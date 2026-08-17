@@ -41,7 +41,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 30;
+    private static final int CONFIG_VERSION = 31;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -103,7 +103,6 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, Collections.singletonList("0.0.0.0:2019"));
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, 40);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_HALF, 25);
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_SHORTENED, 5);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RESTART, 60);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN, 5);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BEDS_DESTROY_COUNTDOWN, 360);
@@ -348,9 +347,11 @@ public class MainConfig extends ConfigManager {
         int storedConfigVersion = yml.getInt(CONFIG_VERSION_PATH, 0);
         if (migrateSchema28Only(yml, storedConfigVersion)) {
             migrateFireballDefaults(yml, storedConfigVersion);
+            removeRetiredFullArenaCountdownSetting(yml);
             return false;
         }
         migrateFireballDefaults(yml, yml.getInt(CONFIG_VERSION_PATH, 0));
+        removeRetiredFullArenaCountdownSetting(yml);
         removeRetiredFullArmorSetting(yml);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 45.0, 60.0);
         if (yml.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 300) == 300) {
@@ -418,6 +419,10 @@ public class MainConfig extends ConfigManager {
 
     static void removeShoutCooldownSetting(YamlConfiguration yml) {
         yml.set(ConfigPath.GENERAL_CONFIGURATION_SHOUT_COOLDOWN, null);
+    }
+
+    static void removeRetiredFullArenaCountdownSetting(YamlConfiguration yml) {
+        yml.set("countdowns.game-start-shortened", null);
     }
 
     /**

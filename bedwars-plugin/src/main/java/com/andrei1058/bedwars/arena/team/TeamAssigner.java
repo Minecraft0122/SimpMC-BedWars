@@ -48,10 +48,12 @@ public class TeamAssigner implements ITeamAssigner {
                 configuredTeamCount, maximumInTeam)) {
             return false;
         }
-        List<List<T>> allocation = TeamAllocationPlanner.allocate(
-                groups, configuredTeamCount, maximumInTeam, random);
+        List<Integer> configuredTeams = new ArrayList<>(configuredTeamCount);
+        for (int index = 0; index < configuredTeamCount; index++) configuredTeams.add(index);
+        Map<Integer, List<T>> allocation = TeamAllocationPlanner.allocateBalanced(
+                groups, configuredTeams, maximumInTeam, 2, random, ignored -> null);
         return ArenaStartPolicy.canStartWithTeamSizes(
-                allocation.stream().map(List::size).toList(), minimumPlayers, maximumInTeam, false);
+                allocation.values().stream().map(List::size).toList(), minimumPlayers, maximumInTeam, false);
     }
 
     @Override
