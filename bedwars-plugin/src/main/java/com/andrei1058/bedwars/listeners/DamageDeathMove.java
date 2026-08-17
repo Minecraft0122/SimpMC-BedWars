@@ -78,6 +78,7 @@ public class DamageDeathMove implements Listener {
     private static final DecimalFormat HEALTH_FORMAT = new DecimalFormat("00.#");
     private final Map<UUID, Location> deathLocations = new HashMap<>();
     private final Set<UUID> voidRespawns = new HashSet<>();
+    private final Map<UUID, Boolean> respawnEligibleAtDeath = new HashMap<>();
     private final double tntJumpBarycenterAlterationInY;
     private final double tntJumpStrengthReductionConstant;
     private final double tntJumpYAxisReductionConstant;
@@ -325,6 +326,7 @@ public class DamageDeathMove implements Listener {
     @EventHandler
     public void onDeath(@NotNull PlayerDeathEvent e) {
         Player victim = e.getEntity(), killer = e.getEntity().getKiller();
+        respawnEligibleAtDeath.remove(victim.getUniqueId());
         ITeam killersTeam = null;
         IArena a = Arena.getArenaByPlayer(victim);
         if ((BedWars.getServerType() == ServerType.MULTIARENA && BedWars.getLobbyWorld().equals(e.getEntity().getWorld().getName())) || a != null) {
@@ -353,6 +355,9 @@ public class DamageDeathMove implements Listener {
                 victim.spigot().respawn();
                 return;
             }
+            // PlayerRespawnEvent is deferred, so keep the death-time decision stable
+            // while bed destruction and the configured respawn countdown continue.
+            respawnEligibleAtDeath.put(victim.getUniqueId(), !victimsTeam.isBedDestroyed());
 
             boolean voidDeath = isVoidDeath(victim, damageEvent, a);
             if (voidDeath) {
@@ -513,8 +518,10 @@ public class DamageDeathMove implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent e) {
-        Location deathLocation = deathLocations.remove(e.getPlayer().getUniqueId());
-        boolean voidDeath = voidRespawns.remove(e.getPlayer().getUniqueId());
+        UUID playerId = e.getPlayer().getUniqueId();
+        Location deathLocation = deathLocations.remove(playerId);
+        boolean voidDeath = voidRespawns.remove(playerId);
+        Boolean eligibleAtDeath = respawnEligibleAtDeath.remove(playerId);
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
         if (a == null) {
             SetupSession ss = SetupSession.getSession(e.getPlayer().getUniqueId());
@@ -543,7 +550,7 @@ public class DamageDeathMove implements Listener {
                 a.removeSpectator(e.getPlayer(), false);
                 return;
             }
-            if (t.isBedDestroyed()) {
+            if (!canRespawnAfterDeath(eligibleAtDeath, t.isBedDestroyed())) {
                 e.setRespawnLocation(a.getSpectatorLocation());
                 a.addSpectator(e.getPlayer(), true, null);
                 t.getMembers().remove(e.getPlayer());
@@ -581,6 +588,7 @@ public class DamageDeathMove implements Listener {
         UUID playerId = event.getPlayer().getUniqueId();
         deathLocations.remove(playerId);
         voidRespawns.remove(playerId);
+        respawnEligibleAtDeath.remove(playerId);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -730,6 +738,10 @@ public class DamageDeathMove implements Listener {
 
     static boolean dealtDamage(boolean cancelled, double finalDamage) {
         return !cancelled && finalDamage > 0;
+    }
+
+    static boolean canRespawnAfterDeath(Boolean eligibleAtDeath, boolean bedDestroyedAtRespawn) {
+        return eligibleAtDeath != null ? eligibleAtDeath : !bedDestroyedAtRespawn;
     }
 
     private static boolean isRespawnProtected(Player player) {

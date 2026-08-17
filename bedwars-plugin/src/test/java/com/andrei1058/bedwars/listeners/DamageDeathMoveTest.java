@@ -44,6 +44,14 @@ class DamageDeathMoveTest {
     }
 
     @Test
+    void usesTheBedStateAtDeathForRespawnEligibility() {
+        assertTrue(DamageDeathMove.canRespawnAfterDeath(true, true));
+        assertFalse(DamageDeathMove.canRespawnAfterDeath(false, false));
+        assertTrue(DamageDeathMove.canRespawnAfterDeath(null, false));
+        assertFalse(DamageDeathMove.canRespawnAfterDeath(null, true));
+    }
+
+    @Test
     void breaksInvisibilityOnlyForSuccessfulEnemyDamage() {
         Player victim = player("victim");
         Player teammate = player("teammate");
