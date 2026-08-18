@@ -38,6 +38,7 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.RestartingPlayerState;
 import com.andrei1058.bedwars.arena.LastHit;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
+import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
@@ -634,15 +635,20 @@ public class DamageDeathMove implements Listener {
                 }
             }
 
-            if (a.isSpectator(player)) {
+            if (a.isSpectator(player) || a.isReSpawning(player)) {
                 if (to.getY() < 0) {
-                    TeleportManager.teleportC(player, a.getSpectatorLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                    player.setAllowFlight(true);
-                    player.setFlying(true);
-                    // how to remove fall velocity?
+                    Location destination = a.isSpectator(player)
+                            ? a.getSpectatorLocation() : a.getReSpawnLocation();
+                    PlayerMotion.enableFlight(player);
+                    TeleportManager.teleportC(player, destination, PlayerTeleportEvent.TeleportCause.PLUGIN)
+                            .whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                                if (error != null || !Boolean.TRUE.equals(success) || !player.isOnline()) return;
+                                IArena current = Arena.getArenaByPlayer(player);
+                                if (current == a && (a.isSpectator(player) || a.isReSpawning(player))) {
+                                    PlayerMotion.enableFlight(player);
+                                }
+                            }));
                 }
-            } else if (a.isReSpawning(player)) {
-                // Waiting to respawn in spectator mode.
             } else {
                 if (a.getStatus() == GameState.playing) {
                     if (to.getBlockY() <= a.getYKillHeight()) {

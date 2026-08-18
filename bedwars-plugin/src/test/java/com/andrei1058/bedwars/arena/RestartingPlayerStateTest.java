@@ -89,6 +89,8 @@ class RestartingPlayerStateTest {
         assertTrue(state.canPickupItems);
         assertFalse(state.allowFlight);
         assertFalse(state.flying);
+        assertTrue(state.velocityReset);
+        assertTrue(state.fallDistanceReset);
         assertEquals(Boolean.TRUE, state.collidable);
         assertTrue(state.invisibilityRemoved);
     }
@@ -98,6 +100,8 @@ class RestartingPlayerStateTest {
         assertTrue(state.canPickupItems);
         assertTrue(state.allowFlight);
         assertTrue(state.flying);
+        assertTrue(state.velocityReset);
+        assertTrue(state.fallDistanceReset);
         assertEquals(Boolean.FALSE, state.collidable);
     }
 
@@ -150,6 +154,14 @@ class RestartingPlayerStateTest {
                         state.flying = (boolean) args[0];
                         yield null;
                     }
+                    case "setVelocity" -> {
+                        state.velocityReset = true;
+                        yield null;
+                    }
+                    case "setFallDistance" -> {
+                        state.fallDistanceReset = true;
+                        yield null;
+                    }
                     case "setCollidable" -> {
                         state.collidable = (boolean) args[0];
                         yield null;
@@ -170,6 +182,8 @@ class RestartingPlayerStateTest {
         private boolean canPickupItems;
         private boolean allowFlight;
         private boolean flying;
+        private boolean velocityReset;
+        private boolean fallDistanceReset;
         private Boolean collidable;
         private boolean invisibilityRemoved;
 

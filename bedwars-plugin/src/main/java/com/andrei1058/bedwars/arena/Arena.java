@@ -521,8 +521,7 @@ public class Arena implements IArena {
             players.add(p);
             setArenaByPlayer(p, this);
             LobbyAnnouncements.playerEnteredArena(p);
-            p.setFlying(false);
-            p.setAllowFlight(false);
+            PlayerMotion.disableFlight(p);
             p.setHealth(20);
             broadcastArenaJoin(p);
 
@@ -654,8 +653,7 @@ public class Arena implements IArena {
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!isCurrentSpectator(p)) return;
-                p.setAllowFlight(true);
-                p.setFlying(true);
+                PlayerMotion.enableFlight(p);
             }, 5L);
 
             if (p.getPassenger() != null && p.getPassenger().getType() == EntityType.ARMOR_STAND)
@@ -679,8 +677,7 @@ public class Arena implements IArena {
                     TeleportManager.teleport(p, getSpectatorLocation());
                 }
 
-                p.setAllowFlight(true);
-                p.setFlying(true);
+                PlayerMotion.enableFlight(p);
 
                 /* Spectator items */
                 sendSpectatorCommandItems(p);
@@ -963,8 +960,7 @@ public class Arena implements IArena {
                 }
             }
         }
-        p.setFlying(false);
-        p.setAllowFlight(false);
+        PlayerMotion.disableFlight(p);
 
         //Remove from ReJoin if game ended
         if (status == GameState.restarting) {
@@ -1079,8 +1075,7 @@ public class Arena implements IArena {
             }
         }
 
-        p.setFlying(false);
-        p.setAllowFlight(false);
+        PlayerMotion.disableFlight(p);
 
         //Remove from ReJoin if game ended
         if (ReJoin.exists(p)) {
@@ -1782,8 +1777,7 @@ public class Arena implements IArena {
         }
         if (!isCurrentLobbyPlayer(p)) return;
         p.setGameMode(GameMode.ADVENTURE);
-        p.setFlying(false);
-        p.setAllowFlight(false);
+        PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
         refreshLobbyCommandItems(p);
         scheduleLobbyItemRecheck(p);
@@ -2742,16 +2736,14 @@ public class Arena implements IArena {
             if (seconds > 1) {
                 player.setCanPickupItems(false);
                 applySpectatorInvisibility(player);
+                // BedWars1058 keeps the player's normal game mode during the
+                // countdown. The session owns interaction blocking and flight;
+                // changing to SPECTATOR here causes an avoidable transition
+                // back to SURVIVAL when the countdown ends.
+                PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
                 Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
                     if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
-                    player.setGameMode(GameMode.SPECTATOR);
-                    if (player.getGameMode() != GameMode.SPECTATOR) {
-                        plugin.getLogger().warning("无法将 " + player.getName()
-                                + " 切换为死亡旁观模式；请检查是否有其他插件取消了游戏模式变更。");
-                        return;
-                    }
-                    player.setSpectatorTarget(null);
                     nms.setCollide(player, this, false);
                     InvisibilityManager.synchronizeViewer(this, player);
                     updateSpectatorCollideRule(player, false);

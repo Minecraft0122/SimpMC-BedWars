@@ -29,6 +29,7 @@ import com.andrei1058.bedwars.api.events.spectator.SpectatorFirstPersonLeaveEven
 import com.andrei1058.bedwars.api.events.spectator.SpectatorTeleportToPlayerEvent;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.configuration.Sounds;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -188,9 +189,9 @@ public class SpectatorListeners implements Listener {
         IArena a = Arena.getArenaByPlayer(p);
         if (a == null) return;
         if (a.isSpectator(p) && p.getSpectatorTarget() != null) {
+            p.setSpectatorTarget(null);
             p.setGameMode(GameMode.ADVENTURE);
-            p.setAllowFlight(true);
-            p.setFlying(true);
+            PlayerMotion.enableFlight(p);
             SpectatorFirstPersonLeaveEvent event = new SpectatorFirstPersonLeaveEvent(p, a, player -> getMsg(player, Messages.ARENA_SPECTATOR_FIRST_PERSON_LEAVE_TITLE), player -> getMsg(player, Messages.ARENA_SPECTATOR_FIRST_PERSON_LEAVE_SUBTITLE));
             Bukkit.getPluginManager().callEvent(event);
             nms.sendTitle(p, event.getTitle().apply(p), event.getSubTitle().apply(p), event.getFadeIn(), event.getStay(), event.getFadeOut());
@@ -210,9 +211,9 @@ public class SpectatorListeners implements Listener {
             if (!(e.getTo().getWorld().equals(e.getPlayer().getWorld())) && e.getCause() == PlayerTeleportEvent.TeleportCause.SPECTATE) {
                 Player p = e.getPlayer();
                 e.setCancelled(true);
+                p.setSpectatorTarget(null);
                 p.setGameMode(GameMode.ADVENTURE);
-                p.setAllowFlight(true);
-                p.setFlying(true);
+                PlayerMotion.enableFlight(p);
                 SpectatorFirstPersonLeaveEvent event = new SpectatorFirstPersonLeaveEvent(p, Arena.getArenaByPlayer(p), player -> getMsg(player, Messages.ARENA_SPECTATOR_FIRST_PERSON_LEAVE_TITLE), player -> getMsg(player, Messages.ARENA_SPECTATOR_FIRST_PERSON_LEAVE_SUBTITLE));
                 Bukkit.getPluginManager().callEvent(event);
                 nms.sendTitle(p, event.getTitle().apply(p), event.getSubTitle().apply(p), event.getFadeIn(), event.getStay(), event.getFadeOut());
@@ -226,9 +227,9 @@ public class SpectatorListeners implements Listener {
         for (Player p : e.getArena().getSpectators()) {
             if (p.getSpectatorTarget() == null) continue;
             if (p.getSpectatorTarget() == e.getVictim()) {
+                p.setSpectatorTarget(null);
                 p.setGameMode(GameMode.ADVENTURE);
-                p.setAllowFlight(true);
-                p.setFlying(true);
+                PlayerMotion.enableFlight(p);
                 SpectatorFirstPersonLeaveEvent event = new SpectatorFirstPersonLeaveEvent(p, e.getArena(), player -> getMsg(player, Messages.ARENA_SPECTATOR_FIRST_PERSON_LEAVE_TITLE), player -> getMsg(player, Messages.ARENA_SPECTATOR_FIRST_PERSON_LEAVE_SUBTITLE));
                 Bukkit.getPluginManager().callEvent(event);
                 nms.sendTitle(p, event.getTitle().apply(p), event.getSubTitle().apply(p), event.getFadeIn(), event.getStay(), event.getFadeOut());

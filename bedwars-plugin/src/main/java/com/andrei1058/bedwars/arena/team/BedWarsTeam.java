@@ -38,6 +38,7 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.OreGenerator;
+import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
@@ -384,11 +385,9 @@ public class BedWarsTeam implements ITeam {
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
         SafeSpawnResolver.teleport(p, getSpawn());
-        p.setVelocity(new Vector(0, 0, 0));
+        PlayerMotion.disableFlight(p);
         InvisibilityManager.remove(getArena(), p);
         nms.setCollide(p, arena, true);
-        p.setAllowFlight(false);
-        p.setFlying(false);
         p.setHealth(20);
 
         nms.sendTitle(p, getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE), "", 0, 20, 10);
