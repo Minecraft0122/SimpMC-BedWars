@@ -140,7 +140,7 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
-    void migratesOnlyBuiltInArenaJoinAndUsesCompactTeamLabels() {
+    void migratesOnlyBuiltInArenaJoinAndUsesVisibleTeamNames() {
         YamlConfiguration language = new YamlConfiguration();
         language.set(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG,
                 "{prefix}&7{player}&e加入了游戏(&b{on}&e/&b{max}&e)！");
@@ -156,9 +156,9 @@ class SimplifiedChineseMigrationTest {
                 language.getString(Messages.COMMAND_JOIN_PLAYER_JOIN_MSG));
         assertEquals("&f你属于 {teamColor}{teamName}队",
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_FOOTER).get(1));
-        assertEquals(List.of("{teamColor}[{teamLetter}] "),
+        assertEquals(List.of("{teamColor}{teamName} "),
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
-        assertEquals(List.of("{teamColor}[{teamLetter}] "),
+        assertEquals(List.of("{teamColor}{teamName} "),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
     }
 
@@ -179,7 +179,7 @@ class SimplifiedChineseMigrationTest {
     }
 
     @Test
-    void compactsEveryKnownBuiltInTeamLabel() {
+    void exposesEveryKnownBuiltInTeamLabel() {
         YamlConfiguration language = new YamlConfiguration();
         for (String path : List.of(
                 Messages.FORMATTING_SB_TAB_PLAYING_PREFIX,
@@ -194,13 +194,13 @@ class SimplifiedChineseMigrationTest {
 
         Language.migrateBuiltInTabPlayerRows(language);
 
-        assertEquals(List.of("{teamColor}[{teamLetter}] "),
+        assertEquals(List.of("{teamColor}{teamName} "),
                 language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
-        assertEquals(List.of("{teamColor}[{teamLetter}] "),
+        assertEquals(List.of("{teamColor}{teamName} "),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX));
-        assertEquals(List.of("{teamColor}[{teamLetter}] "),
+        assertEquals(List.of("{teamColor}{teamName} "),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX));
-        assertEquals(List.of("{teamColor}[{teamLetter}] "),
+        assertEquals(List.of("{teamColor}{teamName} "),
                 language.getStringList(Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX));
     }
 

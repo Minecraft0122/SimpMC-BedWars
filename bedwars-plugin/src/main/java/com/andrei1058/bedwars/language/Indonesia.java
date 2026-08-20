@@ -804,7 +804,7 @@ public class Indonesia extends Language {
                 "&fPowered by {poweredBy}",
                 ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}[{teamLetter}] "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}{teamName} "));
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // player eliminated - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER, List.of(
@@ -1100,7 +1100,7 @@ public class Indonesia extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&lPerangkap alarm telah dipicu oleh &7&l{player} &c&ldari tim {color}&l{team}!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&lALARM!!!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "&fPerangkap alarm telah dipicu oleh tim {color}{team}&f!");
-        updateToLatestVersion(8, Language::migrateBuiltInTabPlayerRows);
+        updateToLatestVersion(9, Language::migrateBuiltInTabPlayerRows);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }

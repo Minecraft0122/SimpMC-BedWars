@@ -582,7 +582,7 @@ public class Russian extends Language{
                 "&fPowered by {poweredBy}",
                 ""
         ));
-        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}[{teamLetter}] "));
+        yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("{teamColor}{teamName} "));
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, List.of(" {vPrefix}", " {level}"));
         // player eliminated - playing state
         yml.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_ELM_HEADER, List.of(
@@ -1141,7 +1141,7 @@ public class Russian extends Language{
                                                                                                                                                            // Добавлено Matveev_: не ебу
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&lВНИМАНИЕ!!!");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "&fЛовушка была активирована командой {color}{team} &f!");
-        updateToLatestVersion(8, Language::migrateBuiltInTabPlayerRows);
+        updateToLatestVersion(9, Language::migrateBuiltInTabPlayerRows);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
