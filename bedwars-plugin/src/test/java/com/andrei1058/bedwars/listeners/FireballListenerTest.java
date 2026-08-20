@@ -28,6 +28,39 @@ class FireballListenerTest {
     }
 
     @Test
+    void includesPlayersOnTheSphericalExplosionBoundary() {
+        assertTrue(FireballListener.isWithinExplosionRadius(
+                new Vector(0D, 64D, 0D), new Vector(3D, 68D, 0D), 5D));
+    }
+
+    @Test
+    void excludesPlayersInTheBoundingCubeOutsideTheSphericalRadius() {
+        assertFalse(FireballListener.isWithinExplosionRadius(
+                new Vector(0D, 64D, 0D), new Vector(3D, 68D, 3D), 5D));
+    }
+
+    @Test
+    void rejectsInvalidExplosionRadiiAndNonFinitePositions() {
+        Vector explosion = new Vector(0D, 64D, 0D);
+        Vector player = new Vector(0D, 64D, 0D);
+
+        assertFalse(FireballListener.isWithinExplosionRadius(explosion, player, -1D));
+        assertFalse(FireballListener.isWithinExplosionRadius(explosion, player, Double.NaN));
+        assertFalse(FireballListener.isWithinExplosionRadius(
+                explosion, new Vector(Double.POSITIVE_INFINITY, 64D, 0D), 5D));
+        assertFalse(FireballListener.isWithinExplosionRadius(null, player, 5D));
+        assertFalse(FireballListener.isWithinExplosionRadius(explosion, null, 5D));
+    }
+
+    @Test
+    void usesOneBoundedExplosionSizeForAllFireballPaths() {
+        assertEquals(0.1D, FireballListener.normalizeExplosionSize(Double.NaN));
+        assertEquals(0.1D, FireballListener.normalizeExplosionSize(-5D));
+        assertEquals(16D, FireballListener.normalizeExplosionSize(99D));
+        assertEquals(3.25D, FireballListener.normalizeExplosionSize(3.25D));
+    }
+
+    @Test
     void overlappingFireballAndPlayerProduceFiniteVerticalKnockback() {
         Vector knockback = FireballListener.calculateKnockback(
                 new Vector(3D, 64D, -2D), new Vector(3D, 64D, -2D), 1.25D, 0.8D);

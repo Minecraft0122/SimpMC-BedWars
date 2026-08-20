@@ -3,10 +3,15 @@ package com.andrei1058.bedwars.listeners;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.event.block.BlockIgniteEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,6 +57,75 @@ class BreakPlaceTest {
         assertTrue(BreakPlace.isProtectedMapBlock(false, true, true));
         assertTrue(BreakPlace.isProtectedMapBlock(false, false, false));
         assertFalse(BreakPlace.isProtectedMapBlock(false, false, true));
+    }
+
+    @Test
+    void consumesTheTowerFromTheOffHandThatPlacedIt() {
+        AtomicReference<ItemStack> mainHand = new AtomicReference<>(new TestItemStack(5));
+        AtomicReference<ItemStack> offHand = new AtomicReference<>(new TestItemStack(2));
+
+        BreakPlace.consumeTowerItem(inventory(mainHand, offHand), EquipmentSlot.OFF_HAND);
+
+        assertEquals(5, mainHand.get().getAmount());
+        assertEquals(1, offHand.get().getAmount());
+    }
+
+    @Test
+    void clearsOnlyTheSingleTowerInThePlacementHand() {
+        AtomicReference<ItemStack> mainHand = new AtomicReference<>(new TestItemStack(3));
+        AtomicReference<ItemStack> offHand = new AtomicReference<>(new TestItemStack(1));
+
+        BreakPlace.consumeTowerItem(inventory(mainHand, offHand), EquipmentSlot.OFF_HAND);
+
+        assertEquals(3, mainHand.get().getAmount());
+        assertTrue(offHand.get() == null);
+    }
+
+    @Test
+    void consumesFromTheMainHandWhenThePlacementEventUsesTheMainHand() {
+        AtomicReference<ItemStack> mainHand = new AtomicReference<>(new TestItemStack(1));
+        AtomicReference<ItemStack> offHand = new AtomicReference<>(new TestItemStack(4));
+
+        BreakPlace.consumeTowerItem(inventory(mainHand, offHand), EquipmentSlot.HAND);
+
+        assertTrue(mainHand.get() == null);
+        assertEquals(4, offHand.get().getAmount());
+    }
+
+    private static PlayerInventory inventory(AtomicReference<ItemStack> mainHand,
+                                             AtomicReference<ItemStack> offHand) {
+        return (PlayerInventory) Proxy.newProxyInstance(PlayerInventory.class.getClassLoader(),
+                new Class<?>[]{PlayerInventory.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getItemInMainHand" -> mainHand.get();
+                    case "getItemInOffHand" -> offHand.get();
+                    case "setItemInMainHand" -> {
+                        mainHand.set((ItemStack) args[0]);
+                        yield null;
+                    }
+                    case "setItemInOffHand" -> {
+                        offHand.set((ItemStack) args[0]);
+                        yield null;
+                    }
+                    default -> null;
+                });
+    }
+
+    private static final class TestItemStack extends ItemStack {
+        private int amount;
+
+        private TestItemStack(int amount) {
+            this.amount = amount;
+        }
+
+        @Override
+        public int getAmount() {
+            return amount;
+        }
+
+        @Override
+        public void setAmount(int amount) {
+            this.amount = amount;
+        }
     }
 
     private static World world(String name) {

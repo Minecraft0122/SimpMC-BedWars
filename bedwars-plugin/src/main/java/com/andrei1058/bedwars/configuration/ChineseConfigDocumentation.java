@@ -51,8 +51,8 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_TNT_PROTECTION_END_STONE_BLAST, "TNT 对末地石、玻璃等方块的爆炸抗性参数。");
         comment(config, ConfigPath.GENERAL_TNT_AUTO_IGNITE, "TNT 放置后是否自动点燃，以及引信持续 tick 数。");
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
-                "火球爆炸和击退生效范围；2.10.20 默认值略微降低为 3.25，插件限制最大 16 格。",
-                "过大的值会自动限幅，避免一次爆炸扫描过多实体。");
+                "火球方块爆炸强度，以及伤害和击退生效的三维球形半径；2.10.20 默认值略微降低为 3.25，插件限制最大 16 格。",
+                "玩家判定使用到火球位置的欧氏距离；过大的值会自动限幅，避免一次爆炸扫描过多实体。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER,
                 "普通投掷的火球初速度倍率；默认 15，对应 1.5 格/tick。潜行投掷默认初速度更高。");
         comment(config, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER,
@@ -211,7 +211,7 @@ public final class ChineseConfigDocumentation {
 
     public static void upgrades(ConfigManager config) {
         comment(config, "default-upgrades-settings", "升级菜单布局和陷阱规则：menu-content 为 元素,槽位；价格货币支持 iron、gold、diamond、emerald 或 Vault。");
-        comment(config, "upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 2、4、8、16 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
+        comment(config, "upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 4、8、16、32 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
         comment(config, "upgrade-armor", "保护 I–IV 逐级购买；默认价格为 2、4、10、24 钻石。");
         comment(config, "upgrade-miner", "挖掘急迫升级。");
         comment(config, "upgrade-forge", "岛屿资源生成器升级。");

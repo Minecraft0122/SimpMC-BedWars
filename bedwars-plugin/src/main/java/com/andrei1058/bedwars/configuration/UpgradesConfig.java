@@ -31,12 +31,14 @@ import static com.andrei1058.bedwars.BedWars.plugin;
 
 public class UpgradesConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 10;
-    private static final int PREVIOUS_SWORD_PRICE_SCHEMA = 9;
+    private static final int CONFIG_VERSION = 11;
+    private static final int PREVIOUS_SWORD_PRICE_SCHEMA = 10;
+    private static final int PREVIOUS_ARMOR_PRICE_SCHEMA = 9;
     private static final int MAX_SWORD_TIER = 4;
     private static final int MAX_ARMOR_TIER = 4;
-    private static final List<Integer> SWORD_TIER_COSTS = List.of(2, 4, 8, 16);
-    private static final List<Integer> PREVIOUS_SWORD_TIER_COSTS = List.of(2, 4, 8, 14);
+    private static final List<Integer> SWORD_TIER_COSTS = List.of(4, 8, 16, 32);
+    private static final List<Integer> SCHEMA_TEN_SWORD_TIER_COSTS = List.of(2, 4, 8, 16);
+    private static final List<Integer> SCHEMA_NINE_SWORD_TIER_COSTS = List.of(2, 4, 8, 14);
     private static final List<Integer> SCHEMA_EIGHT_SWORD_TIER_COSTS = List.of(4, 6, 9, 14);
     private static final List<Integer> LEGACY_SWORD_TIER_COSTS = List.of(4, 8, 16, 32);
     private static final List<Integer> ARMOR_TIER_COSTS = List.of(2, 4, 10, 24);
@@ -134,7 +136,7 @@ public class UpgradesConfig extends ConfigManager {
         }
         yml.options().copyDefaults(true);
         setComments("default-upgrades-settings", "队伍升级菜单布局、陷阱价格和队列上限。");
-        setComments("upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 2、4、8、16 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
+        setComments("upgrade-swords", "锋利 I–IV 逐级购买；默认价格为 4、8、16、32 钻石。", "每个 tier 包含价格、货币、显示物品和 receive 动作。");
         setComments("upgrade-armor", "保护 I–IV 逐级购买；默认价格为 2、4、10、24 钻石。");
         setComments("category-traps", "陷阱分类菜单内容及槽位。");
         ChineseConfigDocumentation.upgrades(this);
@@ -226,7 +228,9 @@ public class UpgradesConfig extends ConfigManager {
         }
         List<Integer> oldDefaults;
         if (storedVersion == PREVIOUS_SWORD_PRICE_SCHEMA) {
-            oldDefaults = PREVIOUS_SWORD_TIER_COSTS;
+            oldDefaults = SCHEMA_TEN_SWORD_TIER_COSTS;
+        } else if (storedVersion == 9) {
+            oldDefaults = SCHEMA_NINE_SWORD_TIER_COSTS;
         } else if (storedVersion == 8) {
             oldDefaults = SCHEMA_EIGHT_SWORD_TIER_COSTS;
         } else {
@@ -244,7 +248,7 @@ public class UpgradesConfig extends ConfigManager {
     }
 
     static void migrateLegacyArmorTierCosts(YamlConfiguration yml, int storedVersion) {
-        if (storedVersion > PREVIOUS_SWORD_PRICE_SCHEMA
+        if (storedVersion > PREVIOUS_ARMOR_PRICE_SCHEMA
                 || !hasExactTierCosts(yml, "upgrade-armor", MAX_ARMOR_TIER, PREVIOUS_ARMOR_TIER_COSTS)) {
             return;
         }

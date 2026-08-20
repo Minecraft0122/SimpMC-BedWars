@@ -45,9 +45,8 @@ public class FireballListener implements Listener {
     private final Set<DamageKey> activeCustomExplosions = new HashSet<>();
 
     public FireballListener() {
-        this.fireballExplosionSize = boundedFiniteNonNegative(
-                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE),
-                MIN_FIREBALL_EXPLOSION_SIZE, MAX_FIREBALL_EXPLOSION_SIZE);
+        this.fireballExplosionSize = normalizeExplosionSize(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE));
         this.fireballMakeFire = config.getYml().getBoolean(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE);
         this.fireballHorizontal = boundedFiniteNonNegative(
                 config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL),
@@ -75,10 +74,10 @@ public class FireballListener implements Listener {
 
         World world = location.getWorld();
         if (world == null) return;
+        Vector explosionPosition = location.toVector();
         Collection<Player> nearbyPlayers = world.getNearbyPlayers(location,
                 fireballExplosionSize, fireballExplosionSize, fireballExplosionSize,
                 player -> Arena.getArenaByPlayer(player) == arena && arena.isPlayer(player));
-        Vector explosionPosition = location.toVector();
         long hitTime = System.currentTimeMillis();
         DamageSource playerExplosion = DamageSource.builder(DamageType.PLAYER_EXPLOSION)
                 .withCausingEntity(source)
@@ -86,9 +85,10 @@ public class FireballListener implements Listener {
                 .build();
         DamageSource unattributedExplosion = DamageSource.builder(DamageType.EXPLOSION).build();
         for (Player player : nearbyPlayers) {
+            Vector playerPosition = new Vector(player.getX(), player.getY(), player.getZ());
+            if (!isWithinExplosionRadius(explosionPosition, playerPosition, fireballExplosionSize)) continue;
 
-            player.setVelocity(calculateKnockback(explosionPosition,
-                    new Vector(player.getX(), player.getY(), player.getZ()),
+            player.setVelocity(calculateKnockback(explosionPosition, playerPosition,
                     fireballHorizontal, fireballVertical));
 
             boolean self = player.equals(source);
@@ -160,6 +160,16 @@ public class FireballListener implements Listener {
         if (y < 0) y += 1.5;
         y = y <= 0.5 ? safeVertical * 1.5D : y * safeVertical * 1.5D;
         return knockback.setY(y);
+    }
+
+    static boolean isWithinExplosionRadius(Vector explosion, Vector player, double radius) {
+        if (explosion == null || player == null || !Double.isFinite(radius) || radius < 0D) return false;
+        double distanceSquared = explosion.distanceSquared(player);
+        return Double.isFinite(distanceSquared) && distanceSquared <= radius * radius;
+    }
+
+    static double normalizeExplosionSize(double value) {
+        return boundedFiniteNonNegative(value, MIN_FIREBALL_EXPLOSION_SIZE, MAX_FIREBALL_EXPLOSION_SIZE);
     }
 
     private static double boundedFiniteNonNegative(double value, double minimum, double maximum) {

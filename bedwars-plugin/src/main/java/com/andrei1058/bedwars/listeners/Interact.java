@@ -98,7 +98,8 @@ public class Interact implements Listener {
         this.fireballMinimumFlightDistance = flightRange.min();
         this.fireballMaximumFlightDistance = flightRange.max();
         this.fireballCooldown = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_COOLDOWN);
-        this.fireballExplosionSize = (float) config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE);
+        this.fireballExplosionSize = (float) FireballListener.normalizeExplosionSize(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE));
         this.craftingDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING);
         this.enchantingDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_ENCHANTING);
         this.furnaceDisabled = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_DISABLE_FURNACE);

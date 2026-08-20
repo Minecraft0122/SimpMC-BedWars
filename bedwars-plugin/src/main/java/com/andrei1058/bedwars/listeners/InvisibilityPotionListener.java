@@ -30,7 +30,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -62,26 +64,24 @@ public class InvisibilityPotionListener implements Listener {
 
     @EventHandler
     public void onDrink(PlayerItemConsumeEvent e) {
-        IArena a = Arena.getArenaByPlayer(e.getPlayer());
-        if (a == null) return;
+        if (Arena.getArenaByPlayer(e.getPlayer()) == null) return;
         if (e.getItem().getType() != Material.POTION) return;
         // remove potion bottle
         Bukkit.getScheduler().runTaskLater(plugin, () ->
                         nms.minusAmount(e.getPlayer(), new ItemStack(Material.GLASS_BOTTLE), 1),
                 5L);
-        //
+    }
 
-        if (nms.isInvisibilityPotion(e.getItem())) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (!e.getPlayer().isOnline() || Arena.getArenaByPlayer(e.getPlayer()) != a) return;
-                for (PotionEffect pe : e.getPlayer().getActivePotionEffects()) {
-                    if (PotionEffectType.INVISIBILITY.equals(pe.getType())) {
-                        InvisibilityManager.activate(a, e.getPlayer(), pe.getDuration() / 20);
-                        break;
-                    }
-                }
-            }, 5L);
-        }
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPotionEffect(EntityPotionEffectEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        PotionEffect effect = event.getNewEffect();
+        boolean invisibility = effect != null && PotionEffectType.INVISIBILITY.equals(effect.getType());
+        if (!isDrunkInvisibility(event.getCause(), event.getAction(), event.isOverride(), invisibility)) return;
+
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null) return;
+        InvisibilityManager.activate(arena, player, durationSeconds(effect.getDuration()));
     }
 
     @EventHandler
@@ -96,5 +96,20 @@ public class InvisibilityPotionListener implements Listener {
                 InvisibilityManager.synchronizePlayerEquipment(arena, player);
             }
         });
+    }
+
+    static boolean isDrunkInvisibility(EntityPotionEffectEvent.Cause cause,
+                                        EntityPotionEffectEvent.Action action,
+                                        boolean override,
+                                        boolean invisibility) {
+        return cause == EntityPotionEffectEvent.Cause.POTION_DRINK
+                && (action == EntityPotionEffectEvent.Action.ADDED
+                || (action == EntityPotionEffectEvent.Action.CHANGED && override))
+                && invisibility;
+    }
+
+    static int durationSeconds(int durationTicks) {
+        return Math.max(1, (int) Math.min(Integer.MAX_VALUE,
+                (durationTicks + 19L) / 20L));
     }
 }

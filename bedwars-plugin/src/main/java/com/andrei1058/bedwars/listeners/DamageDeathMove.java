@@ -340,12 +340,12 @@ public class DamageDeathMove implements Listener {
             e.setNewTotalExp(0);
             if (a.isSpectator(victim)) {
                 e.getDrops().clear();
-                victim.spigot().respawn();
+                requestRespawnIfNeeded(victim);
                 return;
             }
             if (a.getStatus() != GameState.playing) {
                 e.getDrops().clear();
-                victim.spigot().respawn();
+                requestRespawnIfNeeded(victim);
                 return;
             }
             EntityDamageEvent damageEvent = e.getEntity().getLastDamageCause();
@@ -353,7 +353,7 @@ public class DamageDeathMove implements Listener {
             ITeam victimsTeam = a.getTeam(victim);
             if (victimsTeam == null) {
                 e.getDrops().clear();
-                victim.spigot().respawn();
+                requestRespawnIfNeeded(victim);
                 return;
             }
             // PlayerRespawnEvent is deferred, so keep the death-time decision stable
@@ -498,8 +498,7 @@ public class DamageDeathMove implements Listener {
                 e.getDrops().clear();
             }
 
-            // send respawn packet
-            Bukkit.getScheduler().runTaskLater(plugin, () -> victim.spigot().respawn(), 3L);
+            requestRespawnIfNeeded(victim);
 
             // reset last damager
             LastHit lastHit = LastHit.getLastHit(victim);
@@ -748,6 +747,20 @@ public class DamageDeathMove implements Listener {
 
     static boolean canRespawnAfterDeath(Boolean eligibleAtDeath, boolean bedDestroyedAtRespawn) {
         return eligibleAtDeath != null ? eligibleAtDeath : !bedDestroyedAtRespawn;
+    }
+
+    private static void requestRespawnIfNeeded(Player player) {
+        Boolean immediateRespawn = player.getWorld().getGameRuleValue(org.bukkit.GameRules.IMMEDIATE_RESPAWN);
+        if (!requiresManualRespawn(immediateRespawn)) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline() && player.isDead()) {
+                player.spigot().respawn();
+            }
+        });
+    }
+
+    static boolean requiresManualRespawn(Boolean immediateRespawn) {
+        return !Boolean.TRUE.equals(immediateRespawn);
     }
 
     private static boolean isRespawnProtected(Player player) {

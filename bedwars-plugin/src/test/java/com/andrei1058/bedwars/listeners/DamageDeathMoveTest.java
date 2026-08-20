@@ -52,6 +52,13 @@ class DamageDeathMoveTest {
     }
 
     @Test
+    void avoidsASecondDelayedRespawnWhenTheArenaUsesImmediateRespawn() {
+        assertFalse(DamageDeathMove.requiresManualRespawn(true));
+        assertTrue(DamageDeathMove.requiresManualRespawn(false));
+        assertTrue(DamageDeathMove.requiresManualRespawn(null));
+    }
+
+    @Test
     void breaksInvisibilityOnlyForSuccessfulEnemyDamage() {
         Player victim = player("victim");
         Player teammate = player("teammate");

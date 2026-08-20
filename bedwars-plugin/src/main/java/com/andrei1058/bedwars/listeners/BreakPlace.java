@@ -65,7 +65,11 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.*;
@@ -207,15 +211,15 @@ public class BreakPlace implements Listener {
                         rotation += 360.0D;
                     }
                     if (45.0D <= rotation && rotation < 135.0D) {
-                        new TowerSouth(loc, e.getBlockPlaced(), col, p);
+                        new TowerSouth(loc, e.getBlockPlaced(), col, p, e.getHand());
                     } else if (225.0D <= rotation && rotation < 315.0D) {
-                        new TowerNorth(loc, e.getBlockPlaced(), col, p);
+                        new TowerNorth(loc, e.getBlockPlaced(), col, p, e.getHand());
                     } else if (135.0D <= rotation && rotation < 225.0D) {
-                        new TowerWest(loc, e.getBlockPlaced(), col, p);
+                        new TowerWest(loc, e.getBlockPlaced(), col, p, e.getHand());
                     } else if (0.0D <= rotation && rotation < 45.0D) {
-                        new TowerEast(loc, e.getBlockPlaced(), col, p);
+                        new TowerEast(loc, e.getBlockPlaced(), col, p, e.getHand());
                     } else if (315.0D <= rotation && rotation < 360.0D) {
-                        new TowerEast(loc, e.getBlockPlaced(), col, p);
+                        new TowerEast(loc, e.getBlockPlaced(), col, p, e.getHand());
                     }
                 }
             }
@@ -649,6 +653,20 @@ public class BreakPlace implements Listener {
      */
     static boolean isProtectedMapBlock(boolean placedBlock, boolean protectedRegion, boolean allowMapBreak) {
         return !placedBlock && (protectedRegion || !allowMapBreak);
+    }
+
+    public static void consumeTowerItem(@NotNull PlayerInventory inventory, @Nullable EquipmentSlot hand) {
+        boolean offHand = hand == EquipmentSlot.OFF_HAND;
+        ItemStack tower = offHand ? inventory.getItemInOffHand() : inventory.getItemInMainHand();
+        if (tower == null || tower.getAmount() <= 0) return;
+
+        ItemStack remaining = null;
+        if (tower.getAmount() > 1) {
+            tower.setAmount(tower.getAmount() - 1);
+            remaining = tower;
+        }
+        if (offHand) inventory.setItemInOffHand(remaining);
+        else inventory.setItemInMainHand(remaining);
     }
 
     private boolean hasProtectedPlacedBlock(@NotNull IArena arena, @NotNull BlockPlaceEvent event) {

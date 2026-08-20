@@ -3,11 +3,12 @@ package com.andrei1058.bedwars.popuptower;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
 import com.andrei1058.bedwars.configuration.Sounds;
+import com.andrei1058.bedwars.listeners.BreakPlace;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
@@ -16,13 +17,11 @@ import java.util.List;
 public class TowerEast {
     private BukkitTask task;
     public TowerEast(Location loc, Block chest, TeamColor color, Player p) {
-        ItemStack itemInHand = p.getInventory().getItemInHand();
-        if (itemInHand.getAmount() > 1) {
-            itemInHand.setAmount(itemInHand.getAmount() - 1);
-        } else {
-            p.getInventory().setItemInHand(null);
-        }
+        this(loc, chest, color, p, EquipmentSlot.HAND);
+    }
 
+    public TowerEast(Location loc, Block chest, TeamColor color, Player p, EquipmentSlot hand) {
+        BreakPlace.consumeTowerItem(p.getInventory(), hand);
         List<String> relloc = new ArrayList<>();
         relloc.add("2, 0, -1");
         relloc.add("1, 0, -2");
