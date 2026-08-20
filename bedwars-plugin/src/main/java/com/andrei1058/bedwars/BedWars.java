@@ -53,7 +53,7 @@ import com.andrei1058.bedwars.configuration.*;
 import com.andrei1058.bedwars.database.Database;
 import com.andrei1058.bedwars.database.SQLite;
 import com.andrei1058.bedwars.halloween.HalloweenSpecial;
-import com.andrei1058.bedwars.language.*;
+import com.andrei1058.bedwars.language.SimplifiedChinese;
 import com.andrei1058.bedwars.levels.internal.InternalLevel;
 import com.andrei1058.bedwars.levels.internal.LevelListeners;
 import com.andrei1058.bedwars.listeners.*;
@@ -174,23 +174,11 @@ public class BedWars extends JavaPlugin {
 
         this.getLogger().info("Loading Paper API support for Minecraft " + version + ".");
 
-        // Setup languages
-        new English();
-        new Romanian();
-        new Italian();
-        new Polish();
-        new Spanish();
-        new Russian();
-        new Bangla();
-        new Persian();
-        new Hindi();
-        new Indonesia();
-        new Portuguese();
+        // Setup the single bundled player language. Legacy language files are
+        // left on disk but are no longer loaded or exposed to players.
         new SimplifiedChinese();
-        new Turkish();
 
-        // Persist the shared Chinese documentation after built-in languages
-        // have registered their defaults and optional translator headers.
+        // Persist the shared Chinese documentation after its defaults load.
         for (Language language : Language.getLanguages()) {
             language.addChineseDocumentation();
             language.save();
@@ -267,7 +255,7 @@ public class BedWars extends JavaPlugin {
                 new PlacedBlockListener(), new DamageDeathMove(),
                 new Inventory(), new Interact(), new LobbyProtection(), new RefreshGUI(), new HungerWeatherSpawn(), new CmdProcess(),
                 new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(),
-                new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK(),
+                new TargetListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),
                 PreGameSquadManager.getInstance(), PreGameSquadGUI.getInstance(),
                 PreGameTeamSelectionManager.getInstance(), PreGameTeamSelectionGUI.getInstance()

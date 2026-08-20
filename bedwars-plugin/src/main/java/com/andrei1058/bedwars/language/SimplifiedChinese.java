@@ -46,7 +46,7 @@ public class SimplifiedChinese extends Language {
     static final List<String> ELIMINATED_TAB_SUFFIX = List.of("");
 
     public SimplifiedChinese() {
-        super(BedWars.plugin, "zh_cn");
+        super(BedWars.plugin, Language.SIMPLIFIED_CHINESE_ISO);
 
         YamlConfiguration yml = getYml();
         yml.options().copyDefaults(true);

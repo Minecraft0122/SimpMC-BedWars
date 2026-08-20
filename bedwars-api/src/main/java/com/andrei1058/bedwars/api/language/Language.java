@@ -37,6 +37,9 @@ import java.util.regex.Pattern;
 
 public class Language extends ConfigManager {
 
+    /** The only player-facing language bundled by SimpMC-BedWars. */
+    public static final String SIMPLIFIED_CHINESE_ISO = "zh_cn";
+
     private static final Pattern LANGUAGE_FILE = Pattern.compile("^messages_([A-Za-z0-9_-]+)\\.yml$");
 
     private final String iso;
@@ -126,9 +129,9 @@ public class Language extends ConfigManager {
             getYml().set("scoreboard", null);
         }
 
-        // Languages without a built-in subclass do not have a later defaults
-        // phase, so finish their migration here. Built-in languages finish it
-        // after registering their defaults.
+        // API-created language instances do not have a later defaults phase,
+        // so finish their migration here. The plugin itself only registers
+        // SimplifiedChinese.
         addChineseDocumentation();
         if (getClass() == Language.class) {
             updateToLatestVersion(5, Language::migrateLegacyTowerShopItem);
@@ -168,8 +171,10 @@ public class Language extends ConfigManager {
     }
 
     /**
-     * Return the ISO portion of an actual language file. Migration backups
-     * such as messages_zh_cn.yml.v1.bak are intentionally rejected.
+     * Return the ISO portion of a canonical language filename. This generic
+     * parser remains for legacy API callers; the plugin runtime only loads
+     * {@link #SIMPLIFIED_CHINESE_ISO}. Migration backups such as
+     * messages_zh_cn.yml.v1.bak are intentionally rejected.
      */
     public static Optional<String> isoFromFileName(String fileName) {
         if (fileName == null) return Optional.empty();
@@ -321,6 +326,7 @@ public class Language extends ConfigManager {
      * Check if a language exists.
      */
     public static boolean isLanguageExist(String iso) {
+        if (!isSimplifiedChineseIso(iso)) return false;
         for (Language l : languages) {
             if (l.iso.equalsIgnoreCase(iso)) {
                 return true;
@@ -330,11 +336,21 @@ public class Language extends ConfigManager {
     }
 
     /**
+     * Check whether an ISO code is supported by the bundled player language.
+     * Custom {@link Language} instances remain constructible for API
+     * compatibility, while normal plugin commands expose only this code.
+     */
+    public static boolean isSimplifiedChineseIso(String iso) {
+        return SIMPLIFIED_CHINESE_ISO.equalsIgnoreCase(iso);
+    }
+
+    /**
      * Get language with given info.
      *
-     * @return null if you could not find.
+     * @return the configured default language when the ISO code is unknown.
      */
     public static Language getLang(String iso) {
+        if (!isSimplifiedChineseIso(iso)) return getDefaultLanguage();
         for (Language l : languages) {
             if (l.iso.equalsIgnoreCase(iso)) {
                 return l;
@@ -622,6 +638,14 @@ public class Language extends ConfigManager {
             }
             langByPlayer.remove(uuid);
             return true;
+        }
+
+        // Old proxy/database values are deliberately not allowed to revive
+        // a language that the plugin no longer ships. Drop any stale
+        // in-memory preference so the player immediately falls back to Chinese.
+        if (!isSimplifiedChineseIso(iso)) {
+            langByPlayer.remove(uuid);
+            return false;
         }
 
         Language newLang = Language.getLang(iso);

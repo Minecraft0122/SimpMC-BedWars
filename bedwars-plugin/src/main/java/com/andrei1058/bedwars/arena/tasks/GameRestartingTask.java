@@ -227,7 +227,7 @@ public class GameRestartingTask implements Runnable, RestartingTask {
                                 + " 传送到大厅，将在下一秒重试。");
                         return;
                     }
-                    if (BedWars.getServerType() == ServerType.MULTIARENA && player.isOnline()) {
+                    if (player.isOnline()) {
                         Arena.enterLobby(player);
                     }
                 }));

@@ -10,4 +10,10 @@ final class ArenaTransitionPolicy {
                                                boolean currentlyInArena) {
         return !disconnect && online && !currentlyInArena;
     }
+
+    static boolean shouldApplyLobbyStateAfterTeleport(boolean teleportSucceeded,
+                                                       boolean online,
+                                                       boolean currentLobby) {
+        return teleportSucceeded && online && currentLobby;
+    }
 }

@@ -99,7 +99,7 @@ public class Misc {
                 return;
             }
 
-            if (getServerType() == ServerType.MULTIARENA) Arena.enterLobby(p);
+            Arena.enterLobby(p);
             return;
         }
         forceKick(p, arena, notAbandon);

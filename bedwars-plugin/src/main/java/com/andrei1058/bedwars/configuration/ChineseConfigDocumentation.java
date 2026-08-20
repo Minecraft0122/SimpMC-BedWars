@@ -16,8 +16,8 @@ public final class ChineseConfigDocumentation {
 
     public static void main(ConfigManager config) {
         comment(config, "serverType", "服务器模式：MULTIARENA（多竞技场）、SHARED（共享服务器）或 BUNGEE（代理网络）。", "MULTIARENA/BUNGEE 会把实例内全部世界固定为正午和晴天；SHARED 只处理竞技场、设置世界和配置大厅。", "修改后必须完整重启服务器。");
-        comment(config, "language", "默认语言代码，例如 zh_cn；玩家仍可使用 /bw lang 单独选择语言。");
-        comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "禁止玩家选择的语言代码列表。");
+        comment(config, "language", "服务器语言固定为 zh_cn（简体中文）；旧语言值会自动迁移。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "历史兼容字段；当前版本只提供简体中文，不再加载其他语言。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
                 "可用于匹配和竞技场选择器的全局分组名称；Default 是内置组，无需填写。",
                 "每张竞技场地图只能引用其中一个分组。");

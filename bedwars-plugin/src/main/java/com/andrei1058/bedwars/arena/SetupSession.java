@@ -188,9 +188,7 @@ public class SetupSession implements ISetupSession {
             TeleportManager.teleportC(setupPlayer, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN)
                     .whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
                         if (error != null || !Boolean.TRUE.equals(success) || !setupPlayer.isOnline()) return;
-                        if (BedWars.getServerType() == ServerType.MULTIARENA) {
-                            Arena.enterLobby(setupPlayer);
-                        }
+                        Arena.enterLobby(setupPlayer);
                     }));
         } else {
             Misc.connectToProxyLobby(setupPlayer);

@@ -30,6 +30,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 
+import java.util.UUID;
+
 import static com.andrei1058.bedwars.BedWars.plugin;
 
 public class JoinHandlerCommon implements Listener {
@@ -52,7 +54,15 @@ public class JoinHandlerCommon implements Listener {
     @EventHandler
     public void requestLanguage(AsyncPlayerPreLoginEvent e) {
         String iso = BedWars.getRemoteDatabase().getLanguage(e.getUniqueId());
-        Bukkit.getScheduler().runTask(plugin, () -> Language.setPlayerLanguage(e.getUniqueId(), iso));
+        UUID uuid = e.getUniqueId();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Language.setPlayerLanguage(uuid, iso);
+            if (!Language.isSimplifiedChineseIso(iso)) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin,
+                        () -> BedWars.getRemoteDatabase().setLanguage(
+                                uuid, Language.SIMPLIFIED_CHINESE_ISO));
+            }
+        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

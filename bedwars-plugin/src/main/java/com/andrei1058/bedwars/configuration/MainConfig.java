@@ -64,8 +64,8 @@ public class MainConfig extends ConfigManager {
 
         yml.options().header(plugin.getDescription().getName() + "，由 SimpMC 维护。\n");
         yml.addDefault("serverType", "MULTIARENA");
-        yml.addDefault("language", "en");
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, Collections.singletonList("your language iso here"));
+        yml.addDefault("language", Language.SIMPLIFIED_CHINESE_ISO);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, Collections.emptyList());
         yml.addDefault("storeLink", "https://www.spigotmc.org/resources/authors/39904/");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER, "hub");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ENABLE_HALLOWEEN, true);
@@ -246,35 +246,23 @@ public class MainConfig extends ConfigManager {
             }
         });
 
-        //set default server language
-        String whatLang = "en";
-        File[] langs = new File(plugin.getDataFolder(), "/Languages").listFiles();
-        if (langs != null) {
-            for (File f : langs) {
-                if (!f.isFile()) continue;
-                Optional<String> detectedIso = Language.isoFromFileName(f.getName());
-                if (detectedIso.isEmpty()) continue;
-                String lang = detectedIso.get();
-                if (lang.equalsIgnoreCase(yml.getString("language"))) {
-                    whatLang = lang;
-                }
-                if (Language.getLang(lang) == null) new Language(BedWars.plugin, lang);
-            }
+        // Only Simplified Chinese is bundled and selectable. Keep legacy
+        // language files untouched on disk, but never load them as runtime
+        // languages.
+        String configuredLanguage = yml.getString("language");
+        if (!Language.isSimplifiedChineseIso(configuredLanguage)) {
+            plugin.getLogger().warning("仅支持简体中文，已将 language 配置从 "
+                    + configuredLanguage + " 迁移为 zh_cn。");
+            yml.set("language", Language.SIMPLIFIED_CHINESE_ISO);
+            save();
         }
-        Language def = Language.getLang(whatLang);
+        Language def = Language.getLang(Language.SIMPLIFIED_CHINESE_ISO);
 
-        if (def == null) throw new IllegalStateException("Could not found default language: " + whatLang);
+        if (def == null) {
+            throw new IllegalStateException("未找到简体中文语言配置："
+                    + Language.SIMPLIFIED_CHINESE_ISO);
+        }
         Language.setDefaultLanguage(def);
-
-        //remove languages if disabled
-        //server language can t be disabled
-        for (String iso : yml.getStringList(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES)) {
-            Language l = Language.getLang(iso);
-            if (l != null) {
-                if (l != def) Language.getLanguages().remove(l);
-            }
-        }
-        //
 
         BedWars.setDebug(yml.getBoolean("debug"));
         new ConfigManager(plugin, "bukkit", Bukkit.getWorldContainer().getPath()).set("ticks-per.autosave", -1);
@@ -299,9 +287,9 @@ public class MainConfig extends ConfigManager {
                 "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
                 "名称必须与代理配置一致；Velocity 还需在 velocity.toml 的 [advanced] 中启用 bungee-plugin-message-channel。",
                 "大厅里的“回到主大厅”红床会静默直接发送 Connect 请求，不向玩家显示代理信息；默认 hub。");
-        setComments("language", "服务器默认语言代码，例如 zh_cn。");
+        setComments("language", "服务器语言固定为 zh_cn（简体中文）；旧语言值会自动迁移。");
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
-        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "不允许玩家选择的语言代码列表。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "历史兼容字段；当前版本只提供简体中文，不再加载其他语言。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
                 "可用于匹配和竞技场选择器的全局分组名称。Default 是内置组，无需填写。",
                 "每张地图在 Arenas/<地图>.yml 的 group 中引用一个名称。");

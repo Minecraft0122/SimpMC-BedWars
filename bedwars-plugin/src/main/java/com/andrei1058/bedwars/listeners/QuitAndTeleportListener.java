@@ -22,7 +22,6 @@ package com.andrei1058.bedwars.listeners;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
-import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
@@ -64,18 +63,14 @@ public class QuitAndTeleportListener implements Listener {
             }
         }
 
-        //Save preferred language
+        // Persist the single supported player language. A stale value from an
+        // older proxy/database is migrated to Simplified Chinese on quit.
         if (Language.getLangByPlayer().containsKey(p.getUniqueId())) {
             final UUID u = p.getUniqueId();
-            String iso = Language.getLangByPlayer().remove(u).getIso();
-            if (Language.isLanguageExist(iso)) {
-                if (BedWars.config.getYml().getStringList(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES).contains(iso)) {
-                    iso = Language.getDefaultLanguage().getIso();
-                }
-                String languageToSave = iso;
-                Bukkit.getScheduler().runTaskAsynchronously(plugin,
-                        () -> BedWars.getRemoteDatabase().setLanguage(u, languageToSave));
-            }
+            Language.getLangByPlayer().remove(u);
+            String languageToSave = Language.SIMPLIFIED_CHINESE_ISO;
+            Bukkit.getScheduler().runTaskAsynchronously(plugin,
+                    () -> BedWars.getRemoteDatabase().setLanguage(u, languageToSave));
         }
         // Manage internal parties
         if (getParty().isInternal()) {

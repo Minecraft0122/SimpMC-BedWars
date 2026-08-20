@@ -3,9 +3,11 @@ package com.andrei1058.bedwars.listeners;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.CommandItemAction;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -57,9 +59,23 @@ public final class LobbyProtection implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteract(PlayerInteractEvent event) {
-        if (isProtected(event.getPlayer())) {
+        if (isProtected(event.getPlayer()) && !isProxyLobbyReturn(event.getAction(), event.getItem())) {
             event.setCancelled(true);
         }
+    }
+
+    /**
+     * The proxy return item is a command item, not a build interaction. It
+     * must reach {@link Interact#onItemCommand(PlayerInteractEvent)} even
+     * though the rest of the lobby is protected.
+     */
+    static boolean isProxyLobbyReturn(Action action, ItemStack item) {
+        return isProxyLobbyTarget(action, CommandItemAction.readTarget(item));
+    }
+
+    static boolean isProxyLobbyTarget(Action action, CommandItemAction.Target target) {
+        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return false;
+        return target == CommandItemAction.Target.PROXY_LOBBY;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

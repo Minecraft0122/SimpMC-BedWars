@@ -1779,6 +1779,12 @@ public class Arena implements IArena {
         p.setGameMode(GameMode.ADVENTURE);
         PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
+        // A player leaving an arena may have just had his saved inventory
+        // restored. The BedWars lobby has its own loadout, so clear every
+        // player-inventory slot before rebuilding its command items.
+        p.getInventory().clear();
+        p.getInventory().setArmorContents(null);
+        p.setItemOnCursor(new ItemStack(Material.AIR));
         refreshLobbyCommandItems(p);
         scheduleLobbyItemRecheck(p);
         LobbyAnnouncements.playerEntered(p);
@@ -2926,23 +2932,30 @@ public class Arena implements IArena {
         if (BedWars.getServerType() == ServerType.SHARED) {
             Location loc = playerLocation.get(player);
             if (loc == null) {
-                TeleportManager.teleportC(player, Bukkit.getWorlds().get(0).getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                loc = Bukkit.getWorlds().get(0).getSpawnLocation();
                 plugin.getLogger().log(Level.SEVERE, player.getName() + " was teleported to the main world because lobby location is not set!");
-            } else {
-                TeleportManager.teleportC(player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
             }
+            applyLobbyStateAfterTeleport(player,
+                    TeleportManager.teleportC(player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN));
         } else if (BedWars.getServerType() == ServerType.MULTIARENA) {
             Location lobby = config.getConfigLoc("lobbyLoc");
             if (lobby == null || lobby.getWorld() == null) {
                 lobby = Bukkit.getWorlds().getFirst().getSpawnLocation();
                 plugin.getLogger().log(Level.SEVERE, player.getName() + " was teleported to the main world because lobby location is not set!");
             }
-            CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
-                    player, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
-            }));
+            applyLobbyStateAfterTeleport(player, TeleportManager.teleportC(
+                    player, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN));
         }
+    }
+
+    private static void applyLobbyStateAfterTeleport(Player player, CompletableFuture<Boolean> teleport) {
+        teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+            if (ArenaTransitionPolicy.shouldApplyLobbyStateAfterTeleport(
+                    error == null && Boolean.TRUE.equals(success),
+                    player.isOnline(), isCurrentLobbyPlayer(player))) {
+                enterLobby(player);
+            }
+        }));
     }
 
     public boolean isAllowMapBreak() {
