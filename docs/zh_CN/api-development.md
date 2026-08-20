@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>11.0.1</version>
+    <version>11.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -96,7 +96,7 @@ sidebars.giveSidebar(player, arenaSnapshot, false);
 
 `giveSidebar` 的竞技场参数是调用时快照；实现会在应用前与实时玩家竞技场注册表核对，避免延迟任务把新竞技场面板覆盖成大厅面板。附属插件不应在竞技场内持续调用 `Player#setScoreboard` 与 BedWars 争抢同一面板；若只需扩展内容，应监听 `PlayerSidebarInitEvent` 操作公开的 `ISidebar`。SimpMC-BedWars 离开上下文时会恢复接管前最后观察到的外部 scoreboard。
 
-TAB 队伍色由每个查看者的 scoreboard Team 同时控制 TAB 和头顶名牌；竞技场玩家行不再附加队伍名称或字母。插件只向对应查看者发送 nullable PlayerInfo 名称，不修改目标玩家的全局 `playerListName`，因此附属插件不应再把非空 PlayerInfo 名称强制发送给竞技场查看者，否则客户端会绕过 Team 颜色。
+TAB 玩家行会按查看者语言解析 `{teamName}`、`{teamLetter}` 和 `{teamColor}`；内置模板默认让游戏进行中的存活玩家及结算阶段仍有原队伍归属的玩家，在玩家名前显示带队伍颜色的完整队名。插件只向对应查看者发送“前缀 + 明确队伍色玩家名 + 后缀”的完整 PlayerInfo 显示名，不修改目标玩家的全局 `playerListName`；scoreboard Team 独立负责头顶名牌颜色、碰撞和隐身可见性。附属插件若向同一竞技场查看者持续覆盖 PlayerInfo 显示名，会覆盖 BedWars 的 TAB 文字，应在竞技场上下文中避免争抢该状态。
 
 7.1.0 新增 `PlayerTab.PlayerListMode`。`ACTUAL` 保留目标当前真实模式；`SPECTATOR` 只向其他查看者发送 `UPDATE_GAME_MODE=SPECTATOR`，不会调用 `Player#setGameMode`，适合需要保留 ADVENTURE 交互的自定义旁观行。7.1.1 起，当目标就是 Sidebar 持有者本人时始终保留 Paper 当前真实模式；旧版本缓存过的本人伪模式会立即恢复，避免客户端移动模式与服务器分叉。旧构造器和旧 `Sidebar#playerTabCreate` 重载默认使用 `ACTUAL`；可通过带 `PlayerListMode` 的新重载创建，或对已有行调用 `setPlayerListMode`。Sidebar 释放、被覆盖或删除该行时会从 Paper 当前状态恢复真实模式和第三方 nullable 名称。
 
