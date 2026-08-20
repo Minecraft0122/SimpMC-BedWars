@@ -5,6 +5,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,7 +37,7 @@ class LanguageTabPlayerRowsMigrationTest {
     }
 
     @Test
-    void latestSchemaUsesVisibleTeamNamesForKnownBuiltInTeamLabels() {
+    void olderSchemaMigratesKnownBuiltInTeamLabelsToVisibleTeamNames() {
         YamlConfiguration language = new YamlConfiguration();
         language.set(ConfigManager.CONFIG_VERSION_PATH, 5);
         language.set(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX,
@@ -69,18 +70,23 @@ class LanguageTabPlayerRowsMigrationTest {
     }
 
     @Test
-    void latestSchemaPreservesAdministratorPlayerRows() {
+    void migrationPreservesAdministratorPlayerRows() {
         YamlConfiguration language = new YamlConfiguration();
         language.set(ConfigManager.CONFIG_VERSION_PATH, 5);
-        List<String> customPrefix = List.of("&d[联赛] {teamColor}{teamName} ");
+        Map<String, List<String>> customPrefixes = Map.of(
+                Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("&d[联赛] {teamColor}{teamName} "),
+                Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, List.of("&6冠军 {teamName} "),
+                Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, List.of("&7已淘汰冠军 {teamLetter} "),
+                Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, List.of("&c败方 {teamColor} ")
+        );
         List<String> customSuffix = List.of(" &e自定义");
-        language.set(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, customPrefix);
+        customPrefixes.forEach(language::set);
         language.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX, customSuffix);
 
         assertTrue(ConfigManager.applyVersionedMigration(language, 9,
                 Language::migrateBuiltInTabPlayerRows));
 
-        assertEquals(customPrefix, language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
+        customPrefixes.forEach((path, expected) -> assertEquals(expected, language.getStringList(path), path));
         assertEquals(customSuffix, language.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX));
     }
 
