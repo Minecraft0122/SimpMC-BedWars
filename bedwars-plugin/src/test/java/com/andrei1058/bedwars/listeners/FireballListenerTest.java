@@ -99,6 +99,13 @@ class FireballListenerTest {
     }
 
     @Test
+    void teammateFireballsNeverDealDamage() {
+        assertFalse(FireballListener.shouldDamageTarget(false, true));
+        assertTrue(FireballListener.shouldDamageTarget(false, false));
+        assertFalse(FireballListener.shouldDamageTarget(true, false));
+    }
+
+    @Test
     void cancelsAllNativeDamageButKeepsTheMarkedCustomExplosion() {
         assertTrue(FireballListener.shouldCancelDirectHit(false, false));
         assertTrue(FireballListener.shouldCancelDirectHit(true, false));

@@ -70,7 +70,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_FIREBALL_COOLDOWN, "连续使用火球的冷却时间，单位为秒；默认 0.4，持续射速约每秒 2.5 发。", "按发射时刻计算，一个 1 秒窗口内通常可以发射 2 至 3 个火球。");
         comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, "火球对发射者造成的伤害。");
         comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, "火球对敌人造成的伤害；2.10.20 默认值略微降低为 3.5。");
-        comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES, "火球对队友造成的伤害；0 表示不伤害队友。");
+        comment(config, ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES, "历史兼容字段；当前版本火球不会对队友造成伤害，管理员可保留原值。");
         comment(config, "database.enable", "数据存储设置：关闭时使用 SQLite，开启时连接 MySQL。", "修改连接信息后必须完整重启，切勿公开数据库密码。");
         comment(config, "database.pass", "MySQL 专用账户密码；不要沿用示例值，也不要提交到公开仓库。");
         comment(config, "database.ssl", "MySQL 连接是否启用 TLS；远程数据库建议开启并限制允许连接的来源地址。");

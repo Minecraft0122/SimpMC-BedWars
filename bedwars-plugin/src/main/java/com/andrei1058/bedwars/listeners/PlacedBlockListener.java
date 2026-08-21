@@ -31,6 +31,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockFadeEvent;
+import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockMultiPlaceEvent;
 import org.bukkit.event.block.BlockPistonEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
@@ -117,14 +118,59 @@ public final class PlacedBlockListener implements Listener {
         scheduleDestructionReconciliation(arenaAt(event.getBlock()), List.of(event.getBlock()));
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPistonExtend(BlockPistonExtendEvent event) {
         protectMapFromPiston(event);
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPistonRetract(BlockPistonRetractEvent event) {
         protectMapFromPiston(event);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onFluidFlow(BlockFromToEvent event) {
+        IArena arena = arenaAt(event.getBlock());
+        if (arena == null || arena.getStatus() != GameState.playing) return;
+        // Player-placed fluids may still flow normally. Only an original map
+        // fluid source or a non-air original block may be changed by a flow;
+        // this prevents erosion without disabling water/lava gameplay.
+        Block destination = event.getToBlock();
+        if (shouldCancelFluidFlow(arena.isBlockPlaced(event.getBlock()), destination.getType().isAir(),
+                arena.isBlockPlaced(destination), arena.isAllowMapBreak())) {
+            event.setCancelled(true);
+            return;
+        }
+        if (arena.isBlockPlaced(event.getBlock())) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (!event.isCancelled() && arena.getStatus() == GameState.playing
+                        && !destination.getType().isAir()) {
+                    arena.addPlacedBlock(destination);
+                }
+            });
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void protectOriginalFallingBlock(EntityChangeBlockEvent event) {
+        if (!(event.getEntity() instanceof FallingBlock fallingBlock)
+                || event.getTo() == Material.AIR
+                || fallingBlock.hasMetadata(PLAYER_PLACED_FALLING_BLOCK)) return;
+        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
+        if (arena != null && arena.getStatus() == GameState.playing && !arena.isAllowMapBreak()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void protectOriginalEntityChangeBlock(EntityChangeBlockEvent event) {
+        if (event.getEntity() instanceof FallingBlock) return;
+        IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
+        if (arena != null && shouldCancelEntityChange(
+                !arena.isBlockPlaced(event.getBlock()), arena.isAllowMapBreak(),
+                arena.getStatus() == GameState.playing)) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -217,6 +263,21 @@ public final class PlacedBlockListener implements Listener {
         return !finalStateIsAir;
     }
 
+    static boolean shouldCancelFluidFlow(boolean sourcePlaced, boolean destinationAir,
+                                         boolean destinationPlaced, boolean allowMapBreak) {
+        return !allowMapBreak && (!sourcePlaced || (!destinationAir && !destinationPlaced));
+    }
+
+    static boolean shouldCancelPiston(boolean pistonPlaced, boolean movedOriginalBlock,
+                                      boolean allowMapBreak, boolean playing) {
+        return playing && (!allowMapBreak || !pistonPlaced || movedOriginalBlock);
+    }
+
+    static boolean shouldCancelEntityChange(boolean originalBlock, boolean allowMapBreak,
+                                             boolean playing) {
+        return playing && originalBlock && !allowMapBreak;
+    }
+
     private static void scheduleDestructionReconciliation(IArena arena, Collection<Block> blocks) {
         if (arena == null) return;
         Set<TrackedBlockSnapshot> snapshots = captureTrackedBlocks(arena, blocks);
@@ -304,7 +365,14 @@ public final class PlacedBlockListener implements Listener {
 
     private static void protectMapFromPiston(BlockPistonEvent event) {
         IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
-        if (arena != null && !arena.isAllowMapBreak()) event.setCancelled(true);
+        if (arena == null || arena.getStatus() != GameState.playing) return;
+        boolean movedOriginal = event instanceof BlockPistonExtendEvent extend
+                && extend.getBlocks().stream().anyMatch(block -> !arena.isBlockPlaced(block));
+        if (event instanceof BlockPistonRetractEvent retract) {
+            movedOriginal = retract.getBlocks().stream().anyMatch(block -> !arena.isBlockPlaced(block));
+        }
+        if (shouldCancelPiston(arena.isBlockPlaced(event.getBlock()), movedOriginal,
+                arena.isAllowMapBreak(), true)) event.setCancelled(true);
     }
 
     private record PlacementSnapshot(Block block, BlockData replacedData, boolean wasTracked) {

@@ -456,6 +456,7 @@ public class BreakPlace implements Listener {
     @EventHandler
     public void onBucketFill(PlayerBucketFillEvent e) {
         if (e.isCancelled()) return;
+        Block clickedBlock = e.getBlockClicked();
         IArena worldArena = Arena.getArenaByIdentifier(e.getBlockClicked().getWorld().getName());
         IArena playerArena = Arena.getArenaByPlayer(e.getPlayer());
         if (worldArena != playerArena && (worldArena != null || playerArena != null)) {
@@ -473,6 +474,13 @@ public class BreakPlace implements Listener {
         if (a != null) {
             if (a.isSpectator(e.getPlayer()) || a.getStatus() != GameState.playing || a.getRespawnSessions().containsKey(e.getPlayer()))
                 e.setCancelled(true);
+            if (!e.isCancelled() && a.isBlockPlaced(clickedBlock)) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (a.getStatus() == GameState.playing && clickedBlock.getType().isAir()) {
+                        a.removePlacedBlock(clickedBlock);
+                    }
+                });
+            }
         }
     }
 
@@ -524,6 +532,21 @@ public class BreakPlace implements Listener {
                 e.setCancelled(true);
                 p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
                 return;
+            }
+
+            // Bucket placement does not emit BlockPlaceEvent. Track the
+            // source block after the server applies it so subsequent fluid
+            // flow is treated as player-built rather than map erosion.
+            if (e.getBucket() == Material.WATER || e.getBucket() == Material.LAVA) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    // Other listeners may cancel this event after our normal
+                    // priority handler. Only claim the source block when the
+                    // final event state actually placed liquid.
+                    if (!e.isCancelled() && a.getStatus() == GameState.playing
+                            && !waterBlock.getType().isAir()) {
+                        a.addPlacedBlock(waterBlock);
+                    }
+                });
             }
 
             // Remove one empty bucket from player's hand after a short delay

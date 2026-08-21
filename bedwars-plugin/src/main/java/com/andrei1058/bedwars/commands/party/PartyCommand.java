@@ -46,6 +46,12 @@ public class PartyCommand extends BukkitCommand {
     //owner, target
     private static HashMap<UUID, UUID> partySessionRequest = new HashMap<>();
 
+    public static void clearPlayer(UUID playerId) {
+        if (playerId == null) return;
+        partySessionRequest.entrySet().removeIf(entry -> entry.getKey().equals(playerId)
+                || entry.getValue().equals(playerId));
+    }
+
     @Override
     public boolean execute(CommandSender s, String c, String[] args) {
         if (s instanceof ConsoleCommandSender) return true;
@@ -62,10 +68,6 @@ public class PartyCommand extends BukkitCommand {
             case "invite":
                 if (args.length == 1) {
                     p.sendMessage(getMsg(p, Messages.COMMAND_PARTY_INVITE_USAGE));
-                    return true;
-                }
-                if (getParty().hasParty(p) && !getParty().isOwner(p)) {
-                    p.sendMessage(getMsg(p, Messages.COMMAND_PARTY_INSUFFICIENT_PERMISSIONS));
                     return true;
                 }
                 if (Bukkit.getPlayer(args[1]) != null && Bukkit.getPlayer(args[1]).isOnline()) {
@@ -196,6 +198,10 @@ public class PartyCommand extends BukkitCommand {
                     return true;
                 }
                 Player owner = getParty().getOwner(p);
+                if (owner == null) {
+                    p.sendMessage(getMsg(p, Messages.COMMAND_PARTY_GENERAL_DENIED_NOT_IN_PARTY));
+                    return true;
+                }
                 p.sendMessage(getMsg(p, Messages.COMMAND_PARTY_INFO_OWNER).replace("{owner}", owner.getName()));
                 p.sendMessage(getMsg(p, Messages.COMMAND_PARTY_INFO_PLAYERS));
                 for (Player p1 : getParty().getMembers(owner)) {

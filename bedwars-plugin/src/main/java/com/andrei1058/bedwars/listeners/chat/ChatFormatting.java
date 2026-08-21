@@ -41,6 +41,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Set;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -48,10 +49,14 @@ import static com.andrei1058.bedwars.api.language.Language.getPlayerLanguage;
 
 public class ChatFormatting implements Listener {
 
+    private static final Set<Character> SHOUT_PREFIXES = Set.of('@', '!', '！', '#', '%', '&');
+
     @EventHandler(ignoreCancelled = true)
     public void onChat(AsyncPlayerChatEvent e) {
         if (e == null) return;
         Player p = e.getPlayer();
+        String incomingMessage = e.getMessage();
+        boolean shoutPrefix = isShouting(incomingMessage);
 
         // in shared mode we don't want messages from outside the arena to be seen in game
         if (getServerType() == ServerType.SHARED && Arena.getArenaByPlayer(p) == null) {
@@ -60,7 +65,7 @@ public class ChatFormatting implements Listener {
         }
 
         // handle chat color. we would need to work on permission inheritance
-        if (Permissions.hasPermission(p, Permissions.PERMISSION_CHAT_COLOR, Permissions.PERMISSION_VIP, Permissions.PERMISSION_ALL)) {
+        if (!shoutPrefix && Permissions.hasPermission(p, Permissions.PERMISSION_CHAT_COLOR, Permissions.PERMISSION_VIP, Permissions.PERMISSION_ALL)) {
             e.setMessage(ChatColor.translateAlternateColorCodes('&', e.getMessage()));
         }
 
@@ -77,33 +82,31 @@ public class ChatFormatting implements Listener {
 
             // spectator chat
             if (a.isSpectator(p)) {
-                setRecipients(e, a.getSpectators());
+                // Keep the existing spectator channel, but never let it fall
+                // through to active players when global chat is enabled.
+                restrictRecipients(e, a.getSpectators());
                 e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_SPECTATOR), p, null));
                 return;
             }
 
-            // arena lobby chat
-            if (a.getStatus() == GameState.waiting || a.getStatus() == GameState.starting) {
-                setRecipients(e, a.getPlayers());
-                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_WAITING), p, null));
-                return;
-            }
-
-            ITeam team = a.getTeam(p);
-            String msg = e.getMessage();
-
-            // shout format
-            if (isShouting(msg, language)) {
+            // Prefix-based shout and /hh,/h all use the same public route,
+            // including the waiting/starting phase.
+            if (shoutPrefix) {
                 if (!hasShoutPermission(p)) {
                     e.setCancelled(true);
                     p.sendMessage(language.m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
                     return;
                 }
-                setRecipients(e, a.getPlayers(), a.getSpectators());
-                msg = clearShout(msg, language);
+                ITeam team = a.getTeam(p);
+                setRecipients(e, a.getPlayers());
+                excludeArenaSpectators(e);
+                String msg = clearShout(incomingMessage);
                 if (msg.isEmpty()) {
                     e.setCancelled(true);
                     return;
+                }
+                if (Permissions.hasPermission(p, Permissions.PERMISSION_CHAT_COLOR, Permissions.PERMISSION_VIP, Permissions.PERMISSION_ALL)) {
+                    msg = ChatColor.translateAlternateColorCodes('&', msg);
                 }
                 e.setMessage(msg);
                 e.setFormat(ShoutFormattingContext.format(p,
@@ -111,13 +114,26 @@ public class ChatFormatting implements Listener {
                 return;
             }
 
+            // arena lobby chat
+            if (a.getStatus() == GameState.waiting || a.getStatus() == GameState.starting) {
+                setRecipients(e, a.getPlayers());
+                excludeArenaSpectators(e);
+                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_WAITING), p, null));
+                return;
+            }
+
+            ITeam team = a.getTeam(p);
+            String msg = incomingMessage;
+
             // A team that started alone has nobody to receive private chat.
             // Use public arena chat without requiring /shout.
             if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
-                setRecipients(e, a.getPlayers(), a.getSpectators());
+                setRecipients(e, a.getPlayers());
+                excludeArenaSpectators(e);
                 e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team));
             } else {
                 setRecipients(e, team.getMembers());
+                excludeArenaSpectators(e);
                 e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             }
             return;
@@ -165,9 +181,8 @@ public class ChatFormatting implements Listener {
                 + content.substring(messageIndex + "{message}".length());
     }
 
-    private static boolean isShouting(String msg, Language lang) {
-        return msg.startsWith("!") || msg.startsWith("shout") ||
-                msg.startsWith("SHOUT") || msg.startsWith(lang.m(Messages.MEANING_SHOUT));
+    static boolean isShouting(String msg) {
+        return msg != null && !msg.isEmpty() && SHOUT_PREFIXES.contains(msg.charAt(0));
     }
 
     static boolean hasShoutPermission(CommandSender sender) {
@@ -178,14 +193,8 @@ public class ChatFormatting implements Listener {
         return teamSizeAtGameStart <= 1;
     }
 
-    private static String clearShout(String msg, Language lang) {
-        if (msg.startsWith("!")) msg = msg.replaceFirst("!", "");
-        if (msg.startsWith("SHOUT")) msg = msg.replaceFirst("SHOUT", "");
-        if (msg.startsWith("shout")) msg = msg.replaceFirst("shout", "");
-        if (msg.startsWith(lang.m(Messages.MEANING_SHOUT))) {
-            msg = msg.replaceFirst(lang.m(Messages.MEANING_SHOUT), "");
-        }
-        return msg.trim();
+    static String clearShout(String msg) {
+        return isShouting(msg) ? msg.substring(1).trim() : msg.trim();
     }
 
     @SafeVarargs
@@ -196,5 +205,17 @@ public class ChatFormatting implements Listener {
                 event.getRecipients().addAll(list);
             }
         }
+    }
+
+    private static void excludeArenaSpectators(AsyncPlayerChatEvent event) {
+        event.getRecipients().removeIf(recipient -> {
+            IArena arena = Arena.getArenaByPlayer(recipient);
+            return arena != null && arena.isSpectator(recipient);
+        });
+    }
+
+    private static void restrictRecipients(AsyncPlayerChatEvent event, List<Player> allowed) {
+        event.getRecipients().clear();
+        event.getRecipients().addAll(allowed);
     }
 }

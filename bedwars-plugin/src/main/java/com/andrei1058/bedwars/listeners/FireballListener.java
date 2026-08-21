@@ -41,7 +41,6 @@ public class FireballListener implements Listener {
 
     private final double damageSelf;
     private final double damageEnemy;
-    private final double damageTeammates;
     private final Set<DamageKey> activeCustomExplosions = new HashSet<>();
 
     public FireballListener() {
@@ -57,7 +56,6 @@ public class FireballListener implements Listener {
 
         this.damageSelf = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF);
         this.damageEnemy = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY);
-        this.damageTeammates = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES);
     }
 
     @EventHandler
@@ -101,14 +99,8 @@ public class FireballListener implements Listener {
                 if (damageSelf > 0) {
                     player.damage(damageSelf, unattributedExplosion); // damage shooter without kill credit
                 }
-            } else if (teammate) {
-                if (damageTeammates > 0) {
-                    player.damage(damageTeammates, unattributedExplosion); // do not credit friendly fire
-                }
-            } else {
-                if (damageEnemy > 0) {
-                    damageEnemy(player, fireball, playerExplosion);
-                }
+            } else if (shouldDamageTarget(self, teammate) && damageEnemy > 0) {
+                damageEnemy(player, fireball, playerExplosion);
             }
         }
     }
@@ -165,7 +157,9 @@ public class FireballListener implements Listener {
     static boolean isWithinExplosionRadius(Vector explosion, Vector player, double radius) {
         if (explosion == null || player == null || !Double.isFinite(radius) || radius < 0D) return false;
         double distanceSquared = explosion.distanceSquared(player);
-        return Double.isFinite(distanceSquared) && distanceSquared <= radius * radius;
+        double radiusSquared = radius > Math.sqrt(Double.MAX_VALUE)
+                ? Double.MAX_VALUE : radius * radius;
+        return Double.isFinite(distanceSquared) && distanceSquared <= radiusSquared;
     }
 
     static double normalizeExplosionSize(double value) {
@@ -177,6 +171,10 @@ public class FireballListener implements Listener {
     }
 
     static boolean shouldCreditShooter(boolean self, boolean teammate) {
+        return !self && !teammate;
+    }
+
+    static boolean shouldDamageTarget(boolean self, boolean teammate) {
         return !self && !teammate;
     }
 

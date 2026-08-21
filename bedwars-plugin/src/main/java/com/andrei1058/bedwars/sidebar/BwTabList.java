@@ -320,7 +320,7 @@ public class BwTabList {
                     throw new IllegalStateException("Unhandled game status!");
             }
             PlayerTab t = handle.playerTabCreate(
-                    playerTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
+                    playerTabId, player, prefix, suffix, PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
                     this.sidebar.getPlaceholders(player), getPlayerListColor(team)
             );
             deployedPerPlayerTabList.put(player.getUniqueId(), t);

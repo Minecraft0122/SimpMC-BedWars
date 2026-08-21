@@ -64,9 +64,15 @@ public class CmdProcess implements Listener {
     }
 
     static boolean isAllowedInArena(String command, List<?> configuredCommands) {
-        if (command.equalsIgnoreCase("shout")) return true;
+        if (isShoutCommand(command)) return true;
         return configuredCommands.stream()
                 .map(String::valueOf)
                 .anyMatch(command::equalsIgnoreCase);
+    }
+
+    private static boolean isShoutCommand(String command) {
+        return command.equalsIgnoreCase("shout")
+                || command.equalsIgnoreCase("hh")
+                || command.equalsIgnoreCase("h");
     }
 }

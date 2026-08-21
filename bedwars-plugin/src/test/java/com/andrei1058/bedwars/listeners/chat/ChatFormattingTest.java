@@ -47,6 +47,17 @@ class ChatFormattingTest {
         assertFalse(ChatFormatting.usesPublicChannel(4));
     }
 
+    @Test
+    void acceptsOnlyTheConfiguredPublicChatPrefixes() {
+        for (String prefix : new String[]{"@", "!", "！", "#", "%", "&"}) {
+            assertTrue(ChatFormatting.isShouting(prefix + "消息"), prefix);
+            assertEquals("消息", ChatFormatting.clearShout(prefix + " 消息"));
+        }
+        assertFalse(ChatFormatting.isShouting("shout 消息"));
+        assertFalse(ChatFormatting.isShouting("公屏 消息"));
+        assertFalse(ChatFormatting.isShouting("消息"));
+    }
+
     private static CommandSender sender(String... permissions) {
         Set<String> granted = Set.of(permissions);
         return (CommandSender) Proxy.newProxyInstance(CommandSender.class.getClassLoader(),

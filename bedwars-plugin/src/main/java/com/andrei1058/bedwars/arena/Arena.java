@@ -54,6 +54,7 @@ import com.andrei1058.bedwars.arena.stats.GameStatsManager;
 import com.andrei1058.bedwars.arena.stats.StatisticsOrdered;
 import com.andrei1058.bedwars.arena.tasks.GamePlayingTask;
 import com.andrei1058.bedwars.arena.tasks.GameRestartingTask;
+import com.andrei1058.bedwars.arena.matchmaking.ArenaInvitePolicy;
 import com.andrei1058.bedwars.arena.tasks.GameStartingTask;
 import com.andrei1058.bedwars.arena.tasks.ReJoinTask;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
@@ -439,12 +440,35 @@ public class Arena implements IArena {
      * @return true if was added.
      */
     public boolean addPlayer(Player p, boolean skipOwnerCheck) {
+        return addPlayerInternal(p, skipOwnerCheck, false);
+    }
+
+    /**
+     * Add a player which has just been detached from another waiting arena.
+     * The player's {@link PlayerGoods} vault and lobby state stay intact; this
+     * avoids the old arena's asynchronous lobby teleport racing the new join.
+     */
+    boolean addTransferredPreGamePlayer(Player p) {
+        return addPlayerInternal(p, true, true);
+    }
+
+    private boolean canAcceptPreGamePlayer() {
+        return ArenaInvitePolicy.canAcceptPlayer(this);
+    }
+
+    private boolean addPlayerInternal(Player p, boolean skipOwnerCheck, boolean transferredPreGame) {
         if (p == null) return false;
         debug("Player added: " + p.getName() + " arena: " + getArenaName());
         /* used for base enter/leave event */
         isOnABase.remove(p);
         //
-        if (getArenaByPlayer(p) != null) {
+        if (!transferredPreGame && getArenaByPlayer(p) != null) {
+            return false;
+        }
+        // A pre-game transfer must never fall through into the common cleanup
+        // path when the countdown changes between invite validation and join.
+        // Normal joins may still enter spectator mode once the game is playing.
+        if (!canAcceptPreGamePlayer() && (transferredPreGame || status != GameState.playing)) {
             return false;
         }
         if (getParty().hasParty(p)) {
@@ -483,7 +507,7 @@ public class Arena implements IArena {
 
         ArenaDepartureGuard.restore(leaving, p);
 
-        if (status == GameState.waiting || (status == GameState.starting && (startingTask != null && startingTask.getCountdown() > 1))) {
+        if (canAcceptPreGamePlayer()) {
             if (players.size() >= maxPlayers && !isVip(p)) {
                 TextComponent text = new TextComponent(getMsg(p, Messages.COMMAND_JOIN_DENIED_IS_FULL));
                 text.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, config.getYml().getString("storeLink")));
@@ -542,8 +566,10 @@ public class Arena implements IArena {
 
             /* save player inventory etc */
             if (getServerType() != ServerType.BUNGEE) {
-                new PlayerGoods(p, true);
-                playerLocation.put(p, p.getLocation());
+                if (!transferredPreGame) {
+                    new PlayerGoods(p, true);
+                    playerLocation.put(p, p.getLocation());
+                }
             }
             TeleportManager.teleportC(p, getWaitingLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
 
@@ -557,9 +583,13 @@ public class Arena implements IArena {
             for (PotionEffect pf : p.getActivePotionEffects()) {
                 p.removePotionEffect(pf.getType());
             }
-        } else if (status == GameState.playing) {
+        } else if (status == GameState.playing && !transferredPreGame) {
             addSpectator(p, false, null);
             /* stop code if status playing*/
+            return false;
+        } else {
+            // The state may have changed while party/event hooks ran. Do not
+            // report success or clear a source arena for a failed transfer.
             return false;
         }
 
@@ -592,6 +622,48 @@ public class Arena implements IArena {
         refreshSigns();
         JoinNPC.updateNPCs(getGroup());
         return true;
+    }
+
+    /**
+     * Move a player between two waiting/starting arenas without sending them
+     * through the main lobby. Both arenas must be concrete instances because
+     * the transfer relies on their lifecycle bookkeeping.
+     */
+    public boolean transferPreGamePlayer(@NotNull Player player, @NotNull Arena target) {
+        if (target == this || !isPlayer(player)
+                || !ArenaInvitePolicy.canAcceptPlayer(this)
+                || !ArenaInvitePolicy.canAcceptPlayer(target)
+                || target.getPlayers().size() >= target.getMaxPlayers()) return false;
+
+        if (!ArenaDepartureGuard.tryBegin(leaving, player)) return false;
+        Bukkit.getPluginManager().callEvent(new PlayerLeaveArenaEvent(player, this, null));
+        respawnSessions.remove(player);
+        Arena.afkCheck.remove(player.getUniqueId());
+        BedWars.getAPI().getAFKUtil().setPlayerAFK(player, false);
+        InvisibilityManager.remove(this, player);
+        if (player.getPassenger() != null && player.getPassenger().getType() == EntityType.ARMOR_STAND) {
+            player.getPassenger().remove();
+        }
+        players.remove(player);
+        removeArenaByPlayer(player, this);
+        isOnABase.remove(player);
+        if (status == GameState.starting) reevaluateStartEligibility();
+
+        if (target.addTransferredPreGamePlayer(player) && target.isPlayer(player)) {
+            ArenaDepartureGuard.restore(leaving, player);
+            return true;
+        }
+
+        // Restore the full pre-game lifecycle if a target-side join event vetoed the move.
+        if (addTransferredPreGamePlayer(player)) return false;
+
+        // This is only a last-resort guard for a third-party listener which
+        // vetoes both arenas; never leave a player with a dangling mapping.
+        ArenaDepartureGuard.restore(leaving, player);
+        players.add(player);
+        setArenaByPlayer(player, this);
+        reevaluateStartEligibility();
+        return false;
     }
 
     /**
@@ -946,20 +1018,6 @@ public class Arena implements IArena {
             }, 5L);
         }
 
-        /* Remove also the party */
-        if (getParty().hasParty(p)) {
-            if (getParty().isOwner(p)) {
-                if (status != GameState.restarting) {
-                    if (getParty().isInternal()) {
-                        for (Player mem : new ArrayList<>(getParty().getMembers(p))) {
-                            mem.sendMessage(getMsg(mem, Messages.ARENA_LEAVE_PARTY_DISBANDED));
-                        }
-                    }
-                    getParty().disband(p);
-
-                }
-            }
-        }
         PlayerMotion.disableFlight(p);
 
         //Remove from ReJoin if game ended
@@ -983,19 +1041,6 @@ public class Arena implements IArena {
 
         refreshSigns();
         JoinNPC.updateNPCs(getGroup());
-
-        // fix #340
-        // remove player from party if leaves and the owner is still in the arena while waiting or starting
-        if (status == GameState.waiting || status == GameState.starting) {
-            if (BedWars.getParty().hasParty(p) && !BedWars.getParty().isOwner(p)) {
-                for (Player pl : BedWars.getParty().getMembers(p)) {
-                    if (BedWars.getParty().isOwner(pl) && pl.getWorld().getName().equalsIgnoreCase(getArenaName())) {
-                        BedWars.getParty().removeFromParty(p);
-                        break;
-                    }
-                }
-            }
-        }
 
         if (lastHit != null) {
             lastHit.remove();
@@ -1059,20 +1104,6 @@ public class Arena implements IArena {
                 }
                 SidebarService.getInstance().giveSidebar(p, null, false);
             });
-        }
-
-        /* Remove also the party */
-        if (getParty().hasParty(p)) {
-            if (getParty().isOwner(p)) {
-                if (status != GameState.restarting) {
-                    if (getParty().isInternal()) {
-                        for (Player mem : new ArrayList<>(getParty().getMembers(p))) {
-                            mem.sendMessage(getMsg(mem, Messages.ARENA_LEAVE_PARTY_DISBANDED));
-                        }
-                    }
-                    getParty().disband(p);
-                }
-            }
         }
 
         PlayerMotion.disableFlight(p);

@@ -81,10 +81,14 @@ final class TeamAllocationPlanner {
             if (sourceGroup == null || sourceGroup.isEmpty()) continue;
             playerCount += sourceGroup.size();
             if (sourceGroup.size() > capacity) {
-                for (T player : sourceGroup) {
-                    List<T> singlePlayer = new ArrayList<>(1);
-                    singlePlayer.add(player);
-                    groups.add(singlePlayer);
+                // An oversized permanent party cannot fit in one team. Split
+                // it into random capacity-sized blocks so each block remains
+                // together instead of scattering every member independently.
+                List<T> shuffledGroup = new ArrayList<>(sourceGroup);
+                Collections.shuffle(shuffledGroup, random);
+                for (int start = 0; start < shuffledGroup.size(); start += capacity) {
+                    groups.add(new ArrayList<>(shuffledGroup.subList(
+                            start, Math.min(start + capacity, shuffledGroup.size()))));
                 }
             } else {
                 groups.add(new ArrayList<>(sourceGroup));

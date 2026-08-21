@@ -29,6 +29,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.arena.matchmaking.ArenaInviteManager;
 import com.andrei1058.bedwars.commands.bedwars.subcmds.regular.CmdStats;
+import com.andrei1058.bedwars.commands.party.PartyCommand;
 import com.andrei1058.bedwars.sidebar.SidebarService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -78,6 +79,7 @@ public class QuitAndTeleportListener implements Listener {
                 getParty().removeFromParty(p);
             }
         }
+        PartyCommand.clearPlayer(p.getUniqueId());
         // Check if was doing a setup and remove the session
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss != null) {

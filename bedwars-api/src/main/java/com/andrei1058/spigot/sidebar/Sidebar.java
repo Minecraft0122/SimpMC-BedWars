@@ -630,6 +630,14 @@ public class Sidebar {
         if (team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
             team.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
         }
+        // FOR_OTHER_TEAMS prevents members of the same scoreboard team from
+        // colliding while retaining normal enemy-team pushing. Spectator and
+        // explicitly non-pushing rows use NEVER.
+        Team.OptionStatus collision = tab.getPushingRule() == PlayerTab.PushingRule.PUSH_OTHER_TEAMS
+                ? Team.OptionStatus.FOR_OTHER_TEAMS : Team.OptionStatus.NEVER;
+        if (team.getOption(Team.Option.COLLISION_RULE) != collision) {
+            team.setOption(Team.Option.COLLISION_RULE, collision);
+        }
         if (!team.hasEntry(tab.getPlayer().getName())) {
             team.addEntry(tab.getPlayer().getName());
         }

@@ -253,7 +253,7 @@ public class BedWars extends JavaPlugin {
         registerEvents(
                 new EnderPearlLanded(), new QuitAndTeleportListener(), new ArenaWorldProtection(), new BreakPlace(),
                 new PlacedBlockListener(), new DamageDeathMove(),
-                new Inventory(), new Interact(), new LobbyProtection(), new RefreshGUI(), new HungerWeatherSpawn(), new CmdProcess(),
+                new Inventory(), new Interact(), new LobbyProtection(), new LobbyPortalListener(), new RefreshGUI(), new HungerWeatherSpawn(), new CmdProcess(),
                 new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(),
                 new TargetListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -77,5 +79,10 @@ class PermissionManifestTest {
                 "ordinary players should be able to use /shout without an extra grant");
         assertTrue(description.getCommands().containsKey("shout"),
                 "/shout must be declared so Bukkit always routes it to the plugin");
+        Object shoutCommand = description.getCommands().get("shout");
+        assertTrue(shoutCommand instanceof Map<?, ?> command
+                        && command.get("aliases") instanceof Collection<?> aliases
+                        && aliases.containsAll(Set.of("hh", "h")),
+                "/hh and /h must route through the same shout command");
     }
 }

@@ -13,6 +13,8 @@ class CmdProcessTest {
     void shoutIsAlwaysAvailableToArenaPlayers() {
         assertTrue(CmdProcess.isAllowedInArena("shout", List.of()));
         assertTrue(CmdProcess.isAllowedInArena("SHOUT", List.of("bw", "leave")));
+        assertTrue(CmdProcess.isAllowedInArena("hh", List.of()));
+        assertTrue(CmdProcess.isAllowedInArena("H", List.of()));
     }
 
     @Test

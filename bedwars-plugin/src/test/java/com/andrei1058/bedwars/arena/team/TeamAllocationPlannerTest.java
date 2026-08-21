@@ -38,6 +38,20 @@ class TeamAllocationPlannerTest {
     }
 
     @Test
+    void keepsOversizedPartyMembersInRandomCapacityBlocks() {
+        List<List<String>> allocation = TeamAllocationPlanner.allocate(
+                List.of(List.of("A", "B", "C", "D", "E", "F")), 2, 4, new Random(17));
+
+        assertEquals(List.of(4, 2), allocation.stream()
+                .map(List::size)
+                .sorted(java.util.Comparator.reverseOrder())
+                .toList());
+        assertTrue(allocation.stream().anyMatch(team -> team.size() == 4
+                && team.stream().allMatch(Set.of("A", "B", "C", "D", "E", "F")::contains)));
+        assertEquals(Set.of("A", "B", "C", "D", "E", "F"), flatten(allocation));
+    }
+
+    @Test
     void rejectsPlayersBeyondArenaCapacity() {
         assertThrows(IllegalArgumentException.class, () -> TeamAllocationPlanner.allocate(
                 List.of(List.of("A", "B", "C")), 1, 2, new Random(1)));

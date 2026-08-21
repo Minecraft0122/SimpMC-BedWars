@@ -236,6 +236,6 @@ class SimplifiedChineseMigrationTest {
 
         SimplifiedChinese.migrateCommandHelp(language, "bw");
 
-        assertTrue(language.getStringList(Messages.COMMAND_MAIN).contains("&2▪ &7/bw invite &o<大厅玩家>"));
+        assertTrue(language.getStringList(Messages.COMMAND_MAIN).contains("&2▪ &7/bw invite &o<大厅或未开局竞技场玩家>"));
     }
 }

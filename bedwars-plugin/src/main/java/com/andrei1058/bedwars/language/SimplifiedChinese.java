@@ -65,7 +65,7 @@ public class SimplifiedChinese extends Language {
             yml.set("player-die-knocked-final", null);
         }
 
-        yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<游戏/模式>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " invite &o<大厅玩家>", "&2▪ &7/" + mainCmd + " start &3（赞助者）"));
+        yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<游戏/模式>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/" + mainCmd + " start &3（赞助者）"));
         yml.addDefault(Messages.COMMAND_LANG_LIST_HEADER, "{prefix} &2可用的语言：");
         yml.addDefault(Messages.COMMAND_LANG_LIST_FORMAT, "&a▪  &7{iso} - &f{name}");
         yml.addDefault(Messages.COMMAND_LANG_USAGE, "{prefix}&用法：/lang &f&o<iso>");
@@ -1166,7 +1166,7 @@ public class SimplifiedChinese extends Language {
     static void migrateCommandHelp(YamlConfiguration yml, String commandName) {
         replaceListIfEqual(yml, Messages.COMMAND_MAIN,
                 List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " start &3（赞助者）"),
-                List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " invite &o<大厅玩家>", "&2▪ &7/" + commandName + " start &3（赞助者）"));
+                List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/" + commandName + " start &3（赞助者）"));
     }
 
     static void migrateCurrentMessageDefaults(YamlConfiguration yml) {

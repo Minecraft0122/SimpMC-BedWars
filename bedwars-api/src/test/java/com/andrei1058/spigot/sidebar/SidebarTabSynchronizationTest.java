@@ -58,6 +58,15 @@ class SidebarTabSynchronizationTest {
         sidebar.applyTab(scoreboard, unchanged);
         assertEquals(0, state.writeCount);
 
+        TeamState pushingState = new TeamState("Alice");
+        Sidebar pushingSidebar = sidebar();
+        Scoreboard pushingScoreboard = scoreboard(team(pushingState));
+        PlayerTab pushing = new PlayerTab("Alice-pushing", player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.WHITE,
+                PlayerTab.NameTagVisibility.ALWAYS);
+        pushingSidebar.applyTab(pushingScoreboard, pushing);
+        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, pushingState.collision);
+
         PlayerTab changed = tab(player, new SidebarLine("&a队伍"), ChatColor.RED,
                 PlayerTab.NameTagVisibility.NEVER);
         sidebar.applyTab(scoreboard, changed);
@@ -755,6 +764,7 @@ class SidebarTabSynchronizationTest {
         assertSame(ChatColor.RED, state.color);
         assertTrue(state.entries.contains("Alice"));
         assertSame(Team.OptionStatus.NEVER, state.visibility);
+        assertSame(Team.OptionStatus.NEVER, state.collision);
         assertEquals(Sidebar.component("§cRed "), state.prefix);
     }
 
@@ -816,9 +826,14 @@ class SidebarTabSynchronizationTest {
                         state.writeCount++;
                         yield null;
                     }
-                    case "getOption" -> state.visibility;
+                    case "getOption" -> args[0] == Team.Option.COLLISION_RULE
+                            ? state.collision : state.visibility;
                     case "setOption" -> {
-                        state.visibility = (Team.OptionStatus) args[1];
+                        if (args[0] == Team.Option.COLLISION_RULE) {
+                            state.collision = (Team.OptionStatus) args[1];
+                        } else {
+                            state.visibility = (Team.OptionStatus) args[1];
+                        }
                         state.writeCount++;
                         yield null;
                     }
@@ -853,6 +868,7 @@ class SidebarTabSynchronizationTest {
         private Component suffix = Component.empty();
         private ChatColor color = ChatColor.WHITE;
         private Team.OptionStatus visibility = Team.OptionStatus.ALWAYS;
+        private Team.OptionStatus collision = Team.OptionStatus.NEVER;
         private final Set<String> entries = new HashSet<>();
         private int writeCount;
 

@@ -1,13 +1,13 @@
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
 import com.andrei1058.bedwars.api.BedWars;
-import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.matchmaking.ArenaInviteManager;
+import com.andrei1058.bedwars.arena.matchmaking.ArenaInvitePolicy;
 import com.andrei1058.bedwars.listeners.LobbyAnnouncements;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -22,7 +22,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Invites a lobby player into the sender's waiting arena. */
+/** Invites a lobby player or another pre-game arena player into the sender's arena. */
 public final class CmdInvite extends SubCommand {
 
     private static final String PREFIX = ChatColor.GOLD + "[BW] " + ChatColor.RESET;
@@ -56,7 +56,11 @@ public final class CmdInvite extends SubCommand {
             fail(inviter, "你必须先加入一个尚未开始的竞技场。");
             return;
         }
-        if (arena.getPlayers().size() >= arena.getMaxPlayers()) {
+        if (!ArenaInvitePolicy.canAcceptPlayer(arena)) {
+            fail(inviter, "竞技场即将开始，暂时无法邀请玩家。");
+            return;
+        }
+        if (!ArenaInvitePolicy.hasRoom(arena)) {
             fail(inviter, "当前竞技场已满，无法继续邀请。");
             return;
         }
@@ -69,8 +73,13 @@ public final class CmdInvite extends SubCommand {
             fail(inviter, "不能邀请自己。");
             return;
         }
-        if (!LobbyAnnouncements.isLobbyPlayer(target)) {
-            fail(inviter, "只能邀请当前在大厅中的玩家。");
+        IArena targetArena = Arena.getArenaByPlayer(target);
+        boolean targetIsLobby = LobbyAnnouncements.isLobbyPlayer(target);
+        if (targetArena != null && !targetArena.isPlayer(target)) {
+            targetArena = null;
+        }
+        if (!ArenaInvitePolicy.canInviteTarget(arena, targetArena, targetIsLobby)) {
+            fail(inviter, "只能邀请大厅玩家或其他尚未开始竞技场中的玩家。");
             return;
         }
 
@@ -95,10 +104,6 @@ public final class CmdInvite extends SubCommand {
             fail(target, "用法：/bw invite accept <邀请者>");
             return;
         }
-        if (!LobbyAnnouncements.isLobbyPlayer(target)) {
-            fail(target, "只有大厅中的玩家可以接受竞技场邀请。");
-            return;
-        }
         Player inviter = Bukkit.getPlayerExact(args[1]);
         if (inviter == null) {
             fail(target, "邀请者已离线。");
@@ -111,15 +116,30 @@ public final class CmdInvite extends SubCommand {
             return;
         }
         IArena arena = Arena.getArenaByName(invitation.arenaName());
+        IArena targetArena = Arena.getArenaByPlayer(target);
+        boolean targetIsLobby = LobbyAnnouncements.isLobbyPlayer(target);
+        if (targetArena != null && !targetArena.isPlayer(target)) {
+            targetArena = null;
+        }
         if (arena == null || Arena.getArenaByPlayer(inviter) != arena || !arena.isPlayer(inviter)
-                || !isPreGame(arena)) {
+                || !ArenaInvitePolicy.hasRoom(arena)
+                || !ArenaInvitePolicy.canAcceptFrom(arena, targetArena, targetIsLobby)) {
             invitations.remove(target.getUniqueId(), inviter.getUniqueId());
-            fail(target, "该邀请对应的竞技场已不可加入。");
+            fail(target, "该邀请对应的竞技场已不可加入，可能已经开始或已满员。");
             return;
         }
-        if (!arena.addPlayer(target, true)) {
+
+        boolean joined;
+        if (targetArena == null) {
+            joined = arena.addPlayer(target, true);
+        } else if (targetArena instanceof Arena oldArena && arena instanceof Arena newArena) {
+            joined = oldArena.transferPreGamePlayer(target, newArena);
+        } else {
+            joined = false;
+        }
+        if (!joined) {
             invitations.remove(target.getUniqueId(), inviter.getUniqueId());
-            fail(target, "加入失败，竞技场可能已满或即将开始。");
+            fail(target, "加入失败，竞技场可能已满、即将开始或不支持跨竞技场转移。");
             return;
         }
         invitations.clearPlayer(target.getUniqueId());
@@ -160,17 +180,14 @@ public final class CmdInvite extends SubCommand {
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "/bw invite <玩家> " + ChatColor.WHITE + "邀请大厅玩家加入当前竞技场");
+        player.sendMessage(PREFIX + ChatColor.YELLOW + "/bw invite <玩家> " + ChatColor.WHITE
+                + "邀请大厅或其他未开局竞技场玩家加入当前竞技场");
         player.sendMessage(PREFIX + ChatColor.YELLOW + "/bw invite list " + ChatColor.WHITE + "查看收到的邀请");
     }
 
     private static IArena preGameArena(Player player) {
         IArena arena = Arena.getArenaByPlayer(player);
-        return arena != null && arena.isPlayer(player) && isPreGame(arena) ? arena : null;
-    }
-
-    private static boolean isPreGame(IArena arena) {
-        return arena.getStatus() == GameState.waiting || arena.getStatus() == GameState.starting;
+        return arena != null && arena.isPlayer(player) && ArenaInvitePolicy.isPreGame(arena) ? arena : null;
     }
 
     private static TextComponent action(String label, ChatColor color, String command, String hover) {
@@ -186,8 +203,27 @@ public final class CmdInvite extends SubCommand {
 
     @Override
     public List<String> getTabComplete() {
+        return getTabComplete(null);
+    }
+
+    @Override
+    public List<String> getTabComplete(CommandSender sender) {
         List<String> values = new ArrayList<>(List.of("accept", "decline", "list"));
-        Bukkit.getOnlinePlayers().stream().filter(LobbyAnnouncements::isLobbyPlayer)
+        IArena inviterArena = sender instanceof Player player ? preGameArena(player) : null;
+        if (inviterArena == null) {
+            Bukkit.getOnlinePlayers().stream()
+                    .filter(player -> LobbyAnnouncements.isLobbyPlayer(player) || preGameArena(player) != null)
+                    .map(Player::getName).forEach(values::add);
+            return values;
+        }
+        Bukkit.getOnlinePlayers().stream()
+                .filter(player -> inviterArena != null && !player.equals(sender))
+                .filter(player -> {
+                    IArena targetArena = Arena.getArenaByPlayer(player);
+                    if (targetArena != null && !targetArena.isPlayer(player)) targetArena = null;
+                    return ArenaInvitePolicy.canInviteTarget(inviterArena, targetArena,
+                            LobbyAnnouncements.isLobbyPlayer(player));
+                })
                 .map(Player::getName).forEach(values::add);
         return values;
     }
