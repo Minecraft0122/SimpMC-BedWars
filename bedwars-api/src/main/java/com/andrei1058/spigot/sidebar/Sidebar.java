@@ -37,6 +37,7 @@ public class Sidebar {
     private static final String HEALTH_TAB_OBJECTIVE = "bw_health_tab";
     private static final String LINE_TEAM_PREFIX = "bw_l_";
     private static final String TAB_TEAM_PREFIX = "bw_t_";
+    private static final String COLLISION_TEAM_PREFIX = "bw_c_";
     private static final String[] LINE_ENTRIES = {
             ChatColor.BLACK.toString(),
             ChatColor.DARK_BLUE.toString(),
@@ -66,7 +67,9 @@ public class Sidebar {
     private final Map<UUID, Scoreboard> previousScoreboards = new HashMap<>();
     private final Map<String, PlayerTab> tabs = new HashMap<>();
     private final Map<String, String> tabTeamNames = new HashMap<>();
+    private final Map<String, String> collisionTeamNames = new HashMap<>();
     private int nextTabTeamId;
+    private int nextCollisionTeamId;
     private SidebarLine healthLine = new SidebarLine();
     private boolean healthEnabled = false;
     private boolean healthInTab = false;
@@ -302,7 +305,9 @@ public class Sidebar {
         tabs.clear();
         scoreboards.values().forEach(Sidebar::removeTabTeams);
         tabTeamNames.clear();
+        collisionTeamNames.clear();
         nextTabTeamId = 0;
+        nextCollisionTeamId = 0;
     }
 
     public void hidePlayersHealth() {
@@ -353,17 +358,32 @@ public class Sidebar {
                                      @NotNull ChatColor color,
                                      @NotNull PlayerTab.NameTagVisibility nameTagVisibility,
                                      @NotNull PlayerTab.PlayerListMode playerListMode) {
+        return playerTabCreate(identifier, player, prefix, suffix, pushingRule, placeholders, color,
+                nameTagVisibility, playerListMode, null);
+    }
+
+    /**
+     * Creates a TAB row and optionally assigns it to a shared collision group.
+     * The legacy overloads retain their private per-row scoreboard teams.
+     */
+    @NotNull
+    public PlayerTab playerTabCreate(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
+                                     @NotNull SidebarLine suffix, @NotNull PlayerTab.PushingRule pushingRule,
+                                     @NotNull ConcurrentLinkedQueue<PlaceholderProvider> placeholders,
+                                     @NotNull ChatColor color,
+                                     @NotNull PlayerTab.NameTagVisibility nameTagVisibility,
+                                     @NotNull PlayerTab.PlayerListMode playerListMode,
+                                     @Nullable String collisionGroup) {
         PlayerTab tab = new PlayerTab(identifier, player, prefix, suffix, pushingRule, placeholders,
-                color, nameTagVisibility, playerListMode);
+                color, nameTagVisibility, playerListMode, collisionGroup);
         tab.setUpdateCallback(this::applyTabToAll);
         PlayerTab previous = tabs.put(identifier, tab);
         boolean forceDisplayName = previous != null;
         if (previous != null) {
             previous.setUpdateCallback(ignored -> {
             });
-            if (!previous.getPlayer().getName().equals(player.getName())) {
-                removePlayerFromTabTeam(identifier, previous.getPlayer().getName());
-            }
+            removePlayerFromTabTeam(identifier, previous.getPlayer().getName());
+            removeCollisionEntry(previous);
             if (!previous.getPlayer().getUniqueId().equals(player.getUniqueId())) {
                 restoreOrRenderRemainingTab(previous);
             }
@@ -387,6 +407,7 @@ public class Sidebar {
                 }
             });
         }
+        removeCollisionEntry(tab);
         restoreOrRenderRemainingTab(tab);
     }
 
@@ -399,6 +420,26 @@ public class Sidebar {
                 team.removeEntry(playerName);
             }
         });
+    }
+
+    private void removeCollisionEntry(@NotNull PlayerTab tab) {
+        String group = tab.getCollisionGroup();
+        if (group == null) return;
+        String teamName = collisionTeamNames.get(group);
+        if (teamName == null) return;
+        scoreboards.values().forEach(scoreboard -> {
+            Team team = scoreboard.getTeam(teamName);
+            if (team != null && team.hasEntry(tab.getPlayer().getName())) {
+                team.removeEntry(tab.getPlayer().getName());
+            }
+        });
+        if (tabs.values().stream().noneMatch(other -> group.equals(other.getCollisionGroup()))) {
+            collisionTeamNames.remove(group);
+            scoreboards.values().forEach(scoreboard -> {
+                Team team = scoreboard.getTeam(teamName);
+                if (team != null) team.unregister();
+            });
+        }
     }
 
     private void renderAll() {
@@ -611,31 +652,45 @@ public class Sidebar {
 
     private void applyTab(@NotNull Scoreboard scoreboard, @NotNull RenderedPlayerTab renderedTab) {
         PlayerTab tab = renderedTab.tab();
-        Team team = scoreboard.getTeam(teamName(tab.getIdentifier()));
+        boolean pushOtherTeams = tab.getPushingRule() == PlayerTab.PushingRule.PUSH_OTHER_TEAMS;
+        boolean sharedCollision = tab.getCollisionGroup() != null && pushOtherTeams;
+        String scoreboardTeamName = sharedCollision
+                ? collisionTeamName(tab.getCollisionGroup()) : teamName(tab.getIdentifier());
+        Team team = scoreboard.getTeam(scoreboardTeamName);
+        boolean newTeam = team == null;
         if (team == null) {
-            team = scoreboard.registerNewTeam(teamName(tab.getIdentifier()));
+            team = scoreboard.registerNewTeam(scoreboardTeamName);
         }
 
-        Component prefix = component(renderedTab.prefix());
-        if (!team.prefix().equals(prefix)) team.prefix(prefix);
+        // A shared collision team cannot carry per-player suffixes. Its TAB
+        // display name is rendered separately through PlayerInfo packets, so
+        // keep only the first row's name-tag prefix and avoid overwriting it
+        // on every player's refresh.
+        if (!sharedCollision || newTeam) {
+            Component prefix = component(renderedTab.prefix());
+            if (!team.prefix().equals(prefix)) team.prefix(prefix);
 
-        Component suffix = component(renderedTab.suffix());
-        if (!team.suffix().equals(suffix)) team.suffix(suffix);
+            Component suffix = component(sharedCollision ? "" : renderedTab.suffix());
+            if (!team.suffix().equals(suffix)) team.suffix(suffix);
+        }
 
-        if (team.getColor() != tab.getColor()) team.setColor(tab.getColor());
+        if ((!sharedCollision || newTeam) && team.getColor() != tab.getColor()) {
+            team.setColor(tab.getColor());
+        }
 
         Team.OptionStatus visibility = tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER
                 ? Team.OptionStatus.NEVER
                 : Team.OptionStatus.ALWAYS;
-        if (team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
+        if ((!sharedCollision || newTeam)
+                && team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
             team.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
         }
-        // FOR_OTHER_TEAMS prevents members of the same scoreboard team from
-        // colliding while retaining normal enemy-team pushing. Spectator and
-        // explicitly non-pushing rows use NEVER.
-        Team.OptionStatus collision = tab.getPushingRule() == PlayerTab.PushingRule.PUSH_OTHER_TEAMS
+        // FOR_OTHER_TEAMS prevents members of the same shared game-team
+        // scoreboard group from colliding while retaining enemy pushing.
+        Team.OptionStatus collision = pushOtherTeams
                 ? Team.OptionStatus.FOR_OTHER_TEAMS : Team.OptionStatus.NEVER;
-        if (team.getOption(Team.Option.COLLISION_RULE) != collision) {
+        if ((!sharedCollision || newTeam)
+                && team.getOption(Team.Option.COLLISION_RULE) != collision) {
             team.setOption(Team.Option.COLLISION_RULE, collision);
         }
         if (!team.hasEntry(tab.getPlayer().getName())) {
@@ -921,7 +976,8 @@ public class Sidebar {
 
     private static void removeTabTeams(@NotNull Scoreboard scoreboard) {
         for (Team team : new ArrayList<>(scoreboard.getTeams())) {
-            if (team.getName().startsWith(TAB_TEAM_PREFIX)) {
+            if (team.getName().startsWith(TAB_TEAM_PREFIX)
+                    || team.getName().startsWith(COLLISION_TEAM_PREFIX)) {
                 team.unregister();
             }
         }
@@ -932,6 +988,11 @@ public class Sidebar {
         // could merge two unrelated players into one scoreboard team and corrupt client state.
         return tabTeamNames.computeIfAbsent(identifier,
                 ignored -> TAB_TEAM_PREFIX + Integer.toString(nextTabTeamId++, Character.MAX_RADIX));
+    }
+
+    String collisionTeamName(@NotNull String group) {
+        return collisionTeamNames.computeIfAbsent(group,
+                ignored -> COLLISION_TEAM_PREFIX + Integer.toString(nextCollisionTeamId++, Character.MAX_RADIX));
     }
 
     static boolean shouldCapturePreviousScoreboard(Scoreboard managedScoreboard,

@@ -11,6 +11,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,6 +75,32 @@ class SidebarTabSynchronizationTest {
 
         sidebar.applyTab(scoreboard, changed);
         assertEquals(3, state.writeCount, "repeating the same refresh must not send more team updates");
+    }
+
+    @Test
+    void sharedCollisionGroupsPutTeammatesTogetherAndKeepEnemyGroupsSeparate() {
+        Sidebar sidebar = sidebar();
+        Map<String, TeamState> states = new LinkedHashMap<>();
+        Scoreboard scoreboard = dynamicScoreboard(states);
+        Player alice = player("Alice");
+        Player bob = player("Bob");
+        Player enemy = player("Enemy");
+
+        sidebar.applyTab(scoreboard, sharedTab("alice", alice, "red"));
+        sidebar.applyTab(scoreboard, sharedTab("bob", bob, "red"));
+        sidebar.applyTab(scoreboard, sharedTab("enemy", enemy, "blue"));
+
+        assertEquals(2, states.size(), "each game team needs one collision scoreboard team");
+        TeamState red = states.values().stream()
+                .filter(state -> state.entries.containsAll(Set.of("Alice", "Bob")))
+                .findFirst().orElseThrow();
+        TeamState blue = states.values().stream()
+                .filter(state -> state.entries.contains("Enemy"))
+                .findFirst().orElseThrow();
+        assertEquals(Set.of("Alice", "Bob"), red.entries);
+        assertEquals(Set.of("Enemy"), blue.entries);
+        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, red.collision);
+        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, blue.collision);
     }
 
     @Test
@@ -782,6 +809,13 @@ class SidebarTabSynchronizationTest {
                 PlayerTab.PushingRule.NEVER, List.of(), color, visibility);
     }
 
+    private static PlayerTab sharedTab(String identifier, Player player, String collisionGroup) {
+        return new PlayerTab(identifier, player, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.WHITE,
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                collisionGroup);
+    }
+
     private static Player player(String name) {
         return player(name, () -> true);
     }
@@ -801,6 +835,23 @@ class SidebarTabSynchronizationTest {
                 new Class<?>[]{Scoreboard.class}, (proxy, method, args) -> switch (method.getName()) {
                     case "getTeam" -> team;
                     case "registerNewTeam" -> throw new AssertionError("the existing team must be reused");
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
+    private static Scoreboard dynamicScoreboard(Map<String, TeamState> states) {
+        return (Scoreboard) Proxy.newProxyInstance(Scoreboard.class.getClassLoader(),
+                new Class<?>[]{Scoreboard.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getTeam" -> {
+                        TeamState state = states.get((String) args[0]);
+                        yield state == null ? null : team(state);
+                    }
+                    case "registerNewTeam" -> {
+                        String name = (String) args[0];
+                        TeamState state = new TeamState();
+                        states.put(name, state);
+                        yield team(state);
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
     }

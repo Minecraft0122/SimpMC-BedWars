@@ -3,6 +3,7 @@ package com.andrei1058.spigot.sidebar;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -34,6 +35,12 @@ public class PlayerTab {
     private final SidebarLine prefix;
     private final SidebarLine suffix;
     private final PushingRule pushingRule;
+    /**
+     * Optional scoreboard collision group. Rows keep their own identifiers
+     * for TAB rendering, while members of the same game team can share one
+     * scoreboard team for collision rules.
+     */
+    private final String collisionGroup;
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
     private NameTagVisibility nameTagVisibility = NameTagVisibility.ALWAYS;
     private PlayerListMode playerListMode = PlayerListMode.ACTUAL;
@@ -65,6 +72,21 @@ public class PlayerTab {
                      @NotNull Collection<PlaceholderProvider> placeholders, @NotNull ChatColor color,
                      @NotNull NameTagVisibility nameTagVisibility,
                      @NotNull PlayerListMode playerListMode) {
+        this(identifier, player, prefix, suffix, pushingRule, placeholders, color,
+                nameTagVisibility, playerListMode, null);
+    }
+
+    /**
+     * Creates a row with an optional shared collision group. The group is
+     * deliberately separate from the row identifier because a TAB entry may
+     * have unique display formatting while its in-game team must be shared.
+     */
+    public PlayerTab(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
+                     @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
+                     @NotNull Collection<PlaceholderProvider> placeholders, @NotNull ChatColor color,
+                     @NotNull NameTagVisibility nameTagVisibility,
+                     @NotNull PlayerListMode playerListMode,
+                     @Nullable String collisionGroup) {
         this.identifier = identifier;
         this.player = player;
         this.prefix = prefix;
@@ -74,6 +96,7 @@ public class PlayerTab {
         this.color = color;
         this.nameTagVisibility = nameTagVisibility;
         this.playerListMode = playerListMode;
+        this.collisionGroup = collisionGroup;
     }
 
     @NotNull
@@ -84,6 +107,15 @@ public class PlayerTab {
     @NotNull
     public Player getPlayer() {
         return player;
+    }
+
+    /**
+     * Returns the shared collision group, or {@code null} for a row that must
+     * retain its private scoreboard team.
+     */
+    @Nullable
+    public String getCollisionGroup() {
+        return collisionGroup;
     }
 
     public void setNameTagVisibility(@NotNull NameTagVisibility nameTagVisibility) {

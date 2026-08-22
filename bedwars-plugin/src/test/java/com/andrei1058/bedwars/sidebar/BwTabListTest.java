@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class BwTabListTest {
@@ -63,6 +64,21 @@ class BwTabListTest {
         assertSame(PlayerTab.PlayerListMode.SPECTATOR,
                 BwTabList.resolveMinimalPlayerListMode(null, true));
         assertEquals(null, BwTabList.resolveMinimalPlayerListMode(null, false));
+    }
+
+    @Test
+    void collisionGroupsFollowTheRealTeamAndExcludeInvisiblePlayers() {
+        ITeam red = team("red", TeamColor.RED);
+
+        assertEquals(red.getIdentity().toString(), BwTabList.collisionGroup(red, false));
+        assertNull(BwTabList.collisionGroup(red, true));
+        assertNull(BwTabList.collisionGroup(null, false));
+        assertEquals(PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
+                BwTabList.collisionPushingRule(false, false));
+        assertEquals(PlayerTab.PushingRule.NEVER,
+                BwTabList.collisionPushingRule(false, true));
+        assertEquals(PlayerTab.PushingRule.NEVER,
+                BwTabList.collisionPushingRule(true, false));
     }
 
     @Test
@@ -266,6 +282,7 @@ class BwTabListTest {
                     case "getName" -> name;
                     case "getUniqueId" -> uniqueId;
                     case "isOnline" -> true;
+                    case "hasPotionEffect" -> false;
                     case "toString" -> name;
                     default -> throw new UnsupportedOperationException(method.getName());
                 }

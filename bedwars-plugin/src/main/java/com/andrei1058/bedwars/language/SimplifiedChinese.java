@@ -99,8 +99,8 @@ public class SimplifiedChinese extends Language {
                 "&e/party help &7- &b查看该提示",
                 "&e/party invite <玩家> &7- &b邀请一位玩家到你的队伍",
                 "&e/party leave &7- &b离开当前队伍",
-                "&e/party info &7- &bShow party members and owner",
-                "&e/party promote <player> &7- &bTransfer party ownership",
+                "&e/party info &7- &b查看队伍成员和队长",
+                "&e/party promote <player> &7- &b转移队长身份",
                 "&e/party remove <玩家> &7- &b将玩家移出队伍",
                 "&e/party accept <玩家> &7- &b接受队伍邀请",
                 "&e/party disband &7- &bD解散队伍")
