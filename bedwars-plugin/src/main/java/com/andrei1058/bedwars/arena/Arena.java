@@ -544,6 +544,9 @@ public class Arena implements IArena {
             p.closeInventory();
             players.add(p);
             setArenaByPlayer(p, this);
+            // Disable server-side player collision for the whole arena
+            // lifecycle. The TAB scoreboard rule mirrors this on clients.
+            nms.setCollide(p, this, false);
             LobbyAnnouncements.playerEnteredArena(p);
             PlayerMotion.disableFlight(p);
             p.setHealth(20);
@@ -883,6 +886,7 @@ public class Arena implements IArena {
         //players.remove must be under call event in order to check if the player is a spectator or not
         players.remove(p);
         removeArenaByPlayer(p, this);
+        nms.setCollide(p, this, true);
 
         for (PotionEffect pf : p.getActivePotionEffects()) {
             p.removePotionEffect(pf.getType());

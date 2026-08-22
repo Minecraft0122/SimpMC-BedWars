@@ -178,7 +178,7 @@ public class BedWarsTeam implements ITeam {
         SafeSpawnResolver.teleport(p, spawn);
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
-        nms.setCollide(p, getArena(), true);
+        nms.setCollide(p, getArena(), false);
         sendDefaultInventory(p, true);
         Bukkit.getPluginManager().callEvent(new PlayerFirstSpawnEvent(p, getArena(), this));
     }
@@ -387,7 +387,7 @@ public class BedWarsTeam implements ITeam {
         SafeSpawnResolver.teleport(p, getSpawn());
         PlayerMotion.disableFlight(p);
         InvisibilityManager.remove(getArena(), p);
-        nms.setCollide(p, arena, true);
+        nms.setCollide(p, arena, false);
         p.setHealth(20);
 
         nms.sendTitle(p, getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE), "", 0, 20, 10);

@@ -565,9 +565,10 @@ public class BwTabList {
     }
 
     static PlayerTab.PushingRule collisionPushingRule(boolean spectator, boolean invisible) {
-        return spectator || invisible
-                ? PlayerTab.PushingRule.NEVER
-                : PlayerTab.PushingRule.PUSH_OTHER_TEAMS;
+        // Server-side collision is disabled with VersionSupport#setCollide.
+        // Keep the scoreboard state in sync so clients do not predict a
+        // collision that the server rejects.
+        return PlayerTab.PushingRule.NEVER;
     }
 
     /**

@@ -73,7 +73,7 @@ class BwTabListTest {
         assertEquals(red.getIdentity().toString(), BwTabList.collisionGroup(red, false));
         assertNull(BwTabList.collisionGroup(red, true));
         assertNull(BwTabList.collisionGroup(null, false));
-        assertEquals(PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
+        assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(false, false));
         assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(false, true));
