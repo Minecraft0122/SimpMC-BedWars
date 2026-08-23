@@ -131,8 +131,8 @@ public class ReJoin {
             destroy(true);
             return false;
         }
-        if (arena.getStatus() == GameState.restarting) {
-            BedWars.debug("ReJoin canReJoin status is restarting " + player.toString());
+        if (arena.getStatus() != GameState.playing) {
+            BedWars.debug("ReJoin canReJoin arena is no longer playing " + player.toString());
             destroy(true);
             return false;
         }
@@ -221,7 +221,7 @@ public class ReJoin {
         json.addProperty("uuid", player.toString());
         json.addProperty("server", BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
         ArenaSocket.sendMessage(json.toString());
-        if (bwt != null && destroyTeam && bwt.getMembers().isEmpty() && !bwt.isBedDestroyed()) {
+        if (arena != null && bwt != null && destroyTeam && bwt.getMembers().isEmpty() && !bwt.isBedDestroyed()) {
             bwt.setBedDestroyed(true);
             Bukkit.getPluginManager().callEvent(new TeamEliminatedEvent(arena, bwt));
             for (Player p2 : arena.getPlayers()) {
