@@ -117,6 +117,14 @@ public class ReJoin {
      */
     public boolean canReJoin() {
         BedWars.debug("ReJoin canReJoin  check.");
+        // A delayed join callback can retain an object after another lifecycle
+        // already consumed and destroyed its reservation. Detached objects
+        // must never become valid again just because their cached arena/team
+        // state still happens to look healthy.
+        if (!isActiveReservation(reJoinList, this)) {
+            BedWars.debug("ReJoin canReJoin reservation is no longer active");
+            return false;
+        }
         if (arena == null) {
             BedWars.debug("ReJoin canReJoin arena is null " + player.toString());
             destroy(true);
@@ -143,12 +151,32 @@ public class ReJoin {
     /**
      * Make a player re-join the arena
      */
-    public boolean reJoin(Player player) {
+    public boolean reJoin(@NotNull Player player) {
+        if (!belongsToPlayer(this.player, player) || !canReJoin()) {
+            return false;
+        }
+
+        boolean resumed = resumeThroughArenaLifecycle(arena, player);
+        if (!resumed) {
+            return false;
+        }
 
         Sounds.playSound("rejoin-allowed", player);
-        AdventureText.send(player, Language.getMsg(player, Messages.REJOIN_ALLOWED).replace("{arena}", getArena().getDisplayName()));
+        AdventureText.send(player, Language.getMsg(player, Messages.REJOIN_ALLOWED).replace("{arena}", arena.getDisplayName()));
+        return true;
+    }
 
-        return resumeThroughArenaLifecycle(arena, player);
+    static boolean isActiveReservation(List<ReJoin> reservations, ReJoin candidate) {
+        if (candidate == null) return false;
+        for (ReJoin active : reservations) {
+            if (active == candidate) return true;
+        }
+        return false;
+    }
+
+    static boolean belongsToPlayer(@Nullable UUID reservationPlayer, @Nullable Player candidate) {
+        return reservationPlayer != null && candidate != null
+                && reservationPlayer.equals(candidate.getUniqueId());
     }
 
     /**

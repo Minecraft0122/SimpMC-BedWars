@@ -134,9 +134,7 @@ public class JoinListenerBungeeLegacy implements Listener {
                 // Check ReJoin
                 ReJoin reJoin = ReJoin.getPlayer(p);
                 if (reJoin != null) {
-                    if (reJoin.canReJoin()) {
-                        reJoin.reJoin(p);
-                        reJoin.destroy(false);
+                    if (reJoin.canReJoin() && reJoin.reJoin(p)) {
                         return;
                     } else {
                         AdventureText.send(p, getMsg(p, Messages.REJOIN_DENIED));

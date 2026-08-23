@@ -154,9 +154,8 @@ public class JoinListenerBungee implements Listener {
             ReJoin reJoin = ReJoin.getPlayer(p);
             if (reJoin != null) {
                 // Check if can re-join
-                if (reJoin.canReJoin()) {
+                if (reJoin.canReJoin() && reJoin.reJoin(p)) {
                     JoinHandlerCommon.displayCustomerDetails(p);
-                    reJoin.reJoin(p);
                     // Cache player language
                     Language.setPlayerLanguage(p.getUniqueId(), playerLang.getIso());
                 } else {

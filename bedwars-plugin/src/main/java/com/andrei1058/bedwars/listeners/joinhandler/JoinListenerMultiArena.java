@@ -53,6 +53,7 @@ public class JoinListenerMultiArena implements Listener {
         }
 
         ReJoin reJoin = ReJoin.getPlayer(p);
+        boolean rejoinAllowed = reJoin != null && reJoin.canReJoin();
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             // Hide new player to players and spectators, and vice versa
@@ -68,16 +69,21 @@ public class JoinListenerMultiArena implements Listener {
             }
 
             // To prevent invisibility issues handle ReJoin after sending invisibility packets
-            if (reJoin != null) {
-                if (reJoin.canReJoin()) {
-                    reJoin.reJoin(p);
+            if (rejoinAllowed) {
+                if (reJoin.canReJoin() && reJoin.reJoin(p)) {
                     return;
                 }
-                reJoin.destroy(false);
+                teleportToLobby(p);
             }
         }, 14L);
 
-        if (reJoin != null && reJoin.canReJoin()) return;
+        if (rejoinAllowed) return;
+
+        teleportToLobby(p);
+    }
+
+    private void teleportToLobby(Player p) {
+        if (!p.isOnline()) return;
 
         // Teleport to lobby location
         Location lobbyLocation = config.getConfigLoc("lobbyLoc");

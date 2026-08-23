@@ -50,7 +50,7 @@ import static com.andrei1058.bedwars.api.language.Language.getPlayerLanguage;
 
 public class ChatFormatting implements Listener {
 
-    private static final Set<Character> SHOUT_PREFIXES = Set.of('@', '!', '！', '#', '%', '&');
+    private static final Set<Character> SHOUT_PREFIXES = Set.of('@', '!', '！', '#', '$', '%', '&', '*');
 
     @EventHandler(ignoreCancelled = true)
     public void onChat(AsyncChatEvent e) {
@@ -174,7 +174,7 @@ public class ChatFormatting implements Listener {
     }
 
     private static boolean isShouting(String msg, Language lang) {
-        return msg.startsWith("!") || msg.startsWith("shout") ||
+        return isShouting(msg) || msg.startsWith("shout") ||
                 msg.startsWith("SHOUT") || msg.startsWith(lang.m(Messages.MEANING_SHOUT));
     }
 
@@ -192,6 +192,7 @@ public class ChatFormatting implements Listener {
     }
 
     private static String clearShout(String msg, Language lang) {
+        if (isShouting(msg)) return clearShout(msg);
         if (msg.startsWith("!")) msg = msg.replaceFirst("!", "");
         if (msg.startsWith("SHOUT")) msg = msg.replaceFirst("SHOUT", "");
         if (msg.startsWith("shout")) msg = msg.replaceFirst("shout", "");

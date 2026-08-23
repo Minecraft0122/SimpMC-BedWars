@@ -49,7 +49,7 @@ class ChatFormattingTest {
 
     @Test
     void acceptsOnlyTheConfiguredPublicChatPrefixes() {
-        for (String prefix : new String[]{"@", "!", "！", "#", "%", "&"}) {
+        for (String prefix : new String[]{"@", "!", "！", "#", "$", "%", "&", "*"}) {
             assertTrue(ChatFormatting.isShouting(prefix + "消息"), prefix);
             assertEquals("消息", ChatFormatting.clearShout(prefix + " 消息"));
         }

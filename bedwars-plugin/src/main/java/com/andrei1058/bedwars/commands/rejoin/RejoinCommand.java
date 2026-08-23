@@ -27,7 +27,6 @@ import com.andrei1058.bedwars.arena.ReJoin;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.defaults.BukkitCommand;
 import org.bukkit.entity.Player;
 
@@ -39,12 +38,10 @@ public class RejoinCommand extends BukkitCommand {
 
     @Override
     public boolean execute(CommandSender s, String st, String[] args) {
-        if (s instanceof ConsoleCommandSender) {
+        if (!(s instanceof Player p)) {
             AdventureText.send(s, "此命令只能由玩家使用！");
             return true;
         }
-
-        Player p = (Player) s;
 
         if (!Permissions.hasCommandPermission(p, "rejoin", Permissions.PERMISSION_REJOIN)) {
             AdventureText.send(p, Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
@@ -59,15 +56,11 @@ public class RejoinCommand extends BukkitCommand {
             return true;
         }
 
-        if (!rj.canReJoin()) {
+        if (!rj.reJoin(p)) {
             AdventureText.send(p, Language.getMsg(p, Messages.REJOIN_DENIED));
             Sounds.playSound("rejoin-denied", p);
             return true;
         }
-
-        AdventureText.send(p, Language.getMsg(p, Messages.REJOIN_ALLOWED).replace("{arena}", rj.getArena().getDisplayName()));
-        Sounds.playSound("rejoin-allowed", p);
-        rj.reJoin(p);
         return true;
     }
 }
