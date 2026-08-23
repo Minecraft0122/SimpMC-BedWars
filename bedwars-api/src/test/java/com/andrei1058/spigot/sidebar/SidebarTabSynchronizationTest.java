@@ -774,6 +774,24 @@ class SidebarTabSynchronizationTest {
         assertSame(ChatColor.RED, state.color);
     }
 
+    @Test
+    void refreshesColorForAnExistingSharedCollisionTeam() {
+        Sidebar sidebar = sidebar();
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(teamThatRejectsAdventureColorReads(state));
+        Player target = player("Alice");
+        PlayerTab tab = new PlayerTab(
+                "alice", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                "red-team");
+
+        sidebar.applyTab(scoreboard, tab);
+
+        assertSame(NamedTextColor.RED, state.modernColor,
+                "a shared collision team must still receive later colour updates");
+    }
+
     private static Sidebar sidebar() {
         return new Sidebar(new SidebarLine(), List.of(), new ConcurrentLinkedQueue<>());
     }

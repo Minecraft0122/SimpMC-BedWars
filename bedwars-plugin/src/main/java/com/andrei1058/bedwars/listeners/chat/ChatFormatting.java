@@ -35,6 +35,7 @@ import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -56,6 +57,10 @@ public class ChatFormatting implements Listener {
     public void onChat(AsyncChatEvent e) {
         if (e == null) return;
         Player p = e.getPlayer();
+        // Paper's AsyncChatEvent viewers contain players only. Keep the
+        // server console in every routed chat so private team/arena messages
+        // remain available for moderation and diagnostics.
+        e.viewers().add(Bukkit.getConsoleSender());
 
         // in shared mode we don't want messages from outside the arena to be seen in game
         if (getServerType() == ServerType.SHARED && Arena.getArenaByPlayer(p) == null) {
@@ -123,7 +128,10 @@ public class ChatFormatting implements Listener {
             // Use public arena chat without requiring /shout.
             if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
                 setRecipients(e, a.getPlayers(), a.getSpectators());
-                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team));
+                // A one-player team has no private audience, but this is not a
+                // shout. Use the normal public format so it does not display
+                // the [公屏] marker or a synthetic team label.
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, null));
             } else {
                 setRecipients(e, team.getMembers());
                 setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
@@ -215,6 +223,7 @@ public class ChatFormatting implements Listener {
                 event.viewers().addAll(list);
             }
         }
+        event.viewers().add(Bukkit.getConsoleSender());
     }
 
     private static void setRenderer(AsyncChatEvent event, String format) {

@@ -659,8 +659,13 @@ public class Sidebar {
             if (!team.prefix().equals(prefix)) team.prefix(prefix);
             Component suffix = component(sharedCollision ? "" : renderedTab.suffix());
             if (!team.suffix().equals(suffix)) team.suffix(suffix);
-            applyTeamColor(team, tab);
         }
+
+        // Collision teams are shared by several rows. Their prefix/suffix is
+        // intentionally written only once, but the colour must be refreshed
+        // for every row update: a row can be created before its arena team is
+        // assigned and later reuse the same collision team.
+        applyTeamColor(team, tab);
 
         Team.OptionStatus visibility = tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER
                 ? Team.OptionStatus.NEVER

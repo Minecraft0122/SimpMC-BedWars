@@ -521,9 +521,15 @@ public class BwTabList {
     static @NotNull String applyPlayerRowTeamMarkers(
             @NotNull String template, @Nullable Map<String, String> replacements) {
         String rendered = template;
-        if (replacements != null) {
+        if (replacements == null) {
+            // Spectators without a former team still use the same configurable
+            // row templates. Never leak unresolved team placeholders into TAB.
+            rendered = rendered.replace("{teamName}", "")
+                    .replace("{teamColor}", "")
+                    .replace("{teamLetter}", "");
+        } else {
             for (Map.Entry<String, String> entry : replacements.entrySet()) {
-                rendered = rendered.replace(entry.getKey(), entry.getValue());
+                rendered = rendered.replace(entry.getKey(), entry.getValue() == null ? "" : entry.getValue());
             }
         }
         return rendered;

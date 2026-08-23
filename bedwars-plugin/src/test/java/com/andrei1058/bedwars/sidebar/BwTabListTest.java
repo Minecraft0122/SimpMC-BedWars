@@ -97,6 +97,15 @@ class BwTabListTest {
     }
 
     @Test
+    void spectatorRowsWithoutAFormerTeamClearTeamPlaceholders() {
+        assertEquals(
+                "[] [观察者] Alice",
+                BwTabList.applyPlayerRowTeamMarkers(
+                        "{teamColor}{teamName}[{teamLetter}] [观察者] Alice", null)
+        );
+    }
+
+    @Test
     void waitingAndStartingPlayersUseTheirPreGameSelection() {
         ITeam red = team("red", TeamColor.RED);
         Player selected = player("Selected");
