@@ -30,15 +30,15 @@ import com.andrei1058.bedwars.api.exceptions.InvalidMaterialException;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Region;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.stats.PlayerStats;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -204,8 +204,8 @@ public class Misc {
     static ItemStack createItem(Material material, byte data, boolean enchanted, String name, List<String> lore, Player owner, @SuppressWarnings("SameParameterValue") String metaKey, String metaData) {
         ItemStack i = new ItemStack(material, 1, data);
         ItemMeta im = i.getItemMeta();
-        im.setDisplayName(name);
-        im.setLore(lore);
+        AdventureText.displayName(im, name);
+        AdventureText.lore(im, lore);
         if (enchanted) {
             im.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
             im.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -235,8 +235,8 @@ public class Misc {
         }
         ItemStack i = new ItemStack(m, 1, (short) data);
         ItemMeta im = i.getItemMeta();
-        im.setDisplayName(name);
-        im.setLore(lore);
+        AdventureText.displayName(im, name);
+        AdventureText.lore(im, lore);
         if (enchanted) {
             im.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
             im.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -283,13 +283,12 @@ public class Misc {
     }
 
     /**
-     * create TextComponent message
+     * Create a clickable and hoverable Adventure message.
      */
-    public static TextComponent msgHoverClick(String msg, String hover, String click, ClickEvent.Action clickAction) {
-        TextComponent tc = new TextComponent(msg);
-        tc.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(hover).create()));
-        tc.setClickEvent(new ClickEvent(clickAction, click));
-        return tc;
+    public static Component msgHoverClick(String msg, String hover, String click, ClickEvent.Action clickAction) {
+        return AdventureText.section(msg)
+                .hoverEvent(HoverEvent.showText(AdventureText.section(hover)))
+                .clickEvent(ClickEvent.clickEvent(clickAction, click));
     }
 
     /**
@@ -309,7 +308,8 @@ public class Misc {
         Bukkit.getScheduler().runTask(plugin, () -> {
 
             /* create inventory */
-            Inventory inv = Bukkit.createInventory(null, config.getInt(ConfigPath.GENERAL_CONFIGURATION_STATS_GUI_SIZE), replaceStatsPlaceholders(p, getMsg(p, Messages.PLAYER_STATS_GUI_INV_NAME), true));
+            Inventory inv = Bukkit.createInventory(null, config.getInt(ConfigPath.GENERAL_CONFIGURATION_STATS_GUI_SIZE),
+                    AdventureText.section(replaceStatsPlaceholders(p, getMsg(p, Messages.PLAYER_STATS_GUI_INV_NAME), true)));
 
             /* add custom items to gui */
             for (String s : config.getYml().getConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_STATS_PATH).getKeys(false)) {
@@ -319,12 +319,12 @@ public class Misc {
                 ItemStack i = nms.createItemStack(config.getYml().getString(ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_MATERIAL.replace("%path%", s)).toUpperCase(), 1, (short) config.getInt(ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_DATA.replace("%path%", s)));
                 ItemMeta im = i.getItemMeta();
                 im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                im.setDisplayName(replaceStatsPlaceholders(p, getMsg(p, Messages.PLAYER_STATS_GUI_PATH + "-" + s + "-name"), true));
+                AdventureText.displayName(im, replaceStatsPlaceholders(p, getMsg(p, Messages.PLAYER_STATS_GUI_PATH + "-" + s + "-name"), true));
                 List<String> lore = new ArrayList<>();
                 for (String string : getList(p, Messages.PLAYER_STATS_GUI_PATH + "-" + s + "-lore")) {
                     lore.add(replaceStatsPlaceholders(p, string, true));
                 }
-                im.setLore(lore);
+                AdventureText.lore(im, lore);
                 i.setItemMeta(im);
                 inv.setItem(config.getInt(ConfigPath.GENERAL_CONFIGURATION_STATS_ITEMS_SLOT.replace("%path%", s)), i);
             }
@@ -357,7 +357,7 @@ public class Misc {
             s = s.replace("{firstPlay}", new SimpleDateFormat(getMsg(player, Messages.FORMATTING_STATS_DATE_FORMAT)).format(stats.getFirstPlay() != null ? Timestamp.from(stats.getFirstPlay()) : Timestamp.from(Instant.now())));
         if (s.contains("{lastPlay}"))
             s = s.replace("{lastPlay}", new SimpleDateFormat(getMsg(player, Messages.FORMATTING_STATS_DATE_FORMAT)).format(stats.getLastPlay() != null ? Timestamp.from(stats.getLastPlay()) : Timestamp.from(Instant.now())));
-        if (s.contains("{player}")) s = s.replace("{player}", player.getDisplayName());
+        if (s.contains("{player}")) s = s.replace("{player}", AdventureText.displayName(player));
         if (s.contains("{playername")) s = s.replace("{playername}", player.getName());
         if (s.contains("{prefix}")) s = s.replace("{prefix}", BedWars.getChatSupport().getPrefix(player));
 

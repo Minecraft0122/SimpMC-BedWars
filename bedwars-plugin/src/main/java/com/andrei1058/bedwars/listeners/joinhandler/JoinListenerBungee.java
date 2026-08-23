@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ReJoin;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -93,7 +94,7 @@ public class JoinListenerBungee implements Listener {
                         for (Player inGame : arena.getPlayers()) {
                             if (!Arena.isVip(inGame)) {
                                 canJoin = true;
-                                inGame.kickPlayer(getMsg(inGame, Messages.ARENA_JOIN_VIP_KICK));
+                                inGame.kick(AdventureText.section(getMsg(inGame, Messages.ARENA_JOIN_VIP_KICK)));
                                 break;
                             }
                         }
@@ -143,7 +144,7 @@ public class JoinListenerBungee implements Listener {
                 }
             } else {
                 // The player is not an admin and he joined using /server or equivalent
-                p.kickPlayer(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY));
+                p.kick(AdventureText.section(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY)));
             }
         } else {
             // The player joined using BedWarsProxy
@@ -159,7 +160,7 @@ public class JoinListenerBungee implements Listener {
                     // Cache player language
                     Language.setPlayerLanguage(p.getUniqueId(), playerLang.getIso());
                 } else {
-                    p.kickPlayer(playerLang.m(Messages.REJOIN_DENIED));
+                p.kick(AdventureText.section(playerLang.m(Messages.REJOIN_DENIED)));
                 }
                 // ReJoin handled, stop here
                 proxyUser.destroy("Rejoin handled. PreLoaded user no longer needed.");
@@ -172,7 +173,7 @@ public class JoinListenerBungee implements Listener {
 
             // Check if the arena is still available or request time-out etc.
             if (arena == null || proxyUser.isTimedOut() || status == GameState.restarting) {
-                p.kickPlayer(playerLang.m(Messages.ARENA_STATUS_RESTARTING_NAME));
+                p.kick(AdventureText.section(playerLang.m(Messages.ARENA_STATUS_RESTARTING_NAME)));
                 proxyUser.destroy("Time out or game unavailable at PlayerLoginEvent");
                 return;
             }
@@ -191,7 +192,7 @@ public class JoinListenerBungee implements Listener {
                     if (proxyUser.getPartyOwnerOrSpectateTarget() == null) {
                         // Add to arena
                         if (!arena.addPlayer(p, true)) {
-                            p.kickPlayer(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY));
+                            p.kick(AdventureText.section(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY)));
                         }
                     } else {
                         // If is member or owner of a remote party
@@ -222,7 +223,7 @@ public class JoinListenerBungee implements Listener {
                             preLoadedParty.addMember(p);
                         }
                         if (!arena.addPlayer(p, true)) {
-                            p.kickPlayer(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY));
+                            p.kick(AdventureText.section(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY)));
                         }
                     }
                     break;

@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.listeners.joinhandler;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.language.Language;
 import org.bukkit.Bukkit;
@@ -40,12 +41,12 @@ public class JoinHandlerCommon implements Listener {
         if (player == null) return;
         //TODO IMPROVE, ADD MORE DETAILS
         if (player.getName().equalsIgnoreCase("andrei1058") || player.getName().equalsIgnoreCase("andreea1058") || player.getName().equalsIgnoreCase("Dani3l_FTW")) {
-            player.sendMessage("§8[§f" + BedWars.plugin.getName() + " v" + BedWars.plugin.getDescription().getVersion() + "§8]§7§m---------------------------");
-            player.sendMessage("");
-            player.sendMessage("§7用户 ID：§f%%__USER__%%");
-            player.sendMessage("§7下载 ID：§f%%__NONCE__%%");
-            player.sendMessage("");
-            player.sendMessage("§8[§f" + BedWars.plugin.getName() + "§8]§7§m---------------------------");
+            AdventureText.send(player, "§8[§f" + BedWars.plugin.getName() + " v" + BedWars.plugin.getDescription().getVersion() + "§8]§7§m---------------------------");
+            AdventureText.send(player, "");
+            AdventureText.send(player, "§7用户 ID：§f%%__USER__%%");
+            AdventureText.send(player, "§7下载 ID：§f%%__NONCE__%%");
+            AdventureText.send(player, "");
+            AdventureText.send(player, "§8[§f" + BedWars.plugin.getName() + "§8]§7§m---------------------------");
         }
     }
 

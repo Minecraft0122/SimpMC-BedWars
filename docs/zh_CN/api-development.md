@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>11.0.1</version>
+    <version>11.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -34,8 +34,11 @@ if (api == null) {
 ## 安全查询竞技场
 
 ```java
+import net.kyori.adventure.text.Component;
+
 api.getArenaUtil().findArenaByPlayer(player).ifPresent(arena -> {
-    player.sendMessage("当前地图：" + arena.getDisplayName());
+    player.sendMessage(Component.text("当前地图：")
+            .append(Component.text(arena.getDisplayName())));
 });
 
 for (IArena arena : api.getArenaUtil().getArenasSnapshot()) {

@@ -2,7 +2,7 @@
 
 面向现代 Paper 服务端维护的起床战争插件。玩家需要保护己方床、摧毁敌方床，并淘汰所有对手；床被摧毁后将无法再次复活。
 
-> 当前分支仅支持 **Paper 1.21.11 + Java 21**。不支持 Spigot、Folia、其他 Minecraft 版本或旧版 Java。
+> 当前分支支持 **Paper 1.21.11 + Java 21** 和 **Paper 26.2 + Java 25**。不支持 Spigot、Folia、其他 Minecraft 版本或更旧的 Java。
 
 ## 文档
 
@@ -42,7 +42,7 @@
 
 ## 安装
 
-1. 准备 Paper 1.21.11 服务端和 Java 21。
+1. 准备 Paper 1.21.11 + Java 21，或 Paper 26.2 + Java 25。
 2. 将 `SimpMC-BedWars-版本.jar` 放入 `plugins` 目录。
 3. 首次启动生成配置后完整停服。
 4. 按[安装教程](docs/zh_CN/installation.md)配置服务器模式和大厅。

@@ -23,6 +23,7 @@ package com.andrei1058.bedwars.commands.shout;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.configuration.Permissions;
 import org.bukkit.command.CommandSender;
@@ -41,12 +42,12 @@ public class ShoutCommand extends BukkitCommand {
         if (s instanceof ConsoleCommandSender) return true;
         Player p = (Player) s;
         if (!Permissions.hasShoutPermission(p)) {
-            p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+            AdventureText.send(p, Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             return true;
         }
         IArena a = Arena.getArenaByPlayer(p);
         if (a == null || a.isSpectator(p)) {
-            p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+            AdventureText.send(p, Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             return true;
         }
         StringBuilder sb = new StringBuilder();

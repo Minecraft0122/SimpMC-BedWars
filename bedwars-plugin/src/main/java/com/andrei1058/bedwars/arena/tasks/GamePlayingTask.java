@@ -29,6 +29,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.tasks.PlayingTask;
 import com.andrei1058.bedwars.arena.Arena;
 import org.bukkit.Bukkit;
@@ -108,12 +109,12 @@ public class GamePlayingTask implements Runnable, PlayingTask {
                 beds_destroy_countdown--;
                 if (getBedsDestroyCountdown() == 0) {
                     for (Player p : getArena().getPlayers()) {
-                        nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_BEDS_DESTROYED), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_BEDS_DESTROYED), 0, 40, 10);
-                        p.sendMessage(getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_BEDS_DESTROYED));
+                        nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_BEDS_DESTROYED)), AdventureText.section(getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_BEDS_DESTROYED)), 0, 40, 10);
+                        AdventureText.send(p, getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_BEDS_DESTROYED));
                     }
                     for (Player p : getArena().getSpectators()) {
-                        nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_BEDS_DESTROYED), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_BEDS_DESTROYED), 0, 40, 10);
-                        p.sendMessage(getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_BEDS_DESTROYED));
+                        nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_BEDS_DESTROYED)), AdventureText.section(getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_BEDS_DESTROYED)), 0, 40, 10);
+                        AdventureText.send(p, getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_BEDS_DESTROYED));
                     }
                     for (ITeam t : getArena().getTeams()) {
                         t.setBedDestroyed(true);
@@ -125,18 +126,18 @@ public class GamePlayingTask implements Runnable, PlayingTask {
                 dragon_spawn_countdown--;
                 if (getDragonSpawnCountdown() == 0) {
                     for (Player p : getArena().getPlayers()) {
-                        nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_SUDDEN_DEATH), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_SUDDEN_DEATH), 0, 40, 10);
+                        nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_SUDDEN_DEATH)), AdventureText.section(getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_SUDDEN_DEATH)), 0, 40, 10);
                         for (ITeam t : getArena().getTeams()) {
                             if (t.getMembers().isEmpty()) continue;
-                            p.sendMessage(getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_SUDDEN_DEATH).replace("{TeamDragons}", String.valueOf(t.getDragons()))
+                            AdventureText.send(p, getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_SUDDEN_DEATH).replace("{TeamDragons}", String.valueOf(t.getDragons()))
                                     .replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(p))));
                         }
                     }
                     for (Player p : getArena().getSpectators()) {
-                        nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_SUDDEN_DEATH), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_SUDDEN_DEATH), 0, 40, 10);
+                        nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_SUDDEN_DEATH)), AdventureText.section(getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_SUDDEN_DEATH)), 0, 40, 10);
                         for (ITeam t : getArena().getTeams()) {
                             if (t.getMembers().isEmpty()) continue;
-                            p.sendMessage(getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_SUDDEN_DEATH).replace("{TeamDragons}", String.valueOf(t.getDragons()))
+                            AdventureText.send(p, getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_SUDDEN_DEATH).replace("{TeamDragons}", String.valueOf(t.getDragons()))
                                     .replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(p))));
                         }
                     }
@@ -177,8 +178,8 @@ public class GamePlayingTask implements Runnable, PlayingTask {
                             distance = (int) p.getLocation().distance(p2.getLocation());
                         }
                     }
-                    nms.playAction(p, getMsg(p, Messages.FORMATTING_ACTION_BAR_TRACKING).replace("{team}", t.getColor().chat() + t.getDisplayName(Language.getPlayerLanguage(p)))
-                            .replace("{distance}", t.getColor().chat().toString() + distance).replace("&", "§"));
+                    nms.playAction(p, AdventureText.ampersand(getMsg(p, Messages.FORMATTING_ACTION_BAR_TRACKING).replace("{team}", t.getColor().chat() + t.getDisplayName(Language.getPlayerLanguage(p)))
+                            .replace("{distance}", t.getColor().chat().toString() + distance)));
                 }
             }
 
@@ -219,10 +220,10 @@ public class GamePlayingTask implements Runnable, PlayingTask {
                         t.respawnMember(e.getKey());
                     }
                 } else {
-                    nms.sendTitle(e.getKey(), getMsg(e.getKey(), Messages.PLAYER_DIE_RESPAWN_TITLE).replace("{time}",
-                            String.valueOf(e.getValue())), getMsg(e.getKey(), Messages.PLAYER_DIE_RESPAWN_SUBTITLE).replace("{time}",
-                            String.valueOf(e.getValue())), 0, 30, 10);
-                    e.getKey().sendMessage(getMsg(e.getKey(), Messages.PLAYER_DIE_RESPAWN_CHAT).replace("{time}", String.valueOf(e.getValue())));
+                    nms.sendTitle(e.getKey(), AdventureText.section(getMsg(e.getKey(), Messages.PLAYER_DIE_RESPAWN_TITLE).replace("{time}",
+                            String.valueOf(e.getValue()))), AdventureText.section(getMsg(e.getKey(), Messages.PLAYER_DIE_RESPAWN_SUBTITLE).replace("{time}",
+                            String.valueOf(e.getValue()))), 0, 30, 10);
+                    AdventureText.send(e.getKey(), getMsg(e.getKey(), Messages.PLAYER_DIE_RESPAWN_CHAT).replace("{time}", String.valueOf(e.getValue())));
                     getArena().getRespawnSessions().replace(e.getKey(), e.getValue() - 1);
                 }
             }

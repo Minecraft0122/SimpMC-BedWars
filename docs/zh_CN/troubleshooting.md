@@ -4,11 +4,11 @@
 
 确认三项：
 
-1. 服务端确实是 Paper 1.21.11。
-2. `java -version` 显示 Java 21 或更新兼容版本。
+1. 服务端确实是 Paper 1.21.11 或 Paper 26.2。
+2. Paper 1.21.11 的 `java -version` 至少为 21；Paper 26.2 必须为 25。
 3. `plugins` 中没有重复的 SimpMC-BedWars JAR。
 
-Spigot、Folia、旧世界格式和其他 Minecraft 版本会被主动拒绝。
+Spigot、Folia、其他 Minecraft 版本，以及只提供 Paper 26 维度目录而缺少根级 `level.dat` 与 `region/` 的地图会被主动拒绝。竞技场原图必须保持旧版 Bukkit 根目录格式。
 
 ## 配置解析错误
 

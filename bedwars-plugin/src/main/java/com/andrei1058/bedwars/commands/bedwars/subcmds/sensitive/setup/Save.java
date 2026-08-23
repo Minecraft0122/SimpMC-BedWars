@@ -20,13 +20,14 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -61,22 +62,22 @@ public class Save extends SubCommand {
         if (!missingBeds.isEmpty()) {
             StringJoiner teams = new StringJoiner(", ");
             missingBeds.forEach(teams::add);
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "在以下队伍出生点附近找不到床：" + teams);
+            AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "在以下队伍出生点附近找不到床：" + teams);
             if (assisted) {
-                p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "请将队伍出生点设得更靠近床，或使用 /"
+                AdventureText.send(p, ss.getPrefix() + ChatColor.YELLOW + "请将队伍出生点设得更靠近床，或使用 /"
                         + getParent().getName() + " setBed <队伍> 手动设置。");
             } else {
-                p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "高级模式不会自动设置床位，请使用 /"
+                AdventureText.send(p, ss.getPrefix() + ChatColor.YELLOW + "高级模式不会自动设置床位，请使用 /"
                         + getParent().getName() + " setBed <队伍> 手动设置。");
             }
         }
 
         if (!missingGenerators.isEmpty()) {
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "以下队伍缺少必要的铁或金生成器：");
-            missingGenerators.forEach((team, types) -> p.sendMessage(
+            AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "以下队伍缺少必要的铁或金生成器：");
+            missingGenerators.forEach((team, types) -> AdventureText.send(p,
                     ChatColor.GRAY + " - " + ss.getTeamColor(team) + team + ChatColor.GRAY
                             + "：缺少" + String.join("、", types) + "生成器"));
-            p.sendMessage(ss.getPrefix() + ChatColor.YELLOW + "请站在资源点使用 /" + getParent().getName()
+            AdventureText.send(p, ss.getPrefix() + ChatColor.YELLOW + "请站在资源点使用 /" + getParent().getName()
                     + " addGenerator；高级模式可使用 addGenerator <iron/gold> <队伍>。");
         }
         if (!missingBeds.isEmpty() || !missingGenerators.isEmpty()) return true;
@@ -89,9 +90,9 @@ public class Save extends SubCommand {
         }
 
         ss.done();
-        p.sendMessage(ss.getPrefix() + "竞技场修改已保存！");
-        p.sendMessage(ss.getPrefix() + "现在可以使用以下命令启用：");
-        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + "/" + getParent().getName() + " enableArena " + ss.getWorldName() + ChatColor.GRAY +"（点击启用）", ChatColor.GREEN + "启用此竞技场", "/" + getParent().getName() + " enableArena " + ss.getWorldName(), ClickEvent.Action.RUN_COMMAND));
+        AdventureText.send(p, ss.getPrefix() + "竞技场修改已保存！");
+        AdventureText.send(p, ss.getPrefix() + "现在可以使用以下命令启用：");
+        AdventureText.send(p, Misc.msgHoverClick(ChatColor.GOLD + "/" + getParent().getName() + " enableArena " + ss.getWorldName() + ChatColor.GRAY +"（点击启用）", ChatColor.GREEN + "启用此竞技场", "/" + getParent().getName() + " enableArena " + ss.getWorldName(), ClickEvent.Action.RUN_COMMAND));
         return true;
     }
 

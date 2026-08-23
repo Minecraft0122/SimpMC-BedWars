@@ -25,11 +25,12 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -75,11 +76,11 @@ public class AddGenerator extends SubCommand {
                 }
 
                 // else send usage message
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍出生点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "如果没有自动找到，请使用：/bw addGenerator <队伍>", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "另一种用法：/bw addGenerator <emerald/diamond>", "添加绿宝石或钻石资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "附近没有找到队伍。", 5, 60, 5);
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
+                AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍出生点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "如果没有自动找到，请使用：/bw addGenerator <队伍>", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "另一种用法：/bw addGenerator <emerald/diamond>", "添加绿宝石或钻石资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "附近没有找到队伍。"), 5, 60, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                 return true;
             }
@@ -89,11 +90,11 @@ public class AddGenerator extends SubCommand {
             saveTeamGen(p.getLocation(), team, ss, "Emerald");
 
             createArmorStand(ChatColor.GOLD + "已设置队伍资源点：" + ss.getTeamColor(team) + team, p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
-            p.sendMessage(ss.getPrefix() + "已为队伍设置资源点：" + ss.getTeamColor(team) + team);
+            AdventureText.send(p, ss.getPrefix() + "已为队伍设置资源点：" + ss.getTeamColor(team) + team);
 
             Bukkit.dispatchCommand(p, getParent().getName());
 
-            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已为队伍设置资源点：" + ss.getTeamColor(team) + team, 5, 60, 5);
+            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.GREEN + "已为队伍设置资源点：" + ss.getTeamColor(team) + team), 5, 60, 5);
             Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
             return true;
         } else if (args.length == 1 && (args[0].equalsIgnoreCase("diamond") || args[0].equalsIgnoreCase("emerald"))) {
@@ -101,8 +102,8 @@ public class AddGenerator extends SubCommand {
             List<Location> locations = ss.getConfig().getArenaLocations("generator." + args[0].substring(0, 1).toUpperCase() + args[0].substring(1).toLowerCase());
             for (Location l : locations) {
                 if (ss.getConfig().compareArenaLoc(l, p.getLocation())) {
-                    p.sendMessage(ss.getPrefix() + ChatColor.RED + "该资源点已经设置！");
-                    com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "该资源点已经设置！", 5, 30, 5);
+                    AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "该资源点已经设置！");
+                    com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "该资源点已经设置！"), 5, 30, 5);
                     Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                     return true;
                 }
@@ -118,12 +119,12 @@ public class AddGenerator extends SubCommand {
             saved.add(ss.getConfig().stringLocationArenaFormat(p.getLocation()));
 
             ss.getConfig().set("generator." + gen, saved);
-            p.sendMessage(ss.getPrefix() + "已添加 " + gen + " 资源点！");
+            AdventureText.send(p, ss.getPrefix() + "已添加 " + gen + " 资源点！");
             createArmorStand(ChatColor.GOLD + gen + " SET", p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
             if (ss.getSetupType() == SetupType.ASSISTED) {
                 Bukkit.dispatchCommand(p, getParent().getName());
             }
-            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已添加 " + ChatColor.GOLD + gen + ChatColor.GREEN + " 资源点！", 5, 60, 5);
+            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.GREEN + "已添加 " + ChatColor.GOLD + gen + ChatColor.GREEN + " 资源点！"), 5, 60, 5);
             Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
             return true;
         } else if (args.length >= 1 && (args[0].equalsIgnoreCase("iron") || args[0].equalsIgnoreCase("gold") || args[0].equalsIgnoreCase("upgrade")) && ss.getSetupType() == SetupType.ADVANCED) {
@@ -133,18 +134,18 @@ public class AddGenerator extends SubCommand {
             } else {
                 team = args[1];
                 if (ss.getConfig().getYml().get("Team." + team + ".Color") == null) {
-                    p.sendMessage(ss.getPrefix() + ChatColor.RED + "找不到队伍：" + team);
-                    p.sendMessage(ss.getPrefix() + "如需创建队伍，请使用 /bw createTeam。");
+                    AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "找不到队伍：" + team);
+                    AdventureText.send(p, ss.getPrefix() + "如需创建队伍，请使用 /bw createTeam。");
                     ss.displayAvailableTeams();
-                    com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "附近没有找到队伍。", 5, 60, 5);
+                    com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "附近没有找到队伍。"), 5, 60, 5);
                     Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                     return true;
                 }
             }
             // find nearest team to set the generator else send usage msg
             if (team.isEmpty()) {
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
-                p.sendMessage(ss.getPrefix() + "请尝试：/bw addGenerator <iron/gold/upgrade> <队伍>");
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
+                AdventureText.send(p, ss.getPrefix() + "请尝试：/bw addGenerator <iron/gold/upgrade> <队伍>");
                 return true;
             }
 
@@ -154,18 +155,18 @@ public class AddGenerator extends SubCommand {
             }
 
             createArmorStand(ChatColor.GOLD + "已添加 " + gen + " 资源点，队伍：" + ss.getTeamColor(team) + team, p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
-            p.sendMessage(ss.getPrefix() + "已为队伍添加 " + gen + " 资源点：" + ss.getTeamColor(team) + team);
+            AdventureText.send(p, ss.getPrefix() + "已为队伍添加 " + gen + " 资源点：" + ss.getTeamColor(team) + team);
             saveTeamGen(p.getLocation(), team, ss, gen);
-            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已为 " + ss.getTeamColor(team) + team + ChatColor.GREEN + " 添加 " + ChatColor.GOLD + gen + ChatColor.GREEN + " 资源点！", 5, 60, 5);
+            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.GREEN + "已为 " + ss.getTeamColor(team) + team + ChatColor.GREEN + " 添加 " + ChatColor.GOLD + gen + ChatColor.GREEN + " 资源点！"), 5, 60, 5);
             Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
             return true;
         } else if (args.length == 1 && ss.getSetupType() == SetupType.ASSISTED) {
             String team = args[0];
             if (ss.getConfig().getYml().get("Team." + team + ".Color") == null) {
-                p.sendMessage(ss.getPrefix() + "找不到队伍：" + ChatColor.RED + team);
-                p.sendMessage(ss.getPrefix() + "如需创建队伍，请使用 /bw createTeam。");
+                AdventureText.send(p, ss.getPrefix() + "找不到队伍：" + ChatColor.RED + team);
+                AdventureText.send(p, ss.getPrefix() + "如需创建队伍，请使用 /bw createTeam。");
                 ss.displayAvailableTeams();
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", "找不到队伍：" + ChatColor.RED + team, 5, 40, 5);
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section("找不到队伍：" + ChatColor.RED + team), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                 return true;
             }
@@ -174,24 +175,24 @@ public class AddGenerator extends SubCommand {
             saveTeamGen(p.getLocation(), team, ss, "Gold");
             saveTeamGen(p.getLocation(), team, ss, "Emerald");
             createArmorStand(ChatColor.GOLD + "已设置队伍资源点：" + ss.getTeamColor(team) + team, p.getLocation(), ss.getConfig().stringLocationArenaFormat(p.getLocation()));
-            p.sendMessage(ss.getPrefix() + "已为队伍设置资源点：" + ss.getTeamColor(team) + team);
+            AdventureText.send(p, ss.getPrefix() + "已为队伍设置资源点：" + ss.getTeamColor(team) + team);
             Bukkit.dispatchCommand(p, getParent().getName());
 
-            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已为队伍设置资源点：" + ss.getTeamColor(team) + team, 5, 60, 5);
+            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.GREEN + "已为队伍设置资源点：" + ss.getTeamColor(team) + team), 5, 60, 5);
             Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
             return true;
         }
         if (ss.getSetupType() == SetupType.ASSISTED) {
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator（自动识别队伍）", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <队伍>", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator（自动识别队伍）", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <队伍>", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
 
         }
         if (ss.getSetupType() == SetupType.ADVANCED) {
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <iron/gold/upgrade>", "添加队伍资源点，队伍将自动识别。", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <iron/gold/upgrade>", "添加队伍资源点，队伍将自动识别。", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
 
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <iron/gold/upgrade> <队伍>", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <iron/gold/upgrade> <队伍>", "添加队伍资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
         }
-        p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <emerald/diamond>", "添加绿宝石或钻石资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+        AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "/bw addGenerator <emerald/diamond>", "添加绿宝石或钻石资源点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
         return true;
     }
 

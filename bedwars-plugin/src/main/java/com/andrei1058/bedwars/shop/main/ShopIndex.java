@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.shop.main;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.events.shop.ShopOpenEvent;
 import com.andrei1058.bedwars.api.language.Language;
@@ -84,7 +86,7 @@ public class ShopIndex {
             if (event.isCancelled()) return;
         }
 
-        Inventory inv = Bukkit.createInventory(null, invSize, Language.getMsg(player, getNamePath()));
+        Inventory inv = Bukkit.createInventory(null, invSize, AdventureText.section(Language.getMsg(player, getNamePath())));
 
         inv.setItem(getQuickBuyButton().getSlot(), getQuickBuyButton().getItemStack(player));
 
@@ -114,8 +116,8 @@ public class ShopIndex {
         ItemStack i = separatorStandard.clone();
         ItemMeta im = i.getItemMeta();
         if (im != null) {
-            im.setDisplayName(Language.getMsg(player, separatorNamePath));
-            im.setLore(Language.getList(player, separatorLorePath));
+            AdventureText.displayName(im, Language.getMsg(player, separatorNamePath));
+            AdventureText.lore(im, Language.getList(player, separatorLorePath));
             i.setItemMeta(im);
         }
 
@@ -131,8 +133,8 @@ public class ShopIndex {
         ItemStack i = separatorSelected.clone();
         ItemMeta im = i.getItemMeta();
         if (im != null) {
-            im.setDisplayName(Language.getMsg(player, separatorNamePath));
-            im.setLore(Language.getList(player, separatorLorePath));
+            AdventureText.displayName(im, Language.getMsg(player, separatorNamePath));
+            AdventureText.lore(im, Language.getList(player, separatorLorePath));
             i.setItemMeta(im);
         }
         return i;

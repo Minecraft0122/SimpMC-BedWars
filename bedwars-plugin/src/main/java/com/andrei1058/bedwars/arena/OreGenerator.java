@@ -20,6 +20,9 @@
 
 package com.andrei1058.bedwars.arena;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+import com.andrei1058.bedwars.configuration.Sounds;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
@@ -179,7 +182,7 @@ public class OreGenerator implements IGenerator {
                 for (Player player : players) {
                     ItemStack item = ore.clone();
                     item.setAmount(amount);
-                    player.playSound(player, Sound.ENTITY_ITEM_PICKUP, 0.6f, 1.3f);
+                    player.playSound(Sounds.adventureSound(Sound.ENTITY_ITEM_PICKUP, 0.6f, 1.3f));
                     Collection<ItemStack> excess = player.getInventory().addItem(item).values();
                     if (!excess.isEmpty()) {
                         Location overflowLocation = player.getLocation();
@@ -210,7 +213,7 @@ public class OreGenerator implements IGenerator {
             itemStack.setAmount(stackSize);
             if (!stack) {
                 ItemMeta itemMeta = itemStack.getItemMeta();
-                itemMeta.setDisplayName("custom" + dropID++);
+                AdventureText.displayName(itemMeta, "custom" + dropID++);
                 itemStack.setItemMeta(itemMeta);
             }
             Item item = location.getWorld().dropItem(location, itemStack);
@@ -289,7 +292,7 @@ public class OreGenerator implements IGenerator {
         @Override
         public void setTierName(String name) {
             if (tier.isDead()) return;
-            tier.setCustomName(name);
+            AdventureText.customName(tier, name);
         }
 
         @Override
@@ -300,7 +303,7 @@ public class OreGenerator implements IGenerator {
         @Override
         public void setTimerName(String name) {
             if (timer.isDead()) return;
-            timer.setCustomName(name);
+            AdventureText.customName(timer, name);
         }
 
         @Override
@@ -315,7 +318,7 @@ public class OreGenerator implements IGenerator {
         ArmorStand a = (ArmorStand) l.getWorld().spawnEntity(l, EntityType.ARMOR_STAND);
         a.setGravity(false);
         if (name != null) {
-            a.setCustomName(name);
+            AdventureText.customName(a, name);
             a.setCustomNameVisible(true);
         }
         a.setRemoveWhenFarAway(false);

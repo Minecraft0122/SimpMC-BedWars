@@ -10,6 +10,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import org.bukkit.command.CommandSender;
 
@@ -23,7 +24,7 @@ public final class SetMinInTeam extends SetMinPlayers {
 
     @Override
     public boolean execute(String[] args, CommandSender sender) {
-        sender.sendMessage("§e旧命令 setMinInTeam 已改为全场最低开局人数；请改用 /"
+        AdventureText.send(sender, "§e旧命令 setMinInTeam 已改为全场最低开局人数；请改用 /"
                 + getParent().getName() + " setMinPlayers。");
         return super.execute(args, sender);
     }

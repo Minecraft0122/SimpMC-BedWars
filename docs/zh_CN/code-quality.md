@@ -1,6 +1,6 @@
 # 代码质量审计与 API 设计说明
 
-本页记录截至 7.1.1 的代码审计结论，方便维护者理解现有结构、API 选择及后续重构优先级。运行环境只支持 Paper 1.21.11 + Java 21，不为旧 Minecraft 版本、Spigot 或 Folia 保留运行分支；附属插件 API 的兼容策略与服务端版本兼容是两件独立的事。
+本页记录代码审计结论，方便维护者理解现有结构、API 选择及后续重构优先级。运行环境支持 Paper 1.21.11 + Java 21 和 Paper 26.2 + Java 25，不为其他 Minecraft 版本、Spigot 或 Folia 保留运行分支；附属插件 API 的兼容策略与服务端版本兼容是两件独立的事。
 
 ## 本次已经改进
 
@@ -111,7 +111,7 @@ TAB 的本局时间直接读取竞技场已经维护的 `startTime`，由现有�
 
 ### 旧 Bukkit API
 
-聊天仍基于已弃用的 `AsyncPlayerChatEvent`。未来可直接迁移到 Paper Adventure 的异步聊天事件，并以 `Component` 构建消息，减少颜色字符串拼接；无需考虑低版本 Bukkit 回退。
+聊天已迁移到 Paper 的 `AsyncChatEvent`、Adventure `Component` 和 `ChatRenderer`；配置中的颜色码只在渲染边界解析，无需低版本 Bukkit 回退。
 
 ### 配置路径依赖字符串
 

@@ -9,11 +9,11 @@ import com.andrei1058.bedwars.api.events.player.PlayerKillEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.VersionSupport;
+import net.kyori.adventure.text.Component;
 import com.andrei1058.bedwars.support.version.common.DespawnableTargeting;
 import com.andrei1058.bedwars.support.version.common.VersionCommon;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -137,13 +137,19 @@ public class v1_21_R3 extends VersionSupport {
     }
 
     @Override
-    public void sendTitle(Player p, String title, String subtitle, int fadeIn, int stay, int fadeOut) {
-        p.sendTitle(title == null ? " " : title, subtitle == null ? " " : subtitle, fadeIn, stay, fadeOut);
+    public void sendTitle(Player p, Component title, Component subtitle, int fadeIn, int stay, int fadeOut) {
+        p.showTitle(net.kyori.adventure.title.Title.title(
+                title == null ? Component.empty() : title,
+                subtitle == null ? Component.empty() : subtitle,
+                net.kyori.adventure.title.Title.Times.times(
+                        java.time.Duration.ofMillis(Math.max(0, fadeIn) * 50L),
+                        java.time.Duration.ofMillis(Math.max(0, stay) * 50L),
+                        java.time.Duration.ofMillis(Math.max(0, fadeOut) * 50L))));
     }
 
     @Override
-    public void playAction(Player p, String text) {
-        p.sendActionBar(ChatColor.translateAlternateColorCodes('&', text));
+    public void playAction(Player p, Component text) {
+        p.sendActionBar(text == null ? Component.empty() : text);
     }
 
     @Override
@@ -245,7 +251,7 @@ public class v1_21_R3 extends VersionSupport {
         villager.setCollidable(false);
         villager.setInvulnerable(true);
         villager.setSilent(true);
-        villager.setCustomName(null);
+        villager.customName(null);
         villager.setCustomNameVisible(false);
         lockedShopkeepers.put(villager.getUniqueId(), new LockedShopkeeper(villager, location));
 
@@ -604,8 +610,8 @@ public class v1_21_R3 extends VersionSupport {
 
         for (Player player : arena.getPlayers()) {
             if (player == null || player.equals(respawned)) continue;
-            player.showPlayer(getPlugin(), respawned);
-            respawned.showPlayer(getPlugin(), player);
+            player.showEntity(getPlugin(), respawned);
+            respawned.showEntity(getPlugin(), player);
             if (arena.getShowTime().containsKey(respawned) && respawnedTeam != null
                     && !respawnedTeam.equals(arena.getTeam(player))) {
                 hideArmor(respawned, player);
@@ -616,8 +622,8 @@ public class v1_21_R3 extends VersionSupport {
 
         for (Player spectator : arena.getSpectators()) {
             if (spectator == null || spectator.equals(respawned)) continue;
-            spectator.showPlayer(getPlugin(), respawned);
-            respawned.hidePlayer(getPlugin(), spectator);
+            spectator.showEntity(getPlugin(), respawned);
+            respawned.hideEntity(getPlugin(), spectator);
             if (arena.getShowTime().containsKey(respawned)) {
                 hideArmor(respawned, spectator);
             }
@@ -625,8 +631,8 @@ public class v1_21_R3 extends VersionSupport {
     }
 
     @Override
-    public String getInventoryName(InventoryEvent e) {
-        return e.getView().getTitle();
+    public Component getInventoryTitle(InventoryEvent e) {
+        return e.getView().title();
     }
 
     @Override
@@ -668,12 +674,12 @@ public class v1_21_R3 extends VersionSupport {
 
     @Override
     public void spigotShowPlayer(Player victim, Player receiver) {
-        receiver.showPlayer(getPlugin(), victim);
+        receiver.showEntity(getPlugin(), victim);
     }
 
     @Override
     public void spigotHidePlayer(Player victim, Player receiver) {
-        receiver.hidePlayer(getPlugin(), victim);
+        receiver.hideEntity(getPlugin(), victim);
     }
 
     @Override

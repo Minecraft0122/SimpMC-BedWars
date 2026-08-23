@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.money.internal;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
@@ -26,7 +27,7 @@ public class MoneyPerMinuteTask {
             if (!BedWars.getEconomy().isEconomy()) return;
             for (Player p : arena.getPlayers()) {
                 BedWars.getEconomy().giveMoney(p, money);
-                p.sendMessage(Language.getMsg(p, Messages.MONEY_REWARD_PER_MINUTE).replace("{money}", String.valueOf(money)));
+                AdventureText.send(p, Language.getMsg(p, Messages.MONEY_REWARD_PER_MINUTE).replace("{money}", String.valueOf(money)));
             }
         }, 60 * 20, 60 * 20);
     }

@@ -23,6 +23,7 @@ package com.andrei1058.bedwars.api.arena.shop;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.language.Language;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -62,7 +63,7 @@ public class ShopHolo {
 
     public void update() {
         if (l == null) {
-            Bukkit.broadcastMessage("LOCATION IS NULL");
+            Bukkit.broadcast(AdventureText.section("LOCATION IS NULL"));
         }
         for (Player p2 : l.getWorld().getPlayers()) {
             if (Language.getPlayerLanguage(p2).getIso().equalsIgnoreCase(iso)) continue;

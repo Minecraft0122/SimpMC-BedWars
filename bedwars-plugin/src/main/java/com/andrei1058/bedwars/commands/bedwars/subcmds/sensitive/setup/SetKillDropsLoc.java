@@ -25,12 +25,13 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.ArenaConfig;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -67,8 +68,8 @@ public class SetKillDropsLoc extends SubCommand {
             String foundTeam = "";
             double distance = 100;
             if (ss.getConfig().getYml().getConfigurationSection("Team") == null) {
-                p.sendMessage(ss.getPrefix() + "请先创建队伍！");
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "请先创建队伍！", 5, 40, 5);
+                AdventureText.send(p, ss.getPrefix() + "请先创建队伍！");
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "请先创建队伍！"), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                 return true;
             }
@@ -88,9 +89,9 @@ public class SetKillDropsLoc extends SubCommand {
                 }
                 arena.set("Team." + foundTeam + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC, arena.stringLocationArenaFormat(p.getLocation()));
                 String team = ss.getTeamColor(foundTeam) + foundTeam;
-                p.sendMessage(ss.getPrefix() + "已设置死亡掉落点：" + team);
+                AdventureText.send(p, ss.getPrefix() + "已设置死亡掉落点：" + team);
                 createArmorStand(ChatColor.GOLD + "死亡掉落点 " + team, p.getLocation(), null);
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已设置死亡掉落点：" + team, 5, 40, 5);
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.GREEN + "已设置死亡掉落点：" + team), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
 
                 if (ss.getSetupType() == SetupType.ASSISTED) {
@@ -99,18 +100,18 @@ public class SetKillDropsLoc extends SubCommand {
                 return true;
             }
 
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "用法：/" + mainCmd + " setKillDrops <队伍名>");
+            AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "用法：/" + mainCmd + " setKillDrops <队伍名>");
             return true;
         }
 
         String foundTeam = ss.getNearestTeam();
 
         if (foundTeam.isEmpty()) {
-            p.sendMessage("");
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍出生点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "如果没有自动找到，请使用：/bw " + getSubCommandName() + " <队伍>", "设置队伍死亡掉落点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "附近没有找到队伍。", 5, 60, 5);
+            AdventureText.send(p, "");
+            AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
+            AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍出生点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "如果没有自动找到，请使用：/bw " + getSubCommandName() + " <队伍>", "设置队伍死亡掉落点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "附近没有找到队伍。"), 5, 60, 5);
             Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
             return true;
         }
@@ -119,11 +120,11 @@ public class SetKillDropsLoc extends SubCommand {
             if (arena.getYml().get("Team." + args[0]) != null) {
                 foundTeam = args[0];
             } else {
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "该队伍不存在！");
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "该队伍不存在！");
                 if (arena.getYml().get("Team") != null) {
-                    p.sendMessage(ss.getPrefix() + "可用队伍：");
+                    AdventureText.send(p, ss.getPrefix() + "可用队伍：");
                     for (String team : Objects.requireNonNull(arena.getYml().getConfigurationSection("Team")).getKeys(false)) {
-                        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + "死亡掉落点 " + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "（点击设置）", ChatColor.WHITE + "设置 " + ss.getTeamColor(team) + team + " 的死亡掉落点", "/" + mainCmd + " setKillDrops " + team, ClickEvent.Action.RUN_COMMAND));
+                        AdventureText.send(p, Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + "死亡掉落点 " + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "（点击设置）", ChatColor.WHITE + "设置 " + ss.getTeamColor(team) + team + " 的死亡掉落点", "/" + mainCmd + " setKillDrops " + team, ClickEvent.Action.RUN_COMMAND));
                     }
                 }
                 return true;
@@ -131,7 +132,7 @@ public class SetKillDropsLoc extends SubCommand {
         }
 
         arena.set("Team." + foundTeam + "." + ConfigPath.ARENA_TEAM_KILL_DROPS_LOC, arena.stringLocationArenaFormat(p.getLocation()));
-        p.sendMessage(ss.getPrefix() + "已设置死亡掉落点：" + ss.getTeamColor(foundTeam) + foundTeam);
+        AdventureText.send(p, ss.getPrefix() + "已设置死亡掉落点：" + ss.getTeamColor(foundTeam) + foundTeam);
 
         if (ss.getSetupType() == SetupType.ASSISTED) {
             Bukkit.dispatchCommand(p, getParent().getName());

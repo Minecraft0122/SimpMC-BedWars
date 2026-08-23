@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -29,7 +30,7 @@ import com.andrei1058.bedwars.arena.ArenaGroupPolicy;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -56,7 +57,7 @@ public class SetType extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null) {
-            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
+            AdventureText.send(s, "§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
         if (args.length == 0) {
@@ -84,7 +85,7 @@ public class SetType extends SubCommand {
             ss.getConfig().getYml().set(ArenaGroupPolicy.GROUP_PATH, input);
             ss.getConfig().getYml().set(ArenaGroupPolicy.LEGACY_GROUPS_PATH, null);
             ss.getConfig().save();
-            p.sendMessage("§6 ▪ §7竞技场分组已改为：§d" + input);
+            AdventureText.send(p, "§6 ▪ §7竞技场分组已改为：§d" + input);
             if (ss.getSetupType() == SetupType.ASSISTED) {
                 Bukkit.dispatchCommand(p, getParent().getName());
             }
@@ -104,10 +105,10 @@ public class SetType extends SubCommand {
     }
 
     private void sendUsage(Player p) {
-        p.sendMessage("§9 ▪ §7用法：" + getParent().getName() + " " + getSubCommandName() + " <类型>");
-        p.sendMessage("§9可用类型：");
+        AdventureText.send(p, "§9 ▪ §7用法：" + getParent().getName() + " " + getSubCommandName() + " <类型>");
+        AdventureText.send(p, "§9可用类型：");
         for (String st : available) {
-            p.spigot().sendMessage(Misc.msgHoverClick("§1 ▪ §e" + st + " §7（点击设置）", "§d点击将竞技场设为 " + st, "/" + getParent().getName() + " " + getSubCommandName() + " " + st, ClickEvent.Action.RUN_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick("§1 ▪ §e" + st + " §7（点击设置）", "§d点击将竞技场设为 " + st, "/" + getParent().getName() + " " + getSubCommandName() + " " + st, ClickEvent.Action.RUN_COMMAND));
         }
     }
 

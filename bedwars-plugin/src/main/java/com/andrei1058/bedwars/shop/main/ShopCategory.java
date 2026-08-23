@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.shop.main;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
@@ -122,7 +124,7 @@ public class ShopCategory {
         if (player.getOpenInventory().getTopInventory() == null) return;
         ShopIndex.indexViewers.remove(player.getUniqueId());
 
-        Inventory inv = Bukkit.createInventory(null, index.getInvSize(), Language.getMsg(player, invNamePath));
+        Inventory inv = Bukkit.createInventory(null, index.getInvSize(), AdventureText.section(Language.getMsg(player, invNamePath)));
 
         inv.setItem(index.getQuickBuyButton().getSlot(), index.getQuickBuyButton().getItemStack(player));
 
@@ -153,8 +155,8 @@ public class ShopCategory {
         ItemStack i = itemStack.clone();
         ItemMeta im = i.getItemMeta();
         if (im != null) {
-            im.setDisplayName(Language.getMsg(player, itemNamePath));
-            im.setLore(Language.getList(player, itemLorePath));
+            AdventureText.displayName(im, Language.getMsg(player, itemNamePath));
+            AdventureText.lore(im, Language.getList(player, itemLorePath));
             i.setItemMeta(im);
         }
         return i;

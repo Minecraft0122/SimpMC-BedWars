@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.arena;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
@@ -33,7 +35,7 @@ import com.andrei1058.bedwars.configuration.ArenaConfig;
 import com.andrei1058.bedwars.listeners.LobbyAnnouncements;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
@@ -131,25 +133,25 @@ public class SetupSession implements ISetupSession {
      * @return return is broken. do not use it.
      */
     public boolean startSetup() {
-        getPlayer().sendMessage("§6 ▪ §7正在加载 " + getWorldName());
+        AdventureText.send(getPlayer(), "§6 ▪ §7正在加载 " + getWorldName());
         cm = new ArenaConfig(BedWars.plugin, getWorldName(), plugin.getDataFolder().getPath() + "/Arenas");
         BedWars.getAPI().getRestoreAdapter().onSetupSessionStart(this);
         return true;
     }
 
     private static void openGUI(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 9, getInvName());
+        Inventory inv = Bukkit.createInventory(null, 9, AdventureText.section(getInvName()));
         ItemStack assisted = new ItemStack(Material.GLOWSTONE_DUST);
         ItemMeta am = assisted.getItemMeta();
-        am.setDisplayName("§e§l引导式设置");
-        am.setLore(Arrays.asList("", "§a简单快速地创建竞技场", "§7适合首次配置竞技场的管理员", "", "§3仅显示必要选项"));
+        AdventureText.displayName(am, "§e§l引导式设置");
+        AdventureText.lore(am, Arrays.asList("", "§a简单快速地创建竞技场", "§7适合首次配置竞技场的管理员", "", "§3仅显示必要选项"));
         assisted.setItemMeta(am);
         inv.setItem(getAssistedSlot(), assisted);
 
         ItemStack advanced = new ItemStack(Material.REDSTONE);
         ItemMeta amm = advanced.getItemMeta();
-        amm.setDisplayName("§c§l高级设置");
-        amm.setLore(Arrays.asList("", "§a完整配置竞技场", "§7适合熟悉插件的管理员", "", "§3显示全部高级选项"));
+        AdventureText.displayName(amm, "§c§l高级设置");
+        AdventureText.lore(amm, Arrays.asList("", "§a完整配置竞技场", "§7适合熟悉插件的管理员", "", "§3显示全部高级选项"));
         advanced.setItemMeta(amm);
         inv.setItem(getAdvancedSlot(), advanced);
 
@@ -162,7 +164,7 @@ public class SetupSession implements ISetupSession {
     public void cancel() {
         getSetupSessions().remove(this);
         if (isStarted()) {
-            player.sendMessage("§6 ▪ §7已取消 " + getWorldName() + " 的设置。");
+            AdventureText.send(player, "§6 ▪ §7已取消 " + getWorldName() + " 的设置。");
             done();
         }
     }
@@ -252,7 +254,7 @@ public class SetupSession implements ISetupSession {
     public void teleportPlayer() {
         World w = Bukkit.getWorld(getWorldName());
         if (w == null) {
-            player.sendMessage(getPrefix() + ChatColor.RED + "无法加载竞技场世界。");
+            AdventureText.send(player, getPrefix() + ChatColor.RED + "无法加载竞技场世界。");
             return;
         }
         player.getInventory().clear();
@@ -263,19 +265,19 @@ public class SetupSession implements ISetupSession {
             player.setFlying(true);
         }, 5L);
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 2));
-        player.sendMessage("\n" + ChatColor.WHITE + "\n");
+        AdventureText.send(player, "\n" + ChatColor.WHITE + "\n");
 
         for (int x = 0; x < 10; x++) {
-            getPlayer().sendMessage(" ");
+        AdventureText.send(getPlayer(), " ");
         }
-        player.sendMessage(ChatColor.GREEN + "已传送到 " + ChatColor.GOLD + getWorldName() + ChatColor.GREEN + " 的出生点。");
+        AdventureText.send(player, ChatColor.GREEN + "已传送到 " + ChatColor.GOLD + getWorldName() + ChatColor.GREEN + " 的出生点。");
         if (getSetupType() == SetupType.ASSISTED && getConfig().getYml().get("waiting.Loc") == null) {
-            player.sendMessage("");
-            player.sendMessage(ChatColor.GREEN + "你好，" + player.getDisplayName() + "！");
-            player.sendMessage(ChatColor.WHITE + "请先设置等待大厅出生点。");
-            player.sendMessage(ChatColor.WHITE + "玩家将在这里等待游戏开始。");
-            player.spigot().sendMessage(Misc.msgHoverClick(ChatColor.BLUE + "     ▪     " + ChatColor.GOLD + "点击设置等待大厅    " + ChatColor.BLUE + " ▪", ChatColor.LIGHT_PURPLE + "点击设置等待大厅出生点", "/" + BedWars.mainCmd + " setWaitingSpawn", ClickEvent.Action.RUN_COMMAND));
-            player.spigot().sendMessage(MainCommand.createTC(ChatColor.YELLOW + "或输入：" + ChatColor.GRAY + "/" + BedWars.mainCmd + " 查看命令列表。", "/" + BedWars.mainCmd, ChatColor.WHITE + "显示命令列表"));
+            AdventureText.send(player, "");
+            AdventureText.send(player, AdventureText.section(ChatColor.GREEN + "你好，" + AdventureText.displayName(player) + "！"));
+            AdventureText.send(player, ChatColor.WHITE + "请先设置等待大厅出生点。");
+            AdventureText.send(player, ChatColor.WHITE + "玩家将在这里等待游戏开始。");
+            AdventureText.send(player, Misc.msgHoverClick(ChatColor.BLUE + "     ▪     " + ChatColor.GOLD + "点击设置等待大厅    " + ChatColor.BLUE + " ▪", ChatColor.LIGHT_PURPLE + "点击设置等待大厅出生点", "/" + BedWars.mainCmd + " setWaitingSpawn", ClickEvent.Action.RUN_COMMAND));
+            AdventureText.send(player, MainCommand.createTC(ChatColor.YELLOW + "或输入：" + ChatColor.GRAY + "/" + BedWars.mainCmd + " 查看命令列表。", "/" + BedWars.mainCmd, ChatColor.WHITE + "显示命令列表"));
         } else {
             Bukkit.dispatchCommand(player, BedWars.mainCmd + " cmds");
         }
@@ -349,12 +351,12 @@ public class SetupSession implements ISetupSession {
     public void displayAvailableTeams() {
         List<String> teams = getTeams();
         if (teams.isEmpty()) {
-            getPlayer().sendMessage(getPrefix() + ChatColor.YELLOW + "当前地图还没有队伍。");
+            AdventureText.send(getPlayer(), getPrefix() + ChatColor.YELLOW + "当前地图还没有队伍。");
             return;
         }
-        getPlayer().sendMessage(getPrefix() + "当前队伍（共 " + teams.size() + " 支）：");
+        AdventureText.send(getPlayer(), getPrefix() + "当前队伍（共 " + teams.size() + " 支）：");
         for (String team : teams) {
-            getPlayer().sendMessage(getPrefix() + TeamColor.getChatColor(Objects.requireNonNull(getConfig().getYml().getString("Team." + team + ".Color"))) + team);
+            AdventureText.send(getPlayer(), getPrefix() + TeamColor.getChatColor(Objects.requireNonNull(getConfig().getYml().getString("Team." + team + ".Color"))) + team);
         }
     }
 

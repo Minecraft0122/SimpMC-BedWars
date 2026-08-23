@@ -22,6 +22,7 @@ package com.andrei1058.bedwars.support.party;
 
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.party.Party;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -98,7 +99,7 @@ public class Internal implements Party {
                 disband(member);
             } else if (p.members.contains(member)) {
                 for (Player mem : p.members) {
-                    mem.sendMessage(getMsg(mem, Messages.COMMAND_PARTY_LEAVE_SUCCESS).replace("{playername}", member.getName()).replace("{player}", member.getDisplayName()));
+                    AdventureText.send(mem, getMsg(mem, Messages.COMMAND_PARTY_LEAVE_SUCCESS).replace("{playername}", member.getName()).replace("{player}", AdventureText.displayName(member)));
                 }
                 p.members.remove(member);
                 if (p.members.isEmpty() || p.members.size() == 1) {
@@ -115,7 +116,7 @@ public class Internal implements Party {
         Internal.Party pa = getParty(owner);
         if (pa == null) return;
         for (Player p : pa.members) {
-            p.sendMessage(getMsg(p, Messages.COMMAND_PARTY_DISBAND_SUCCESS));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_PARTY_DISBAND_SUCCESS));
         }
         pa.members.clear();
         Internal.parites.remove(pa);
@@ -137,7 +138,7 @@ public class Internal implements Party {
         if (p != null) {
             if (p.members.contains(target)) {
                 for (Player mem : p.members) {
-                    mem.sendMessage(getMsg(mem, Messages.COMMAND_PARTY_REMOVE_SUCCESS).replace("{player}", target.getName()));
+                    AdventureText.send(mem, getMsg(mem, Messages.COMMAND_PARTY_REMOVE_SUCCESS).replace("{player}", target.getName()));
                 }
                 p.members.remove(owner);
                 if (p.members.isEmpty() || p.members.size() == 1) {

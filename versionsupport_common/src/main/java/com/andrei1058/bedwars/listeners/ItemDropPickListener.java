@@ -24,6 +24,7 @@ import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.events.player.PlayerGeneratorCollectEvent;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Entity;
@@ -108,7 +109,7 @@ public class ItemDropPickListener {
         } else if (item.getItemStack().hasItemMeta()) {
             //noinspection ConstantConditions
             if (item.getItemStack().getItemMeta().hasDisplayName()) {
-                if (item.getItemStack().getItemMeta().getDisplayName().contains("custom")) {
+                if (AdventureText.plain(item.getItemStack().getItemMeta().displayName()).contains("custom")) {
                     Material material = item.getItemStack().getType();
                     ItemMeta itemMeta = new ItemStack(material).getItemMeta();
 

@@ -1,6 +1,6 @@
 # SimpMC-BedWars 完整中文教程
 
-本教程对应 SimpMC-BedWars `4.x`，目标运行环境是 **Paper 1.21.11 + Java 21**。其他 Minecraft 版本、Spigot、Folia 和旧版 Java 不在支持范围内。仓库面向维护者和服主的说明、Issue/PR 模板及工作流显示文本均使用中文。
+本教程对应当前 SimpMC-BedWars，目标运行环境是 **Paper 1.21.11 + Java 21** 或 **Paper 26.2 + Java 25**。其他 Minecraft 版本、Spigot、Folia 和更旧的 Java 不在支持范围内。仓库面向维护者和服主的说明、Issue/PR 模板及工作流显示文本均使用中文。
 
 ## 文档导航
 
@@ -16,7 +16,7 @@
 
 ## 最短开服流程
 
-1. 安装 Java 21，创建 Paper 1.21.11 服务端。
+1. 创建 Paper 1.21.11 + Java 21，或 Paper 26.2 + Java 25 服务端。
 2. 将插件 JAR 放入 `plugins`，启动并等待配置生成。
 3. 停服，将 `plugins/SimpMC-BedWars/config.yml` 的 `language` 改为 `zh_cn`，确认 `serverType`。
 4. MULTIARENA 模式进入主大厅执行 `/bw setLobby`。
@@ -24,6 +24,8 @@
 6. 按聊天中的引导设置等待点、队伍、出生点、NPC 和生成器。
 7. 执行 `/bw save`，然后 `/bw enableArena <世界名>`。
 8. 使用 `/bw join <世界名>` 或 `/bw gui` 测试完整一局。
+
+Paper 26.2 的竞技场原图和缓存仍强制保存在服务端根目录的 `<世界名>` 文件夹，插件不会把维度目录当作地图来源或新格式缓存；Paper 只在加载期间使用内部运行副本。不要手工移动原图，也不需要安装 Multiverse-Core。
 
 ## 重要约定
 

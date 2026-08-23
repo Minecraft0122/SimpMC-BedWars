@@ -26,12 +26,13 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -60,17 +61,17 @@ public class SetUpgrade extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null) {
-            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
+            AdventureText.send(s, "§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
         if (args.length == 0) {
             String foundTeam = ss.getNearestTeam();
             if (foundTeam.isEmpty()) {
-                p.sendMessage("");
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍出生点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "如果没有自动找到，请使用：/bw " + getSubCommandName() + " <队伍>", "设置队伍升级商人", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "附近没有找到队伍。", 0, 60, 10);
+                AdventureText.send(p, "");
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
+                AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍出生点", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "如果没有自动找到，请使用：/bw " + getSubCommandName() + " <队伍>", "设置队伍升级商人", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "附近没有找到队伍。"), 0, 60, 10);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
 
             } else {
@@ -78,11 +79,11 @@ public class SetUpgrade extends SubCommand {
             }
         } else {
             if (ss.getConfig().getYml().get("Team." + args[0]) == null) {
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "该队伍不存在！");
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "该队伍不存在！");
                 if (ss.getConfig().getYml().get("Team") != null) {
-                    p.sendMessage(ss.getPrefix() + "可用队伍：");
+                    AdventureText.send(p, ss.getPrefix() + "可用队伍：");
                     for (String team : Objects.requireNonNull(ss.getConfig().getYml().getConfigurationSection("Team")).getKeys(false)) {
-                        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "（点击设置）", ChatColor.WHITE + "设置 " + TeamColor.getChatColor(Objects.requireNonNull(ss.getConfig().getYml().getString("Team." + team + ".Color"))) + team + " 的升级商人", "/" + mainCmd + " setUpgrade " + team, ClickEvent.Action.RUN_COMMAND));
+                        AdventureText.send(p, Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + ss.getTeamColor(team) + team + " " + ChatColor.getLastColors(ss.getPrefix()) + "（点击设置）", ChatColor.WHITE + "设置 " + TeamColor.getChatColor(Objects.requireNonNull(ss.getConfig().getYml().getString("Team." + team + ".Color"))) + team + " 的升级商人", "/" + mainCmd + " setUpgrade " + team, ClickEvent.Action.RUN_COMMAND));
                     }
                 }
             } else {
@@ -94,7 +95,7 @@ public class SetUpgrade extends SubCommand {
                 ss.getConfig().getYml().set("Team." + args[0] + "." + ConfigPath.ARENA_TEAM_UPGRADE_FACING,
                         NpcFacing.normalize(p.getLocation().getYaw()));
                 ss.getConfig().saveArenaLoc("Team." + args[0] + ".Upgrade", p.getLocation());
-                p.sendMessage(ss.getPrefix() + "已设置升级商人：" + teamm);
+                AdventureText.send(p, ss.getPrefix() + "已设置升级商人：" + teamm);
 
                 if (ss.getSetupType() == SetupType.ASSISTED) {
                     Bukkit.dispatchCommand(p, getParent().getName());

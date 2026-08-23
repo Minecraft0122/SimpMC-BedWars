@@ -25,6 +25,8 @@ import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
 import com.andrei1058.bedwars.api.entity.Despawnable;
 import com.andrei1058.bedwars.api.exceptions.InvalidEffectException;
+import com.andrei1058.bedwars.api.util.AdventureText;
+import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
@@ -72,15 +74,34 @@ public abstract class VersionSupport {
      */
     public abstract void registerCommand(String name, Command clasa);
 
-    /**
-     * Send title, subtitle. null for empty
-     */
-    public abstract void sendTitle(Player p, String title, String subtitle, int fadeIn, int stay, int fadeOut);
+    /** Send title, subtitle using the native Adventure representation. */
+    public void sendTitle(Player p, @Nullable Component title, @Nullable Component subtitle,
+                          int fadeIn, int stay, int fadeOut) {
+        // Keep the legacy overload virtual so pre-Adventure version adapters that
+        // override it continue to work. Modern adapters override this method instead.
+        sendTitle(p, AdventureText.section(title), AdventureText.section(subtitle), fadeIn, stay, fadeOut);
+    }
 
     /**
-     * Send action-bar message
+     * Legacy source- and binary-compatible bridge for integrations that still
+     * provide language strings. Internal code should prefer the Component overload.
      */
-    public abstract void playAction(Player p, String text);
+    @Deprecated
+    public void sendTitle(Player p, @Nullable String title, @Nullable String subtitle,
+                          int fadeIn, int stay, int fadeOut) {
+        throw new UnsupportedOperationException("Version adapter must implement an Adventure title sender");
+    }
+
+    /** Send action-bar message using the native Adventure representation. */
+    public void playAction(Player p, @Nullable Component text) {
+        playAction(p, AdventureText.section(text));
+    }
+
+    /** Legacy source- and binary-compatible bridge; messages are parsed before delivery. */
+    @Deprecated
+    public void playAction(Player p, @Nullable String text) {
+        throw new UnsupportedOperationException("Version adapter must implement an Adventure action-bar sender");
+    }
 
     /**
      * Check if bukkit command is registered
@@ -385,10 +406,19 @@ public abstract class VersionSupport {
      */
     public abstract void sendPlayerSpawnPackets(Player player, IArena arena);
 
+    /** Get the inventory title using Paper's native Adventure representation. */
+    public Component getInventoryTitle(InventoryEvent e) {
+        // Keep old version adapters working when they only implement the String API.
+        return AdventureText.section(getInventoryName(e));
+    }
+
     /**
-     * Get inventory name.
+     * Legacy inventory-name bridge. New code should use {@link #getInventoryTitle(InventoryEvent)}.
      */
-    public abstract String getInventoryName(InventoryEvent e);
+    @Deprecated
+    public String getInventoryName(InventoryEvent e) {
+        return AdventureText.section(getInventoryTitle(e));
+    }
 
     /**
      * Make item unbreakable.
@@ -423,11 +453,11 @@ public abstract class VersionSupport {
     }
 
     public void spigotShowPlayer(Player victim, Player receiver) {
-        receiver.showPlayer(victim);
+        receiver.showEntity(plugin, victim);
     }
 
     public void spigotHidePlayer(Player victim, Player receiver) {
-        receiver.hidePlayer(victim);
+        receiver.hideEntity(plugin, victim);
     }
 
     /**

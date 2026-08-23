@@ -30,12 +30,22 @@ import java.io.IOException;
 public class WorldZipper {
 
     private final String worldName;
+    private final File worldFolder;
     private boolean replace;
 
     public WorldZipper(String worldName, boolean replace) {
+        this(worldName, replace, new File(Bukkit.getWorldContainer(), worldName));
+    }
+
+    public WorldZipper(String worldName, boolean replace, File worldFolder) {
         this.worldName = worldName;
         this.replace = replace;
+        this.worldFolder = worldFolder;
         execute();
+    }
+
+    public static File backupFile(String worldName) {
+        return new File(InternalAdapter.backupFolder, worldName + ".zip");
     }
 
     private void execute() {
@@ -55,13 +65,11 @@ public class WorldZipper {
     }
 
     private File getWorldFolder() {
-        File worldContainer = Bukkit.getWorldContainer();
-        return new File(worldContainer, worldName);
+        return worldFolder;
     }
 
     private File getBackupFile() {
-        File backupFolder = InternalAdapter.backupFolder;
-        return new File(backupFolder, worldName + ".zip");
+        return backupFile(worldName);
     }
 
     private boolean exists() {

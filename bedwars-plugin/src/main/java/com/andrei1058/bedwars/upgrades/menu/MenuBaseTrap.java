@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.upgrades.menu;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
@@ -205,7 +207,7 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
             } else {
                 color = Language.getMsg(player, Messages.FORMAT_UPGRADE_COLOR_CANT_AFFORD);
             }
-            im.setDisplayName(Language.getMsg(player, Messages.UPGRADES_BASE_TRAP_ITEM_NAME_PATH + name.replace("base-trap-", ""))
+            AdventureText.displayName(im, Language.getMsg(player, Messages.UPGRADES_BASE_TRAP_ITEM_NAME_PATH + name.replace("base-trap-", ""))
                     .replace("{color}", color));
 
             List<String> lore = Language.getList(player, Messages.UPGRADES_BASE_TRAP_ITEM_LORE_PATH + name.replace("base-trap-", ""));
@@ -218,7 +220,7 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
             } else {
                 lore.add(Language.getMsg(player, Messages.UPGRADES_LORE_REPLACEMENT_INSUFFICIENT_MONEY).replace("{currency}", currencyMsg).replace("{color}", color));
             }
-            im.setLore(lore);
+            AdventureText.lore(im, lore);
             im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             i.setItemMeta(im);
         }
@@ -232,7 +234,7 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
             queueLimit = UpgradesManager.getConfiguration().getInt("default-upgrades-settings.trap-queue-limit");
         }
         if (queueLimit <= team.getActiveTraps().size()) {
-            player.sendMessage(Language.getMsg(player, Messages.UPGRADES_TRAP_QUEUE_LIMIT));
+            AdventureText.send(player, Language.getMsg(player, Messages.UPGRADES_TRAP_QUEUE_LIMIT));
             return;
         }
 
@@ -264,7 +266,7 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
         int money = UpgradesManager.getMoney(player, currency);
         if (money < cost) {
             Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, player);
-            player.sendMessage(Language.getMsg(player, Messages.SHOP_INSUFFICIENT_MONEY)
+            AdventureText.send(player, Language.getMsg(player, Messages.SHOP_INSUFFICIENT_MONEY)
                     .replace("{currency}", UpgradesManager.getCurrencyMsg(player, cost, currency))
                     .replace("{amount}", String.valueOf(cost - money)));
             player.closeInventory();
@@ -294,8 +296,8 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
         }
 
         for (Player p1 : team.getMembers()) {
-            p1.sendMessage(Language.getMsg(p1, Messages.UPGRADES_UPGRADE_BOUGHT_CHAT).replace("{playername}", player.getName()).replace("{player}", player.getDisplayName()).replace("{upgradeName}",
-                    ChatColor.stripColor(Language.getMsg(p1, Messages.UPGRADES_BASE_TRAP_ITEM_NAME_PATH + getName().replace("base-trap-", "")).replace("{color}", ""))));
+            AdventureText.send(p1, Language.getMsg(p1, Messages.UPGRADES_UPGRADE_BOUGHT_CHAT).replace("{playername}", player.getName()).replace("{player}", AdventureText.displayName(player)).replace("{upgradeName}",
+                    AdventureText.plain(AdventureText.section(Language.getMsg(p1, Messages.UPGRADES_BASE_TRAP_ITEM_NAME_PATH + getName().replace("base-trap-", "")).replace("{color}", "")))));
         }
         UpgradesManager.getMenuForArena(team.getArena()).open(player);
     }
@@ -343,22 +345,22 @@ public class MenuBaseTrap implements MenuContent, EnemyBaseEnterTrap, TeamUpgrad
             String name2 = name.replace("base-trap-", "");
             String color = enemyTeam == null ? "" : enemyTeam.getColor().chat().toString();
             for (Player p : trapTeam.getMembers()) {
-                String trapName = ChatColor.stripColor(Language.getMsg(p, getNameMsgPath())).replace("{color}", "");
+                String trapName = AdventureText.plain(AdventureText.section(Language.getMsg(p, getNameMsgPath()))).replace("{color}", "");
                 String enemy = enemyTeam == null ? "NULL" : enemyTeam.getDisplayName(Language.getPlayerLanguage(p));
-                p.sendMessage(Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_MSG + name2).replace("{trap}", trapName)
+                AdventureText.send(p, Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_MSG + name2).replace("{trap}", trapName)
                         .replace("{player}", player.getName()).replace("{team}", enemy).replace("{color}", color));
-                BedWars.nms.sendTitle(p, Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_TITLE + name2)
-                                .replace("{trap}", trapName).replace("{player}", player.getName()).replace("{team}", enemy).replace("{color}", color),
-                        Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + name2).replace("{trap}", trapName).replace("{player}", player.getName())
-                                .replace("{team}", enemy).replace("{color}", color), 15, 35, 10);
+                BedWars.nms.sendTitle(p, AdventureText.section(Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_TITLE + name2)
+                                .replace("{trap}", trapName).replace("{player}", player.getName()).replace("{team}", enemy).replace("{color}", color)),
+                        AdventureText.section(Language.getMsg(p, Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + name2).replace("{trap}", trapName).replace("{player}", player.getName())
+                                .replace("{team}", enemy).replace("{color}", color)), 15, 35, 10);
             }
         } else {
             for (Player p : trapTeam.getMembers()) {
-                String trapName = ChatColor.stripColor(Language.getMsg(p, getNameMsgPath())).replace("{color}", "");
-                p.sendMessage(Language.getMsg(p, Messages.UPGRADES_TRAP_DEFAULT_MSG).replace("{trap}", trapName));
-                BedWars.nms.sendTitle(p, Language.getMsg(p, Messages.UPGRADES_TRAP_DEFAULT_TITLE)
-                        .replace("{trap}", trapName), Language.getMsg(p, Messages.UPGRADES_TRAP_DEFAULT_SUBTITLE)
-                        .replace("{trap}", trapName), 15, 35, 10);
+                String trapName = AdventureText.plain(AdventureText.section(Language.getMsg(p, getNameMsgPath()))).replace("{color}", "");
+                AdventureText.send(p, Language.getMsg(p, Messages.UPGRADES_TRAP_DEFAULT_MSG).replace("{trap}", trapName));
+                BedWars.nms.sendTitle(p, AdventureText.section(Language.getMsg(p, Messages.UPGRADES_TRAP_DEFAULT_TITLE)
+                        .replace("{trap}", trapName)), AdventureText.section(Language.getMsg(p, Messages.UPGRADES_TRAP_DEFAULT_SUBTITLE)
+                        .replace("{trap}", trapName)), 15, 35, 10);
             }
         }
     }

@@ -24,6 +24,7 @@ import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.events.player.PlayerKillEvent;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.LivingEntity;
 
@@ -81,7 +82,7 @@ public class Despawnable {
         if (team != null) {
             name = name.replace("{TeamColor}", team.getColor().chat().toString()).replace("{TeamName}", team.getDisplayName(api.getDefaultLang()));
         }
-        e.setCustomName(name);
+        AdventureText.customName(e, name);
     }
 
     public LivingEntity getEntity() {

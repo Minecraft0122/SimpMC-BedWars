@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.listeners.arenaselector;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
@@ -84,13 +85,13 @@ public class ArenaSelectorListener implements Listener {
                 Sounds.playSound("join-allowed", player);
             } else {
                 Sounds.playSound("join-denied", player);
-                player.sendMessage(Language.getMsg(player, Messages.ARENA_JOIN_DENIED_SELECTOR));
+                AdventureText.send(player, Language.getMsg(player, Messages.ARENA_JOIN_DENIED_SELECTOR));
             }
         } else if (event.getClick() == ClickType.RIGHT) {
             if (status == GameState.playing && arena.addSpectator(player, false, null)) {
                 Sounds.playSound("spectate-allowed", player);
             } else {
-                player.sendMessage(Language.getMsg(player, Messages.ARENA_SPECTATE_DENIED_SELECTOR));
+                AdventureText.send(player, Language.getMsg(player, Messages.ARENA_SPECTATE_DENIED_SELECTOR));
                 Sounds.playSound("spectate-denied", player);
             }
         } else {

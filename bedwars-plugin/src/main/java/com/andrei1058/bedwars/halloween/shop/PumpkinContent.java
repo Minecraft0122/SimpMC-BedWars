@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.halloween.shop;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.shop.IBuyItem;
 import com.andrei1058.bedwars.api.arena.shop.IContentTier;
@@ -115,8 +117,8 @@ public class PumpkinContent extends CategoryContent {
 
         pumpkin.setAmount(12);
         ItemMeta itemMeta = pumpkin.getItemMeta();
-        itemMeta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "万圣节快乐！");
-        itemMeta.setLore(Arrays.asList("", cColor + String.valueOf(tier.getPrice()) + " " + cColor + translatedCurrency, " ", buyStatus));
+        AdventureText.displayName(itemMeta, ChatColor.GOLD + "" + ChatColor.BOLD + "万圣节快乐！");
+        AdventureText.lore(itemMeta, Arrays.asList("", cColor + String.valueOf(tier.getPrice()) + " " + cColor + translatedCurrency, " ", buyStatus));
         pumpkin.setItemMeta(itemMeta);
         return pumpkin;
     }

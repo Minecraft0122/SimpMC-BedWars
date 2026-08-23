@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -54,29 +55,29 @@ public class CmdLang extends SubCommand {
         Player p = (Player) s;
         if (Arena.getArenaByPlayer(p) != null) return false;
         if (args.length == 0) {
-            p.sendMessage(getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
             for (Language l : Language.getLanguages()) {
-                p.sendMessage(getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
+                AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
             }
-            p.sendMessage(getMsg(p, Messages.COMMAND_LANG_USAGE));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE));
             return true;
         } else if (Language.isLanguageExist(args[0])) {
             if (Arena.getArenaByPlayer(p) == null) {
                 if (Language.setPlayerLanguage(p.getUniqueId(), args[0])) {
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> p.sendMessage(getMsg(p, Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY)), 3L);
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY)), 3L);
                 } else {
-                    p.sendMessage(getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
+                    AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
                     for (Language l : Language.getLanguages()) {
-                        p.sendMessage(getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
+                        AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
                     }
-                    p.sendMessage(getMsg(p, Messages.COMMAND_LANG_USAGE));
+                    AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE));
                     return true;
                 }
             } else {
-                p.sendMessage(getMsg(p, Messages.COMMAND_LANG_USAGE_DENIED));
+                AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE_DENIED));
             }
         } else {
-            p.sendMessage(getMsg(p, Messages.COMMAND_LANG_SELECTED_NOT_EXIST));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_SELECTED_NOT_EXIST));
         }
         return true;
     }

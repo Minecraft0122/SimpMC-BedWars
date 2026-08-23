@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.money.internal;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
@@ -30,7 +31,7 @@ public class MoneyListeners implements Listener {
             int gameWin = MoneyConfig.money.getInt("money-rewards.game-win");
             if (gameWin > 0) {
                 BedWars.getEconomy().giveMoney(player, gameWin);
-                player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_WIN).replace("{money}", String.valueOf(gameWin)));
+                AdventureText.send(player, Language.getMsg(player, Messages.MONEY_REWARD_WIN).replace("{money}", String.valueOf(gameWin)));
             }
             ITeam bwt = e.getArena().getExTeam(player.getUniqueId());
             IArena arena = e.getArena();
@@ -39,7 +40,7 @@ public class MoneyListeners implements Listener {
                     int teamMate = MoneyConfig.money.getInt("money-rewards.per-teammate");
                     if (teamMate > 0) {
                         BedWars.getEconomy().giveMoney(player, teamMate);
-                        player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_PER_TEAMMATE).replace("{money}", String.valueOf(teamMate)));
+                        AdventureText.send(player, Language.getMsg(player, Messages.MONEY_REWARD_PER_TEAMMATE).replace("{money}", String.valueOf(teamMate)));
                     }
                 }
             }
@@ -54,7 +55,7 @@ public class MoneyListeners implements Listener {
                     int teamMate = MoneyConfig.money.getInt("money-rewards.per-teammate");
                     if (teamMate > 0) {
                         BedWars.getEconomy().giveMoney(player, teamMate);
-                        player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_PER_TEAMMATE).replace("{money}", String.valueOf(teamMate)));
+                        AdventureText.send(player, Language.getMsg(player, Messages.MONEY_REWARD_PER_TEAMMATE).replace("{money}", String.valueOf(teamMate)));
                     }
                 }
             }
@@ -72,7 +73,7 @@ public class MoneyListeners implements Listener {
         int bedDestroy = MoneyConfig.money.getInt("money-rewards.bed-destroyed");
         if (bedDestroy > 0) {
             BedWars.getEconomy().giveMoney(player, bedDestroy);
-            player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_BED_DESTROYED).replace("{money}", String.valueOf(bedDestroy)));
+            AdventureText.send(player, Language.getMsg(player, Messages.MONEY_REWARD_BED_DESTROYED).replace("{money}", String.valueOf(bedDestroy)));
         }
     }
 
@@ -90,12 +91,12 @@ public class MoneyListeners implements Listener {
         if (e.getCause().isFinalKill()) {
             if (finalKill > 0) {
                 BedWars.getEconomy().giveMoney(player, finalKill);
-                player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_FINAL_KILL).replace("{money}", String.valueOf(finalKill)));
+                AdventureText.send(player, Language.getMsg(player, Messages.MONEY_REWARD_FINAL_KILL).replace("{money}", String.valueOf(finalKill)));
             }
         } else {
             if (regularKill > 0) {
                 BedWars.getEconomy().giveMoney(player, regularKill);
-                player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_REGULAR_KILL).replace("{money}", String.valueOf(regularKill)));
+                AdventureText.send(player, Language.getMsg(player, Messages.MONEY_REWARD_REGULAR_KILL).replace("{money}", String.valueOf(regularKill)));
             }
         }
     }

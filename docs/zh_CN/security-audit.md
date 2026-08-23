@@ -57,7 +57,7 @@
 
 ### 聊天仍使用旧异步 Bukkit 事件
 
-`AsyncPlayerChatEvent` 中会读取部分竞技场和玩家状态。2.10.28 修复了 `!消息` 入口未检查 `bw.shout` 的直接权限绕过，并与 `/shout` 共用权限门；异步读取 Bukkit 状态的线程安全与兼容性风险仍需后续迁移到 Paper Adventure 聊天事件或只读快照。
+`AsyncChatEvent` 中会读取部分竞技场和玩家状态。2.10.28 修复了 `!消息` 入口未检查 `bw.shout` 的直接权限绕过，并与 `/shout` 共用权限门；当前事件使用 Paper Adventure 消息和收件人视图，竞技场状态读取仍应保持只读。
 
 ### 配置文件属于受信任输入
 

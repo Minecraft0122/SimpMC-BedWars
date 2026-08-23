@@ -1,6 +1,7 @@
 package com.andrei1058.spigot.sidebar;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
@@ -758,6 +759,21 @@ class SidebarTabSynchronizationTest {
         assertEquals(Sidebar.component("§cRed "), state.prefix);
     }
 
+    @Test
+    void doesNotReadPaperAdventureColorForNamedScoreboardColors() {
+        Sidebar sidebar = sidebar();
+        TeamState state = new TeamState();
+        state.color = ChatColor.RESET;
+        Scoreboard scoreboard = scoreboard(teamThatRejectsAdventureColorReads(state));
+        Player player = player("Alice");
+
+        sidebar.applyTab(scoreboard, tab(player, new SidebarLine(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS));
+
+        assertSame(NamedTextColor.RED, state.modernColor);
+        assertSame(ChatColor.RED, state.color);
+    }
+
     private static Sidebar sidebar() {
         return new Sidebar(new SidebarLine(), List.of(), new ConcurrentLinkedQueue<>());
     }
@@ -837,6 +853,46 @@ class SidebarTabSynchronizationTest {
                 });
     }
 
+    private static Team teamThatRejectsAdventureColorReads(TeamState state) {
+        return (Team) Proxy.newProxyInstance(Team.class.getClassLoader(), new Class<?>[]{Team.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "prefix" -> {
+                        if (args == null || args.length == 0) yield state.prefix;
+                        state.prefix = (Component) args[0];
+                        yield null;
+                    }
+                    case "suffix" -> {
+                        if (args == null || args.length == 0) yield state.suffix;
+                        state.suffix = (Component) args[0];
+                        yield null;
+                    }
+                    case "color" -> {
+                        if (args == null || args.length == 0) {
+                            throw new IllegalStateException("Team colors must have hex values");
+                        }
+                        state.modernColor = (NamedTextColor) args[0];
+                        if (state.modernColor == NamedTextColor.RED) state.color = ChatColor.RED;
+                        yield null;
+                    }
+                    case "getColor" -> state.color;
+                    case "setColor" -> {
+                        state.color = (ChatColor) args[0];
+                        yield null;
+                    }
+                    case "getOption" -> state.visibility;
+                    case "setOption" -> {
+                        state.visibility = (Team.OptionStatus) args[1];
+                        yield null;
+                    }
+                    case "hasEntry" -> state.entries.contains((String) args[0]);
+                    case "addEntry" -> {
+                        state.entries.add((String) args[0]);
+                        yield null;
+                    }
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
     @SuppressWarnings("unchecked")
     private static <K, V> Map<K, V> fieldMap(Sidebar sidebar, String fieldName) {
         try {
@@ -852,6 +908,7 @@ class SidebarTabSynchronizationTest {
         private Component prefix = Component.empty();
         private Component suffix = Component.empty();
         private ChatColor color = ChatColor.WHITE;
+        private NamedTextColor modernColor = NamedTextColor.WHITE;
         private Team.OptionStatus visibility = Team.OptionStatus.ALWAYS;
         private final Set<String> entries = new HashSet<>();
         private int writeCount;

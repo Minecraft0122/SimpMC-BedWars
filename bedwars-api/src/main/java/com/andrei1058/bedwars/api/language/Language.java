@@ -24,7 +24,7 @@ import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.events.player.PlayerLangChangeEvent;
-import net.md_5.bungee.api.ChatColor;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -291,10 +291,10 @@ public class Language extends ConfigManager {
             }
         }
 
-        return ChatColor.translateAlternateColorCodes('&', message
+        return AdventureText.section(AdventureText.ampersand(message
                 .replace("{prefix}", (prefix == null ? "" : prefix))
                 .replace("{serverIp}", serverIp == null ? "" : serverIp)
-        );
+        ));
     }
 
     /**
@@ -308,7 +308,7 @@ public class Language extends ConfigManager {
             lines = Collections.emptyList();
         }
         for (String line : lines) {
-            result.add(ChatColor.translateAlternateColorCodes('&', line));
+            result.add(AdventureText.section(AdventureText.ampersand(line)));
         }
         return result;
     }
@@ -595,7 +595,7 @@ public class Language extends ConfigManager {
     private static boolean isGeneratedPlaceholder(Object value, String placeholder) {
         if (value == null) return true;
         if (value instanceof String text) {
-            return ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', text))
+            return AdventureText.plain(AdventureText.ampersand(text))
                     .trim().equalsIgnoreCase(placeholder);
         }
         if (value instanceof List<?> values && values.size() == 1 && values.get(0) instanceof String text) {
@@ -650,11 +650,11 @@ public class Language extends ConfigManager {
 
     public static String @NotNull [] getCountDownTitle(@NotNull Language playerLang, int second) {
         String[] result = new String[2];
-        result[0] = ChatColor.translateAlternateColorCodes('&', playerLang.getYml().get(Messages.ARENA_STATUS_START_COUNTDOWN_TITLE + "-" + second, playerLang.getString(Messages.ARENA_STATUS_START_COUNTDOWN_TITLE)).toString().replace("{second}", String.valueOf(second)));
+        result[0] = AdventureText.section(AdventureText.ampersand(playerLang.getYml().get(Messages.ARENA_STATUS_START_COUNTDOWN_TITLE + "-" + second, playerLang.getString(Messages.ARENA_STATUS_START_COUNTDOWN_TITLE)).toString().replace("{second}", String.valueOf(second))));
         if (result[0].isEmpty()) {
             result[0] = " ";
         }
-        result[1] = ChatColor.translateAlternateColorCodes('&', playerLang.getYml().get(Messages.ARENA_STATUS_START_COUNTDOWN_SUB_TITLE + "-" + second, playerLang.getString(Messages.ARENA_STATUS_START_COUNTDOWN_SUB_TITLE)).toString().replace("{second}", String.valueOf(second)));
+        result[1] = AdventureText.section(AdventureText.ampersand(playerLang.getYml().get(Messages.ARENA_STATUS_START_COUNTDOWN_SUB_TITLE + "-" + second, playerLang.getString(Messages.ARENA_STATUS_START_COUNTDOWN_SUB_TITLE)).toString().replace("{second}", String.valueOf(second))));
         if (result[1].isEmpty()) {
             result[1] = " ";
         }

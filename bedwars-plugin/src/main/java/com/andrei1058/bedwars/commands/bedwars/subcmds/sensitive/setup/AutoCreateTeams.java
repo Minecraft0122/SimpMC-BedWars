@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
 import com.andrei1058.bedwars.api.command.ParentCommand;
@@ -28,7 +29,7 @@ import com.andrei1058.bedwars.api.server.SetupType;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -61,7 +62,7 @@ public class AutoCreateTeams extends SubCommand {
         UUID playerId = p.getUniqueId();
         SetupSession ss = SetupSession.getSession(playerId);
         if (ss == null) {
-            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
+            AdventureText.send(s, "§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
         if (ss.getSetupType() != SetupType.ASSISTED) return false;
@@ -73,14 +74,14 @@ public class AutoCreateTeams extends SubCommand {
                         + color.setupName() + " " + color.name());
             }
             if (ss.getConfig().getYml().get("waiting.Pos1") == null) {
-                s.sendMessage("");
-                s.sendMessage("§6§l移除等待大厅：");
-                s.sendMessage("§f如果希望游戏开始时移除等待大厅，");
-                s.sendMessage("§f请像 WorldEdit 选区一样设置下面两个位置。");
-                p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 1", "§d设置位置 1", "/" + getParent().getName() + " waitingPos 1", ClickEvent.Action.RUN_COMMAND));
-                p.spigot().sendMessage(Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 2", "§d设置位置 2", "/" + getParent().getName() + " waitingPos 2", ClickEvent.Action.RUN_COMMAND));
-                s.sendMessage("");
-                s.sendMessage("§7此步骤可选，如需跳过请输入 §6/" + BedWars.mainCmd);
+                AdventureText.send(s, "");
+                AdventureText.send(s, "§6§l移除等待大厅：");
+                AdventureText.send(s, "§f如果希望游戏开始时移除等待大厅，");
+                AdventureText.send(s, "§f请像 WorldEdit 选区一样设置下面两个位置。");
+                AdventureText.send(p, Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 1", "§d设置位置 1", "/" + getParent().getName() + " waitingPos 1", ClickEvent.Action.RUN_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick("§c ▪ §7/" + BedWars.mainCmd + " waitingPos 2", "§d设置位置 2", "/" + getParent().getName() + " waitingPos 2", ClickEvent.Action.RUN_COMMAND));
+                AdventureText.send(s, "");
+                AdventureText.send(s, "§7此步骤可选，如需跳过请输入 §6/" + BedWars.mainCmd);
             }
             return true;
         }
@@ -88,11 +89,11 @@ public class AutoCreateTeams extends SubCommand {
         List<TeamColor> found = new ArrayList<>();
         World w = Bukkit.getWorld(ss.getWorldName());
         if (w == null) {
-            p.sendMessage(ss.getPrefix() + "§c竞技场世界尚未加载，无法扫描队伍羊毛。");
+            AdventureText.send(p, ss.getPrefix() + "§c竞技场世界尚未加载，无法扫描队伍羊毛。");
             return true;
         }
         if (ss.getConfig().getYml().get("Team") == null) {
-            p.sendMessage("§6 ▪ §7正在搜索队伍，期间可能出现短暂卡顿。");
+            AdventureText.send(p, "§6 ▪ §7正在搜索队伍，期间可能出现短暂卡顿。");
             for (int x = -200; x < 200; x++) {
                 for (int y = 50; y < 130; y++) {
                     for (int z = -200; z < 200; z++) {
@@ -107,7 +108,7 @@ public class AutoCreateTeams extends SubCommand {
             }
         }
         if (found.isEmpty()) {
-            p.sendMessage("§6 ▪ §7没有找到新队伍。\n§6 ▪ §7请手动创建队伍：§6/" + BedWars.mainCmd + " createTeam");
+            AdventureText.send(p, "§6 ▪ §7没有找到新队伍。\n§6 ▪ §7请手动创建队伍：§6/" + BedWars.mainCmd + " createTeam");
             return true;
         }
 
@@ -117,11 +118,11 @@ public class AutoCreateTeams extends SubCommand {
         Bukkit.getScheduler().runTaskLater(BedWars.plugin,
                 () -> pendingDetections.remove(playerId, detection),
                 CONFIRMATION_TIMEOUT_MILLIS / 50L);
-        p.sendMessage("§6§l发现新队伍：");
+        AdventureText.send(p, "§6§l发现新队伍：");
         for (TeamColor color : found) {
-            p.sendMessage("§f ▪ " + color.chat() + color.setupName().replace("_", " "));
+            AdventureText.send(p, "§f ▪ " + color.chat() + color.setupName().replace("_", " "));
         }
-        p.spigot().sendMessage(Misc.msgHoverClick("§6 ▪ §7§l点击创建已发现的队伍。", "§f点击创建这些队伍", "/" + getParent().getName() + " " + getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
+        AdventureText.send(p, Misc.msgHoverClick("§6 ▪ §7§l点击创建已发现的队伍。", "§f点击创建这些队伍", "/" + getParent().getName() + " " + getSubCommandName(), ClickEvent.Action.RUN_COMMAND));
         return true;
     }
 

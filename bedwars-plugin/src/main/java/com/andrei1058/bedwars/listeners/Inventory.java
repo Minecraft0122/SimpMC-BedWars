@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.SetupType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import org.bukkit.ChatColor;
@@ -52,7 +53,7 @@ public class Inventory implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent e) {
         Player p = (Player) e.getPlayer();
-        if (nms.getInventoryName(e).equalsIgnoreCase(SetupSession.getInvName())) {
+        if (nms.getInventoryTitle(e).equals(AdventureText.section(SetupSession.getInvName()))) {
             SetupSession ss = SetupSession.getSession(p.getUniqueId());
             if (ss != null) {
                 if (ss.getSetupType() == null)
@@ -167,7 +168,8 @@ public class Inventory implements Listener {
         if (a != null) {
 
             //Prevent players from moving items in stats GUI
-            if (nms.getInventoryName(e).equals(Language.getMsg(p, Messages.PLAYER_STATS_GUI_INV_NAME).replace("{playername}", p.getName()).replace("{player}", p.getDisplayName()))) {
+            if (nms.getInventoryTitle(e).equals(AdventureText.section(Language.getMsg(p, Messages.PLAYER_STATS_GUI_INV_NAME)
+                    .replace("{playername}", p.getName()).replace("{player}", AdventureText.displayName(p))))) {
                 e.setCancelled(true);
                 return;
             }
@@ -182,7 +184,7 @@ public class Inventory implements Listener {
         if (!i.hasItemMeta()) return;
         if (!i.getItemMeta().hasDisplayName()) return;
         /* Check setup gui items */
-        if (SetupSession.isInSetupSession(p.getUniqueId()) && nms.getInventoryName(e).equalsIgnoreCase(SetupSession.getInvName())) {
+        if (SetupSession.isInSetupSession(p.getUniqueId()) && nms.getInventoryTitle(e).equals(AdventureText.section(SetupSession.getInvName()))) {
             SetupSession ss = SetupSession.getSession(p.getUniqueId());
             if (e.getSlot() == SetupSession.getAdvancedSlot()) {
                 Objects.requireNonNull(ss).setSetupType(SetupType.ADVANCED);
@@ -190,7 +192,7 @@ public class Inventory implements Listener {
                 Objects.requireNonNull(ss).setSetupType(SetupType.ASSISTED);
             }
             if (!Objects.requireNonNull(ss).startSetup()) {
-                ss.getPlayer().sendMessage(ChatColor.RED + "无法启动竞技场设置会话，请查看控制台。");
+                AdventureText.send(ss.getPlayer(), ChatColor.RED + "无法启动竞技场设置会话，请查看控制台。");
             }
             p.closeInventory();
             return;

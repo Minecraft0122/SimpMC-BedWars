@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.rejoin;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.ReJoin;
@@ -39,32 +40,32 @@ public class RejoinCommand extends BukkitCommand {
     @Override
     public boolean execute(CommandSender s, String st, String[] args) {
         if (s instanceof ConsoleCommandSender) {
-            s.sendMessage("此命令只能由玩家使用！");
+            AdventureText.send(s, "此命令只能由玩家使用！");
             return true;
         }
 
         Player p = (Player) s;
 
         if (!Permissions.hasCommandPermission(p, "rejoin", Permissions.PERMISSION_REJOIN)) {
-            p.sendMessage(Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+            AdventureText.send(p, Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             return true;
         }
 
         ReJoin rj = ReJoin.getPlayer(p);
 
         if (rj == null) {
-            p.sendMessage(Language.getMsg(p, Messages.REJOIN_NO_ARENA));
+            AdventureText.send(p, Language.getMsg(p, Messages.REJOIN_NO_ARENA));
             Sounds.playSound("rejoin-denied", p);
             return true;
         }
 
         if (!rj.canReJoin()) {
-            p.sendMessage(Language.getMsg(p, Messages.REJOIN_DENIED));
+            AdventureText.send(p, Language.getMsg(p, Messages.REJOIN_DENIED));
             Sounds.playSound("rejoin-denied", p);
             return true;
         }
 
-        p.sendMessage(Language.getMsg(p, Messages.REJOIN_ALLOWED).replace("{arena}", rj.getArena().getDisplayName()));
+        AdventureText.send(p, Language.getMsg(p, Messages.REJOIN_ALLOWED).replace("{arena}", rj.getArena().getDisplayName()));
         Sounds.playSound("rejoin-allowed", p);
         rj.reJoin(p);
         return true;

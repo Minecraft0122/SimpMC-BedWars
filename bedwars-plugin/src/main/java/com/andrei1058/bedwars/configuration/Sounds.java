@@ -30,6 +30,8 @@ import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.sound.Sound.Source;
 
 import java.util.List;
 import java.util.Locale;
@@ -126,10 +128,11 @@ public class Sounds {
     public static void playSound(String path, List<Player> players) {
         if(path.equalsIgnoreCase("none")) return;
         final Sound sound = getSound(path);
-        int volume = getSounds().getInt(path + ".volume");
-        int pitch = getSounds().getInt(path + ".pitch");
+        float volume = (float) getSounds().getYml().getDouble(path + ".volume");
+        float pitch = (float) getSounds().getYml().getDouble(path + ".pitch");
         if (sound != null) {
-            players.forEach(p -> p.playSound(p, sound, volume, pitch));
+            net.kyori.adventure.sound.Sound adventureSound = adventureSound(sound, volume, pitch);
+            players.forEach(p -> p.playSound(adventureSound));
         }
     }
 
@@ -138,7 +141,8 @@ public class Sounds {
      */
     public static boolean playSound(Sound sound, List<Player> players) {
         if (sound == null) return false;
-        players.forEach(p -> p.playSound(p, sound, 1f, 1f));
+        net.kyori.adventure.sound.Sound adventureSound = adventureSound(sound, 1f, 1f);
+        players.forEach(p -> p.playSound(adventureSound));
         return true;
     }
 
@@ -146,7 +150,7 @@ public class Sounds {
         final Sound sound = getSound(path);
         float volume = (float) getSounds().getYml().getDouble(path + ".volume");
         float pitch = (float) getSounds().getYml().getDouble(path + ".pitch");
-        if (sound != null) player.playSound(player, sound, volume, pitch);
+        if (sound != null) player.playSound(adventureSound(sound, volume, pitch));
     }
 
     public static ConfigManager getSounds() {
@@ -167,6 +171,16 @@ public class Sounds {
 
     public static  void playsoundArea(String path, Location location, float x, float y){
         final Sound sound = getSound(path);
-        if (sound != null) location.getWorld().playSound(location, sound, x, y);
+        if (sound != null) {
+            net.kyori.adventure.sound.Sound adventure = adventureSound(sound, x, y);
+            location.getWorld().getPlayers().forEach(player ->
+                    player.playSound(adventure, location.getX(), location.getY(), location.getZ()));
+        }
+    }
+
+    /** Convert a legacy Bukkit registry value into Paper's native Adventure sound. */
+    public static net.kyori.adventure.sound.Sound adventureSound(Sound sound, float volume, float pitch) {
+        return net.kyori.adventure.sound.Sound.sound(
+                Key.key(((net.kyori.adventure.sound.Sound.Type) sound).key().asString()), Source.MASTER, volume, pitch);
     }
 }

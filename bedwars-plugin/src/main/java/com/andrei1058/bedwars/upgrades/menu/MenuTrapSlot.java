@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.upgrades.menu;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.language.Language;
@@ -72,7 +74,7 @@ public class MenuTrapSlot implements MenuContent {
         i.setAmount(trap+1);
         ItemMeta im = i.getItemMeta();
         if (im == null) return i;
-        im.setDisplayName(Language.getMsg(player, Messages.UPGRADES_TRAP_SLOT_ITEM_NAME_PATH + name.replace("trap-slot-", ""))
+        AdventureText.displayName(im, Language.getMsg(player, Messages.UPGRADES_TRAP_SLOT_ITEM_NAME_PATH + name.replace("trap-slot-", ""))
                 .replace("{name}", Language.getMsg(player, ebe == null ? Messages.MEANING_NO_TRAP : ebe.getNameMsgPath()))
                 .replace("{color}", Language.getMsg(player, ebe == null ? Messages.FORMAT_UPGRADE_COLOR_CANT_AFFORD : Messages.FORMAT_UPGRADE_COLOR_UNLOCKED)));
         List<String> lore = new ArrayList<>();
@@ -104,7 +106,7 @@ public class MenuTrapSlot implements MenuContent {
             lore.addAll(Language.getList(player, ebe.getLoreMsgPath()));
             lore.addAll(Language.getList(player, Messages.UPGRADES_TRAP_SLOT_ITEM_LORE1_PATH + name.replace("trap-slot-", "")));
         }
-        im.setLore(lore);
+        AdventureText.lore(im, lore);
         im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         i.setItemMeta(im);
         return i;

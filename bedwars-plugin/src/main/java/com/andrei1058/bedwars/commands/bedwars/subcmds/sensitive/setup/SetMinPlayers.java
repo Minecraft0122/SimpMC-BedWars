@@ -10,6 +10,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -37,7 +38,7 @@ public class SetMinPlayers extends SubCommand {
         Player player = (Player) sender;
         SetupSession session = SetupSession.getSession(player.getUniqueId());
         if (session == null) {
-            player.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
+            AdventureText.send(player, "§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
 
@@ -50,13 +51,13 @@ public class SetMinPlayers extends SubCommand {
         int capacity = arenaCapacity(session);
         if (minimum < 2 || (capacity > 0 && minimum > capacity)) {
             String range = capacity > 0 ? "2 到 " + capacity : "大于或等于 2";
-            player.sendMessage("§c▪ §7全场最低开局人数必须是" + range + "的整数。");
-            player.sendMessage("§c▪ §7用法：/" + getParent().getName() + " setMinPlayers <整数>");
+            AdventureText.send(player, "§c▪ §7全场最低开局人数必须是" + range + "的整数。");
+            AdventureText.send(player, "§c▪ §7用法：/" + getParent().getName() + " setMinPlayers <整数>");
             return true;
         }
 
         session.getConfig().set("minPlayers", minimum);
-        player.sendMessage("§6 ▪ §7已将全场最低开局人数设置为 §e" + minimum
+        AdventureText.send(player, "§6 ▪ §7已将全场最低开局人数设置为 §e" + minimum
                 + "§7；达到人数且能够分成至少两个不超过每队容量的队伍后开始倒计时。");
         return true;
     }

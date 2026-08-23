@@ -33,10 +33,10 @@ import com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.Reload;
 import com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup.*;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import com.andrei1058.bedwars.api.util.AdventureText;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
@@ -126,9 +126,9 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         if (args.length == 0) {
             if (!Permissions.hasCommandPermission(s, "help")) {
                 if (s instanceof Player player) {
-                    player.sendMessage(getMsg(player, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                    AdventureText.send(player, getMsg(player, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
                 } else {
-                    s.sendMessage(Language.getDefaultLanguage().m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                    AdventureText.send(s, Language.getDefaultLanguage().m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
                 }
                 return true;
             }
@@ -138,17 +138,17 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
                     if (SetupSession.isInSetupSession(((Player) s).getUniqueId())) {
                         Bukkit.dispatchCommand(s, getName() + " cmds");
                     } else {
-                        s.sendMessage("");
-                        s.sendMessage("§8§l" + dot + " §6" + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion() + " §7- §c管理员命令");
-                        s.sendMessage("");
+                        AdventureText.send(s, "");
+                        AdventureText.send(s, "§8§l" + dot + " §6" + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion() + " §7- §c管理员命令");
+                        AdventureText.send(s, "");
                         sendSubCommands((Player) s);
                     }
                 } else {
-                    s.sendMessage("§f   bw safemode §eenable/disable §7（启用/禁用安全模式）");
+                    AdventureText.send(s, "§f   bw safemode §eenable/disable §7（启用/禁用安全模式）");
                 }
             } else {
                 if (s instanceof ConsoleCommandSender) {
-                    s.sendMessage("§f当前没有可用的控制台命令。");
+                    AdventureText.send(s, "§f当前没有可用的控制台命令。");
                     return true;
                 }
                 /* Send player commands */
@@ -168,9 +168,9 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
 
         if (!commandFound) {
             if (s instanceof Player) {
-                s.sendMessage(getMsg((Player) s, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                AdventureText.send(s, getMsg((Player) s, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             } else {
-                s.sendMessage(Language.getDefaultLanguage().m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                AdventureText.send(s, Language.getDefaultLanguage().m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             }
         }
         return true;
@@ -183,11 +183,10 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
                 .anyMatch(group -> group.equalsIgnoreCase(var.trim()));
     }
 
-    public static TextComponent createTC(String text, String suggest, String shot_text) {
-        TextComponent tx = new TextComponent(text);
-        tx.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, suggest));
-        tx.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(shot_text).create()));
-        return tx;
+    public static Component createTC(String text, String suggest, String shot_text) {
+        return AdventureText.section(text)
+                .clickEvent(ClickEvent.suggestCommand(suggest))
+                .hoverEvent(HoverEvent.showText(AdventureText.section(shot_text)));
     }
 
     @Override
@@ -200,7 +199,7 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         for (int i = 0; i <= 20; i++) {
             for (SubCommand sb : getSubCommands()) {
                 if (sb.getPriority() == i && sb.isShow() && sb.canSee(p, BedWars.getAPI())) {
-                    p.spigot().sendMessage(sb.getDisplayInfo());
+                    AdventureText.send(p, sb.getDisplayInfo());
                 }
             }
         }
@@ -243,7 +242,7 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         if (BedWars.getServerType() == ServerType.BUNGEE) return true;
         if (config.getLobbyWorldName().isEmpty()) {
             if (p != null) {
-                p.sendMessage("§c▪ §7请先设置大厅位置！");
+                AdventureText.send(p, "§c▪ §7请先设置大厅位置！");
             }
             return false;
         }

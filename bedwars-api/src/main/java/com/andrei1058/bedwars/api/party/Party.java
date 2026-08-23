@@ -20,7 +20,7 @@
 
 package com.andrei1058.bedwars.api.party;
 
-import org.bukkit.ChatColor;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -58,9 +58,9 @@ public interface Party {
     }
 
     default void promote(@NotNull Player owner, @NotNull Player target) {
-        String msg = ChatColor.RED+"Not implemented! Contact an administrator";
-        owner.sendMessage(msg);
-        target.sendMessage(msg);
+        String msg = "§cNot implemented! Contact an administrator";
+        AdventureText.send(owner, msg);
+        AdventureText.send(target, msg);
     }
 
     boolean isInternal();

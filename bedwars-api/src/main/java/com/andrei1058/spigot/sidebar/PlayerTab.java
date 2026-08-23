@@ -3,6 +3,7 @@ package com.andrei1058.spigot.sidebar;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -116,6 +117,35 @@ public class PlayerTab {
     @NotNull
     public ChatColor getColor() {
         return color;
+    }
+
+    /**
+     * Return the Adventure color used by Paper scoreboard teams.
+     *
+     * <p>The ChatColor accessor remains for binary/source compatibility with
+     * older add-ons; new integrations should use this method.</p>
+     */
+    @NotNull
+    public NamedTextColor getTextColor() {
+        return switch (color) {
+            case BLACK -> NamedTextColor.BLACK;
+            case DARK_BLUE -> NamedTextColor.DARK_BLUE;
+            case DARK_GREEN -> NamedTextColor.DARK_GREEN;
+            case DARK_AQUA -> NamedTextColor.DARK_AQUA;
+            case DARK_RED -> NamedTextColor.DARK_RED;
+            case DARK_PURPLE -> NamedTextColor.DARK_PURPLE;
+            case GOLD -> NamedTextColor.GOLD;
+            case GRAY -> NamedTextColor.GRAY;
+            case DARK_GRAY -> NamedTextColor.DARK_GRAY;
+            case BLUE -> NamedTextColor.BLUE;
+            case GREEN -> NamedTextColor.GREEN;
+            case AQUA -> NamedTextColor.AQUA;
+            case RED -> NamedTextColor.RED;
+            case LIGHT_PURPLE -> NamedTextColor.LIGHT_PURPLE;
+            case YELLOW -> NamedTextColor.YELLOW;
+            case WHITE -> NamedTextColor.WHITE;
+            default -> NamedTextColor.WHITE;
+        };
     }
 
     @NotNull

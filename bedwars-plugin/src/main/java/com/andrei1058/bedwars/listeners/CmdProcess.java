@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.listeners;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
@@ -42,12 +43,12 @@ public class CmdProcess implements Listener {
         Player p = e.getPlayer();
 
         if (e.getMessage().equals("/party sethome")){
-            p.sendMessage(getMsg(p, Messages.COMMAND_NOT_ALLOWED_IN_GAME));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_NOT_ALLOWED_IN_GAME));
             e.setCancelled(true);
         }
 
         if (e.getMessage().equals("/party home")){
-            p.sendMessage(getMsg(p, Messages.COMMAND_NOT_ALLOWED_IN_GAME));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_NOT_ALLOWED_IN_GAME));
             e.setCancelled(true);
         }
 
@@ -57,7 +58,7 @@ public class CmdProcess implements Listener {
         if (Arena.isInArena(p)) {
             if (!isAllowedInArena(cmd[0], BedWars.config.getList(
                     ConfigPath.CENERAL_CONFIGURATION_ALLOWED_COMMANDS))) {
-                p.sendMessage(getMsg(p, Messages.COMMAND_NOT_ALLOWED_IN_GAME));
+                AdventureText.send(p, getMsg(p, Messages.COMMAND_NOT_ALLOWED_IN_GAME));
                 e.setCancelled(true);
             }
         }

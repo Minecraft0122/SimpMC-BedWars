@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -29,7 +30,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -63,37 +64,37 @@ public class DelArena extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 1) {
-            p.sendMessage("§c▪ §7用法：§o/" + MainCommand.getInstance().getName() + " delArena <地图名>");
+            AdventureText.send(p, "§c▪ §7用法：§o/" + MainCommand.getInstance().getName() + " delArena <地图名>");
             return true;
         }
         if (!WorldNameValidator.isSafe(args[0])) {
-            p.sendMessage("§c▪ §7竞技场世界名称包含不安全字符。");
+            AdventureText.send(p, "§c▪ §7竞技场世界名称包含不安全字符。");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {
-            p.sendMessage("§c▪ §7找不到世界文件夹：" + args[0]);
+            AdventureText.send(p, "§c▪ §7找不到世界文件夹：" + args[0]);
             return true;
         }
         if (getArenaByName(args[0]) != null) {
-            p.sendMessage("§c▪ §7请先禁用该竞技场！");
+            AdventureText.send(p, "§c▪ §7请先禁用该竞技场！");
             return true;
         }
         File ac = new File(plugin.getDataFolder(), "/Arenas/" + args[0]+ ".yml");
         if (!ac.exists()) {
-            p.sendMessage("§c▪ §7该竞技场不存在！");
+            AdventureText.send(p, "§c▪ §7该竞技场不存在！");
             return true;
         }
         if (delArenaConfirm.containsKey(p)) {
             if (System.currentTimeMillis() - 2000 <= delArenaConfirm.get(p)) {
                 BedWars.getAPI().getRestoreAdapter().deleteWorld(args[0]);
                 FileUtils.deleteQuietly(ac);
-                p.sendMessage("§c▪ §7已删除 " + args[0] + "！");
+                AdventureText.send(p, "§c▪ §7已删除 " + args[0] + "！");
                 return true;
             }
-            p.sendMessage("§6 ▪ §7请再次输入命令确认删除。");
+            AdventureText.send(p, "§6 ▪ §7请再次输入命令确认删除。");
             delArenaConfirm.replace(p, System.currentTimeMillis());
         } else {
-            p.sendMessage("§6 ▪ §7请再次输入命令确认删除。");
+            AdventureText.send(p, "§6 ▪ §7请再次输入命令确认删除。");
             delArenaConfirm.put(p, System.currentTimeMillis());
         }
         return true;

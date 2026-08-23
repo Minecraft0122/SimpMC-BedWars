@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.shop.main;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.shop.IBuyItem;
@@ -74,7 +76,7 @@ public class BuyItem implements IBuyItem {
         if (yml.get(path + ".name") != null) {
             ItemMeta im = itemStack.getItemMeta();
             if (im != null) {
-                im.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&r"+yml.getString(path + ".name")));
+                im.displayName(AdventureText.ampersand("&r" + yml.getString(path + ".name")));
                 itemStack.setItemMeta(im);
             }
         }

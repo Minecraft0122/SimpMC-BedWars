@@ -23,6 +23,7 @@ package com.andrei1058.bedwars.levels.internal;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.events.player.PlayerLevelUpEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerXpGainEvent;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.configuration.LevelsConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -69,7 +70,7 @@ public class PlayerLevel {
     }
 
     public void setLevelName(int level) {
-        this.levelName = ChatColor.translateAlternateColorCodes('&', LevelsConfig.getLevelName(level)).replace("{number}", String.valueOf(level));
+        this.levelName = AdventureText.section(AdventureText.ampersand(LevelsConfig.getLevelName(level))).replace("{number}", String.valueOf(level));
 
     }
 
@@ -102,9 +103,9 @@ public class PlayerLevel {
             locked = 10;
             unlocked = 0;
         }
-        progressBar = ChatColor.translateAlternateColorCodes('&', LevelsConfig.levels.getString("progress-bar.format").replace("{progress}",
+        progressBar = AdventureText.section(AdventureText.ampersand(LevelsConfig.levels.getString("progress-bar.format").replace("{progress}",
                 LevelsConfig.levels.getString("progress-bar.unlocked-color") + String.valueOf(new char[unlocked]).replace("\0", LevelsConfig.levels.getString("progress-bar.symbol"))
-                        + LevelsConfig.levels.getString("progress-bar.locked-color") + String.valueOf(new char[locked]).replace("\0", LevelsConfig.levels.getString("progress-bar.symbol"))));
+                        + LevelsConfig.levels.getString("progress-bar.locked-color") + String.valueOf(new char[locked]).replace("\0", LevelsConfig.levels.getString("progress-bar.symbol")))));
         requiredXp = formatNumber(nextLevelCost);
         formattedCurrentXp = formatNumber(currentXp);
     }
@@ -195,7 +196,7 @@ public class PlayerLevel {
     public void setLevel(int level) {
         this.level = level;
         nextLevelCost = LevelsConfig.getNextCost(level);
-        this.levelName = ChatColor.translateAlternateColorCodes('&', LevelsConfig.getLevelName(level)).replace("{number}", String.valueOf(level));
+        this.levelName = AdventureText.section(AdventureText.ampersand(LevelsConfig.getLevelName(level))).replace("{number}", String.valueOf(level));
         requiredXp = nextLevelCost >= 1000 ? nextLevelCost % 1000 == 0 ? nextLevelCost / 1000 + "k" : (double) nextLevelCost / 1000 + "k" : String.valueOf(nextLevelCost);
         updateProgressBar();
         modified = true;
@@ -217,7 +218,7 @@ public class PlayerLevel {
             currentXp = currentXp - nextLevelCost;
             level++;
             nextLevelCost = LevelsConfig.getNextCost(level);
-            this.levelName = ChatColor.translateAlternateColorCodes('&', LevelsConfig.getLevelName(level)).replace("{number}", String.valueOf(level));
+            this.levelName = AdventureText.section(AdventureText.ampersand(LevelsConfig.getLevelName(level))).replace("{number}", String.valueOf(level));
             requiredXp = formatNumber(nextLevelCost);
             formattedCurrentXp = formatNumber(currentXp);
             Bukkit.getPluginManager().callEvent(new PlayerLevelUpEvent(Bukkit.getPlayer(getUuid()), level, nextLevelCost));

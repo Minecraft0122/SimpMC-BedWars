@@ -24,6 +24,7 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.Misc;
 import com.andrei1058.bedwars.configuration.Permissions;
@@ -116,9 +117,9 @@ public class RemoveGenerator extends SubCommand {
             }
 
             if (nearest == null) {
-                p.sendMessage(ss.getPrefix() + "附近没有找到资源点（范围 2×2）。");
-                p.sendMessage(ss.getPrefix() + "请站在需要移除的资源点全息文字旁边。");
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "附近没有找到资源点。", 5, 40, 5);
+                AdventureText.send(p, ss.getPrefix() + "附近没有找到资源点（范围 2×2）。");
+                AdventureText.send(p, ss.getPrefix() + "请站在需要移除的资源点全息文字旁边。");
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "附近没有找到资源点。"), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                 return true;
             }
@@ -128,8 +129,8 @@ public class RemoveGenerator extends SubCommand {
                 list.remove(toRemove[1]);
 
                 ss.getConfig().set("generator." + toRemove[0], list);
-                p.sendMessage(ss.getPrefix() + "已移除 " + toRemove[0] + " 资源点，坐标：X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已移除 " + toRemove[0] + " 资源点。", 5, 40, 5);
+                AdventureText.send(p, ss.getPrefix() + "已移除 " + toRemove[0] + " 资源点，坐标：X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.GREEN + "已移除 " + toRemove[0] + " 资源点。"), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
                 Misc.removeArmorStand(toRemove[0], nearest, toRemove[1]);
                 return true;
@@ -139,18 +140,18 @@ public class RemoveGenerator extends SubCommand {
                 ss.getConfig().set("Team." + toRemove[2] + ".Emerald", new ArrayList<>());
                 ss.getConfig().set("Team." + toRemove[2] + ".Iron", new ArrayList<>());
                 ss.getConfig().set("Team." + toRemove[2] + ".Gold", new ArrayList<>());
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ss.getTeamColor(toRemove[2]) + toRemove[2] + " 的资源点已移除。", 5, 40, 5);
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ss.getTeamColor(toRemove[2]) + toRemove[2] + " 的资源点已移除。"), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
                 Misc.removeArmorStand(null, nearest, toRemove[1]);
-                p.sendMessage(ss.getPrefix() + "已移除 " + ss.getTeamColor(toRemove[2]) + toRemove[2] + ChatColor.getLastColors(ss.getPrefix()) + " 的全部资源点！");
+                AdventureText.send(p, ss.getPrefix() + "已移除 " + ss.getTeamColor(toRemove[2]) + toRemove[2] + ChatColor.getLastColors(ss.getPrefix()) + " 的全部资源点！");
                 return true;
             }
 
             List<String> list = ss.getConfig().getList("Team." + toRemove[2] + "." + toRemove[0]);
             list.remove(toRemove[1]);
             ss.getConfig().set("Team." + toRemove[2] + "." + toRemove[0], list);
-            p.sendMessage(ss.getPrefix() + "已移除 " + ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.getLastColors(ss.getPrefix()) + toRemove[0] + " 资源点，坐标：X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
-            com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.GREEN + toRemove[0] + " 资源点已移除。", 5, 40, 5);
+            AdventureText.send(p, ss.getPrefix() + "已移除 " + ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.getLastColors(ss.getPrefix()) + toRemove[0] + " 资源点，坐标：X:" + nearest.getBlockX() + " Y:" + nearest.getBlockY() + " Z:" + nearest.getZ());
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ss.getTeamColor(toRemove[2]) + toRemove[2] + " " + ChatColor.GREEN + toRemove[0] + " 资源点已移除。"), 5, 40, 5);
             Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
             Misc.removeArmorStand(toRemove[0], nearest, toRemove[1]);
             return true;

@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Sounds;
@@ -54,12 +55,12 @@ public class CmdJoin extends SubCommand {
         if (s instanceof ConsoleCommandSender) return false;
         Player p = (Player) s;
         if (args.length < 1) {
-            s.sendMessage(getMsg(p, Messages.COMMAND_JOIN_USAGE));
+            AdventureText.send(s, getMsg(p, Messages.COMMAND_JOIN_USAGE));
             return true;
         }
         if (args[0].equalsIgnoreCase("random")){
             if (!Arena.joinRandomArena(p)){
-                s.sendMessage(getMsg(p, Messages.COMMAND_JOIN_NO_EMPTY_FOUND));
+                AdventureText.send(s, getMsg(p, Messages.COMMAND_JOIN_NO_EMPTY_FOUND));
                 Sounds.playSound("join-denied", p);
             } else {
                 Sounds.playSound("join-allowed", p);
@@ -68,7 +69,7 @@ public class CmdJoin extends SubCommand {
         }
         if (com.andrei1058.bedwars.commands.bedwars.MainCommand.isArenaGroup(args[0]) || args[0].contains("+")) {
             if (!Arena.joinRandomFromGroup(p, args[0])) {
-                s.sendMessage(getMsg(p, Messages.COMMAND_JOIN_NO_EMPTY_FOUND));
+                AdventureText.send(s, getMsg(p, Messages.COMMAND_JOIN_NO_EMPTY_FOUND));
                 Sounds.playSound("join-denied", p);
             } else {
                 Sounds.playSound("join-allowed", p);
@@ -100,12 +101,12 @@ public class CmdJoin extends SubCommand {
             Sounds.playSound("join-denied", p);
             return true;
         }
-        s.sendMessage(getMsg(p, Messages.COMMAND_JOIN_GROUP_OR_ARENA_NOT_FOUND).replace("{name}", args[0]));
+        AdventureText.send(s, getMsg(p, Messages.COMMAND_JOIN_GROUP_OR_ARENA_NOT_FOUND).replace("{name}", args[0]));
         return true;
     }
 
     private void sendArenaRestoringMessage(Player player, String arenaName) {
-        player.sendMessage("§c▪ §7竞技场 §e" + arenaName + " §7正在重置，请稍后再试。");
+        AdventureText.send(player, "§c▪ §7竞技场 §e" + arenaName + " §7正在重置，请稍后再试。");
     }
 
     @Override

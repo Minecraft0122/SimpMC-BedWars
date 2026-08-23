@@ -7,6 +7,7 @@ import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.shop.ShopItemIdentifier;
@@ -121,7 +122,7 @@ public final class RecallScrollListener implements Listener {
     private static void announce(Channel channel) {
         String message = Language.getMsg(channel.player(), Messages.RECALL_SCROLL_COUNTDOWN)
                 .replace("{time}", String.valueOf(channel.countdown().secondsRemaining()));
-        BedWars.nms.playAction(channel.player(), message);
+        BedWars.nms.playAction(channel.player(), AdventureText.section(message));
     }
 
     private static void spawnParticles(Channel channel) {
@@ -160,7 +161,7 @@ public final class RecallScrollListener implements Listener {
     }
 
     private static void showActionBar(Player player, String messagePath) {
-        BedWars.nms.playAction(player, Language.getMsg(player, messagePath));
+        BedWars.nms.playAction(player, AdventureText.section(Language.getMsg(player, messagePath)));
     }
 
     private void stopTickerIfIdle() {

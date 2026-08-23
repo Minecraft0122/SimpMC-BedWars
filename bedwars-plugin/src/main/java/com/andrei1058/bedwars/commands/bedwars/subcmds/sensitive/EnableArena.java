@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
@@ -30,7 +31,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -60,31 +61,31 @@ public class EnableArena extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 1) {
-            p.sendMessage("§c▪ §7用法：§o/" + getParent().getName() + " enableArena <地图名>");
+            AdventureText.send(p, "§c▪ §7用法：§o/" + getParent().getName() + " enableArena <地图名>");
             return true;
         }
         if (!WorldNameValidator.isSafe(args[0])) {
-            p.sendMessage("§c▪ §7竞技场世界名称包含不安全字符。");
+            AdventureText.send(p, "§c▪ §7竞技场世界名称包含不安全字符。");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {
-            p.sendMessage("§c▪ §7竞技场 " + args[0] + " 不存在！");
+            AdventureText.send(p, "§c▪ §7竞技场 " + args[0] + " 不存在！");
             return true;
         }
 
         for (IArena mm : Arena.getEnableQueue()){
             if (mm.getArenaName().equalsIgnoreCase(args[0])){
-                p.sendMessage("§c▪ §7该竞技场已经在启用队列中！");
+                AdventureText.send(p, "§c▪ §7该竞技场已经在启用队列中！");
                 return true;
             }
         }
 
         IArena aa = Arena.getArenaByName(args[0]);
         if (aa != null) {
-            p.sendMessage("§c▪ §7该竞技场已经启用！");
+            AdventureText.send(p, "§c▪ §7该竞技场已经启用！");
             return true;
         }
-        p.sendMessage("§6 ▪ §7正在启用竞技场……");
+        AdventureText.send(p, "§6 ▪ §7正在启用竞技场……");
         new Arena(args[0], p);
         return true;
     }

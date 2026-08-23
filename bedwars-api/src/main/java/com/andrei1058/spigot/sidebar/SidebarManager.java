@@ -1,5 +1,7 @@
 package com.andrei1058.spigot.sidebar;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.jetbrains.annotations.NotNull;
@@ -128,7 +130,7 @@ public class SidebarManager {
         if (cacheKey.equals(headerFooterCache.get(player))) {
             return;
         }
-        player.setPlayerListHeaderFooter(header, footer);
+        player.sendPlayerListHeaderAndFooter(AdventureText.section(header), AdventureText.section(footer));
         headerFooterCache.put(player, cacheKey);
     }
 
@@ -137,7 +139,7 @@ public class SidebarManager {
     }
 
     public void clearHeaderFooter(@NotNull Player player) {
-        player.setPlayerListHeaderFooter("", "");
+        player.sendPlayerListHeaderAndFooter(AdventureText.section(""), AdventureText.section(""));
         clearHeaderFooterCache(player);
     }
 

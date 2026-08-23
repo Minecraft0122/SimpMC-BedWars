@@ -8,11 +8,11 @@ import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.matchmaking.ArenaInviteManager;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.listeners.LobbyAnnouncements;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -76,18 +76,16 @@ public final class CmdInvite extends SubCommand {
 
         invitations.create(inviter.getUniqueId(), target.getUniqueId(), arena.getArenaName(),
                 System.currentTimeMillis());
-        inviter.sendMessage(PREFIX + ChatColor.GREEN + "已邀请 " + target.getName() + " 加入竞技场 "
+        AdventureText.send(inviter, PREFIX + ChatColor.GREEN + "已邀请 " + target.getName() + " 加入竞技场 "
                 + arena.getDisplayName() + "，邀请 30 秒内有效。");
 
-        TextComponent message = new TextComponent(PREFIX + ChatColor.AQUA + inviter.getName()
+        Component message = AdventureText.section(PREFIX + ChatColor.AQUA + inviter.getName()
                 + ChatColor.YELLOW + " 邀请你加入竞技场 " + ChatColor.GREEN + arena.getDisplayName() + " ");
-        TextComponent accept = action("[接受]", ChatColor.GREEN,
+        Component accept = action("[接受]", ChatColor.GREEN,
                 "/bw invite accept " + inviter.getName(), "点击加入该竞技场");
-        TextComponent decline = action(" [拒绝]", ChatColor.RED,
+        Component decline = action(" [拒绝]", ChatColor.RED,
                 "/bw invite decline " + inviter.getName(), "点击拒绝邀请");
-        message.addExtra(accept);
-        message.addExtra(decline);
-        target.spigot().sendMessage(message);
+        target.sendMessage(message.append(accept).append(decline));
     }
 
     private void accept(Player target, String[] args) {
@@ -123,8 +121,8 @@ public final class CmdInvite extends SubCommand {
             return;
         }
         invitations.clearPlayer(target.getUniqueId());
-        target.sendMessage(PREFIX + ChatColor.GREEN + "你已接受 " + inviter.getName() + " 的邀请。");
-        inviter.sendMessage(PREFIX + ChatColor.GREEN + target.getName() + " 已接受邀请并加入竞技场。");
+        AdventureText.send(target, PREFIX + ChatColor.GREEN + "你已接受 " + inviter.getName() + " 的邀请。");
+        AdventureText.send(inviter, PREFIX + ChatColor.GREEN + target.getName() + " 已接受邀请并加入竞技场。");
     }
 
     private void decline(Player target, String[] args) {
@@ -139,29 +137,29 @@ public final class CmdInvite extends SubCommand {
             return;
         }
         invitations.remove(target.getUniqueId(), inviter.getUniqueId());
-        target.sendMessage(PREFIX + ChatColor.YELLOW + "已拒绝 " + inviter.getName() + " 的竞技场邀请。");
-        inviter.sendMessage(PREFIX + ChatColor.YELLOW + target.getName() + " 拒绝了你的竞技场邀请。");
+        AdventureText.send(target, PREFIX + ChatColor.YELLOW + "已拒绝 " + inviter.getName() + " 的竞技场邀请。");
+        AdventureText.send(inviter, PREFIX + ChatColor.YELLOW + target.getName() + " 拒绝了你的竞技场邀请。");
     }
 
     private void list(Player target) {
         List<ArenaInviteManager.Invitation> active = invitations.findAll(target.getUniqueId(),
                 System.currentTimeMillis());
         if (active.isEmpty()) {
-            target.sendMessage(PREFIX + ChatColor.GRAY + "当前没有有效的竞技场邀请。");
+            AdventureText.send(target, PREFIX + ChatColor.GRAY + "当前没有有效的竞技场邀请。");
             return;
         }
-        target.sendMessage(PREFIX + ChatColor.YELLOW + "当前竞技场邀请：");
+        AdventureText.send(target, PREFIX + ChatColor.YELLOW + "当前竞技场邀请：");
         for (ArenaInviteManager.Invitation invitation : active) {
             Player inviter = Bukkit.getPlayer(invitation.inviter());
             String inviterName = inviter == null ? invitation.inviter().toString() : inviter.getName();
-            target.sendMessage(ChatColor.GRAY + " - " + ChatColor.AQUA + inviterName + ChatColor.GRAY
+            AdventureText.send(target, ChatColor.GRAY + " - " + ChatColor.AQUA + inviterName + ChatColor.GRAY
                     + " → " + ChatColor.GREEN + invitation.arenaName());
         }
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "/bw invite <玩家> " + ChatColor.WHITE + "邀请大厅玩家加入当前竞技场");
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "/bw invite list " + ChatColor.WHITE + "查看收到的邀请");
+        AdventureText.send(player, PREFIX + ChatColor.YELLOW + "/bw invite <玩家> " + ChatColor.WHITE + "邀请大厅玩家加入当前竞技场");
+        AdventureText.send(player, PREFIX + ChatColor.YELLOW + "/bw invite list " + ChatColor.WHITE + "查看收到的邀请");
     }
 
     private static IArena preGameArena(Player player) {
@@ -173,15 +171,14 @@ public final class CmdInvite extends SubCommand {
         return arena.getStatus() == GameState.waiting || arena.getStatus() == GameState.starting;
     }
 
-    private static TextComponent action(String label, ChatColor color, String command, String hover) {
-        TextComponent component = new TextComponent(color + label);
-        component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command));
-        component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(hover).create()));
-        return component;
+    private static Component action(String label, ChatColor color, String command, String hover) {
+        return AdventureText.section(color + label)
+                .clickEvent(ClickEvent.runCommand(command))
+                .hoverEvent(HoverEvent.showText(AdventureText.section(hover)));
     }
 
     private static void fail(Player player, String message) {
-        player.sendMessage(PREFIX + ChatColor.RED + message);
+        AdventureText.send(player, PREFIX + ChatColor.RED + message);
     }
 
     @Override

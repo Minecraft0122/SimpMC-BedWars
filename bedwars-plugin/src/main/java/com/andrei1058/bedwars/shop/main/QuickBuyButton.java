@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.shop.main;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.api.language.Language;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -53,8 +55,8 @@ public class QuickBuyButton {
         ItemStack i = itemStack.clone();
         ItemMeta im = i.getItemMeta();
         if (im != null) {
-            im.setDisplayName(Language.getMsg(player, namePath));
-            im.setLore(Language.getList(player, lorePath));
+            AdventureText.displayName(im, Language.getMsg(player, namePath));
+            AdventureText.lore(im, Language.getList(player, lorePath));
             i.setItemMeta(im);
         }
         return i;

@@ -34,6 +34,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Region;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.util.BlastProtectionUtil;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
@@ -174,7 +175,7 @@ public class BreakPlace implements Listener {
 
             if (hasProtectedPlacedBlock(a, e)) {
                 e.setCancelled(true);
-                p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
+                AdventureText.send(p, getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
                 return;
             }
 
@@ -326,7 +327,7 @@ public class BreakPlace implements Listener {
                                 if (t.getBed().getBlockX() == x && t.getBed().getBlockY() == y && t.getBed().getBlockZ() == z) {
                                     if (!t.isBedDestroyed()) {
                                         if (t.isMember(p)) {
-                                            p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_OWN_BED));
+                                            AdventureText.send(p, getMsg(p, Messages.INTERACT_CANNOT_BREAK_OWN_BED));
                                             e.setCancelled(true);
                                             if (e.getPlayer().getLocation().getBlock().getType().toString().contains("BED")) {
                                                 TeleportManager.teleport(e.getPlayer(), e.getPlayer().getLocation().add(0, 0.5, 0));
@@ -357,15 +358,15 @@ public class BreakPlace implements Listener {
                                                     }));
                                             for (Player on : a.getWorld().getPlayers()) {
                                                 if (breakEvent.getMessage() != null) {
-                                                    on.sendMessage(breakEvent.getMessage().apply(on)
+                                                    AdventureText.send(on, breakEvent.getMessage().apply(on)
                                                             .replace("{TeamColor}", t.getColor().chat().toString())
                                                             .replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(on)))
                                                             .replace("{PlayerColor}", a.getTeam(p).getColor().chat().toString())
-                                                            .replace("{PlayerName}", p.getDisplayName())
+                                                            .replace("{PlayerName}", AdventureText.displayName(p))
                                                             .replace("{PlayerNameUnformatted}", p.getName()));
                                                 }
                                                 if (breakEvent.getTitle() != null && breakEvent.getSubTitle() != null) {
-                                                    nms.sendTitle(on, breakEvent.getTitle().apply(on), breakEvent.getSubTitle().apply(on), 0, 40, 10);
+                                                    nms.sendTitle(on, AdventureText.section(breakEvent.getTitle().apply(on)), AdventureText.section(breakEvent.getSubTitle().apply(on)), 0, 40, 10);
                                                 }
                                                 if (t.isMember(on))
                                                     Sounds.playSound(ConfigPath.SOUNDS_BED_DESTROY_OWN, on);
@@ -392,7 +393,7 @@ public class BreakPlace implements Listener {
                 }
             }
             if (isProtectedMapBlock(placedBlock, protectedRegion, a.isAllowMapBreak())) {
-                p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
+                AdventureText.send(p, getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
                 e.setCancelled(true);
                 return;
             }
@@ -406,14 +407,16 @@ public class BreakPlace implements Listener {
     public void onSignChange(SignChangeEvent e) {
         if (e == null) return;
         Player p = e.getPlayer();
-        if (Objects.requireNonNull(e.getLine(0)).equalsIgnoreCase("[" + mainCmd + "]")) {
+        String commandLine = AdventureText.plain(e.line(0));
+        String arenaName = AdventureText.plain(e.line(1));
+        if (commandLine.equalsIgnoreCase("[" + mainCmd + "]")) {
             File dir = new File(plugin.getDataFolder(), "/Arenas");
             boolean exists = false;
             if (dir.exists()) {
                 for (File f : Objects.requireNonNull(dir.listFiles())) {
                     if (f.isFile()) {
                         if (f.getName().contains(".yml")) {
-                            if (Objects.equals(e.getLine(1), f.getName().replace(".yml", ""))) {
+                            if (Objects.equals(arenaName, f.getName().replace(".yml", ""))) {
                                 exists = true;
                             }
                         }
@@ -426,25 +429,25 @@ public class BreakPlace implements Listener {
                     s = new ArrayList<>(signs.getYml().getStringList("locations"));
                 }
                 if (exists) {
-                    s.add(e.getLine(1) + "," + signs.stringLocationConfigFormat(e.getBlock().getLocation()));
+                    s.add(arenaName + "," + signs.stringLocationConfigFormat(e.getBlock().getLocation()));
                     signs.set("locations", s);
                 }
-                IArena a = Arena.getArenaByName(e.getLine(1));
+                IArena a = Arena.getArenaByName(arenaName);
                 if (a != null) {
-                    p.sendMessage("§a▪ §7已保存竞技场告示牌：" + e.getLine(1));
+                    AdventureText.send(p, "§a▪ §7已保存竞技场告示牌：" + arenaName);
                     a.addSign(e.getBlock().getLocation());
                     Sign b = (Sign) e.getBlock().getState();
                     int line = 0;
                     for (String string : BedWars.signs.getList("format")) {
-                        e.setLine(line, string.replace("[on]", String.valueOf(a.getPlayers().size())).replace("[max]",
+                        e.line(line, AdventureText.ampersand(string.replace("[on]", String.valueOf(a.getPlayers().size())).replace("[max]",
                                         String.valueOf(a.getMaxPlayers())).replace("[arena]", a.getDisplayName()).replace("[status]", a.getDisplayStatus(Language.getDefaultLanguage()))
-                                .replace("[type]", String.valueOf(a.getMaxInTeam())));
+                                .replace("[type]", String.valueOf(a.getMaxInTeam())).replace('\u00a7', '&')));
                         line++;
                     }
                     b.update(true);
                 }
             } else {
-                p.sendMessage("§c▪ §7你还没有设置任何竞技场！");
+                AdventureText.send(p, "§c▪ §7你还没有设置任何竞技场！");
             }
         }
     }
@@ -518,7 +521,7 @@ public class BreakPlace implements Listener {
             // Protected areas around shops/upgrades/generators. Team spawn remains buildable so players can defend beds.
             if (isShopUpgradeOrGeneratorProtected(a, waterLocation)) {
                 e.setCancelled(true);
-                p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
+                AdventureText.send(p, getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
                 return;
             }
 

@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.support.vault;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -35,11 +36,11 @@ public final class WithChat implements Chat {
 
     @Override
     public String getPrefix(Player p) {
-        return ChatColor.translateAlternateColorCodes('&', chat.getPlayerPrefix(p));
+        return AdventureText.section(AdventureText.ampersand(chat.getPlayerPrefix(p)));
     }
 
     @Override
     public String getSuffix(Player p) {
-        return ChatColor.translateAlternateColorCodes('&', chat.getPlayerSuffix(p));
+        return AdventureText.section(AdventureText.ampersand(chat.getPlayerSuffix(p)));
     }
 }

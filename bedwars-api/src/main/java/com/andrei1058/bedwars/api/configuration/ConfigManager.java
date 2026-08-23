@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.api.configuration;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
@@ -534,7 +535,7 @@ public class ConfigManager {
      * @return a list of string with colors translated
      */
     public List<String> getList(String path) {
-        return yml.getStringList(path).stream().map(s -> s.replace("&", "§")).collect(Collectors.toList());
+        return yml.getStringList(path).stream().map(s -> AdventureText.section(AdventureText.ampersand(s))).collect(Collectors.toList());
     }
 
     /**

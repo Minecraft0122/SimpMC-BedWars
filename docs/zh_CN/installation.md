@@ -2,10 +2,12 @@
 
 ## 系统要求
 
-- Paper 1.21.11，不能使用 Spigot 或 Folia。
-- Java 21 或更新的兼容版本。
+- Paper 1.21.11 或 Paper 26.2，不能使用 Spigot 或 Folia。
+- Paper 1.21.11 使用 Java 21 或更新的兼容版本；Paper 26.2 必须使用 Java 25。
 - 地图较多时建议使用 SSD；内部地图恢复会压缩和解压完整世界。
 - 建议至少保留一份服务端离线备份。
+
+Paper 26.2 会把自定义世界运行数据放入主 `level` 目录下的 `dimensions`，但 SimpMC-BedWars 强制把竞技场原图和唯一缓存来源保存在 1.21.11 使用的服务端根目录 `<世界名>`；维度目录只作为 Paper 加载期间的运行副本，设置会话保存后才同步回原图并更新 `plugins/SimpMC-BedWars/Cache/<世界名>.zip`。有效原图和 ZIP 必须同时包含根级 `level.dat` 与 `region/`；只有维度内容、嵌套 `level.dat` 或仅有 `level.dat_old` 的目录/缓存会被拒绝，不会自动转换为另一种地图格式。不要安装 Multiverse-Core 作为必需依赖，也不要手工移动竞技场原图。
 
 ## 获取自动发布版本
 

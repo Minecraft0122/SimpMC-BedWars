@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.support.citizens;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
@@ -81,7 +82,7 @@ public class CitizensListener implements Listener {
         if (npc == null) return;
         if (JoinNPC.npcs.containsKey(npc.getId())) {
             if (!Arena.joinRandomFromGroup(e.getPlayer(), JoinNPC.npcs.get(npc.getId()))) {
-                e.getPlayer().sendMessage(getMsg(e.getPlayer(), Messages.COMMAND_JOIN_NO_EMPTY_FOUND));
+                AdventureText.send(e.getPlayer(), getMsg(e.getPlayer(), Messages.COMMAND_JOIN_NO_EMPTY_FOUND));
                 Sounds.playSound("join-denied", e.getPlayer());
             } else {
                 Sounds.playSound("join-allowed", e.getPlayer());

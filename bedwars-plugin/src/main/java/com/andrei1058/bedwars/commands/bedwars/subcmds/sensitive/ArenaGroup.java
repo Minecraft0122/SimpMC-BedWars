@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
@@ -33,7 +34,7 @@ import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.ArenaConfig;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -91,18 +92,18 @@ public class ArenaGroup extends SubCommand {
         }
         String requested = args[1].trim();
         if (requested.isEmpty() || requested.contains("+")) {
-            player.sendMessage("§c▪ §7竞技场组名称不能为空，也不能包含：" + ChatColor.RED + "+");
+            AdventureText.send(player, "§c▪ §7竞技场组名称不能为空，也不能包含：" + ChatColor.RED + "+");
             return true;
         }
         if (findConfiguredGroup(requested) != null) {
-            player.sendMessage("§c▪ §7该竞技场组已存在！");
+            AdventureText.send(player, "§c▪ §7该竞技场组已存在！");
             return true;
         }
 
         List<String> groups = configuredGroups();
         groups.add(requested);
         config.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS, groups);
-        player.sendMessage("§6 ▪ §7竞技场组已创建：§f" + requested);
+        AdventureText.send(player, "§6 ▪ §7竞技场组已创建：§f" + requested);
         return true;
     }
 
@@ -113,7 +114,7 @@ public class ArenaGroup extends SubCommand {
         }
         String group = findConfiguredGroup(args[1]);
         if (group == null || group.equalsIgnoreCase(ArenaGroupPolicy.DEFAULT_GROUP)) {
-            player.sendMessage("§c▪ §7该竞技场组不存在或不能删除！");
+            AdventureText.send(player, "§c▪ §7该竞技场组不存在或不能删除！");
             return true;
         }
 
@@ -121,15 +122,15 @@ public class ArenaGroup extends SubCommand {
         groups.removeIf(value -> value.equalsIgnoreCase(group));
         config.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS, groups);
         int changed = resetGroupForAllArenas(group);
-        player.sendMessage("§6 ▪ §7竞技场组已删除：§f" + group + "§7；已将 " + changed + " 张地图重置到 Default。");
+        AdventureText.send(player, "§6 ▪ §7竞技场组已删除：§f" + group + "§7；已将 " + changed + " 张地图重置到 Default。");
         return true;
     }
 
     private boolean listGroups(Player player) {
-        player.sendMessage("§7可用的竞技场组：");
-        player.sendMessage("§6 ▪ §f默认组（Default）");
+        AdventureText.send(player, "§7可用的竞技场组：");
+        AdventureText.send(player, "§6 ▪ §f默认组（Default）");
         for (String group : configuredGroups()) {
-            player.sendMessage("§6 ▪ §f" + group);
+            AdventureText.send(player, "§6 ▪ §f" + group);
         }
         return true;
     }
@@ -144,12 +145,12 @@ public class ArenaGroup extends SubCommand {
 
         String group = findConfiguredGroup(args[2]);
         if (group == null) {
-            player.sendMessage("§c▪ §7不存在该竞技场组：" + args[2]);
+            AdventureText.send(player, "§c▪ §7不存在该竞技场组：" + args[2]);
             return true;
         }
 
         saveGroup(args[1], arenaConfig, group);
-        player.sendMessage("§6 ▪ §7竞技场 §f" + args[1] + " §7的分组已设为：§f" + group);
+        AdventureText.send(player, "§6 ▪ §7竞技场 §f" + args[1] + " §7的分组已设为：§f" + group);
         return true;
     }
 
@@ -160,19 +161,19 @@ public class ArenaGroup extends SubCommand {
         }
         ArenaConfig arenaConfig = arenaConfig(player, args[1]);
         if (arenaConfig == null) return true;
-        player.sendMessage("§6 ▪ §7竞技场 §f" + args[1] + " §7的分组：§f"
+        AdventureText.send(player, "§6 ▪ §7竞技场 §f" + args[1] + " §7的分组：§f"
                 + ArenaGroupPolicy.read(arenaConfig.getYml()));
         return true;
     }
 
     private ArenaConfig arenaConfig(Player player, String arenaName) {
         if (!WorldNameValidator.isSafe(arenaName)) {
-            player.sendMessage(ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
+            AdventureText.send(player, ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
             return null;
         }
         File file = new File(plugin.getDataFolder(), "Arenas/" + arenaName + ".yml");
         if (!file.isFile()) {
-            player.sendMessage("§c▪ §7竞技场 " + arenaName + " 不存在！");
+            AdventureText.send(player, "§c▪ §7竞技场 " + arenaName + " 不存在！");
             return null;
         }
         return new ArenaConfig(BedWars.plugin, arenaName, new File(plugin.getDataFolder(), "Arenas").getPath());
@@ -238,7 +239,7 @@ public class ArenaGroup extends SubCommand {
     }
 
     private void sendUsage(Player player, String syntax, String description, String action) {
-        player.spigot().sendMessage(Misc.msgHoverClick(
+        AdventureText.send(player, Misc.msgHoverClick(
                 "§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + " §o" + syntax,
                 description,
                 "/" + getParent().getName() + " " + getSubCommandName() + " " + action,
