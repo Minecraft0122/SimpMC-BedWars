@@ -1873,13 +1873,13 @@ public class Arena implements IArena {
             LobbyCommandItem item = byId.get(selected.id());
             if (item == null) continue;
             try {
+                String itemName = lobbyItemName(p, item.id(), item.command());
+                List<String> itemLore = lobbyItemLore(p, item.id(), item.command());
                 ItemStack stack = Misc.createItem(item.material(), item.data(), item.enchanted(),
                         SupportPAPI.getSupportPAPI().replace(p,
-                                getMsg(p, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_NAME
-                                        .replace("%path%", item.id()))),
+                                itemName),
                         SupportPAPI.getSupportPAPI().replace(p,
-                                getList(p, Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_LORE
-                                        .replace("%path%", item.id()))),
+                                itemLore),
                         p, "RUNCOMMAND", item.command());
                 stack = CommandItemAction.tagReturnItem(stack, item.id(), item.command(),
                         BedWars.mainCmd, CommandItemAction.Target.PROXY_LOBBY);
@@ -1889,6 +1889,27 @@ public class Arena implements IArena {
                         + "，已跳过该物品：" + exception.getMessage());
             }
         }
+    }
+
+    /**
+     * Resolve a lobby item's optional language entry without logging a
+     * warning for administrator-defined item ids. Built-in ids still use the
+     * normal translated message and custom return items receive a useful
+     * Chinese fallback based on their leave command.
+     */
+    private static String lobbyItemName(Player player, String id, String command) {
+        String path = Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_NAME.replace("%path%", id);
+        Language language = Language.getPlayerLanguage(player);
+        if (language.exists(path)) return getMsg(player, path);
+        return LobbyItemText.fallbackName(id, command, BedWars.mainCmd);
+    }
+
+    /** See {@link #lobbyItemName(Player, String, String)}. */
+    private static List<String> lobbyItemLore(Player player, String id, String command) {
+        String path = Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_LORE.replace("%path%", id);
+        Language language = Language.getPlayerLanguage(player);
+        if (language.exists(path)) return getList(player, path);
+        return LobbyItemText.fallbackLore(id, command, BedWars.mainCmd);
     }
 
     private static boolean isCurrentLobbyPlayer(Player player) {

@@ -468,7 +468,7 @@ public class Language extends ConfigManager {
                 String p2 = Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_LORE.replace("%path%", item);
                 if (yml.getDefaults() == null || !yml.getDefaults().contains(p1))
                     yml.addDefault(p1, "&cName not set at: &f" + p1);
-                if (yml.getDefaults() == null || !yml.getDefaults().contains(p1))
+                if (yml.getDefaults() == null || !yml.getDefaults().contains(p2))
                     yml.addDefault(p2, Arrays.asList("&cLore not set at:", " &f" + p2));
             }
         }
@@ -479,7 +479,7 @@ public class Language extends ConfigManager {
                 String p2 = Messages.GENERAL_CONFIGURATION_SPECTATOR_ITEMS_LORE.replace("%path%", item);
                 if (yml.getDefaults() == null || !yml.getDefaults().contains(p1))
                     yml.addDefault(p1, "&cName not set at: &f" + p1);
-                if (yml.getDefaults() == null || !yml.getDefaults().contains(p1))
+                if (yml.getDefaults() == null || !yml.getDefaults().contains(p2))
                     yml.addDefault(p2, Arrays.asList("&cLore not set at:", " &f" + p2));
             }
         }
@@ -490,7 +490,7 @@ public class Language extends ConfigManager {
                 String p2 = Messages.GENERAL_CONFIGURATION_WAITING_ITEMS_LORE.replace("%path%", item);
                 if (yml.getDefaults() == null || !yml.getDefaults().contains(p1))
                     yml.addDefault(p1, "&cName not set at: &f" + p1);
-                if (yml.getDefaults() == null || !yml.getDefaults().contains(p1))
+                if (yml.getDefaults() == null || !yml.getDefaults().contains(p2))
                     yml.addDefault(p2, Arrays.asList("&cLore not set at:", " &f" + p2));
             }
         }

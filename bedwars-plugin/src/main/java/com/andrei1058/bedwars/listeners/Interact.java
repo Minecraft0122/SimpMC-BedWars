@@ -112,13 +112,21 @@ public class Interact implements Listener {
     /* Handle custom items with commands on them */
     public void onItemCommand(PlayerInteractEvent e) {
         if (e == null) return;
+        // Command items are issued in the main hand. Ignoring the off-hand
+        // mirror event prevents a single right-click from scheduling the
+        // return action twice and keeps the client inventory stable when the
+        // cancelled interaction is replayed by Paper.
+        if (e.getHand() != EquipmentSlot.HAND) return;
         Player p = e.getPlayer();
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR) {
             ItemStack i = e.getItem();
             CommandItemAction.Target returnTarget = CommandItemAction.readTarget(i);
             if (returnTarget != null) {
                 e.setCancelled(true);
-                if (!pendingReturnActions.add(p.getUniqueId())) return;
+                if (!pendingReturnActions.add(p.getUniqueId())) {
+                    p.updateInventory();
+                    return;
+                }
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     try {
                         executeReturnItem(p, returnTarget);
@@ -141,6 +149,9 @@ public class Interact implements Listener {
                             } else {
                                 plugin.getProxyLobbyConnector().connect(p);
                             }
+                            // This also covers legacy items created before the
+                            // persistent return target was introduced.
+                            if (p.isOnline()) p.updateInventory();
                         });
                     } else {
                         Bukkit.getScheduler().runTask(plugin, () -> Bukkit.dispatchCommand(p, command));
@@ -158,6 +169,10 @@ public class Interact implements Listener {
             } else {
                 plugin.getProxyLobbyConnector().connect(player);
             }
+            // Proxy plugin messages are fire-and-forget. Re-sync the item
+            // after the cancelled interaction so a failed or direct-backend
+            // handoff cannot leave the client showing an empty slot.
+            if (player.isOnline()) player.updateInventory();
             return;
         }
 

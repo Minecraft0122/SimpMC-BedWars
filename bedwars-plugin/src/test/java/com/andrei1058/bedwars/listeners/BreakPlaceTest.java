@@ -60,6 +60,14 @@ class BreakPlaceTest {
     }
 
     @Test
+    void fireballsNeverDestroyOriginalMapBlocksOrTeamBeds() {
+        assertTrue(BreakPlace.shouldProtectExplosionBlock(true, false, false));
+        assertTrue(BreakPlace.shouldProtectExplosionBlock(true, true, true));
+        assertFalse(BreakPlace.shouldProtectExplosionBlock(true, true, false));
+        assertFalse(BreakPlace.shouldProtectExplosionBlock(false, false, false));
+    }
+
+    @Test
     void consumesTheTowerFromTheOffHandThatPlacedIt() {
         AtomicReference<ItemStack> mainHand = new AtomicReference<>(new TestItemStack(5));
         AtomicReference<ItemStack> offHand = new AtomicReference<>(new TestItemStack(2));

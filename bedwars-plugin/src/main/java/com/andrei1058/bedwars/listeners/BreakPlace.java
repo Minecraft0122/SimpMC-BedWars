@@ -52,6 +52,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
@@ -557,14 +558,15 @@ public class BreakPlace implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlow(@NotNull EntityExplodeEvent e) {
-        if (e.isCancelled()) return;
-
         IArena a = Arena.getArenaByIdentifier(e.getLocation().getWorld().getName());
         if (a != null) {
             if (a.getStatus() == GameState.playing) {
-                e.blockList().removeIf((b) -> blastProtection.isProtected(a, e.getLocation(), b, 0.3));
+                boolean fireball = e.getEntity() instanceof Fireball;
+                e.blockList().removeIf((b) -> shouldProtectExplosionBlock(
+                        fireball, a.isBlockPlaced(b), a.isTeamBed(b.getLocation()))
+                        || blastProtection.isProtected(a, e.getLocation(), b, 0.3));
                 return;
             }
             e.blockList().clear();
@@ -679,6 +681,16 @@ public class BreakPlace implements Listener {
      */
     static boolean isProtectedMapBlock(boolean placedBlock, boolean protectedRegion, boolean allowMapBreak) {
         return !placedBlock && (protectedRegion || !allowMapBreak);
+    }
+
+    /**
+     * Fireballs may destroy player-built blocks, but never the original arena
+     * structure. The generic blast ray sampler is intentionally retained for
+     * placed blocks (glass and other blast barriers still apply); this direct
+     * rule closes edge cases where a ray starts and ends inside one map block.
+     */
+    static boolean shouldProtectExplosionBlock(boolean fireball, boolean placedBlock, boolean teamBed) {
+        return fireball && (teamBed || !placedBlock);
     }
 
     public static void consumeTowerItem(@NotNull PlayerInventory inventory, @Nullable EquipmentSlot hand) {
