@@ -288,7 +288,25 @@ public class Misc {
     public static Component msgHoverClick(String msg, String hover, String click, ClickEvent.Action clickAction) {
         return AdventureText.section(msg)
                 .hoverEvent(HoverEvent.showText(AdventureText.section(hover)))
-                .clickEvent(ClickEvent.clickEvent(clickAction, click));
+                .clickEvent(toClickEvent(clickAction, click));
+    }
+
+    /**
+     * Use Adventure's stable action-specific factories so this helper compiles
+     * against both the string-payload API in 1.21.11 and the typed-payload API
+     * introduced by newer Paper releases.
+     */
+    private static ClickEvent toClickEvent(ClickEvent.Action action, String value) {
+        String actionName = action.toString().toLowerCase(java.util.Locale.ROOT);
+        return switch (actionName) {
+            case "open_url" -> ClickEvent.openUrl(value);
+            case "open_file" -> ClickEvent.openFile(value);
+            case "run_command" -> ClickEvent.runCommand(value);
+            case "suggest_command" -> ClickEvent.suggestCommand(value);
+            case "change_page" -> ClickEvent.changePage(Integer.parseInt(value));
+            case "copy_to_clipboard" -> ClickEvent.copyToClipboard(value);
+            default -> throw new IllegalArgumentException("Unsupported click action: " + action);
+        };
     }
 
     /**
