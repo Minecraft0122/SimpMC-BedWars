@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.arena;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
@@ -106,7 +108,7 @@ public class ArenaGUI {
 
 
             ItemMeta im = i.getItemMeta();
-            im.setDisplayName(Language.getMsg(p, Messages.ARENA_GUI_ARENA_CONTENT_NAME).replace("{name}", arenas.get(arenaKey).getDisplayName()).replace("{map_name}", arenas.get(arenaKey).getArenaName()));
+            AdventureText.displayName(im, Language.getMsg(p, Messages.ARENA_GUI_ARENA_CONTENT_NAME).replace("{name}", arenas.get(arenaKey).getDisplayName()).replace("{map_name}", arenas.get(arenaKey).getArenaName()));
             List<String> lore = new ArrayList<>();
             for (String s : Language.getList(p, Messages.ARENA_GUI_ARENA_CONTENT_LORE)) {
                 if (!(s.contains("{group}") && arenas.get(arenaKey).getGroup().equalsIgnoreCase("default"))) {
@@ -115,7 +117,7 @@ public class ArenaGUI {
                             .replace("{group}", arenas.get(arenaKey).getDisplayGroup(p)));
                 }
             }
-            im.setLore(lore);
+            AdventureText.lore(im, lore);
             i.setItemMeta(im);
             i = BedWars.nms.addCustomData(i, ArenaSelectorListener.ARENA_SELECTOR_GUI_IDENTIFIER + arenas.get(arenaKey).getArenaName());
             inventory.setItem(slot, i);
@@ -144,7 +146,7 @@ public class ArenaGUI {
                         .getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE),
                 configuredSlots, availableArenas(group).size());
         ArenaSelectorHolder ash = new ArenaSelectorHolder(group, Math.max(0, page));
-        Inventory inv = Bukkit.createInventory(ash, size, Language.getMsg(p, Messages.ARENA_GUI_INV_NAME));
+        Inventory inv = Bukkit.createInventory(ash, size, AdventureText.section(Language.getMsg(p, Messages.ARENA_GUI_INV_NAME)));
         ash.attach(inv);
 
         String skippedSlotMaterial = BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_MATERIAL.replace("%path%", "skipped-slot"));
@@ -154,8 +156,7 @@ public class ArenaGUI {
             i = BedWars.nms.addCustomData(i, "RUNCOMMAND_bw join random");
             ItemMeta im = i.getItemMeta();
             assert im != null;
-            im.setDisplayName(ChatColor.translateAlternateColorCodes(
-                    '&',
+            im.displayName(AdventureText.ampersand(
                     Language.getMsg(p, Messages.ARENA_GUI_SKIPPED_ITEM_NAME)
                             .replaceAll(
                                     "\\{serverIp}",
@@ -165,7 +166,7 @@ public class ArenaGUI {
                                     "\\{poweredBy}",
                                     BedWars.config.getString(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_POWERED_BY)
                             )
-            ));
+                    ));
             List<String> lore = new ArrayList<>();
             for (String line : Language.getList(p, Messages.ARENA_GUI_SKIPPED_ITEM_LORE)) {
                 line = line
@@ -180,7 +181,7 @@ public class ArenaGUI {
                 lore.add(line);
             }
             if (lore.size() > 0) {
-                im.setLore(lore);
+                AdventureText.lore(im, lore);
             }
             im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             i.setItemMeta(im);
@@ -216,7 +217,7 @@ public class ArenaGUI {
         ItemStack indicator = new ItemStack(Material.PAPER);
         ItemMeta meta = indicator.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§f第 §e" + (page + 1) + "§f/§e" + pageCount + " §f页");
+            AdventureText.displayName(meta, "§f第 §e" + (page + 1) + "§f/§e" + pageCount + " §f页");
             indicator.setItemMeta(meta);
         }
         inventory.setItem(indicatorSlot, indicator);
@@ -226,7 +227,7 @@ public class ArenaGUI {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(name);
+            AdventureText.displayName(meta, name);
             item.setItemMeta(meta);
         }
         return BedWars.nms.addCustomData(item, PAGE_GUI_IDENTIFIER + page);

@@ -21,11 +21,11 @@
 package com.andrei1058.bedwars.listeners;
 
 import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.listeners.blockstatus.BlockStatusListener;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
@@ -52,7 +52,8 @@ public class ChunkLoad implements Listener {
                         if (((ArmorStand)entity).isMarker()){
                             //if (!entity.hasGravity()){
                             if (entity.isCustomNameVisible()){
-                                if (ChatColor.stripColor(entity.getCustomName()).contains(" SET") || ChatColor.stripColor(entity.getCustomName()).contains(" set")){
+                                if (entity instanceof org.bukkit.Nameable nameable
+                                        && (AdventureText.customName(nameable).contains(" SET") || AdventureText.customName(nameable).contains(" set"))){
                                     entity.remove();
                                 }
                             }

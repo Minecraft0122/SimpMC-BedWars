@@ -113,7 +113,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.ARENA_NORMAL_DEATH_DROPS, "是否使用原版死亡掉落；关闭时由插件管理资源掉落。");
         comment(config, ConfigPath.ARENA_USE_BED_HOLO, "是否在床上方显示床状态全息文字。");
         comment(config, ConfigPath.ARENA_ALLOW_MAP_BREAK, "是否允许破坏地图原有方块；关闭时通常只能破坏玩家放置的方块。");
-        comment(config, ConfigPath.ARENA_GAME_RULES, "进入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场初始化时固定正午 6000 tick 与晴天，并关闭 Paper 1.21.11 的 advance_time、advance_weather、spawn_mobs、随机方块刻、火势蔓延和 Locator Bar。", "旧 doDaylightCycle 等 Bukkit 名称会自动映射到现代注册键；后续时间、天气以及 advance_time/advance_weather 的变化由事件守卫恢复，不使用周期扫描。");
+        comment(config, ConfigPath.ARENA_GAME_RULES, "进入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场初始化时固定正午 6000 tick 与晴天，并关闭受支持 Paper 版本的 advance_time、advance_weather、spawn_mobs、随机方块刻、火势蔓延和 Locator Bar。", "旧 doDaylightCycle 等 Bukkit 名称会自动映射到现代注册键；后续时间、天气以及 advance_time/advance_weather 的变化由事件守卫恢复，不使用周期扫描。");
         comment(config, "waiting.Loc", "等待大厅出生坐标，使用 x.5,y,z.5 的方块中心格式。");
         comment(config, ConfigPath.ARENA_WAITING_FACING, "进入等待大厅时使用的朝向；yaw 自动取最近的 90 度倍数，pitch 固定为 0。");
         comment(config, ConfigPath.ARENA_WAITING_POS1, "开局后移除地图内等待大厅区域的第一个角点。");

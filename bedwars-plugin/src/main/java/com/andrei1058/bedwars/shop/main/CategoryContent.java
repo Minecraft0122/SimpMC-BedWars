@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.shop.main;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.shop.IBuyItem;
@@ -163,7 +165,7 @@ public class CategoryContent implements ICategoryContent {
         //check if can re-buy
         if (shopCache.getContentTier(getIdentifier()) == contentTiers.size()) {
             if (isPermanent() && shopCache.hasCachedItem(this)) {
-                player.sendMessage(getMsg(player, Messages.SHOP_ALREADY_BOUGHT));
+                AdventureText.send(player, getMsg(player, Messages.SHOP_ALREADY_BOUGHT));
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, player);
                 return;
             }
@@ -187,7 +189,7 @@ public class CategoryContent implements ICategoryContent {
         //check money
         int money = calculateMoney(player, ct.getCurrency());
         if (money < ct.getPrice()) {
-            player.sendMessage(getMsg(player, Messages.SHOP_INSUFFICIENT_MONEY).replace("{currency}", getMsg(player, getCurrencyMsgPath(ct))).
+            AdventureText.send(player, getMsg(player, Messages.SHOP_INSUFFICIENT_MONEY).replace("{currency}", getMsg(player, getCurrencyMsgPath(ct))).
                     replace("{amount}", String.valueOf(ct.getPrice() - money)));
             Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, player);
             return;
@@ -224,10 +226,11 @@ public class CategoryContent implements ICategoryContent {
         if (itemNamePath == null || Language.getPlayerLanguage(player).getYml().get(itemNamePath) == null) {
             ItemStack displayItem = ct.getItemStack();
             if (displayItem.getItemMeta() != null && displayItem.getItemMeta().hasDisplayName()) {
-                player.sendMessage(getMsg(player, Messages.SHOP_NEW_PURCHASE).replace("{item}", displayItem.getItemMeta().getDisplayName()));
+                AdventureText.send(player, getMsg(player, Messages.SHOP_NEW_PURCHASE).replace("{item}",
+                        AdventureText.section(displayItem.getItemMeta().displayName())));
             }
         } else {
-            player.sendMessage(getMsg(player, Messages.SHOP_NEW_PURCHASE).replace("{item}", ChatColor.stripColor(getMsg(player, itemNamePath))).replace("{color}", "").replace("{tier}", ""));
+            AdventureText.send(player, getMsg(player, Messages.SHOP_NEW_PURCHASE).replace("{item}", AdventureText.plain(AdventureText.section(getMsg(player, itemNamePath)))).replace("{color}", "").replace("{tier}", ""));
         }
 
 
@@ -328,7 +331,7 @@ public class CategoryContent implements ICategoryContent {
             }
 
 
-            im.setDisplayName(getMsg(player, itemNamePath).replace("{color}", color).replace("{tier}", tier));
+            AdventureText.displayName(im, getMsg(player, itemNamePath).replace("{color}", color).replace("{tier}", tier));
 
             List<String> lore = new ArrayList<>();
             for (String s : Language.getList(player, itemLorePath)) {
@@ -348,7 +351,7 @@ public class CategoryContent implements ICategoryContent {
                 lore.add(s);
             }
 
-            im.setLore(lore);
+            AdventureText.lore(im, lore);
             i.setItemMeta(im);
         }
         return i;
@@ -484,7 +487,7 @@ public class CategoryContent implements ICategoryContent {
     public static void takeMoney(Player player, Material currency, int amount) {
         if (currency == Material.AIR) {
             if (!BedWars.getEconomy().isEconomy()) {
-                player.sendMessage("§4§l错误：此功能需要 Vault 支持，请安装 Vault 插件！");
+                AdventureText.send(player, "§4§l错误：此功能需要 Vault 支持，请安装 Vault 插件！");
                 return;
             }
             BedWars.getEconomy().buyAction(player, amount);

@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -28,7 +29,7 @@ import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -54,10 +55,10 @@ public class Build extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (isBuildSession(p)) {
-            p.sendMessage("§6 ▪ §7你已退出建造模式，无法再放置或破坏方块！");
+            AdventureText.send(p, "§6 ▪ §7你已退出建造模式，无法再放置或破坏方块！");
             removeBuildSession(p);
         } else {
-            p.sendMessage("§6 ▪ §7你已进入建造模式，可以放置和破坏方块。");
+            AdventureText.send(p, "§6 ▪ §7你已进入建造模式，可以放置和破坏方块。");
             addBuildSession(p);
         }
         return true;

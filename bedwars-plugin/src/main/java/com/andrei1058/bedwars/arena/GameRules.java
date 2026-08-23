@@ -43,7 +43,7 @@ public final class GameRules {
      * Set the requested fixed time once and disable vanilla time progression.
      */
     public static void enforceFixedTime(World world) {
-        if (world == null) return;
+        if (world == null || world.isFixedTime()) return;
         setTyped(world, org.bukkit.GameRules.ADVANCE_TIME, false);
         if (world.getTime() != VANILLA_NOON_TIME) world.setTime(VANILLA_NOON_TIME);
     }

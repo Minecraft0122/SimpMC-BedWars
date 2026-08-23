@@ -35,7 +35,7 @@ public class SignsConfig extends ConfigManager {
     public SignsConfig(Plugin plugin, String name, String dir) {
         super(plugin, name, dir);
         YamlConfiguration yml = getYml();
-        yml.options().header("SimpMC-BedWars 竞技场告示牌配置。\n材质必须使用 Paper 1.21.11 的 Bukkit Material 名称。");
+        yml.options().header("SimpMC-BedWars 竞技场告示牌配置。\n材质必须使用当前受支持 Paper 版本的 Bukkit Material 名称。");
         yml.addDefault("format", Arrays.asList("&a[arena]", "", "&2[on]&9/&2[max] &7([type])", "[status]"));
         yml.addDefault(ConfigPath.SIGNS_STATUS_BLOCK_WAITING_MATERIAL, "GREEN_CONCRETE");
         yml.addDefault(ConfigPath.SIGNS_STATUS_BLOCK_STARTING_MATERIAL, "YELLOW_CONCRETE");

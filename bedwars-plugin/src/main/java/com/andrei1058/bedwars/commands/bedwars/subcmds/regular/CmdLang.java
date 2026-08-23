@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -33,6 +34,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.andrei1058.bedwars.BedWars.plugin;
@@ -53,35 +55,40 @@ public class CmdLang extends SubCommand {
         Player p = (Player) s;
         if (Arena.getArenaByPlayer(p) != null) return false;
         if (args.length == 0) {
-            sendLanguageList(p);
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
+            for (Language l : Language.getLanguages()) {
+                AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
+            }
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE));
             return true;
-        }
-        if (!Language.isSimplifiedChineseIso(args[0])) {
-            p.sendMessage(getMsg(p, Messages.COMMAND_LANG_SELECTED_NOT_EXIST));
-            return true;
-        }
-        if (Language.setPlayerLanguage(p.getUniqueId(), args[0])) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> p.sendMessage(getMsg(p, Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY)), 3L);
+        } else if (Language.isLanguageExist(args[0])) {
+            if (Arena.getArenaByPlayer(p) == null) {
+                if (Language.setPlayerLanguage(p.getUniqueId(), args[0])) {
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY)), 3L);
+                } else {
+                    AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
+                    for (Language l : Language.getLanguages()) {
+                        AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
+                    }
+                    AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE));
+                    return true;
+                }
+            } else {
+                AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE_DENIED));
+            }
         } else {
-            sendLanguageList(p);
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_SELECTED_NOT_EXIST));
         }
         return true;
     }
 
-    private static void sendLanguageList(Player player) {
-        player.sendMessage(getMsg(player, Messages.COMMAND_LANG_LIST_HEADER));
-        Language language = Language.getDefaultLanguage();
-        if (language != null) {
-            player.sendMessage(getMsg(player, Messages.COMMAND_LANG_LIST_FORMAT)
-                    .replace("{iso}", language.getIso())
-                    .replace("{name}", language.getLangName()));
-        }
-        player.sendMessage(getMsg(player, Messages.COMMAND_LANG_USAGE));
-    }
-
     @Override
     public List<String> getTabComplete() {
-        return List.of(Language.SIMPLIFIED_CHINESE_ISO);
+        List<String> tab = new ArrayList<>();
+        for (Language lang : Language.getLanguages()) {
+            tab.add(lang.getIso());
+        }
+        return tab;
     }
 
     @Override

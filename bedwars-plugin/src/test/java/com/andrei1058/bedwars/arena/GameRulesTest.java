@@ -2,6 +2,10 @@ package com.andrei1058.bedwars.arena;
 
 import org.junit.jupiter.api.Test;
 
+import org.bukkit.World;
+
+import java.lang.reflect.Proxy;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GameRulesTest {
@@ -9,6 +13,19 @@ class GameRulesTest {
     @Test
     void usesVanillaNoonTime() {
         assertEquals(6000L, GameRules.VANILLA_NOON_TIME);
+    }
+
+    @Test
+    void doesNotSetTimeInDimensionsWithoutAWritableClock() {
+        World fixedTimeWorld = (World) Proxy.newProxyInstance(
+                World.class.getClassLoader(),
+                new Class[]{World.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("isFixedTime")) return true;
+                    throw new AssertionError("Fixed-time world must not call " + method.getName());
+                });
+
+        GameRules.enforceFixedTime(fixedTimeWorld);
     }
 
     @Test

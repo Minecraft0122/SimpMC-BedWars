@@ -48,7 +48,7 @@ public class ArenaConfig extends ConfigManager {
         super(plugin, name, dir);
 
         YamlConfiguration yml = getYml();
-        yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 服务器。");
+        yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 与 26.2 服务器。");
         yml.addDefault(ArenaGroupPolicy.GROUP_PATH, ArenaGroupPolicy.DEFAULT_GROUP);
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
         yml.addDefault("minPlayers", 2);
@@ -88,7 +88,7 @@ public class ArenaConfig extends ConfigManager {
         setComments(ConfigPath.ARENA_ISLAND_RADIUS, "队伍岛屿检测半径，用于治疗池和床位自动识别。");
         setComments("worldBorder", "世界边界半径，单位为方块。");
         setComments(ConfigPath.ARENA_Y_LEVEL_KILL, "玩家低于该 Y 坐标时判定掉入虚空。");
-        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场初始化时固定正午 6000 tick 与晴天，并关闭 Paper 1.21.11 的 advance_time、advance_weather、spawn_mobs、随机方块刻、火势蔓延和 Locator Bar。", "旧 doDaylightCycle 等 Bukkit 名称会自动映射到现代注册键；后续时间、天气以及 advance_time/advance_weather 的变化由事件守卫恢复，不使用周期扫描。");
+        setComments(ConfigPath.ARENA_GAME_RULES, "载入竞技场时应用的游戏规则，格式为 规则:值。", "竞技场初始化时固定正午 6000 tick 与晴天，并关闭受支持 Paper 版本的 advance_time、advance_weather、spawn_mobs、随机方块刻、火势蔓延和 Locator Bar。", "旧 doDaylightCycle 等 Bukkit 名称会自动映射到现代注册键；后续时间、天气以及 advance_time/advance_weather 的变化由事件守卫恢复，不使用周期扫描。");
         ChineseConfigDocumentation.arena(this);
         updateToLatestVersion(CONFIG_VERSION, config -> migrateLegacyConfig(plugin, config));
 

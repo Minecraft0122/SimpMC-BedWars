@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -29,7 +30,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -60,32 +61,32 @@ public class CloneArena extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 2) {
-            p.sendMessage("§c▪ §7用法：§o/" + getParent().getName() + " " + getSubCommandName() + " <地图名> <新竞技场名>");
+            AdventureText.send(p, "§c▪ §7用法：§o/" + getParent().getName() + " " + getSubCommandName() + " <地图名> <新竞技场名>");
             return true;
         }
         if (!WorldNameValidator.isSafe(args[0]) || !WorldNameValidator.isSafe(args[1])) {
-            p.sendMessage(ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
+            AdventureText.send(p, ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
             return true;
         }
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {
-            p.sendMessage("§c▪ §7" + args[0] + " 不存在！");
+            AdventureText.send(p, "§c▪ §7" + args[0] + " 不存在！");
             return true;
         }
         File yml1 = new File(plugin.getDataFolder(), "/Arenas/" + args[0] + ".yml"), yml2 = new File(plugin.getDataFolder(), "/Arenas/" + args[1] + ".yml");
         if (!yml1.exists()) {
-            p.sendMessage("§c▪ §7" + args[0] + " 不存在！");
+            AdventureText.send(p, "§c▪ §7" + args[0] + " 不存在！");
             return true;
         }
         if (BedWars.getAPI().getRestoreAdapter().isWorld(args[1]) && yml2.exists()) {
-            p.sendMessage("§c▪ §7" + args[1] + " 已存在！");
+            AdventureText.send(p, "§c▪ §7" + args[1] + " 已存在！");
             return true;
         }
         if (args[1].contains("+")) {
-            p.sendMessage("§c▪ §7" + args[1] + " 不能包含符号：" + ChatColor.RED + "+");
+            AdventureText.send(p, "§c▪ §7" + args[1] + " 不能包含符号：" + ChatColor.RED + "+");
             return true;
         }
         if (Arena.getArenaByName(args[0]) != null) {
-            p.sendMessage("§c▪ §7请先禁用 " + args[0] + "！");
+            AdventureText.send(p, "§c▪ §7请先禁用 " + args[0] + "！");
             return true;
         }
         BedWars.getAPI().getRestoreAdapter().cloneArena(args[0], args[1]);
@@ -94,10 +95,10 @@ public class CloneArena extends SubCommand {
                 FileUtils.copyFile(yml1, yml2, true);
             } catch (IOException e) {
                 e.printStackTrace();
-                p.sendMessage("§c▪ §7复制地图配置时发生错误，请查看控制台。");
+                AdventureText.send(p, "§c▪ §7复制地图配置时发生错误，请查看控制台。");
             }
         }
-        p.sendMessage("§6 ▪ §7克隆完成。");
+        AdventureText.send(p, "§6 ▪ §7克隆完成。");
         return true;
     }
 

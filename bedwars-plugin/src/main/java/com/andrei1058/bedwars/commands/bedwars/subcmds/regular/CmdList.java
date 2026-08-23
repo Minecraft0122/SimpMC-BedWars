@@ -31,10 +31,10 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ArenaGroupPolicy;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import com.andrei1058.bedwars.api.util.AdventureText;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -139,52 +139,52 @@ public class CmdList extends SubCommand {
             String addGenerator = ss.dot() + "addGenerator " + ((generatorNotSet.toString().length() == 0) ? "" : ChatColor.RED + "（剩余：" + generatorNotSet + ChatColor.RED + "） ") + ChatColor.YELLOW + "(" + ChatColor.DARK_GREEN + "E" + emGen + " " + ChatColor.AQUA + "D" + dmGen + ChatColor.YELLOW + ")";
             String setSpectatorSpawn = ss.dot() + (ss.getConfig().getYml().get(ConfigPath.ARENA_SPEC_LOC) == null ? "" : ChatColor.STRIKETHROUGH) + "setSpectSpawn" + ChatColor.RESET + " " + (ss.getConfig().getYml().get(ConfigPath.ARENA_SPEC_LOC) == null ? ChatColor.RED + "（未设置）" : ChatColor.GRAY + "（已设置）");
 
-            s.sendMessage("");
-            s.sendMessage(ChatColor.GRAY + "" + ChatColor.BOLD + com.andrei1058.bedwars.commands.bedwars.MainCommand.getDot() + ChatColor.GOLD + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion() + ChatColor.GRAY + '-' + " " + ChatColor.GREEN + ss.getWorldName() + " 设置命令");
-            p.spigot().sendMessage(Misc.msgHoverClick(setWaitingSpawn, ChatColor.WHITE + "设置玩家在游戏开始前\n" + ChatColor.WHITE + "等待的位置。", "/" + getParent().getName() + " setWaitingSpawn", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(waitingPos, ChatColor.WHITE + "设置游戏开始时消失的等待大厅区域。\n" + ChatColor.WHITE + "请按 WorldEdit 选区方式选择。", "/" + getParent().getName() + " waitingPos ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(s, "");
+            AdventureText.send(s, ChatColor.GRAY + "" + ChatColor.BOLD + com.andrei1058.bedwars.commands.bedwars.MainCommand.getDot() + ChatColor.GOLD + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion() + ChatColor.GRAY + '-' + " " + ChatColor.GREEN + ss.getWorldName() + " 设置命令");
+            AdventureText.send(p, Misc.msgHoverClick(setWaitingSpawn, ChatColor.WHITE + "设置玩家在游戏开始前\n" + ChatColor.WHITE + "等待的位置。", "/" + getParent().getName() + " setWaitingSpawn", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(waitingPos, ChatColor.WHITE + "设置游戏开始时消失的等待大厅区域。\n" + ChatColor.WHITE + "请按 WorldEdit 选区方式选择。", "/" + getParent().getName() + " waitingPos ", ClickEvent.Action.SUGGEST_COMMAND));
             if (ss.getSetupType() == SetupType.ADVANCED) {
-                p.spigot().sendMessage(Misc.msgHoverClick(setSpectatorSpawn, ChatColor.WHITE + "设置观战者出生点。", "/" + getParent().getName() + " setSpectSpawn", ClickEvent.Action.RUN_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(setSpectatorSpawn, ChatColor.WHITE + "设置观战者出生点。", "/" + getParent().getName() + " setSpectSpawn", ClickEvent.Action.RUN_COMMAND));
             }
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "autoCreateTeams " + ChatColor.YELLOW + "（自动检测）", ChatColor.WHITE + "根据岛屿颜色自动创建队伍。", "/" + getParent().getName() + " autoCreateTeams", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "createTeam <name> <color> " + ChatColor.YELLOW + "（已创建 " + teams + " 个）", ChatColor.WHITE + "创建一个队伍。", "/" + getParent().getName() + " createTeam ", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "listTeams", ChatColor.WHITE + "列出当前地图的所有队伍。", "/" + mainCmd + " listTeams", ClickEvent.Action.RUN_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "removeTeam <name>", ChatColor.WHITE + "按名称删除队伍。", "/" + mainCmd + " removeTeam ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "autoCreateTeams " + ChatColor.YELLOW + "（自动检测）", ChatColor.WHITE + "根据岛屿颜色自动创建队伍。", "/" + getParent().getName() + " autoCreateTeams", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "createTeam <name> <color> " + ChatColor.YELLOW + "（已创建 " + teams + " 个）", ChatColor.WHITE + "创建一个队伍。", "/" + getParent().getName() + " createTeam ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "listTeams", ChatColor.WHITE + "列出当前地图的所有队伍。", "/" + mainCmd + " listTeams", ClickEvent.Action.RUN_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "removeTeam <name>", ChatColor.WHITE + "按名称删除队伍。", "/" + mainCmd + " removeTeam ", ClickEvent.Action.SUGGEST_COMMAND));
 
 
-            p.spigot().sendMessage(Misc.msgHoverClick(setSpawn, ChatColor.WHITE + "设置队伍出生点。\n" + ChatColor.WHITE + "尚未设置出生点的队伍：\n" + spawnNotSetNames.toString(), "/" + getParent().getName() + " setSpawn ", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(setBed, ChatColor.WHITE + "设置队伍床的位置。\n" + ChatColor.WHITE + "无需指定队伍名称。", "/" + getParent().getName() + " setBed", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(setShop, ChatColor.WHITE + "设置队伍商店 NPC。\n" + ChatColor.WHITE + "无需指定队伍名称。\n" + ChatColor.WHITE + "NPC 只会在游戏开始时生成。", "/" + getParent().getName() + " setShop", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(setUpgrade, ChatColor.WHITE + "设置队伍升级 NPC。\n" + ChatColor.WHITE + "无需指定队伍名称。\n" + ChatColor.WHITE + "NPC 只会在游戏开始时生成。", "/" + getParent().getName() + " setUpgrade", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(setSpawn, ChatColor.WHITE + "设置队伍出生点。\n" + ChatColor.WHITE + "尚未设置出生点的队伍：\n" + spawnNotSetNames.toString(), "/" + getParent().getName() + " setSpawn ", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(setBed, ChatColor.WHITE + "设置队伍床的位置。\n" + ChatColor.WHITE + "无需指定队伍名称。", "/" + getParent().getName() + " setBed", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(setShop, ChatColor.WHITE + "设置队伍商店 NPC。\n" + ChatColor.WHITE + "无需指定队伍名称。\n" + ChatColor.WHITE + "NPC 只会在游戏开始时生成。", "/" + getParent().getName() + " setShop", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(setUpgrade, ChatColor.WHITE + "设置队伍升级 NPC。\n" + ChatColor.WHITE + "无需指定队伍名称。\n" + ChatColor.WHITE + "NPC 只会在游戏开始时生成。", "/" + getParent().getName() + " setUpgrade", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
             if (ss.getSetupType() == SetupType.ADVANCED) {
-                p.spigot().sendMessage(Misc.msgHoverClick(setKillDrops, ChatColor.WHITE + "设置击杀敌人后\n" + ChatColor.WHITE + "掉落其物品的位置。", "/" + getParent().getName() + " setKillDrops ", ClickEvent.Action.SUGGEST_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(setKillDrops, ChatColor.WHITE + "设置击杀敌人后\n" + ChatColor.WHITE + "掉落其物品的位置。", "/" + getParent().getName() + " setKillDrops ", ClickEvent.Action.SUGGEST_COMMAND));
             }
             String genHover = (ss.getSetupType() == SetupType.ADVANCED ? ChatColor.WHITE + "添加资源生成点。\n" + ChatColor.YELLOW + "/" + getParent().getName() + " addGenerator <Iron/Gold/Emerald/Diamond>" :
                     ChatColor.WHITE + "添加资源生成点。\n" + ChatColor.YELLOW + "站在队伍岛屿上设置队伍生成点") + "\n" + ChatColor.WHITE + "站在钻石块上设置钻石生成点。\n" + ChatColor.WHITE + "站在绿宝石块上设置绿宝石生成点。";
 
-            p.spigot().sendMessage(Misc.msgHoverClick(addGenerator, genHover, "/" + getParent().getName() + " addGenerator ", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "removeGenerator", genHover, "/" + getParent().getName() + " removeGenerator", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(addGenerator, genHover, "/" + getParent().getName() + " addGenerator ", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "removeGenerator", genHover, "/" + getParent().getName() + " removeGenerator", ss.getSetupType() == SetupType.ASSISTED ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND));
 
             if (ss.getSetupType() == SetupType.ADVANCED) {
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "arenaGroup " + group, ChatColor.WHITE + "设置竞技场分组。", "/" + mainCmd + " arenaGroup ", ClickEvent.Action.SUGGEST_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "arenaGroup " + group, ChatColor.WHITE + "设置竞技场分组。", "/" + mainCmd + " arenaGroup ", ClickEvent.Action.SUGGEST_COMMAND));
             } else {
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setType <type> " + group, ChatColor.WHITE + "设置竞技场分组。", "/" + getParent().getName() + " setType", ClickEvent.Action.RUN_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "setType <type> " + group, ChatColor.WHITE + "设置竞技场分组。", "/" + getParent().getName() + " setType", ClickEvent.Action.RUN_COMMAND));
             }
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMaxInTeam <int>（当前每队 " + maxInTeam + " 人）",
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "setMaxInTeam <int>（当前每队 " + maxInTeam + " 人）",
                     ChatColor.WHITE + "设置每支队伍的最大容量。",
                     "/" + mainCmd + " setMaxInTeam ", ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "setMinPlayers <int>（当前全场最少 " + minPlayers + " 人）",
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "setMinPlayers <int>（当前全场最少 " + minPlayers + " 人）",
                     ChatColor.WHITE + "设置全场最低开局人数；分队仍检查每队容量并要求至少两个非空队伍。",
                     "/" + mainCmd + " setMinPlayers ", ClickEvent.Action.SUGGEST_COMMAND));
 
-            p.spigot().sendMessage(Misc.msgHoverClick(ss.dot() + "save", ChatColor.WHITE + "保存竞技场并返回大厅", "/" + getParent().getName() + " save", ClickEvent.Action.SUGGEST_COMMAND));
+            AdventureText.send(p, Misc.msgHoverClick(ss.dot() + "save", ChatColor.WHITE + "保存竞技场并返回大厅", "/" + getParent().getName() + " save", ClickEvent.Action.SUGGEST_COMMAND));
         } else {
-            TextComponent credits = new TextComponent(ChatColor.BLUE + "" + ChatColor.BOLD + com.andrei1058.bedwars.commands.bedwars.MainCommand.getDot() + " " + ChatColor.GOLD + plugin.getName() + " " + ChatColor.GRAY + "v" + plugin.getDescription().getVersion() + "，作者 andrei1058");
-            credits.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, link));
-            credits.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(ChatColor.GRAY + "竞技场数量：" + (Arena.getArenas().size() == 0 ? ChatColor.RED + "0" : ChatColor.GREEN + "" + Arena.getArenas().size())).create()));
-            ((Player) s).spigot().sendMessage(credits);
+            Component credits = AdventureText.section(ChatColor.BLUE + "" + ChatColor.BOLD + com.andrei1058.bedwars.commands.bedwars.MainCommand.getDot() + " " + ChatColor.GOLD + plugin.getName() + " " + ChatColor.GRAY + "v" + plugin.getDescription().getVersion() + "，作者 andrei1058")
+                    .clickEvent(ClickEvent.openUrl(link))
+                    .hoverEvent(HoverEvent.showText(AdventureText.section(ChatColor.GRAY + "竞技场数量：" + (Arena.getArenas().size() == 0 ? ChatColor.RED + "0" : ChatColor.GREEN + "" + Arena.getArenas().size()))));
+            AdventureText.send(((Player) s), credits);
             for (String string : getList((Player) s, Messages.COMMAND_MAIN)) {
-                s.sendMessage(string);
+                AdventureText.send(s, string);
             }
         }
         return true;

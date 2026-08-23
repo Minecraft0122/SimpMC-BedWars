@@ -34,6 +34,7 @@ import com.andrei1058.bedwars.api.events.team.TeamEliminatedEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.RestartingPlayerState;
 import com.andrei1058.bedwars.arena.LastHit;
@@ -156,8 +157,8 @@ public class DamageDeathMove implements Listener {
                 .replace("{amount}", HEALTH_FORMAT.format(p.getHealth() - e.getFinalDamage()))
                 .replace("{TeamColor}", team.getColor().chat().toString())
                 .replace("{TeamName}", team.getDisplayName(lang))
-                .replace("{PlayerName}", ChatColor.stripColor(p.getDisplayName()));
-        damager.sendMessage(message);
+                .replace("{PlayerName}", AdventureText.plainDisplayName(p));
+        AdventureText.send(damager, message);
     }
 
     @EventHandler
@@ -319,7 +320,7 @@ public class DamageDeathMove implements Listener {
             if (!dealtDamage(event.isCancelled(), event.getFinalDamage())) return;
             if (!victim.isOnline() || Arena.getArenaByPlayer(victim) != arena) return;
             if (InvisibilityManager.remove(arena, victim)) {
-                victim.sendMessage(getMsg(victim, Messages.INTERACT_INVISIBILITY_REMOVED_DAMGE_TAKEN));
+                AdventureText.send(victim, getMsg(victim, Messages.INTERACT_INVISIBILITY_REMOVED_DAMGE_TAKEN));
             }
         });
     }
@@ -466,13 +467,13 @@ public class DamageDeathMove implements Listener {
             if (null != playerKillEvent.getMessage()) {
                 for (Player on : a.getPlayers()) {
                     Language lang = Language.getPlayerLanguage(on);
-                    on.sendMessage(playerKillEvent.getMessage().apply(on).
+                    AdventureText.send(on, playerKillEvent.getMessage().apply(on).
                             replace("{PlayerColor}", victimsTeam.getColor().chat().toString())
-                            .replace("{PlayerName}", victim.getDisplayName())
+                            .replace("{PlayerName}", AdventureText.displayName(victim))
                             .replace("{PlayerNameUnformatted}", victim.getName())
                             .replace("{PlayerTeamName}", victimsTeam.getDisplayName(lang))
                             .replace("{KillerColor}", killersTeam == null ? "" : killersTeam.getColor().chat().toString())
-                            .replace("{KillerName}", killer == null ? "" : killer.getDisplayName())
+                            .replace("{KillerName}", killer == null ? "" : AdventureText.displayName(killer))
                             .replace("{KillerNameUnformatted}", killer == null ? "" : killer.getName())
                             .replace("{KillerTeamName}", killersTeam == null ? "" : killersTeam.getDisplayName(lang)));
                 }
@@ -481,13 +482,13 @@ public class DamageDeathMove implements Listener {
             if (null != playerKillEvent.getMessage()) {
                 for (Player on : a.getSpectators()) {
                     Language lang = Language.getPlayerLanguage(on);
-                    on.sendMessage(playerKillEvent.getMessage().apply(on).
+                    AdventureText.send(on, playerKillEvent.getMessage().apply(on).
                             replace("{PlayerColor}", victimsTeam.getColor().chat().toString())
-                            .replace("{PlayerName}", victim.getDisplayName())
+                            .replace("{PlayerName}", AdventureText.displayName(victim))
                             .replace("{PlayerNameUnformatted}", victim.getName())
                             .replace("{KillerColor}", killersTeam == null ? "" : killersTeam.getColor().chat().toString())
                             .replace("{PlayerTeamName}", victimsTeam.getDisplayName(lang))
-                            .replace("{KillerName}", killer == null ? "" : killer.getDisplayName())
+                            .replace("{KillerName}", killer == null ? "" : AdventureText.displayName(killer))
                             .replace("{KillerNameUnformatted}", killer == null ? "" : killer.getName())
                             .replace("{KillerTeamName}", killersTeam == null ? "" : killersTeam.getDisplayName(lang)));
                 }
@@ -554,11 +555,11 @@ public class DamageDeathMove implements Listener {
                 e.setRespawnLocation(a.getSpectatorLocation());
                 a.addSpectator(e.getPlayer(), true, null);
                 t.getMembers().remove(e.getPlayer());
-                e.getPlayer().sendMessage(getMsg(e.getPlayer(), Messages.PLAYER_DIE_ELIMINATED_CHAT));
+                AdventureText.send(e.getPlayer(), getMsg(e.getPlayer(), Messages.PLAYER_DIE_ELIMINATED_CHAT));
                 if (t.getMembers().isEmpty()) {
                     Bukkit.getPluginManager().callEvent(new TeamEliminatedEvent(a, t));
                     for (Player p : a.getWorld().getPlayers()) {
-                        p.sendMessage(getMsg(p, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(p))));
+                        AdventureText.send(p, getMsg(p, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(p))));
                     }
                     Bukkit.getScheduler().runTaskLater(plugin, a::checkWinner, 40L);
                 }

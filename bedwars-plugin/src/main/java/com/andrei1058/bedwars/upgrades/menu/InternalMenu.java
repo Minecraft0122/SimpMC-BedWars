@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.upgrades.menu;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
@@ -62,7 +64,7 @@ public class InternalMenu implements UpgradesIndex {
         ITeam team = a.getTeam(player);
         if (team == null) return;
         if (!BedWars.getAPI().getArenaUtil().isPlaying(player)) return;
-        Inventory inv = Bukkit.createInventory(null, 45, Language.getMsg(player, Messages.UPGRADES_MENU_GUI_NAME_PATH + name));
+        Inventory inv = Bukkit.createInventory(null, 45, AdventureText.section(Language.getMsg(player, Messages.UPGRADES_MENU_GUI_NAME_PATH + name)));
         for (Map.Entry<Integer, MenuContent> entry : menuContentBySlot.entrySet()) {
             inv.setItem(entry.getKey(), entry.getValue().getDisplayItem(player, team));
         }

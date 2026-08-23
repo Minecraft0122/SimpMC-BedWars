@@ -24,11 +24,12 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.language.Language;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -78,10 +79,10 @@ public class ArenaList extends SubCommand {
             start = 0;
         }
 
-        p.sendMessage(color(" \n&1|| &3" + plugin.getName() + "&7 已加载的竞技场：\n "));
+        AdventureText.send(p, color(" \n&1|| &3" + plugin.getName() + "&7 已加载的竞技场：\n "));
 
         if (arenas.isEmpty()) {
-            p.sendMessage(ChatColor.RED + "没有可显示的竞技场。");
+            AdventureText.send(p, ChatColor.RED + "没有可显示的竞技场。");
             return true;
         }
 
@@ -98,13 +99,13 @@ public class ArenaList extends SubCommand {
             );
 
 
-            p.sendMessage(msg);
+            AdventureText.send(p, msg);
         });
 
-        p.sendMessage(" ");
+        AdventureText.send(p, " ");
 
         if (arenas.size() > ARENAS_PER_PAGE * page) {
-            p.sendMessage(ChatColor.GRAY + "输入 /" + ChatColor.GREEN + MainCommand.getInstance().getName() + " arenaList " + ++page + ChatColor.GRAY + " 查看下一页。");
+            AdventureText.send(p, ChatColor.GRAY + "输入 /" + ChatColor.GREEN + MainCommand.getInstance().getName() + " arenaList " + ++page + ChatColor.GRAY + " 查看下一页。");
         }
         return true;
     }
@@ -144,6 +145,6 @@ public class ArenaList extends SubCommand {
     }
 
     private static String color(String msg) {
-        return ChatColor.translateAlternateColorCodes('&', msg);
+        return AdventureText.section(AdventureText.ampersand(msg));
     }
 }

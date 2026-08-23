@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.listeners;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
@@ -69,7 +70,7 @@ public final class LobbyAnnouncements {
     private static void broadcast(String message, Player excluded) {
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             if (viewer.equals(excluded) || !isLobbyPlayer(viewer)) continue;
-            viewer.sendMessage(message);
+            AdventureText.send(viewer, message);
         }
     }
 }

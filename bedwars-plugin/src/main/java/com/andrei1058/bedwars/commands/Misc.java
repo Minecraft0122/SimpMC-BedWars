@@ -21,8 +21,7 @@
 package com.andrei1058.bedwars.commands;
 
 import com.andrei1058.bedwars.BedWars;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.ChatColor;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Display;
@@ -46,8 +45,8 @@ public class Misc {
         TextDisplay display = location.getWorld().spawn(
                 location.getBlock().getLocation().add(0.5, 2, 0.5), TextDisplay.class
         );
-        display.text(LegacyComponentSerializer.legacySection().deserialize(name));
-        display.setCustomName(name);
+        display.text(AdventureText.section(name));
+        AdventureText.customName(display, name);
         display.setCustomNameVisible(false);
         display.setBillboard(Display.Billboard.CENTER);
         display.setDefaultBackground(false);
@@ -70,8 +69,8 @@ public class Misc {
                     if (configLoc == null || e.getMetadata("bw1058-loc").get(0).asString().equalsIgnoreCase(configLoc)) {
                         if (contains != null){
                             if (!contains.isEmpty()){
-                                String customName = e.getCustomName();
-                                if (customName != null && ChatColor.stripColor(customName).toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))){
+                                String customName = e instanceof org.bukkit.Nameable nameable ? AdventureText.customName(nameable) : null;
+                                if (customName != null && customName.toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))){
                                     e.remove();
                                     return;
                                 }
@@ -86,8 +85,8 @@ public class Misc {
             }
             if (e.getType() == EntityType.ARMOR_STAND) {
                 if (!((ArmorStand) e).isVisible()) {
-                    if (contains != null && e.getCustomName() != null
-                            && e.getCustomName().toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))) {
+                    if (contains != null && e instanceof org.bukkit.Nameable nameable
+                            && AdventureText.customName(nameable).toLowerCase(Locale.ROOT).contains(contains.toLowerCase(Locale.ROOT))) {
                         e.remove();
                     }
                 }

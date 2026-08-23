@@ -1,9 +1,9 @@
 package com.andrei1058.spigot.sidebar;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import io.papermc.paper.scoreboard.numbers.FixedFormat;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -40,21 +40,9 @@ public class Sidebar {
     private static final String TAB_TEAM_PREFIX = "bw_t_";
     private static final String COLLISION_TEAM_PREFIX = "bw_c_";
     private static final String[] LINE_ENTRIES = {
-            ChatColor.BLACK.toString(),
-            ChatColor.DARK_BLUE.toString(),
-            ChatColor.DARK_GREEN.toString(),
-            ChatColor.DARK_AQUA.toString(),
-            ChatColor.DARK_RED.toString(),
-            ChatColor.DARK_PURPLE.toString(),
-            ChatColor.GOLD.toString(),
-            ChatColor.GRAY.toString(),
-            ChatColor.DARK_GRAY.toString(),
-            ChatColor.BLUE.toString(),
-            ChatColor.GREEN.toString(),
-            ChatColor.AQUA.toString(),
-            ChatColor.RED.toString(),
-            ChatColor.LIGHT_PURPLE.toString(),
-            ChatColor.YELLOW.toString()
+            "\u00a70", "\u00a71", "\u00a72", "\u00a73", "\u00a74",
+            "\u00a75", "\u00a76", "\u00a77", "\u00a78", "\u00a79",
+            "\u00a7a", "\u00a7b", "\u00a7c", "\u00a7d", "\u00a7e"
     };
 
     private SidebarLine title;
@@ -664,19 +652,14 @@ public class Sidebar {
         }
 
         // A shared collision team cannot carry per-player suffixes. Its TAB
-        // display name is rendered separately through PlayerInfo packets, so
-        // keep only the first row's name-tag prefix and avoid overwriting it
-        // on every player's refresh.
+        // display name is sent separately, so keep the first row's name-tag
+        // formatting and avoid overwriting it on every player's refresh.
         if (!sharedCollision || newTeam) {
             Component prefix = component(renderedTab.prefix());
             if (!team.prefix().equals(prefix)) team.prefix(prefix);
-
             Component suffix = component(sharedCollision ? "" : renderedTab.suffix());
             if (!team.suffix().equals(suffix)) team.suffix(suffix);
-        }
-
-        if ((!sharedCollision || newTeam) && team.getColor() != tab.getColor()) {
-            setTeamColor(team, tab.getColor());
+            applyTeamColor(team, tab);
         }
 
         Team.OptionStatus visibility = tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER
@@ -686,13 +669,9 @@ public class Sidebar {
                 && team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
             team.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
         }
-        // FOR_OTHER_TEAMS prevents members of the same shared game-team
-        // scoreboard group from colliding while retaining enemy pushing.
-        Team.OptionStatus collision = pushOtherTeams
-                ? Team.OptionStatus.FOR_OTHER_TEAMS : Team.OptionStatus.NEVER;
-        if ((!sharedCollision || newTeam)
-                && team.getOption(Team.Option.COLLISION_RULE) != collision) {
-            team.setOption(Team.Option.COLLISION_RULE, collision);
+        if (pushOtherTeams && (!sharedCollision || newTeam)
+                && team.getOption(Team.Option.COLLISION_RULE) != Team.OptionStatus.FOR_OTHER_TEAMS) {
+            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
         }
         if (!team.hasEntry(tab.getPlayer().getName())) {
             team.addEntry(tab.getPlayer().getName());
@@ -702,45 +681,6 @@ public class Sidebar {
 
     void renderPlayerListName(@NotNull Player viewer, @NotNull PlayerTab tab) {
         renderPlayerListNames(viewer, List.of(renderPlayerTab(tab)), false);
-    }
-
-    /**
-     * Paper 1.21.11 exposes a modern Adventure setter for scoreboard colors,
-     * while its modern getter throws when the underlying team color is the
-     * reset value. Read the legacy value only for the change check and never
-     * call {@code Team.color()} without arguments.
-     */
-    private static void setTeamColor(@NotNull Team team, @NotNull ChatColor color) {
-        try {
-            team.color(namedColor(color));
-        } catch (UnsupportedOperationException | IllegalArgumentException
-                 | AbstractMethodError | NoSuchMethodError ignored) {
-            // Keep compatibility with older Bukkit implementations and test doubles.
-            team.setColor(color);
-        }
-    }
-
-    @NotNull
-    private static NamedTextColor namedColor(@NotNull ChatColor color) {
-        return switch (color) {
-            case BLACK -> NamedTextColor.BLACK;
-            case DARK_BLUE -> NamedTextColor.DARK_BLUE;
-            case DARK_GREEN -> NamedTextColor.DARK_GREEN;
-            case DARK_AQUA -> NamedTextColor.DARK_AQUA;
-            case DARK_RED -> NamedTextColor.DARK_RED;
-            case DARK_PURPLE -> NamedTextColor.DARK_PURPLE;
-            case GOLD -> NamedTextColor.GOLD;
-            case GRAY -> NamedTextColor.GRAY;
-            case DARK_GRAY -> NamedTextColor.DARK_GRAY;
-            case BLUE -> NamedTextColor.BLUE;
-            case GREEN -> NamedTextColor.GREEN;
-            case AQUA -> NamedTextColor.AQUA;
-            case RED -> NamedTextColor.RED;
-            case LIGHT_PURPLE -> NamedTextColor.LIGHT_PURPLE;
-            case YELLOW -> NamedTextColor.YELLOW;
-            case WHITE -> NamedTextColor.WHITE;
-            default -> NamedTextColor.WHITE;
-        };
     }
 
     void forcePlayerListNameRefresh(@NotNull Player viewer) {
@@ -990,8 +930,35 @@ public class Sidebar {
     private static @NotNull RenderedPlayerTab renderPlayerTab(@NotNull PlayerTab tab) {
         String prefix = renderText(tab.getPrefix(), tab.getPlaceholders());
         String suffix = renderText(tab.getSuffix(), tab.getPlaceholders());
+        Component displayName = component(prefix)
+                .append(Component.text(tab.getPlayer().getName()).color(tab.getTextColor()))
+                .append(component(suffix));
         return new RenderedPlayerTab(tab, prefix, suffix,
-                prefix + tab.getColor() + tab.getPlayer().getName() + suffix);
+                LEGACY.serialize(displayName));
+    }
+
+    private static void applyTeamColor(@NotNull Team team, @NotNull PlayerTab tab) {
+        /*
+         * Paper 1.21.11's Team.color() getter only accepts a scoreboard color
+         * backed by a hex value. A newly registered team has the RESET color,
+         * which therefore throws "Team colors must have hex values" while reading.
+         * The deprecated getter is the only safe read path for those named
+         * colors; keep the modern Adventure setter for the actual update.
+         */
+        boolean changed;
+        try {
+            changed = !Objects.equals(team.getColor(), tab.getColor());
+        } catch (UnsupportedOperationException ignored) {
+            changed = true;
+        }
+        if (!changed) return;
+
+        try {
+            team.color(tab.getTextColor());
+        } catch (UnsupportedOperationException | IllegalArgumentException ignored) {
+            // Compatibility for old scoreboard implementations and test doubles.
+            team.setColor(tab.getColor());
+        }
     }
 
     private record RenderedPlayerTab(@NotNull PlayerTab tab, @NotNull String prefix,
@@ -1061,7 +1028,7 @@ public class Sidebar {
             String value = placeholder.getValue();
             result = result.replace(placeholder.getPlaceholder(), value == null ? "" : value);
         }
-        return ChatColor.translateAlternateColorCodes('&', result);
+        return AdventureText.section(AdventureText.ampersand(result));
     }
 
     static Component component(String legacyText) {

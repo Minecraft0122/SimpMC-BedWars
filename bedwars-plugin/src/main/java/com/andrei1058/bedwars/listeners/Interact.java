@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.listeners;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
@@ -162,7 +163,7 @@ public class Interact implements Listener {
 
         IArena arena = Arena.getArenaByPlayer(player);
         if (arena == null) {
-            player.sendMessage(ChatColor.RED + "你当前不在竞技场中，无法执行返回操作。");
+            AdventureText.send(player, ChatColor.RED + "你当前不在竞技场中，无法执行返回操作。");
             return;
         }
         Misc.moveToLobbyOrKick(player, arena, arena.isSpectator(player.getUniqueId()));
@@ -281,7 +282,7 @@ public class Interact implements Listener {
                         if (!owner.isMember(p)) {
                             if (!(owner.getMembers().isEmpty() && owner.isBedDestroyed())) {
                                 e.setCancelled(true);
-                                p.sendMessage(getMsg(p, Messages.INTERACT_CHEST_CANT_OPEN_TEAM_ELIMINATED));
+                                AdventureText.send(p, getMsg(p, Messages.INTERACT_CHEST_CANT_OPEN_TEAM_ELIMINATED));
                             }
                         }
                     }

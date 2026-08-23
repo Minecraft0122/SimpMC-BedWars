@@ -9,6 +9,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.sidebar.ISidebar;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ElapsedTimeFormatter;
 import com.andrei1058.bedwars.arena.stats.StatisticsOrdered;
@@ -362,8 +363,8 @@ public class BwSidebar implements ISidebar {
                         return "";
                     }
                     return targetFormat.replace("{targetTeamColor}", targetTeam.getColor().chat().toString())
-                            .replace("{targetDisplayName}", target.getDisplayName())
-                            .replace("{targetName}", target.getDisplayName())
+                            .replace("{targetDisplayName}", AdventureText.displayName(target))
+                            .replace("{targetName}", AdventureText.displayName(target))
                             .replace("{targetTeamName}", targetTeam.getDisplayName(lang));
                 }));
             }

@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
@@ -57,19 +58,19 @@ public class CmdStart extends SubCommand {
         if (args.length > 0 && !debugStart) return true;
         IArena a = Arena.getArenaByPlayer(p);
         if (a == null){
-            p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NOT_IN_GAME));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_FORCESTART_NOT_IN_GAME));
             return true;
         }
         if (!a.isPlayer(p)){
-            p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NOT_IN_GAME));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_FORCESTART_NOT_IN_GAME));
             return true;
         }
         if (!hasPermission(p)){
-            p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
             return true;
         }
         if (debugStart && !hasDebugStartPermission(p)) {
-            p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
             return true;
         }
         if (a.getStatus() == GameState.playing) return true;
@@ -88,7 +89,7 @@ public class CmdStart extends SubCommand {
         }
         if (a.getStartingTask().getCountdown() < 5) return true;
         a.getStartingTask().setCountdown(5);
-        p.sendMessage(getMsg(p, Messages.COMMAND_FORCESTART_SUCCESS));
+        AdventureText.send(p, getMsg(p, Messages.COMMAND_FORCESTART_SUCCESS));
         return true;
     }
 

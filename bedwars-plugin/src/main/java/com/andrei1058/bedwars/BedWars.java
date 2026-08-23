@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.api.levels.Level;
 import com.andrei1058.bedwars.api.party.Party;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.server.VersionSupport;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ArenaManager;
 import com.andrei1058.bedwars.arena.ProxyLobbyConnector;
@@ -66,6 +67,8 @@ import com.andrei1058.bedwars.lobbysocket.ArenaSocket;
 import com.andrei1058.bedwars.lobbysocket.LoadedUsersCleaner;
 import com.andrei1058.bedwars.lobbysocket.SendTask;
 import com.andrei1058.bedwars.maprestore.internal.InternalAdapter;
+import com.andrei1058.bedwars.maprestore.internal.LegacyWorldSourceGuard;
+import com.andrei1058.bedwars.maprestore.internal.WorldStorageLayout;
 import com.andrei1058.bedwars.metrics.MetricsManager;
 import com.andrei1058.bedwars.money.internal.MoneyListeners;
 import com.andrei1058.bedwars.shop.ShopManager;
@@ -89,7 +92,6 @@ import com.andrei1058.vipfeatures.api.MiniGameAlreadyRegistered;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
@@ -104,6 +106,7 @@ import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "CallToPrintStackTrace"})
@@ -146,7 +149,7 @@ public class BedWars extends JavaPlugin {
 
         isPaper = detectPaper();
         if (!isPaper) {
-            this.getLogger().severe("SimpMC-BedWars supports Paper 1.21.11 only.");
+            this.getLogger().severe("SimpMC-BedWars 仅支持 Paper 1.21.11 或 Paper 26.2。");
             this.getLogger().severe("Please run this plugin on Paper or a compatible Paper fork.");
             serverSoftwareSupport = false;
             return;
@@ -158,10 +161,10 @@ public class BedWars extends JavaPlugin {
             return;
         }
 
-        if (!isExactMinecraftVersion(1, 21, 11)) {
+        if (!MinecraftVersionPolicy.isSupported(version)) {
             serverSoftwareSupport = false;
-            this.getLogger().severe("I can't run on your Minecraft version: " + version);
-            this.getLogger().severe("This build supports Paper 1.21.11 only because newer world formats are not yet supported.");
+            this.getLogger().severe("不支持当前 Minecraft 版本：" + version);
+            this.getLogger().severe("本构建仅支持 Paper 1.21.11 和 Paper 26.2。");
             return;
         }
 
@@ -227,16 +230,13 @@ public class BedWars extends JavaPlugin {
         if (getServerType() == ServerType.MULTIARENA)
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 if (!config.getLobbyWorldName().isEmpty()) {
-                    if (Bukkit.getWorld(config.getLobbyWorldName()) == null && new File(Bukkit.getWorldContainer(), config.getLobbyWorldName() + "/level.dat").exists()) {
+                    WorldStorageLayout lobbyStorage = WorldStorageLayout.detect();
+                    boolean lobbyExists = LegacyWorldSourceGuard.hasRecoverableLobbySource(
+                            lobbyStorage, config.getLobbyWorldName());
+                    if (Bukkit.getWorld(config.getLobbyWorldName()) == null && lobbyExists) {
                         if (!config.getLobbyWorldName().equalsIgnoreCase(Bukkit.getServer().getWorlds().get(0).getName())) {
-                            Bukkit.getScheduler().runTaskLater(this, () -> {
-                                Bukkit.createWorld(new WorldCreator(config.getLobbyWorldName()));
-
-                                if (Bukkit.getWorld(config.getLobbyWorldName()) != null) {
-                                    Bukkit.getScheduler().runTaskLater(plugin, () -> Objects.requireNonNull(Bukkit.getWorld(config.getLobbyWorldName()))
-                                            .getEntities().stream().filter(e -> e instanceof Monster).forEach(Entity::remove), 20L);
-                                }
-                            }, 100L);
+                            Bukkit.getScheduler().runTaskLater(this,
+                                    () -> loadLegacyLobbyWorld(lobbyStorage, config.getLobbyWorldName()), 100L);
                         }
                     }
                     Location l = config.getConfigLoc("lobbyLoc");
@@ -402,7 +402,7 @@ public class BedWars extends JavaPlugin {
 
         /* Prevent issues on reload */
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.kickPlayer("SimpMC-BedWars was reloaded. Please restart the server instead of reloading plugins.");
+            p.kick(AdventureText.section("SimpMC-BedWars was reloaded. Please restart the server instead of reloading plugins."));
         }
 
         /* Load sounds configuration */
@@ -459,6 +459,51 @@ public class BedWars extends JavaPlugin {
         // TNT Spoil Feature
         SpoilPlayerTNTFeature.init();
 
+    }
+
+    private void loadLegacyLobbyWorld(WorldStorageLayout storageLayout, String worldName) {
+        if (!storageLayout.supportsWorldName(worldName)) {
+            getLogger().severe("无法加载大厅世界 " + worldName
+                    + "：Paper 26+ 仅支持小写 ASCII 世界名。");
+            return;
+        }
+        File staging = LegacyWorldSourceGuard.lobbyStagingFolder(storageLayout, worldName);
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            try {
+                LegacyWorldSourceGuard.prepare(storageLayout, worldName, staging);
+            } catch (IOException exception) {
+                getLogger().log(java.util.logging.Level.SEVERE,
+                        "无法从旧版 Bukkit 目录准备大厅世界 " + worldName, exception);
+                return;
+            }
+            Bukkit.getScheduler().runTask(this, () -> {
+                try {
+                    if (Bukkit.getWorld(worldName) == null) {
+                        Bukkit.createWorld(storageLayout.createWorldCreator(worldName));
+                    }
+                } catch (RuntimeException exception) {
+                    getLogger().log(java.util.logging.Level.SEVERE,
+                            "无法加载大厅世界 " + worldName, exception);
+                } finally {
+                    try {
+                        LegacyWorldSourceGuard.restore(storageLayout, worldName, staging);
+                    } catch (IOException exception) {
+                        getLogger().log(java.util.logging.Level.SEVERE,
+                                "无法恢复大厅世界旧格式源目录；请立即备份 " + staging, exception);
+                    }
+                }
+
+                if (Bukkit.getWorld(worldName) != null) {
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        World lobby = Bukkit.getWorld(worldName);
+                        if (lobby != null) {
+                            lobby.getEntities().stream().filter(entity -> entity instanceof Monster)
+                                    .forEach(Entity::remove);
+                        }
+                    }, 20L);
+                }
+            });
+        });
     }
 
     private void registerDelayedCommands() {
@@ -623,23 +668,6 @@ public class BedWars extends JavaPlugin {
             return true;
         } catch (ClassNotFoundException ignored) {
             return Bukkit.getName().toLowerCase(Locale.ROOT).contains("folia");
-        }
-    }
-
-    private static boolean isExactMinecraftVersion(int major, int minor, int patch) {
-        String minecraftVersion = Bukkit.getBukkitVersion().split("-")[0];
-        String[] parts = minecraftVersion.split("\\.");
-        return parseVersionPart(parts, 0) == major
-                && parseVersionPart(parts, 1) == minor
-                && parseVersionPart(parts, 2) == patch;
-    }
-
-    private static int parseVersionPart(String[] parts, int index) {
-        if (index >= parts.length) return 0;
-        try {
-            return Integer.parseInt(parts[index]);
-        } catch (NumberFormatException ignored) {
-            return 0;
         }
     }
 

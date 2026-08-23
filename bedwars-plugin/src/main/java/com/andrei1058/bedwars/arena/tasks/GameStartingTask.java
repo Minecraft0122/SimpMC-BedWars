@@ -30,6 +30,7 @@ import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.tasks.StartingTask;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ArenaStartPolicy;
@@ -178,8 +179,8 @@ public class GameStartingTask implements Runnable, StartingTask {
             for (Player player : getArena().getPlayers()) {
                 Language playerLang = Language.getPlayerLanguage(player);
                 String[] titleSubtitle = Language.getCountDownTitle(playerLang, getCountdown());
-                nms.sendTitle(player, titleSubtitle[0], titleSubtitle[1], 0, 20, 10);
-                player.sendMessage(getMsg(player, Messages.ARENA_STATUS_START_COUNTDOWN_CHAT).replace("{time}", String.valueOf(getCountdown())));
+                nms.sendTitle(player, AdventureText.section(titleSubtitle[0]), AdventureText.section(titleSubtitle[1]), 0, 20, 10);
+                AdventureText.send(player, getMsg(player, Messages.ARENA_STATUS_START_COUNTDOWN_CHAT).replace("{time}", String.valueOf(getCountdown())));
             }
         }
         countdown--;
@@ -192,9 +193,9 @@ public class GameStartingTask implements Runnable, StartingTask {
                 BedWarsTeam.reSpawnInvulnerability.put(p.getUniqueId(), System.currentTimeMillis() + 2000L);
                 bwt.firstSpawn(p);
                 Sounds.playSound(ConfigPath.SOUND_GAME_START, p);
-                nms.sendTitle(p, getMsg(p, Messages.ARENA_STATUS_START_PLAYER_TITLE), null, 0, 30, 10);
+                nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.ARENA_STATUS_START_PLAYER_TITLE)), null, 0, 30, 10);
                 for (String tut : getList(p, Messages.ARENA_STATUS_START_PLAYER_TUTORIAL)) {
-                    p.sendMessage(SupportPAPI.getSupportPAPI().replace(p, tut));
+                    AdventureText.send(p, SupportPAPI.getSupportPAPI().replace(p, tut));
                 }
             }
         }
@@ -218,7 +219,7 @@ public class GameStartingTask implements Runnable, StartingTask {
         BedWars.plugin.getLogger().warning("已停止竞技场 " + getArena().getArenaName()
                 + " 的开局：分队后少于两支非空队伍，或有队伍人数不在配置的最小/最大范围内。");
         for (Player player : getArena().getPlayers()) {
-            player.sendMessage(getMsg(player, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
+            AdventureText.send(player, getMsg(player, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
         }
         task.cancel();
         getArena().changeStatus(GameState.waiting);

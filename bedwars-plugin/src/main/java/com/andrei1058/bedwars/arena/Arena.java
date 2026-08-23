@@ -50,11 +50,11 @@ import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.tasks.PlayingTask;
 import com.andrei1058.bedwars.api.tasks.RestartingTask;
 import com.andrei1058.bedwars.api.tasks.StartingTask;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.stats.GameStatsManager;
 import com.andrei1058.bedwars.arena.stats.StatisticsOrdered;
 import com.andrei1058.bedwars.arena.tasks.GamePlayingTask;
 import com.andrei1058.bedwars.arena.tasks.GameRestartingTask;
-import com.andrei1058.bedwars.arena.matchmaking.ArenaInvitePolicy;
 import com.andrei1058.bedwars.arena.tasks.GameStartingTask;
 import com.andrei1058.bedwars.arena.tasks.ReJoinTask;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
@@ -75,8 +75,7 @@ import com.andrei1058.bedwars.support.paper.TeleportManager;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -206,14 +205,14 @@ public class Arena implements IArena {
                 if (mm.getArenaName().equalsIgnoreCase(name)) {
                     plugin.getLogger().severe("Tried to load arena " + name + " but it is already in the enable queue.");
                     if (p != null)
-                        p.sendMessage(ChatColor.RED + "竞技场 " + name + " 已在启用队列中。");
+                        AdventureText.send(p, ChatColor.RED + "竞技场 " + name + " 已在启用队列中。");
                     return;
                 }
             }
             if (getArenaByName(name) != null) {
                 plugin.getLogger().severe("Tried to load arena " + name + " but it is already enabled.");
                 if (p != null)
-                    p.sendMessage(ChatColor.RED + "竞技场 " + name + " 已启用。");
+                    AdventureText.send(p, ChatColor.RED + "竞技场 " + name + " 已启用。");
                 return;
             }
         }
@@ -228,13 +227,13 @@ public class Arena implements IArena {
 
         yml = cm.getYml();
         if (yml.get("Team") == null) {
-            if (p != null) p.sendMessage("§c竞技场尚未设置任何队伍：" + name);
+            if (p != null) AdventureText.send(p, "§c竞技场尚未设置任何队伍：" + name);
             plugin.getLogger().severe("You didn't set any team for arena: " + name);
             clearRestoring(name);
             return;
         }
         if (yml.getConfigurationSection("Team").getKeys(false).size() < 2) {
-            if (p != null) p.sendMessage("§c竞技场至少需要设置 2 个队伍：" + name);
+            if (p != null) AdventureText.send(p, "§c竞技场至少需要设置 2 个队伍：" + name);
             plugin.getLogger().severe("You must set at least 2 teams on: " + name);
             clearRestoring(name);
             return;
@@ -255,7 +254,7 @@ public class Arena implements IArena {
 
 
         if (!BedWars.getAPI().getRestoreAdapter().isWorld(name)) {
-            if (p != null) p.sendMessage(ChatColor.RED + "找不到地图：" + name);
+            if (p != null) AdventureText.send(p, ChatColor.RED + "找不到地图：" + name);
             plugin.getLogger().log(Level.WARNING, "There isn't any map called " + name);
             clearRestoring(name);
             return;
@@ -269,28 +268,28 @@ public class Arena implements IArena {
             try {
                 TeamColor.fromName(colorS);
             } catch (Exception e) {
-                if (p != null) p.sendMessage("§c队伍 " + team + " 的颜色无效，竞技场：" + name);
+                if (p != null) AdventureText.send(p, "§c队伍 " + team + " 的颜色无效，竞技场：" + name);
                 plugin.getLogger().severe("Invalid color at team: " + team + " in arena: " + name);
                 error = true;
             }
             for (String stuff : Arrays.asList("Color", "Spawn", "Bed", "Shop", "Upgrade", "Iron", "Gold")) {
                 if (yml.get("Team." + team + "." + stuff) == null) {
-                    if (p != null) p.sendMessage("§c队伍 " + team + " 尚未设置 " + stuff + "，竞技场：" + name);
+                    if (p != null) AdventureText.send(p, "§c队伍 " + team + " 尚未设置 " + stuff + "，竞技场：" + name);
                     plugin.getLogger().severe(stuff + " not set for " + team + " team on: " + name);
                     error = true;
                 }
             }
         }
         if (yml.get("generator.Diamond") == null) {
-            if (p != null) p.sendMessage("§c竞技场尚未设置钻石生成点：" + name);
+            if (p != null) AdventureText.send(p, "§c竞技场尚未设置钻石生成点：" + name);
             plugin.getLogger().severe("There isn't set any Diamond generator on: " + name);
         }
         if (yml.get("generator.Emerald") == null) {
-            if (p != null) p.sendMessage("§c竞技场尚未设置绿宝石生成点：" + name);
+            if (p != null) AdventureText.send(p, "§c竞技场尚未设置绿宝石生成点：" + name);
             plugin.getLogger().severe("There isn't set any Emerald generator on: " + name);
         }
         if (yml.get("waiting.Loc") == null) {
-            if (p != null) p.sendMessage("§c竞技场尚未设置等待大厅出生点：" + name);
+            if (p != null) AdventureText.send(p, "§c竞技场尚未设置等待大厅出生点：" + name);
             plugin.getLogger().severe("Waiting spawn not set on: " + name);
             clearRestoring(name);
             return;
@@ -440,41 +439,18 @@ public class Arena implements IArena {
      * @return true if was added.
      */
     public boolean addPlayer(Player p, boolean skipOwnerCheck) {
-        return addPlayerInternal(p, skipOwnerCheck, false);
-    }
-
-    /**
-     * Add a player which has just been detached from another waiting arena.
-     * The player's {@link PlayerGoods} vault and lobby state stay intact; this
-     * avoids the old arena's asynchronous lobby teleport racing the new join.
-     */
-    boolean addTransferredPreGamePlayer(Player p) {
-        return addPlayerInternal(p, true, true);
-    }
-
-    private boolean canAcceptPreGamePlayer() {
-        return ArenaInvitePolicy.canAcceptPlayer(this);
-    }
-
-    private boolean addPlayerInternal(Player p, boolean skipOwnerCheck, boolean transferredPreGame) {
         if (p == null) return false;
         debug("Player added: " + p.getName() + " arena: " + getArenaName());
         /* used for base enter/leave event */
         isOnABase.remove(p);
         //
-        if (!transferredPreGame && getArenaByPlayer(p) != null) {
-            return false;
-        }
-        // A pre-game transfer must never fall through into the common cleanup
-        // path when the countdown changes between invite validation and join.
-        // Normal joins may still enter spectator mode once the game is playing.
-        if (!canAcceptPreGamePlayer() && (transferredPreGame || status != GameState.playing)) {
+        if (getArenaByPlayer(p) != null) {
             return false;
         }
         if (getParty().hasParty(p)) {
             if (!skipOwnerCheck) {
                 if (!getParty().isOwner(p)) {
-                    p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_DENIED_NOT_PARTY_LEADER));
+                    AdventureText.send(p, getMsg(p, Messages.COMMAND_JOIN_DENIED_NOT_PARTY_LEADER));
                     return false;
                 }
                 int partySize = (int) getParty().getMembers(p).stream().filter(member -> {
@@ -486,7 +462,7 @@ public class Arena implements IArena {
                 }).count();
 
                 if (partySize > maxInTeam * getTeams().size() - getPlayers().size()) {
-                    p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_DENIED_PARTY_TOO_BIG));
+                    AdventureText.send(p, getMsg(p, Messages.COMMAND_JOIN_DENIED_PARTY_TOO_BIG));
                     return false;
                 }
                 for (Player mem : getParty().getMembers(p)) {
@@ -507,11 +483,11 @@ public class Arena implements IArena {
 
         ArenaDepartureGuard.restore(leaving, p);
 
-        if (canAcceptPreGamePlayer()) {
+        if (status == GameState.waiting || (status == GameState.starting && (startingTask != null && startingTask.getCountdown() > 1))) {
             if (players.size() >= maxPlayers && !isVip(p)) {
-                TextComponent text = new TextComponent(getMsg(p, Messages.COMMAND_JOIN_DENIED_IS_FULL));
-                text.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, config.getYml().getString("storeLink")));
-                p.spigot().sendMessage(text);
+                Component text = AdventureText.section(getMsg(p, Messages.COMMAND_JOIN_DENIED_IS_FULL))
+                        .clickEvent(ClickEvent.openUrl(config.getYml().getString("storeLink")));
+                AdventureText.send(p, text);
                 return false;
             } else if (players.size() >= maxPlayers && isVip(p)) {
                 boolean canJoin = false;
@@ -519,14 +495,14 @@ public class Arena implements IArena {
                     if (!isVip(on)) {
                         canJoin = true;
                         removePlayer(on, false);
-                        TextComponent vipKick = new TextComponent(getMsg(p, Messages.ARENA_JOIN_VIP_KICK));
-                        vipKick.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, config.getYml().getString("storeLink")));
-                        p.spigot().sendMessage(vipKick);
+                        Component vipKick = AdventureText.section(getMsg(p, Messages.ARENA_JOIN_VIP_KICK))
+                                .clickEvent(ClickEvent.openUrl(config.getYml().getString("storeLink")));
+                        AdventureText.send(p, vipKick);
                         break;
                     }
                 }
                 if (!canJoin) {
-                    p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_DENIED_IS_FULL_OF_VIPS));
+                    AdventureText.send(p, getMsg(p, Messages.COMMAND_JOIN_DENIED_IS_FULL_OF_VIPS));
                     return false;
                 }
             }
@@ -544,9 +520,6 @@ public class Arena implements IArena {
             p.closeInventory();
             players.add(p);
             setArenaByPlayer(p, this);
-            // Disable server-side player collision for the whole arena
-            // lifecycle. The TAB scoreboard rule mirrors this on clients.
-            nms.setCollide(p, this, false);
             LobbyAnnouncements.playerEnteredArena(p);
             PlayerMotion.disableFlight(p);
             p.setHealth(20);
@@ -569,10 +542,8 @@ public class Arena implements IArena {
 
             /* save player inventory etc */
             if (getServerType() != ServerType.BUNGEE) {
-                if (!transferredPreGame) {
-                    new PlayerGoods(p, true);
-                    playerLocation.put(p, p.getLocation());
-                }
+                new PlayerGoods(p, true);
+                playerLocation.put(p, p.getLocation());
             }
             TeleportManager.teleportC(p, getWaitingLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
 
@@ -580,19 +551,15 @@ public class Arena implements IArena {
                 SidebarService.getInstance().giveSidebar(p, this, false);
             }
             sendPreGameCommandItems(p);
-            p.sendMessage(ChatColor.GOLD + "[选队] " + ChatColor.YELLOW
+            AdventureText.send(p, ChatColor.GOLD + "[选队] " + ChatColor.YELLOW
                     + "使用 /" + mainCmd + " team 打开游戏队伍选择 GUI。"
                     + (getMaxInTeam() > 1 ? " 邀请固定队友可使用 /" + mainCmd + " team squad。" : ""));
             for (PotionEffect pf : p.getActivePotionEffects()) {
                 p.removePotionEffect(pf.getType());
             }
-        } else if (status == GameState.playing && !transferredPreGame) {
+        } else if (status == GameState.playing) {
             addSpectator(p, false, null);
             /* stop code if status playing*/
-            return false;
-        } else {
-            // The state may have changed while party/event hooks ran. Do not
-            // report success or clear a source arena for a failed transfer.
             return false;
         }
 
@@ -625,48 +592,6 @@ public class Arena implements IArena {
         refreshSigns();
         JoinNPC.updateNPCs(getGroup());
         return true;
-    }
-
-    /**
-     * Move a player between two waiting/starting arenas without sending them
-     * through the main lobby. Both arenas must be concrete instances because
-     * the transfer relies on their lifecycle bookkeeping.
-     */
-    public boolean transferPreGamePlayer(@NotNull Player player, @NotNull Arena target) {
-        if (target == this || !isPlayer(player)
-                || !ArenaInvitePolicy.canAcceptPlayer(this)
-                || !ArenaInvitePolicy.canAcceptPlayer(target)
-                || target.getPlayers().size() >= target.getMaxPlayers()) return false;
-
-        if (!ArenaDepartureGuard.tryBegin(leaving, player)) return false;
-        Bukkit.getPluginManager().callEvent(new PlayerLeaveArenaEvent(player, this, null));
-        respawnSessions.remove(player);
-        Arena.afkCheck.remove(player.getUniqueId());
-        BedWars.getAPI().getAFKUtil().setPlayerAFK(player, false);
-        InvisibilityManager.remove(this, player);
-        if (player.getPassenger() != null && player.getPassenger().getType() == EntityType.ARMOR_STAND) {
-            player.getPassenger().remove();
-        }
-        players.remove(player);
-        removeArenaByPlayer(player, this);
-        isOnABase.remove(player);
-        if (status == GameState.starting) reevaluateStartEligibility();
-
-        if (target.addTransferredPreGamePlayer(player) && target.isPlayer(player)) {
-            ArenaDepartureGuard.restore(leaving, player);
-            return true;
-        }
-
-        // Restore the full pre-game lifecycle if a target-side join event vetoed the move.
-        if (addTransferredPreGamePlayer(player)) return false;
-
-        // This is only a last-resort guard for a third-party listener which
-        // vetoes both arenas; never leave a player with a dangling mapping.
-        ArenaDepartureGuard.restore(leaving, player);
-        players.add(player);
-        setArenaByPlayer(player, this);
-        reevaluateStartEligibility();
-        return false;
     }
 
     /**
@@ -767,10 +692,10 @@ public class Arena implements IArena {
 
             ArenaDepartureGuard.restore(leaving, p);
 
-            p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_MSG).replace("{arena}", this.getDisplayName()));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_MSG).replace("{arena}", this.getDisplayName()));
 
         } else {
-            p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_DENIED_MSG));
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_DENIED_MSG));
             return false;
         }
 
@@ -886,7 +811,6 @@ public class Arena implements IArena {
         //players.remove must be under call event in order to check if the player is a spectator or not
         players.remove(p);
         removeArenaByPlayer(p, this);
-        nms.setCollide(p, this, true);
 
         for (PotionEffect pf : p.getActivePotionEffects()) {
             p.removePotionEffect(pf.getType());
@@ -912,11 +836,11 @@ public class Arena implements IArena {
                 if (team != null) {
                     if (!team.isBedDestroyed()) {
                         for (Player p2 : this.getPlayers()) {
-                            p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", team.getColor().chat().toString())
+                            AdventureText.send(p2, getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", team.getColor().chat().toString())
                                     .replace("{TeamName}", team.getDisplayName(Language.getPlayerLanguage(p2))));
                         }
                         for (Player p2 : this.getSpectators()) {
-                            p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", team.getColor().chat().toString())
+                            AdventureText.send(p2, getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", team.getColor().chat().toString())
                                     .replace("{TeamName}", team.getDisplayName(Language.getPlayerLanguage(p2))));
                         }
                     }
@@ -947,11 +871,11 @@ public class Arena implements IArena {
                     if (null != event.getMessage()) {
                         for (Player inGame : getPlayers()) {
                             Language lang = Language.getPlayerLanguage(inGame);
-                            inGame.sendMessage(event.getMessage().apply(inGame)
+                            AdventureText.send(inGame, event.getMessage().apply(inGame)
                                     .replace("{PlayerTeamName}", team.getDisplayName(lang))
-                                    .replace("{PlayerColor}", team.getColor().chat().toString()).replace("{PlayerName}", p.getDisplayName())
+                                    .replace("{PlayerColor}", team.getColor().chat().toString()).replace("{PlayerName}", AdventureText.displayName(p))
                                     .replace("{KillerColor}", killerTeam.getColor().chat().toString())
-                                    .replace("{KillerName}", lastDamager.getDisplayName())
+                                    .replace("{KillerName}", AdventureText.displayName(lastDamager))
                                     .replace("{KillerTeamName}", killerTeam.getDisplayName(lang)));
                         }
                     }
@@ -959,11 +883,11 @@ public class Arena implements IArena {
                     if (null != event.getMessage()) {
                         for (Player inGame : getSpectators()) {
                             Language lang = Language.getPlayerLanguage(inGame);
-                            inGame.sendMessage(event.getMessage().apply(inGame)
+                            AdventureText.send(inGame, event.getMessage().apply(inGame)
                                     .replace("{PlayerTeamName}", team.getDisplayName(lang))
-                                    .replace("{PlayerColor}", team.getColor().chat().toString()).replace("{PlayerName}", p.getDisplayName())
+                                    .replace("{PlayerColor}", team.getColor().chat().toString()).replace("{PlayerName}", AdventureText.displayName(p))
                                     .replace("{KillerColor}", killerTeam.getColor().chat().toString())
-                                    .replace("{KillerName}", lastDamager.getDisplayName())
+                                    .replace("{KillerName}", AdventureText.displayName(lastDamager))
                                     .replace("{KillerTeamName}", killerTeam.getDisplayName(lang)));
                         }
                     }
@@ -972,17 +896,17 @@ public class Arena implements IArena {
             }
         }
         for (Player on : getPlayers()) {
-            on.sendMessage(
+            AdventureText.send(on,
                     getMsg(on, Messages.COMMAND_LEAVE_MSG)
                             .replace("{vPrefix}", getChatSupport().getPrefix(p))
                             .replace("{vSuffix}", getChatSupport().getSuffix(p))
                             .replace("{playername}", p.getName())
-                            .replace("{player}", p.getDisplayName()
+                            .replace("{player}", AdventureText.displayName(p)
                             )
             );
         }
         for (Player on : getSpectators()) {
-            on.sendMessage(getMsg(on, Messages.COMMAND_LEAVE_MSG).replace("{vPrefix}", getChatSupport().getPrefix(p)).replace("{playername}", p.getName()).replace("{player}", p.getDisplayName()));
+            AdventureText.send(on, getMsg(on, Messages.COMMAND_LEAVE_MSG).replace("{vPrefix}", getChatSupport().getPrefix(p)).replace("{playername}", p.getName()).replace("{player}", AdventureText.displayName(p)));
         }
 
         if (getServerType() == ServerType.SHARED) {
@@ -1022,6 +946,20 @@ public class Arena implements IArena {
             }, 5L);
         }
 
+        /* Remove also the party */
+        if (getParty().hasParty(p)) {
+            if (getParty().isOwner(p)) {
+                if (status != GameState.restarting) {
+                    if (getParty().isInternal()) {
+                        for (Player mem : new ArrayList<>(getParty().getMembers(p))) {
+                            AdventureText.send(mem, getMsg(mem, Messages.ARENA_LEAVE_PARTY_DISBANDED));
+                        }
+                    }
+                    getParty().disband(p);
+
+                }
+            }
+        }
         PlayerMotion.disableFlight(p);
 
         //Remove from ReJoin if game ended
@@ -1045,6 +983,19 @@ public class Arena implements IArena {
 
         refreshSigns();
         JoinNPC.updateNPCs(getGroup());
+
+        // fix #340
+        // remove player from party if leaves and the owner is still in the arena while waiting or starting
+        if (status == GameState.waiting || status == GameState.starting) {
+            if (BedWars.getParty().hasParty(p) && !BedWars.getParty().isOwner(p)) {
+                for (Player pl : BedWars.getParty().getMembers(p)) {
+                    if (BedWars.getParty().isOwner(pl) && pl.getWorld().getName().equalsIgnoreCase(getArenaName())) {
+                        BedWars.getParty().removeFromParty(p);
+                        break;
+                    }
+                }
+            }
+        }
 
         if (lastHit != null) {
             lastHit.remove();
@@ -1110,6 +1061,20 @@ public class Arena implements IArena {
             });
         }
 
+        /* Remove also the party */
+        if (getParty().hasParty(p)) {
+            if (getParty().isOwner(p)) {
+                if (status != GameState.restarting) {
+                    if (getParty().isInternal()) {
+                        for (Player mem : new ArrayList<>(getParty().getMembers(p))) {
+                            AdventureText.send(mem, getMsg(mem, Messages.ARENA_LEAVE_PARTY_DISBANDED));
+                        }
+                    }
+                    getParty().disband(p);
+                }
+            }
+        }
+
         PlayerMotion.disableFlight(p);
 
         //Remove from ReJoin if game ended
@@ -1161,10 +1126,10 @@ public class Arena implements IArena {
         ArenaDepartureGuard.restore(leaving, p);
         players.add(p);
         for (Player on : players) {
-            on.sendMessage(getMsg(on, Messages.COMMAND_REJOIN_PLAYER_RECONNECTED).replace("{playername}", p.getName()).replace("{player}", p.getDisplayName()).replace("{on}", String.valueOf(getPlayers().size())).replace("{max}", String.valueOf(getMaxPlayers())));
+            AdventureText.send(on, getMsg(on, Messages.COMMAND_REJOIN_PLAYER_RECONNECTED).replace("{playername}", p.getName()).replace("{player}", AdventureText.displayName(p)).replace("{on}", String.valueOf(getPlayers().size())).replace("{max}", String.valueOf(getMaxPlayers())));
         }
         for (Player on : spectators) {
-            on.sendMessage(getMsg(on, Messages.COMMAND_REJOIN_PLAYER_RECONNECTED).replace("{playername}", p.getName()).replace("{player}", p.getDisplayName()).replace("{on}", String.valueOf(getPlayers().size())).replace("{max}", String.valueOf(getMaxPlayers())));
+            AdventureText.send(on, getMsg(on, Messages.COMMAND_REJOIN_PLAYER_RECONNECTED).replace("{playername}", p.getName()).replace("{player}", AdventureText.displayName(p)).replace("{on}", String.valueOf(getPlayers().size())).replace("{max}", String.valueOf(getMaxPlayers())));
         }
         setArenaByPlayer(p, this);
         /* save player inventory etc */
@@ -1214,7 +1179,7 @@ public class Arena implements IArena {
         if (getPlayingTask() != null) getPlayingTask().cancel();
         plugin.getComponentLogger().info(Component.text("正在卸载竞技场：" + getArenaName(), NamedTextColor.YELLOW));
         for (Player inWorld : getWorld().getPlayers()) {
-            inWorld.kickPlayer("服务器正在卸载竞技场。");
+            inWorld.kick(AdventureText.section("服务器正在卸载竞技场。"));
         }
         BedWars.getAPI().getRestoreAdapter().onDisable(this);
         Bukkit.getPluginManager().callEvent(new ArenaDisableEvent(getArenaName(), getWorldName()));
@@ -1297,7 +1262,7 @@ public class Arena implements IArena {
         if (status == GameState.starting && !eligible) {
             changeStatus(GameState.waiting);
             for (Player player : players) {
-                player.sendMessage(getMsg(player, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
+                AdventureText.send(player, getMsg(player, Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT));
             }
             return true;
         }
@@ -1599,7 +1564,7 @@ public class Arena implements IArena {
         if (this.status == GameState.starting && status == GameState.waiting) {
             for (Player player : getPlayers()) {
                 Language playerLang = Language.getPlayerLanguage(player);
-                nms.sendTitle(player, playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_TITLE), playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_SUB_TITLE), 0, 40, 10);
+                nms.sendTitle(player, AdventureText.section(playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_TITLE)), AdventureText.section(playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_SUB_TITLE)), 0, 40, 10);
             }
         }
         this.status = status;
@@ -1763,10 +1728,10 @@ public class Arena implements IArena {
             for (String string : BedWars.signs.getList("format")) {
                 if (line >= 4) break;
                 if (string == null) continue;
-                s.setLine(line, string.replace("[on]", String.valueOf(getPlayers().size()))
+                s.line(line, AdventureText.ampersand(string.replace("[on]", String.valueOf(getPlayers().size()))
                         .replace("[max]", String.valueOf(getMaxPlayers())).replace("[arena]", getDisplayName())
                         .replace("[status]", getDisplayStatus(Language.getDefaultLanguage()))
-                        .replace("[type]", String.valueOf(getMaxInTeam())));
+                        .replace("[type]", String.valueOf(getMaxInTeam())).replace('\u00a7', '&')));
                 line++;
             }
             try {
@@ -1814,12 +1779,6 @@ public class Arena implements IArena {
         p.setGameMode(GameMode.ADVENTURE);
         PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
-        // A player leaving an arena may have just had his saved inventory
-        // restored. The BedWars lobby has its own loadout, so clear every
-        // player-inventory slot before rebuilding its command items.
-        p.getInventory().clear();
-        p.getInventory().setArmorContents(null);
-        p.setItemOnCursor(new ItemStack(Material.AIR));
         refreshLobbyCommandItems(p);
         scheduleLobbyItemRecheck(p);
         LobbyAnnouncements.playerEntered(p);
@@ -1843,12 +1802,12 @@ public class Arena implements IArena {
             if (LobbyAnnouncements.isLobbyPlayer(viewer)) audience.add(viewer);
         }
         for (Player viewer : audience) {
-            viewer.sendMessage(
+            AdventureText.send(viewer,
                     getMsg(viewer, Messages.COMMAND_JOIN_PLAYER_JOIN_MSG)
                             .replace("{vPrefix}", getChatSupport().getPrefix(joined))
                             .replace("{vSuffix}", getChatSupport().getSuffix(joined))
                             .replace("{playername}", joined.getName())
-                            .replace("{player}", joined.getDisplayName())
+                            .replace("{player}", AdventureText.displayName(joined))
                             .replace("{arena}", getDisplayName())
                             .replace("{on}", String.valueOf(getPlayers().size()))
                             .replace("{max}", String.valueOf(getMaxPlayers()))
@@ -2161,8 +2120,8 @@ public class Arena implements IArena {
                     StringBuilder winners = new StringBuilder();
                     //noinspection deprecation
                     for (Player p : winner.getMembersCache()) {
-                        if (!winners.toString().contains(p.getDisplayName())) {
-                            winners.append(p.getDisplayName()).append(" ");
+                        if (!winners.toString().contains(AdventureText.displayName(p))) {
+                            winners.append(AdventureText.displayName(p)).append(" ");
                         }
                     }
                     if (winners.toString().endsWith(" ")) {
@@ -2195,14 +2154,14 @@ public class Arena implements IArena {
                             String winnerTeamChat = playerLang.m(Messages.GAME_END_TEAM_WON_CHAT);
                             // check if message disabled
                             if (null != winnerTeamChat && !winnerTeamChat.isBlank()) {
-                                receiver.sendMessage(winnerTeamChat.replace("{TeamColor}", winner.getColor().chat().toString())
+                                AdventureText.send(receiver, winnerTeamChat.replace("{TeamColor}", winner.getColor().chat().toString())
                                         .replace("{TeamName}", winner.getDisplayName(playerLang)));
                             }
 
                             if (winner.getMembers().contains(receiver) || winner.wasMember(receiver.getUniqueId())) {
-                                nms.sendTitle(receiver, getMsg(receiver, Messages.GAME_END_VICTORY_PLAYER_TITLE), null, 0, 70, 20);
+                                nms.sendTitle(receiver, AdventureText.section(getMsg(receiver, Messages.GAME_END_VICTORY_PLAYER_TITLE)), null, 0, 70, 20);
                             } else {
-                                nms.sendTitle(receiver, playerLang.m(Messages.GAME_END_GAME_OVER_PLAYER_TITLE), null, 0, 70, 20);
+                                nms.sendTitle(receiver, AdventureText.section(playerLang.m(Messages.GAME_END_GAME_OVER_PLAYER_TITLE)), null, 0, 70, 20);
                             }
 
                             statParser.resetIndex();
@@ -2223,7 +2182,7 @@ public class Arena implements IArena {
                                 msg = msg.replace("{winnerFormat}", getMaxInTeam() > 1 ? playerLang.m(Messages.FORMATTING_TEAM_WINNER_FORMAT).replace("{members}", winners.toString()) : playerLang.m(Messages.FORMATTING_SOLO_WINNER_FORMAT).replace("{members}", winners.toString()))
                                         .replace("{TeamColor}", winner.getColor().chat().toString()).replace("{TeamName}", winner.getDisplayName(playerLang));
 
-                                receiver.sendMessage(SupportPAPI.getSupportPAPI().replace(receiver, msg));
+                                AdventureText.send(receiver, SupportPAPI.getSupportPAPI().replace(receiver, msg));
                             }
 
                         }
@@ -2570,11 +2529,11 @@ public class Arena implements IArena {
      */
     public void sendDiamondsUpgradeMessages() {
         for (Player p : getPlayers()) {
-            p.sendMessage(getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
+            AdventureText.send(p, getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
                     getMsg(p, Messages.GENERATOR_HOLOGRAM_TYPE_DIAMOND)).replace("{tier}", getMsg(p, (diamondTier == 2 ? Messages.FORMATTING_GENERATOR_TIER2 : Messages.FORMATTING_GENERATOR_TIER3))));
         }
         for (Player p : getSpectators()) {
-            p.sendMessage(getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
+            AdventureText.send(p, getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
                     getMsg(p, Messages.GENERATOR_HOLOGRAM_TYPE_DIAMOND)).replace("{tier}", getMsg(p, (diamondTier == 2 ? Messages.FORMATTING_GENERATOR_TIER2 : Messages.FORMATTING_GENERATOR_TIER3))));
         }
     }
@@ -2585,11 +2544,11 @@ public class Arena implements IArena {
      */
     public void sendEmeraldsUpgradeMessages() {
         for (Player p : getPlayers()) {
-            p.sendMessage(getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
+            AdventureText.send(p, getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
                     getMsg(p, Messages.GENERATOR_HOLOGRAM_TYPE_EMERALD)).replace("{tier}", getMsg(p, (emeraldTier == 2 ? Messages.FORMATTING_GENERATOR_TIER2 : Messages.FORMATTING_GENERATOR_TIER3))));
         }
         for (Player p : getSpectators()) {
-            p.sendMessage(getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
+            AdventureText.send(p, getMsg(p, Messages.GENERATOR_UPGRADE_CHAT_ANNOUNCEMENT).replace("{generatorType}",
                     getMsg(p, Messages.GENERATOR_HOLOGRAM_TYPE_EMERALD)).replace("{tier}", getMsg(p, (emeraldTier == 2 ? Messages.FORMATTING_GENERATOR_TIER2 : Messages.FORMATTING_GENERATOR_TIER3))));
         }
     }
@@ -2967,30 +2926,23 @@ public class Arena implements IArena {
         if (BedWars.getServerType() == ServerType.SHARED) {
             Location loc = playerLocation.get(player);
             if (loc == null) {
-                loc = Bukkit.getWorlds().get(0).getSpawnLocation();
+                TeleportManager.teleportC(player, Bukkit.getWorlds().get(0).getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 plugin.getLogger().log(Level.SEVERE, player.getName() + " was teleported to the main world because lobby location is not set!");
+            } else {
+                TeleportManager.teleportC(player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
             }
-            applyLobbyStateAfterTeleport(player,
-                    TeleportManager.teleportC(player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN));
         } else if (BedWars.getServerType() == ServerType.MULTIARENA) {
             Location lobby = config.getConfigLoc("lobbyLoc");
             if (lobby == null || lobby.getWorld() == null) {
                 lobby = Bukkit.getWorlds().getFirst().getSpawnLocation();
                 plugin.getLogger().log(Level.SEVERE, player.getName() + " was teleported to the main world because lobby location is not set!");
             }
-            applyLobbyStateAfterTeleport(player, TeleportManager.teleportC(
-                    player, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN));
+            CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
+                    player, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN);
+            teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
+            }));
         }
-    }
-
-    private static void applyLobbyStateAfterTeleport(Player player, CompletableFuture<Boolean> teleport) {
-        teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
-            if (ArenaTransitionPolicy.shouldApplyLobbyStateAfterTeleport(
-                    error == null && Boolean.TRUE.equals(success),
-                    player.isOnline(), isCurrentLobbyPlayer(player))) {
-                enterLobby(player);
-            }
-        }));
     }
 
     public boolean isAllowMapBreak() {

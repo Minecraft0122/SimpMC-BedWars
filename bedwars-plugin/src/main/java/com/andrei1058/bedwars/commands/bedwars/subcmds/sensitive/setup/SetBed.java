@@ -24,12 +24,13 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.server.SetupType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.BedLocator;
 import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -64,11 +65,11 @@ public class SetBed extends SubCommand {
         if (args.length == 0) {
             String foundTeam = ss.getNearestTeam();
             if (foundTeam.isEmpty()) {
-                p.sendMessage("");
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍床位", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-                p.spigot().sendMessage(Misc.msgHoverClick(ss.getPrefix() + "如果已设置出生点但未自动找到，请使用：/bw " + getSubCommandName() + " <队伍>", "添加队伍床位", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "附近没有找到队伍。", 5, 60, 5);
+                AdventureText.send(p, "");
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "附近没有找到队伍。");
+                AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "请先设置队伍出生点！", ChatColor.WHITE + "设置队伍床位", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+                AdventureText.send(p, Misc.msgHoverClick(ss.getPrefix() + "如果已设置出生点但未自动找到，请使用：/bw " + getSubCommandName() + " <队伍>", "添加队伍床位", "/" + getParent().getName() + " " + getSubCommandName() + " ", ClickEvent.Action.SUGGEST_COMMAND));
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "附近没有找到队伍。"), 5, 60, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                 ss.displayAvailableTeams();
 
@@ -78,17 +79,17 @@ public class SetBed extends SubCommand {
         } else {
             Location bedLocation = BedLocator.findNearestBed(p.getLocation(), 2);
             if (bedLocation == null) {
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "使用此命令时必须站在床旁边！");
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.RED + "请站在床旁边。", 5, 40, 5);
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "使用此命令时必须站在床旁边！");
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.RED + "请站在床旁边。"), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, p);
                 return true;
             }
             if (ss.getConfig().getYml().get("Team." + args[0]) == null) {
-                p.sendMessage(ss.getPrefix() + ChatColor.RED + "该队伍不存在！");
+                AdventureText.send(p, ss.getPrefix() + ChatColor.RED + "该队伍不存在！");
                 if (ss.getConfig().getYml().get("Team") != null) {
-                    p.sendMessage(ss.getPrefix() + "可用队伍：");
+                    AdventureText.send(p, ss.getPrefix() + "可用队伍：");
                     for (String team : Objects.requireNonNull(ss.getConfig().getYml().getConfigurationSection("Team")).getKeys(false)) {
-                        p.spigot().sendMessage(Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + ss.getTeamColor(team) + team, ChatColor.WHITE + "设置 " + ss.getTeamColor(team) + team + " 的床位", "/" + mainCmd + " setBed " + team, ClickEvent.Action.RUN_COMMAND));
+                        AdventureText.send(p, Misc.msgHoverClick(ChatColor.GOLD + " " + '▪' + " " + ss.getTeamColor(team) + team, ChatColor.WHITE + "设置 " + ss.getTeamColor(team) + team + " 的床位", "/" + mainCmd + " setBed " + team, ClickEvent.Action.RUN_COMMAND));
                     }
                 }
             } else {
@@ -98,9 +99,9 @@ public class SetBed extends SubCommand {
                 }
                 createArmorStand(team + " " + ChatColor.GOLD + "床位已设置", bedLocation, null);
                 ss.getConfig().saveArenaLoc("Team." + args[0] + ".Bed", bedLocation);
-                p.sendMessage(ss.getPrefix() + "已设置床位：" + team);
+                AdventureText.send(p, ss.getPrefix() + "已设置床位：" + team);
 
-                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, " ", ChatColor.GREEN + "已设置床位：" + team, 5, 40, 5);
+                com.andrei1058.bedwars.BedWars.nms.sendTitle(p, AdventureText.section(" "), AdventureText.section(ChatColor.GREEN + "已设置床位：" + team), 5, 40, 5);
                 Sounds.playSound(ConfigPath.SOUNDS_BOUGHT, p);
 
                 if (ss.getSetupType() == SetupType.ASSISTED) {

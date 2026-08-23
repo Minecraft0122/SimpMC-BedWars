@@ -10,6 +10,8 @@
 
 package com.andrei1058.bedwars.arena.team;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
@@ -53,12 +55,12 @@ public final class PreGameTeamSelectionGUI implements Listener {
     public void open(@NotNull Player player) {
         IArena arena = preGameArena(player);
         if (arena == null) {
-            player.sendMessage(PREFIX + ChatColor.RED + "只能在开局前选择队伍。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "只能在开局前选择队伍。");
             return;
         }
 
         TeamSelectionHolder holder = new TeamSelectionHolder(player.getUniqueId());
-        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, ChatColor.DARK_GRAY + "选择游戏队伍");
+        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, AdventureText.section(ChatColor.DARK_GRAY + "选择游戏队伍"));
         holder.attach(inventory);
 
         ITeam current = selections.getSelection(arena, player);
@@ -88,7 +90,7 @@ public final class PreGameTeamSelectionGUI implements Listener {
         }
         if (event.getRawSlot() == CLEAR_SLOT) {
             selections.clear(player);
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "已取消队伍选择，开局时将自动均衡分队。");
+            AdventureText.send(player, PREFIX + ChatColor.YELLOW + "已取消队伍选择，开局时将自动均衡分队。");
             open(player);
             return;
         }
@@ -103,15 +105,15 @@ public final class PreGameTeamSelectionGUI implements Listener {
 
         PreGameTeamSelectionManager.Result result = selections.select(player, team);
         if (result == PreGameTeamSelectionManager.Result.TEAM_FULL) {
-            player.sendMessage(PREFIX + ChatColor.RED + "该队伍的预选人数已达到每队上限。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "该队伍的预选人数已达到每队上限。");
             return;
         }
         if (result != PreGameTeamSelectionManager.Result.SELECTED) {
-            player.sendMessage(PREFIX + ChatColor.RED + "当前无法选择该队伍。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "当前无法选择该队伍。");
             return;
         }
 
-        player.sendMessage(PREFIX + team.getColor().chat() + "已选择 " + team.getName()
+        AdventureText.send(player, PREFIX + team.getColor().chat() + "已选择 " + team.getName()
                 + ChatColor.GRAY + "（固定队友会一起选择；若组合无法合法分队，系统将自动均衡）");
         open(player);
     }
@@ -120,8 +122,8 @@ public final class PreGameTeamSelectionGUI implements Listener {
         ItemStack item = new ItemStack(team.getColor().woolMaterial());
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
-        meta.setDisplayName(team.getColor().chat() + team.getName());
-        meta.setLore(List.of(
+        AdventureText.displayName(meta, team.getColor().chat() + team.getName());
+        AdventureText.lore(meta, List.of(
                 ChatColor.GRAY + "已预选：" + ChatColor.WHITE + selections.selectedCount(team)
                         + ChatColor.GRAY + "/" + ChatColor.WHITE + team.getArena().getMaxInTeam(),
                 selected ? ChatColor.GREEN + "已选择" : ChatColor.YELLOW + "点击选择"
@@ -138,8 +140,8 @@ public final class PreGameTeamSelectionGUI implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
-        meta.setDisplayName(name);
-        meta.setLore(lore);
+        AdventureText.displayName(meta, name);
+        AdventureText.lore(meta, lore);
         item.setItemMeta(meta);
         return item;
     }

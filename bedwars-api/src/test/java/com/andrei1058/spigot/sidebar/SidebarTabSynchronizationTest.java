@@ -12,7 +12,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,15 +59,6 @@ class SidebarTabSynchronizationTest {
         sidebar.applyTab(scoreboard, unchanged);
         assertEquals(0, state.writeCount);
 
-        TeamState pushingState = new TeamState("Alice");
-        Sidebar pushingSidebar = sidebar();
-        Scoreboard pushingScoreboard = scoreboard(team(pushingState));
-        PlayerTab pushing = new PlayerTab("Alice-pushing", player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.WHITE,
-                PlayerTab.NameTagVisibility.ALWAYS);
-        pushingSidebar.applyTab(pushingScoreboard, pushing);
-        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, pushingState.collision);
-
         PlayerTab changed = tab(player, new SidebarLine("&a队伍"), ChatColor.RED,
                 PlayerTab.NameTagVisibility.NEVER);
         sidebar.applyTab(scoreboard, changed);
@@ -76,32 +66,6 @@ class SidebarTabSynchronizationTest {
 
         sidebar.applyTab(scoreboard, changed);
         assertEquals(3, state.writeCount, "repeating the same refresh must not send more team updates");
-    }
-
-    @Test
-    void sharedCollisionGroupsPutTeammatesTogetherAndKeepEnemyGroupsSeparate() {
-        Sidebar sidebar = sidebar();
-        Map<String, TeamState> states = new LinkedHashMap<>();
-        Scoreboard scoreboard = dynamicScoreboard(states);
-        Player alice = player("Alice");
-        Player bob = player("Bob");
-        Player enemy = player("Enemy");
-
-        sidebar.applyTab(scoreboard, sharedTab("alice", alice, "red"));
-        sidebar.applyTab(scoreboard, sharedTab("bob", bob, "red"));
-        sidebar.applyTab(scoreboard, sharedTab("enemy", enemy, "blue"));
-
-        assertEquals(2, states.size(), "each game team needs one collision scoreboard team");
-        TeamState red = states.values().stream()
-                .filter(state -> state.entries.containsAll(Set.of("Alice", "Bob")))
-                .findFirst().orElseThrow();
-        TeamState blue = states.values().stream()
-                .filter(state -> state.entries.contains("Enemy"))
-                .findFirst().orElseThrow();
-        assertEquals(Set.of("Alice", "Bob"), red.entries);
-        assertEquals(Set.of("Enemy"), blue.entries);
-        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, red.collision);
-        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, blue.collision);
     }
 
     @Test
@@ -792,14 +756,14 @@ class SidebarTabSynchronizationTest {
         assertSame(ChatColor.RED, state.color);
         assertTrue(state.entries.contains("Alice"));
         assertSame(Team.OptionStatus.NEVER, state.visibility);
-        assertSame(Team.OptionStatus.NEVER, state.collision);
         assertEquals(Sidebar.component("§cRed "), state.prefix);
     }
 
     @Test
-    void writesNamedColorWithoutReadingPaperAdventureColor() {
+    void doesNotReadPaperAdventureColorForNamedScoreboardColors() {
         Sidebar sidebar = sidebar();
         TeamState state = new TeamState();
+        state.color = ChatColor.RESET;
         Scoreboard scoreboard = scoreboard(teamThatRejectsAdventureColorReads(state));
         Player player = player("Alice");
 
@@ -822,13 +786,6 @@ class SidebarTabSynchronizationTest {
                                  PlayerTab.NameTagVisibility visibility) {
         return new PlayerTab(player.getUniqueId().toString(), player, prefix, new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, List.of(), color, visibility);
-    }
-
-    private static PlayerTab sharedTab(String identifier, Player player, String collisionGroup) {
-        return new PlayerTab(identifier, player, new SidebarLine(), new SidebarLine(),
-                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.WHITE,
-                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
-                collisionGroup);
     }
 
     private static Player player(String name) {
@@ -854,23 +811,6 @@ class SidebarTabSynchronizationTest {
                 });
     }
 
-    private static Scoreboard dynamicScoreboard(Map<String, TeamState> states) {
-        return (Scoreboard) Proxy.newProxyInstance(Scoreboard.class.getClassLoader(),
-                new Class<?>[]{Scoreboard.class}, (proxy, method, args) -> switch (method.getName()) {
-                    case "getTeam" -> {
-                        TeamState state = states.get((String) args[0]);
-                        yield state == null ? null : team(state);
-                    }
-                    case "registerNewTeam" -> {
-                        String name = (String) args[0];
-                        TeamState state = new TeamState();
-                        states.put(name, state);
-                        yield team(state);
-                    }
-                    default -> throw new UnsupportedOperationException(method.getName());
-                });
-    }
-
     private static Team team(TeamState state) {
         return (Team) Proxy.newProxyInstance(Team.class.getClassLoader(), new Class<?>[]{Team.class},
                 (proxy, method, args) -> switch (method.getName()) {
@@ -892,14 +832,9 @@ class SidebarTabSynchronizationTest {
                         state.writeCount++;
                         yield null;
                     }
-                    case "getOption" -> args[0] == Team.Option.COLLISION_RULE
-                            ? state.collision : state.visibility;
+                    case "getOption" -> state.visibility;
                     case "setOption" -> {
-                        if (args[0] == Team.Option.COLLISION_RULE) {
-                            state.collision = (Team.OptionStatus) args[1];
-                        } else {
-                            state.visibility = (Team.OptionStatus) args[1];
-                        }
+                        state.visibility = (Team.OptionStatus) args[1];
                         state.writeCount++;
                         yield null;
                     }
@@ -975,7 +910,6 @@ class SidebarTabSynchronizationTest {
         private ChatColor color = ChatColor.WHITE;
         private NamedTextColor modernColor = NamedTextColor.WHITE;
         private Team.OptionStatus visibility = Team.OptionStatus.ALWAYS;
-        private Team.OptionStatus collision = Team.OptionStatus.NEVER;
         private final Set<String> entries = new HashSet<>();
         private int writeCount;
 

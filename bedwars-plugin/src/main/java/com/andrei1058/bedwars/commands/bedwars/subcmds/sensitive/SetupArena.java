@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -29,7 +30,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -56,30 +57,30 @@ public class SetupArena extends SubCommand {
         Player p = (Player) s;
         if (!MainCommand.isLobbySet(p)) return true;
         if (args.length != 1) {
-            p.sendMessage("§c▪ §7用法：§o/" + getParent().getName() + " " + getSubCommandName() + " <地图名>");
+            AdventureText.send(p, "§c▪ §7用法：§o/" + getParent().getName() + " " + getSubCommandName() + " <地图名>");
             return true;
         }
         if (!WorldNameValidator.isSafe(args[0])) {
-            p.sendMessage(ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
+            AdventureText.send(p, ChatColor.RED + "竞技场世界名称不能包含路径分隔符、冒号或控制字符。");
             return true;
         }
         if (!args[0].equals(args[0].toLowerCase())) {
-            p.sendMessage("§c▪ §c" + args[0] + ChatColor.GRAY + " 不能包含大写字母，请将文件夹重命名为：" + ChatColor.GREEN + args[0].toLowerCase());
+            AdventureText.send(p, "§c▪ §c" + args[0] + ChatColor.GRAY + " 不能包含大写字母，请将文件夹重命名为：" + ChatColor.GREEN + args[0].toLowerCase());
             return true;
         }
         if (args[0].contains("+")) {
-            p.sendMessage("§c▪ §7" + args[0] + " 不能包含符号：" + ChatColor.RED + "+");
+            AdventureText.send(p, "§c▪ §7" + args[0] + " 不能包含符号：" + ChatColor.RED + "+");
             return true;
         }
         //if (!BedWars.getAPI().getRestoreAdapter().isWorld(args[0])) {
         //    return true;
         //}
         if (getArenaByName(args[0]) != null && !BedWars.autoscale) {
-            p.sendMessage("§c▪ §7请先禁用该竞技场！");
+            AdventureText.send(p, "§c▪ §7请先禁用该竞技场！");
             return true;
         }
         if (SetupSession.isInSetupSession(p.getUniqueId())) {
-            p.sendMessage("§c ▪ §7你已经处于竞技场设置会话中！");
+            AdventureText.send(p, "§c ▪ §7你已经处于竞技场设置会话中！");
             return true;
         }
         new SetupSession(p, args[0]);

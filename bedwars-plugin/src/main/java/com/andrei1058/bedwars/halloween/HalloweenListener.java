@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.halloween;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent;
@@ -78,7 +79,9 @@ public class HalloweenListener implements Listener {
             Location location = e.getVictim().getLocation().add(0, 1, 0);
             if (location.getBlock().getType() == Material.AIR) {
                 if (ghastSound != null) {
-                    location.getWorld().playSound(location, ghastSound, 2f, 1f);
+                    net.kyori.adventure.sound.Sound sound = Sounds.adventureSound(ghastSound, 2f, 1f);
+                    location.getWorld().getPlayers().forEach(player ->
+                            player.playSound(sound, location.getX(), location.getY(), location.getZ()));
                 }
                 if (!Misc.isBuildProtected(location, e.getArena())) {
                     location.getBlock().setType(Material.valueOf("COBWEB"));
@@ -101,7 +104,7 @@ public class HalloweenListener implements Listener {
             if (level != null) {
                 e.getBlock().getDrops().clear();
                 level.addXp(5, PlayerXpGainEvent.XpSource.OTHER);
-                e.getPlayer().sendMessage(ChatColor.GOLD + "+5 经验值！");
+                AdventureText.send(e.getPlayer(), ChatColor.GOLD + "+5 经验值！");
             }
         }
     }
@@ -111,7 +114,9 @@ public class HalloweenListener implements Listener {
         if (!e.isSpectator()) {
             Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                 if (ambienceSound != null) {
-                    e.getPlayer().getWorld().playSound(e.getPlayer().getLocation(), ambienceSound, 3f, 1f);
+                    net.kyori.adventure.sound.Sound sound = Sounds.adventureSound(ambienceSound, 3f, 1f);
+                    Location location = e.getPlayer().getLocation();
+                    e.getPlayer().playSound(sound, location.getX(), location.getY(), location.getZ());
                 }
             }, 20L);
         }

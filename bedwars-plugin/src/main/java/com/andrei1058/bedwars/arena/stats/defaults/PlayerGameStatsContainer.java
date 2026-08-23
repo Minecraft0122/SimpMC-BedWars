@@ -2,6 +2,7 @@ package com.andrei1058.bedwars.arena.stats.defaults;
 
 import com.andrei1058.bedwars.api.arena.stats.PlayerGameStats;
 import com.andrei1058.bedwars.api.arena.stats.GameStatistic;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +25,7 @@ public class PlayerGameStatsContainer implements PlayerGameStats {
     public PlayerGameStatsContainer(@NotNull Player player) {
         this.player = player.getUniqueId();
         this.username = player.getName();
-        this.lastDisplayName = player.getDisplayName();
+        this.lastDisplayName = AdventureText.displayName(player);
     }
 
     @Override
@@ -38,7 +39,7 @@ public class PlayerGameStatsContainer implements PlayerGameStats {
         if (null == online) {
             return lastDisplayName;
         }
-        return online.getDisplayName();
+        return AdventureText.displayName(online);
     }
 
     @Override

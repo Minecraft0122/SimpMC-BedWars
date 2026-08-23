@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.arena.tasks;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.shop.ShopHolo;
@@ -151,7 +152,7 @@ public class GameRestartingTask implements Runnable, RestartingTask {
             String template = language.exists(Messages.ARENA_RESTART_COUNTDOWN)
                     ? getMsg(player, Messages.ARENA_RESTART_COUNTDOWN)
                     : "§e竞技场将在 §c{time} §e秒后重置";
-            player.sendMessage(template.replace("{time}", String.valueOf(restarting)));
+            AdventureText.send(player, template.replace("{time}", String.valueOf(restarting)));
         }
     }
 

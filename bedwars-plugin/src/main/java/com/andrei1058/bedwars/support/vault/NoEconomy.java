@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.support.vault;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.entity.Player;
 
 public class NoEconomy implements Economy {
@@ -35,11 +36,11 @@ public class NoEconomy implements Economy {
 
     @Override
     public void giveMoney(Player p, double money) {
-        p.sendMessage("§c缺少 Vault 经济支持！");
+        AdventureText.send(p, "§c缺少 Vault 经济支持！");
     }
 
     @Override
     public void buyAction(Player p, double cost) {
-        p.sendMessage("§c缺少 Vault 经济支持！");
+        AdventureText.send(p, "§c缺少 Vault 经济支持！");
     }
 }

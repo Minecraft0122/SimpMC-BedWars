@@ -24,8 +24,8 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.SetupSession;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.configuration.Permissions;
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -52,11 +52,11 @@ public class SetSpectatorPos extends SubCommand {
             return false;
         }
         if (args.length != 0) {
-            p.sendMessage(ss.getPrefix() + ChatColor.RED + "用法：/" + mainCmd + " " + getSubCommandName());
+            AdventureText.send(p, ss.getPrefix() + "§c用法：/" + mainCmd + " " + getSubCommandName());
         } else {
             ss.getConfig().savePlayerArenaLocation(ConfigPath.ARENA_SPEC_LOC,
                     ConfigPath.ARENA_SPEC_FACING, p.getLocation());
-            p.sendMessage(ss.getPrefix() + "已设置观战出生点！");
+            AdventureText.send(p, ss.getPrefix() + "已设置观战出生点！");
         }
         return true;
     }

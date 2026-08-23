@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.events.player.PlayerBaseEnterEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerBaseLeaveEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerLeaveArenaEvent;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import org.bukkit.Bukkit;
@@ -143,16 +144,16 @@ public class BaseListener implements Listener {
                 team.disableTrap();
                 for (Player mem : team.getMembers()) {
                     if (team.isTrapTitle()) {
-                        nms.sendTitle(mem, getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_TITLE), null, 0, 50, 0);
+                        nms.sendTitle(mem, AdventureText.section(getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_TITLE)), null, 0, 50, 0);
                     }
                     if (team.isTrapSubtitle()) {
-                        nms.sendTitle(mem, null, getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_SUBTITLE), 0, 50, 0);
+                        nms.sendTitle(mem, null, AdventureText.section(getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_SUBTITLE)), 0, 50, 0);
                     }
                     if (team.isTrapAction()) {
-                        nms.playAction(mem, getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_ACTION));
+                        nms.playAction(mem, AdventureText.section(getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_ACTION)));
                     }
                     if (team.isTrapChat()) {
-                        mem.sendMessage(getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_CHAT));
+                        AdventureText.send(mem, getMsg(mem, Messages.TRAP_ENEMY_BASE_ENTER_CHAT));
                     }
                 }
             }*/

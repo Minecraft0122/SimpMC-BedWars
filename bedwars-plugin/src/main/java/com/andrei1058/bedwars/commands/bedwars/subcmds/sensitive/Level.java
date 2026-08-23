@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -29,7 +30,7 @@ import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.LevelsConfig;
 import com.andrei1058.bedwars.configuration.Permissions;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -58,12 +59,12 @@ public class Level extends SubCommand {
         }
         if (args[0].equalsIgnoreCase("setlevel")) {
             if (args.length != 3) {
-                s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "用法：/bw level setLevel §o<玩家> <等级>");
+                AdventureText.send(s, ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "用法：/bw level setLevel §o<玩家> <等级>");
                 return true;
             }
             Player pl = Bukkit.getPlayer(args[1]);
             if (pl == null) {
-                s.sendMessage(ChatColor.RED + " ▪ " + ChatColor.GRAY + "找不到玩家！");
+                AdventureText.send(s, ChatColor.RED + " ▪ " + ChatColor.GRAY + "找不到玩家！");
                 return true;
             }
 
@@ -72,7 +73,7 @@ public class Level extends SubCommand {
             try {
                 level = Integer.parseInt(args[2]);
             } catch (Exception e) {
-                s.sendMessage(ChatColor.RED + "等级必须是整数！");
+                AdventureText.send(s, ChatColor.RED + "等级必须是整数！");
                 return true;
             }
 
@@ -89,18 +90,18 @@ public class Level extends SubCommand {
             BedWars.plugin.getServer().getScheduler().runTaskAsynchronously(BedWars.plugin, () -> {
                 BedWars.getRemoteDatabase().setLevelData(playerId, level, 0, levelName, nextLevelCost);
                 Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
-                s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "已将 " + pl.getName() + " 的等级设为：" + args[2]);
-                s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "玩家可能需要重新加入才能看到更新。");
+                AdventureText.send(s, ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "已将 " + pl.getName() + " 的等级设为：" + args[2]);
+                AdventureText.send(s, ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "玩家可能需要重新加入才能看到更新。");
                 });
             });
         } else if (args[0].equalsIgnoreCase("givexp")) {
             if (args.length != 3) {
-                s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "用法：/bw level giveXp §o<玩家> <数量>");
+                AdventureText.send(s, ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "用法：/bw level giveXp §o<玩家> <数量>");
                 return true;
             }
             Player pl = Bukkit.getPlayer(args[1]);
             if (pl == null) {
-                s.sendMessage(ChatColor.RED + " ▪ " + ChatColor.GRAY + "找不到玩家！");
+                AdventureText.send(s, ChatColor.RED + " ▪ " + ChatColor.GRAY + "找不到玩家！");
                 return true;
             }
 
@@ -109,7 +110,7 @@ public class Level extends SubCommand {
             try {
                 amount = Integer.parseInt(args[2]);
             } catch (Exception e) {
-                s.sendMessage(ChatColor.RED + "数量必须是整数！");
+                AdventureText.send(s, ChatColor.RED + "数量必须是整数！");
                 return true;
             }
 
@@ -120,8 +121,8 @@ public class Level extends SubCommand {
                 Object[] data = BedWars.getRemoteDatabase().getLevelData(playerId);
                 BedWars.getRemoteDatabase().setLevelData(playerId, (Integer) data[0], ((Integer)data[1]) + amount, (String) data[2], (Integer)data[3]);
                 Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
-                s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "已给予 " + pl.getName() + " " + args[2] + " 点经验。");
-                s.sendMessage(ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "玩家可能需要重新加入才能看到更新。");
+                AdventureText.send(s, ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "已给予 " + pl.getName() + " " + args[2] + " 点经验。");
+                AdventureText.send(s, ChatColor.GOLD + " ▪ " + ChatColor.GRAY + "玩家可能需要重新加入才能看到更新。");
                 });
             });
         } else {
@@ -133,15 +134,15 @@ public class Level extends SubCommand {
     private void sendSubCommands(CommandSender s, com.andrei1058.bedwars.api.BedWars api) {
         if (s instanceof Player) {
             Player p = (Player) s;
-            p.spigot().sendMessage(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + " setLevel §o<player> <level>",
+            AdventureText.send(p, Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + " setLevel §o<player> <level>",
                     "设置玩家等级。", "/" + getParent().getName() + " " + getSubCommandName() + " setLevel",
                     ClickEvent.Action.SUGGEST_COMMAND));
-            p.spigot().sendMessage(Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + " giveXp §o<player> <amount>",
+            AdventureText.send(p, Misc.msgHoverClick("§6 ▪ §7/" + getParent().getName() + " " + getSubCommandName() + " giveXp §o<player> <amount>",
                     "给予玩家经验值。", "/" + getParent().getName() + " " + getSubCommandName() + " giveXp",
                     ClickEvent.Action.SUGGEST_COMMAND));
         } else {
-            s.sendMessage(ChatColor.GOLD + "bw level setLevel <玩家> <等级>");
-            s.sendMessage(ChatColor.GOLD + "bw level giveXp <玩家> <数量>");
+            AdventureText.send(s, ChatColor.GOLD + "bw level setLevel <玩家> <等级>");
+            AdventureText.send(s, ChatColor.GOLD + "bw level giveXp <玩家> <数量>");
         }
     }
 

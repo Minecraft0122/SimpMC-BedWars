@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.command.ParentCommand;
@@ -50,24 +51,24 @@ public class CmdTpStaff extends SubCommand {
         if (!(s instanceof Player)) return true;
         Player p2 = (Player) s;
         if (args.length != 1) {
-            s.sendMessage(Language.getMsg(p2, Messages.COMMAND_TP_USAGE));
+            AdventureText.send(s, Language.getMsg(p2, Messages.COMMAND_TP_USAGE));
             return true;
         }
 
         if (!hasPermission(p2)) {
-            p2.sendMessage(getMsg(p2, Messages.COMMAND_FORCESTART_NO_PERM));
+            AdventureText.send(p2, getMsg(p2, Messages.COMMAND_FORCESTART_NO_PERM));
             return true;
         }
 
         Player p = Bukkit.getPlayer(args[0]);
         if (p == null) {
-            s.sendMessage(Language.getMsg(p2, Messages.COMMAND_TP_PLAYER_NOT_FOUND));
+            AdventureText.send(s, Language.getMsg(p2, Messages.COMMAND_TP_PLAYER_NOT_FOUND));
             return true;
         }
         IArena a = Arena.getArenaByPlayer(p);
         IArena a2 = Arena.getArenaByPlayer(p2);
         if (a == null) {
-            s.sendMessage(Language.getMsg(p2, Messages.COMMAND_TP_NOT_IN_ARENA));
+            AdventureText.send(s, Language.getMsg(p2, Messages.COMMAND_TP_NOT_IN_ARENA));
             return true;
         }
 
@@ -83,7 +84,7 @@ public class CmdTpStaff extends SubCommand {
             }
             a.addSpectator(p2, false, p.getLocation());
         } else {
-            s.sendMessage(Language.getMsg(((Player) s), Messages.COMMAND_TP_NOT_STARTED));
+            AdventureText.send(s, Language.getMsg(((Player) s), Messages.COMMAND_TP_NOT_STARTED));
         }
 
         return true;

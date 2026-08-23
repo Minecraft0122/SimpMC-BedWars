@@ -31,8 +31,9 @@ import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
 import com.andrei1058.bedwars.arena.team.PreGameSquadGUI;
 import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionGUI;
 import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionManager;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import com.andrei1058.bedwars.api.util.AdventureText;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -60,7 +61,7 @@ public class CmdTeam extends SubCommand {
         if (!(sender instanceof Player player)) return false;
         IArena arena = preGameArena(player);
         if (arena == null) {
-            player.sendMessage(PREFIX + ChatColor.RED + "只能在开局前使用竞技场组队功能。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "只能在开局前使用竞技场组队功能。");
             return true;
         }
         if (args.length == 0 || args[0].equalsIgnoreCase("select")
@@ -86,17 +87,17 @@ public class CmdTeam extends SubCommand {
     private void invite(Player player, String[] args) {
         IArena arena = preGameArena(player);
         if (arena != null && arena.getMaxInTeam() <= 1) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "当前地图为单人队模式，无需邀请固定队友。");
+            AdventureText.send(player, PREFIX + ChatColor.YELLOW + "当前地图为单人队模式，无需邀请固定队友。");
             return;
         }
         if (args.length < 2) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
+            AdventureText.send(player, PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
                     + " team invite <玩家>");
             return;
         }
         Player target = Bukkit.getPlayerExact(args[1]);
         if (target == null) {
-            player.sendMessage(PREFIX + ChatColor.RED + "找不到在线玩家：" + args[1]);
+            AdventureText.send(player, PREFIX + ChatColor.RED + "找不到在线玩家：" + args[1]);
             return;
         }
 
@@ -105,19 +106,17 @@ public class CmdTeam extends SubCommand {
             sendFailure(player, result);
             return;
         }
-        player.sendMessage(PREFIX + ChatColor.GREEN + "已邀请 " + target.getName() + "，邀请 30 秒内有效。");
+        AdventureText.send(player, PREFIX + ChatColor.GREEN + "已邀请 " + target.getName() + "，邀请 30 秒内有效。");
 
-        TextComponent message = new TextComponent(PREFIX + ChatColor.AQUA + player.getName()
+        Component message = AdventureText.section(PREFIX + ChatColor.AQUA + player.getName()
                 + ChatColor.YELLOW + " 邀请你在本局成为队友。 ");
-        TextComponent accept = new TextComponent(ChatColor.GREEN + "[接受]");
-        accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/"
-                + com.andrei1058.bedwars.BedWars.mainCmd + " team accept " + player.getName()));
-        TextComponent decline = new TextComponent(ChatColor.RED + " [拒绝]");
-        decline.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/"
-                + com.andrei1058.bedwars.BedWars.mainCmd + " team decline " + player.getName()));
-        message.addExtra(accept);
-        message.addExtra(decline);
-        target.spigot().sendMessage(message);
+        Component accept = AdventureText.section(ChatColor.GREEN + "[接受]")
+                .clickEvent(ClickEvent.runCommand("/"
+                        + com.andrei1058.bedwars.BedWars.mainCmd + " team accept " + player.getName()));
+        Component decline = AdventureText.section(ChatColor.RED + " [拒绝]")
+                .clickEvent(ClickEvent.runCommand("/"
+                        + com.andrei1058.bedwars.BedWars.mainCmd + " team decline " + player.getName()));
+        AdventureText.send(target, message.append(accept).append(decline));
     }
 
     private void choose(Player player, IArena arena, String[] args) {
@@ -130,35 +129,35 @@ public class CmdTeam extends SubCommand {
                 .findFirst()
                 .orElse(null);
         if (team == null) {
-            player.sendMessage(PREFIX + ChatColor.RED + "找不到队伍：" + args[1]);
+            AdventureText.send(player, PREFIX + ChatColor.RED + "找不到队伍：" + args[1]);
             return;
         }
         PreGameTeamSelectionManager.Result result = selections.select(player, team);
         if (result == PreGameTeamSelectionManager.Result.TEAM_FULL) {
-            player.sendMessage(PREFIX + ChatColor.RED + "该队伍的预选人数已达到每队上限。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "该队伍的预选人数已达到每队上限。");
             return;
         }
         if (result != PreGameTeamSelectionManager.Result.SELECTED) {
-            player.sendMessage(PREFIX + ChatColor.RED + "当前无法选择该队伍。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "当前无法选择该队伍。");
             return;
         }
-        player.sendMessage(PREFIX + team.getColor().chat() + "已选择 " + team.getName());
+        AdventureText.send(player, PREFIX + team.getColor().chat() + "已选择 " + team.getName());
     }
 
     private void clearSelection(Player player) {
         selections.clear(player);
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "已取消队伍选择，开局时将自动均衡分队。");
+        AdventureText.send(player, PREFIX + ChatColor.YELLOW + "已取消队伍选择，开局时将自动均衡分队。");
     }
 
     private void accept(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
+            AdventureText.send(player, PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
                     + " team accept <邀请者>");
             return;
         }
         Player inviter = Bukkit.getPlayerExact(args[1]);
         if (inviter == null) {
-            player.sendMessage(PREFIX + ChatColor.RED + "邀请者已离线或离开竞技场。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "邀请者已离线或离开竞技场。");
             return;
         }
         PreGameSquad.Result result = squads.accept(player, inviter);
@@ -167,19 +166,19 @@ public class CmdTeam extends SubCommand {
             return;
         }
         for (Player member : squads.getMembers(player)) {
-            member.sendMessage(PREFIX + ChatColor.GREEN + player.getName() + " 已加入开局队伍。");
+            AdventureText.send(member, PREFIX + ChatColor.GREEN + player.getName() + " 已加入开局队伍。");
         }
     }
 
     private void decline(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
+            AdventureText.send(player, PREFIX + ChatColor.YELLOW + "用法：/" + com.andrei1058.bedwars.BedWars.mainCmd
                     + " team decline <邀请者>");
             return;
         }
         Player inviter = Bukkit.getPlayerExact(args[1]);
         if (inviter == null) {
-            player.sendMessage(PREFIX + ChatColor.RED + "邀请者已离线或离开竞技场。");
+            AdventureText.send(player, PREFIX + ChatColor.RED + "邀请者已离线或离开竞技场。");
             return;
         }
         PreGameSquad.Result result = squads.decline(player, inviter);
@@ -187,8 +186,8 @@ public class CmdTeam extends SubCommand {
             sendFailure(player, result);
             return;
         }
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "已拒绝 " + inviter.getName() + " 的邀请。");
-        inviter.sendMessage(PREFIX + ChatColor.YELLOW + player.getName() + " 拒绝了你的邀请。");
+        AdventureText.send(player, PREFIX + ChatColor.YELLOW + "已拒绝 " + inviter.getName() + " 的邀请。");
+        AdventureText.send(inviter, PREFIX + ChatColor.YELLOW + player.getName() + " 拒绝了你的邀请。");
     }
 
     private void leave(Player player) {
@@ -198,22 +197,22 @@ public class CmdTeam extends SubCommand {
             sendFailure(player, result);
             return;
         }
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "你已退出开局队伍，将作为单人队参与分配。");
+        AdventureText.send(player, PREFIX + ChatColor.YELLOW + "你已退出开局队伍，将作为单人队参与分配。");
         previousMembers.stream().filter(member -> !member.equals(player)).forEach(member ->
-                member.sendMessage(PREFIX + ChatColor.YELLOW + player.getName() + " 已退出开局队伍。"));
+                AdventureText.send(member, PREFIX + ChatColor.YELLOW + player.getName() + " 已退出开局队伍。"));
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(PREFIX + ChatColor.YELLOW + "开局选队与固定队友命令：");
+        AdventureText.send(player, PREFIX + ChatColor.YELLOW + "开局选队与固定队友命令：");
         String command = "/" + com.andrei1058.bedwars.BedWars.mainCmd + " team";
-        player.sendMessage(ChatColor.GRAY + command + ChatColor.WHITE + " 打开游戏队伍选择 GUI");
-        player.sendMessage(ChatColor.GRAY + command + " choose <队伍> " + ChatColor.WHITE + "直接选择队伍");
-        player.sendMessage(ChatColor.GRAY + command + " clear " + ChatColor.WHITE + "取消队伍选择");
-        player.sendMessage(ChatColor.GRAY + command + " squad " + ChatColor.WHITE + "打开固定队友 GUI");
-        player.sendMessage(ChatColor.GRAY + command + " invite <玩家> " + ChatColor.WHITE + "邀请队友");
-        player.sendMessage(ChatColor.GRAY + command + " accept <玩家> " + ChatColor.WHITE + "接受邀请");
-        player.sendMessage(ChatColor.GRAY + command + " decline <玩家> " + ChatColor.WHITE + "拒绝邀请");
-        player.sendMessage(ChatColor.GRAY + command + " leave " + ChatColor.WHITE + "退出队伍");
+        AdventureText.send(player, ChatColor.GRAY + command + ChatColor.WHITE + " 打开游戏队伍选择 GUI");
+        AdventureText.send(player, ChatColor.GRAY + command + " choose <队伍> " + ChatColor.WHITE + "直接选择队伍");
+        AdventureText.send(player, ChatColor.GRAY + command + " clear " + ChatColor.WHITE + "取消队伍选择");
+        AdventureText.send(player, ChatColor.GRAY + command + " squad " + ChatColor.WHITE + "打开固定队友 GUI");
+        AdventureText.send(player, ChatColor.GRAY + command + " invite <玩家> " + ChatColor.WHITE + "邀请队友");
+        AdventureText.send(player, ChatColor.GRAY + command + " accept <玩家> " + ChatColor.WHITE + "接受邀请");
+        AdventureText.send(player, ChatColor.GRAY + command + " decline <玩家> " + ChatColor.WHITE + "拒绝邀请");
+        AdventureText.send(player, ChatColor.GRAY + command + " leave " + ChatColor.WHITE + "退出队伍");
     }
 
     private void sendFailure(Player player, PreGameSquad.Result result) {
@@ -230,7 +229,7 @@ public class CmdTeam extends SubCommand {
             case NOT_IN_SQUAD -> "你当前是单人队，无需退出。";
             case SUCCESS -> "";
         };
-        player.sendMessage(PREFIX + ChatColor.RED + message);
+        AdventureText.send(player, PREFIX + ChatColor.RED + message);
     }
 
     private IArena preGameArena(Player player) {

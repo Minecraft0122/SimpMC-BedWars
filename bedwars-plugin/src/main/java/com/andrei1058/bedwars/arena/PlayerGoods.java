@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.arena;
 
 import com.andrei1058.bedwars.BedWars;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -47,7 +48,7 @@ class PlayerGoods {
     private HashMap<ItemStack, Integer> enderchest = new HashMap<>();
     private GameMode gamemode;
     private boolean allowFlight, flying;
-    private String displayName;
+    private Component displayName;
 
     PlayerGoods(Player p, boolean prepare){
         this(p, prepare, false);
@@ -97,7 +98,7 @@ class PlayerGoods {
         this.flying = p.isFlying();
         // TAB rows are rendered per viewer and never mutate the player's
         // global list name, so PlayerGoods must not snapshot or restore it.
-        this.displayName = p.getDisplayName();
+        this.displayName = p.displayName();
 
         /* prepare for arena */
         if (prepare) {
@@ -186,8 +187,8 @@ class PlayerGoods {
         player.setAllowFlight(allowFlight);
         player.setFlying(flying);
 
-        if (!displayName.equals(player.getDisplayName())) {
-            player.setDisplayName(displayName);
+        if (!displayName.equals(player.displayName())) {
+            player.displayName(displayName);
         }
         uuid = null;
         items = null;

@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.arena.spectator;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
@@ -90,7 +92,7 @@ public class TeleporterGUI {
             return;
         }
 
-        Inventory inv = Bukkit.createInventory(p, size, getMsg(p, Messages.ARENA_SPECTATOR_TELEPORTER_GUI_NAME));
+        Inventory inv = Bukkit.createInventory(p, size, AdventureText.section(getMsg(p, Messages.ARENA_SPECTATOR_TELEPORTER_GUI_NAME)));
         refreshInv(p, inv);
         refresh.put(p, inv);
         p.openInventory(inv);
@@ -142,19 +144,19 @@ public class TeleporterGUI {
         ITeam targetPlayerTeam = currentArena.getTeam(targetPlayer);
         if (targetPlayerTeam == null) return new ItemStack(Material.AIR);
 
-        im.setDisplayName(getMsg(GUIholder, Messages.ARENA_SPECTATOR_TELEPORTER_GUI_HEAD_NAME)
+        AdventureText.displayName(im, getMsg(GUIholder, Messages.ARENA_SPECTATOR_TELEPORTER_GUI_HEAD_NAME)
                 .replace("{vPrefix}", BedWars.getChatSupport().getPrefix(targetPlayer))
                 .replace("{vSuffix}", BedWars.getChatSupport().getSuffix(targetPlayer))
                 .replace("{team}", targetPlayerTeam.getDisplayName(Language.getPlayerLanguage(GUIholder)))
                 .replace("{teamColor}", String.valueOf(targetPlayerTeam.getColor().chat()))
-                .replace("{player}", targetPlayer.getDisplayName())
+                .replace("{player}", AdventureText.displayName(targetPlayer))
                 .replace("{playername}", targetPlayer.getName()));
         List<String> lore = new ArrayList<>();
         String health = String.valueOf((int)targetPlayer.getHealth() * 100 / targetPlayer.getHealthScale());
         for (String s : getList(GUIholder, Messages.ARENA_SPECTATOR_TELEPORTER_GUI_HEAD_LORE)) {
             lore.add(s.replace("{health}", health).replace("{food}", String.valueOf(targetPlayer.getFoodLevel())));
         }
-        im.setLore(lore);
+        AdventureText.lore(im, lore);
         i.setItemMeta(im);
         return nms.addCustomData(i, NBT_SPECTATOR_TELEPORTER_GUI_HEAD + targetPlayer.getName());
     }

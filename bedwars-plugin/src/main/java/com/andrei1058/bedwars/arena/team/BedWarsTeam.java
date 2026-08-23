@@ -20,6 +20,9 @@
 
 package com.andrei1058.bedwars.arena.team;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+import net.kyori.adventure.text.Component;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.generator.GeneratorType;
 import com.andrei1058.bedwars.api.arena.generator.IGenerator;
@@ -257,7 +260,7 @@ public class BedWarsTeam implements ITeam {
                     }
                     ItemMeta im = i.getItemMeta();
                     if (parm.length > 3) {
-                        im.setDisplayName(ChatColor.translateAlternateColorCodes('&', parm[3]));
+                        im.displayName(AdventureText.ampersand(parm[3]));
                     }
                     nms.setUnbreakable(im);
                     i.setItemMeta(im);
@@ -331,7 +334,7 @@ public class BedWarsTeam implements ITeam {
                     }
                     ItemMeta im = i.getItemMeta();
                     if (parm.length > 3) {
-                        im.setDisplayName(ChatColor.translateAlternateColorCodes('&', parm[3]));
+                        im.displayName(AdventureText.ampersand(parm[3]));
                     }
                     nms.setUnbreakable(im);
                     i.setItemMeta(im);
@@ -390,7 +393,7 @@ public class BedWarsTeam implements ITeam {
         nms.setCollide(p, arena, false);
         p.setHealth(20);
 
-        nms.sendTitle(p, getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE), "", 0, 20, 10);
+        nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE)), Component.empty(), 0, 20, 10);
 
         sendDefaultInventory(p, false);
         ShopCache sc = ShopCache.getShopCache(p.getUniqueId());

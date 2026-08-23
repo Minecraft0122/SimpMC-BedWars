@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.upgrades.menu;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.language.Language;
@@ -71,7 +73,7 @@ public class MenuCategory implements MenuContent {
         ItemStack i = new ItemStack(displayItem);
         ItemMeta im = i.getItemMeta();
         if (im != null) {
-            im.setDisplayName(Language.getMsg(player, Messages.UPGRADES_CATEGORY_ITEM_NAME_PATH + name.replace("category-", "")));
+            AdventureText.displayName(im, Language.getMsg(player, Messages.UPGRADES_CATEGORY_ITEM_NAME_PATH + name.replace("category-", "")));
             List<String> lore = Language.getList(player, Messages.UPGRADES_CATEGORY_ITEM_LORE_PATH + name.replace("category-", ""));
 
             if (name.equalsIgnoreCase("traps")) {
@@ -84,7 +86,7 @@ public class MenuCategory implements MenuContent {
                     lore.add(Language.getMsg(player, Messages.UPGRADES_TRAP_QUEUE_LIMIT));
                 }
             }
-            im.setLore(lore);
+            AdventureText.lore(im, lore);
             i.setItemMeta(im);
         }
         return i;
@@ -103,11 +105,11 @@ public class MenuCategory implements MenuContent {
                 queueLimit = UpgradesManager.getConfiguration().getInt("default-upgrades-settings.trap-queue-limit");
             }
             if (queueLimit <= team.getActiveTraps().size()){
-                player.sendMessage(Language.getMsg(player, Messages.UPGRADES_TRAP_QUEUE_LIMIT));
+                AdventureText.send(player, Language.getMsg(player, Messages.UPGRADES_TRAP_QUEUE_LIMIT));
                 return;
             }
         }
-        Inventory inv = Bukkit.createInventory(null, 45, Language.getMsg(player, Messages.UPGRADES_CATEGORY_GUI_NAME_PATH + name.replace("category-", "")));
+        Inventory inv = Bukkit.createInventory(null, 45, AdventureText.section(Language.getMsg(player, Messages.UPGRADES_CATEGORY_GUI_NAME_PATH + name.replace("category-", ""))));
         for (Map.Entry<Integer, MenuContent> entry : menuContentBySlot.entrySet()) {
             inv.setItem(entry.getKey(), entry.getValue().getDisplayItem(player, team));
         }

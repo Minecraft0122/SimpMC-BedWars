@@ -25,14 +25,14 @@ import com.andrei1058.bedwars.arena.Arena;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
+import io.papermc.paper.event.player.AsyncChatEvent;
 
 import static com.andrei1058.bedwars.BedWars.plugin;
 
 public class ChatAFK implements Listener {
 
     @EventHandler(ignoreCancelled = true)
-    public void onChat(AsyncPlayerChatEvent event) {
+    public void onChat(AsyncChatEvent event) {
         Arena.afkCheck.remove(event.getPlayer().getUniqueId());
         if (BedWars.getAPI().getAFKUtil().isPlayerAFK(event.getPlayer())) {
             // go sync

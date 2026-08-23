@@ -4,6 +4,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -35,11 +36,7 @@ public class PlayerTab {
     private final SidebarLine prefix;
     private final SidebarLine suffix;
     private final PushingRule pushingRule;
-    /**
-     * Optional scoreboard collision group. Rows keep their own identifiers
-     * for TAB rendering, while members of the same game team can share one
-     * scoreboard team for collision rules.
-     */
+    /** Optional shared scoreboard collision group for teammates. */
     private final String collisionGroup;
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
     private NameTagVisibility nameTagVisibility = NameTagVisibility.ALWAYS;
@@ -77,9 +74,9 @@ public class PlayerTab {
     }
 
     /**
-     * Creates a row with an optional shared collision group. The group is
-     * deliberately separate from the row identifier because a TAB entry may
-     * have unique display formatting while its in-game team must be shared.
+     * Creates a row with an optional shared collision group. The display row
+     * remains identified by {@code identifier}; the group only controls the
+     * scoreboard collision team used by the TAB renderer.
      */
     public PlayerTab(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
                      @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
@@ -109,10 +106,6 @@ public class PlayerTab {
         return player;
     }
 
-    /**
-     * Returns the shared collision group, or {@code null} for a row that must
-     * retain its private scoreboard team.
-     */
     @Nullable
     public String getCollisionGroup() {
         return collisionGroup;
@@ -148,6 +141,35 @@ public class PlayerTab {
     @NotNull
     public ChatColor getColor() {
         return color;
+    }
+
+    /**
+     * Return the Adventure color used by Paper scoreboard teams.
+     *
+     * <p>The ChatColor accessor remains for binary/source compatibility with
+     * older add-ons; new integrations should use this method.</p>
+     */
+    @NotNull
+    public NamedTextColor getTextColor() {
+        return switch (color) {
+            case BLACK -> NamedTextColor.BLACK;
+            case DARK_BLUE -> NamedTextColor.DARK_BLUE;
+            case DARK_GREEN -> NamedTextColor.DARK_GREEN;
+            case DARK_AQUA -> NamedTextColor.DARK_AQUA;
+            case DARK_RED -> NamedTextColor.DARK_RED;
+            case DARK_PURPLE -> NamedTextColor.DARK_PURPLE;
+            case GOLD -> NamedTextColor.GOLD;
+            case GRAY -> NamedTextColor.GRAY;
+            case DARK_GRAY -> NamedTextColor.DARK_GRAY;
+            case BLUE -> NamedTextColor.BLUE;
+            case GREEN -> NamedTextColor.GREEN;
+            case AQUA -> NamedTextColor.AQUA;
+            case RED -> NamedTextColor.RED;
+            case LIGHT_PURPLE -> NamedTextColor.LIGHT_PURPLE;
+            case YELLOW -> NamedTextColor.YELLOW;
+            case WHITE -> NamedTextColor.WHITE;
+            default -> NamedTextColor.WHITE;
+        };
     }
 
     @NotNull

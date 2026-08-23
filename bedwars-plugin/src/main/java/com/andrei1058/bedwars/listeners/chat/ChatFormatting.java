@@ -28,16 +28,17 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.commands.shout.ShoutFormattingContext;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
-import org.bukkit.ChatColor;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -52,21 +53,21 @@ public class ChatFormatting implements Listener {
     private static final Set<Character> SHOUT_PREFIXES = Set.of('@', '!', '！', '#', '%', '&');
 
     @EventHandler(ignoreCancelled = true)
-    public void onChat(AsyncPlayerChatEvent e) {
+    public void onChat(AsyncChatEvent e) {
         if (e == null) return;
         Player p = e.getPlayer();
-        String incomingMessage = e.getMessage();
-        boolean shoutPrefix = isShouting(incomingMessage);
 
         // in shared mode we don't want messages from outside the arena to be seen in game
         if (getServerType() == ServerType.SHARED && Arena.getArenaByPlayer(p) == null) {
-            e.getRecipients().removeIf(pl -> Arena.getArenaByPlayer(pl) != null);
+            e.viewers().removeIf(viewer -> viewer instanceof Player pl && Arena.getArenaByPlayer(pl) != null);
             return;
         }
 
         // handle chat color. we would need to work on permission inheritance
-        if (!shoutPrefix && Permissions.hasPermission(p, Permissions.PERMISSION_CHAT_COLOR, Permissions.PERMISSION_VIP, Permissions.PERMISSION_ALL)) {
-            e.setMessage(ChatColor.translateAlternateColorCodes('&', e.getMessage()));
+        boolean canUseLegacyColors = Permissions.hasPermission(p, Permissions.PERMISSION_CHAT_COLOR,
+                Permissions.PERMISSION_VIP, Permissions.PERMISSION_ALL);
+        if (canUseLegacyColors) {
+            e.message(deserializeLegacy(AdventureText.section(e.message())));
         }
 
         Language language = getPlayerLanguage(p);
@@ -82,65 +83,56 @@ public class ChatFormatting implements Listener {
 
             // spectator chat
             if (a.isSpectator(p)) {
-                // Keep the existing spectator channel, but never let it fall
-                // through to active players when global chat is enabled.
-                restrictRecipients(e, a.getSpectators());
-                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_SPECTATOR), p, null));
-                return;
-            }
-
-            // Prefix-based shout and /hh,/h all use the same public route,
-            // including the waiting/starting phase.
-            if (shoutPrefix) {
-                if (!hasShoutPermission(p)) {
-                    e.setCancelled(true);
-                    p.sendMessage(language.m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
-                    return;
-                }
-                ITeam team = a.getTeam(p);
-                setRecipients(e, a.getPlayers());
-                excludeArenaSpectators(e);
-                String msg = clearShout(incomingMessage);
-                if (msg.isEmpty()) {
-                    e.setCancelled(true);
-                    return;
-                }
-                if (Permissions.hasPermission(p, Permissions.PERMISSION_CHAT_COLOR, Permissions.PERMISSION_VIP, Permissions.PERMISSION_ALL)) {
-                    msg = ChatColor.translateAlternateColorCodes('&', msg);
-                }
-                e.setMessage(msg);
-                e.setFormat(ShoutFormattingContext.format(p,
-                        () -> parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team)));
+                setRecipients(e, a.getSpectators());
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_SPECTATOR), p, null));
                 return;
             }
 
             // arena lobby chat
             if (a.getStatus() == GameState.waiting || a.getStatus() == GameState.starting) {
                 setRecipients(e, a.getPlayers());
-                excludeArenaSpectators(e);
-                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_WAITING), p, null));
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_WAITING), p, null));
                 return;
             }
 
             ITeam team = a.getTeam(p);
-            String msg = incomingMessage;
+            // Keep a legacy representation while checking the shout prefix so any
+            // formatting in the message body survives the prefix removal.
+            String msg = AdventureText.section(e.message());
+
+            // shout format
+            if (isShouting(msg, language)) {
+                if (!hasShoutPermission(p)) {
+                    e.setCancelled(true);
+                    AdventureText.send(p, language.m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
+                    return;
+                }
+                setRecipients(e, a.getPlayers(), a.getSpectators());
+                msg = clearShout(msg, language);
+                if (msg.isEmpty()) {
+                    e.setCancelled(true);
+                    return;
+                }
+                e.message(canUseLegacyColors ? deserializeLegacy(msg) : AdventureText.section(msg));
+                setRenderer(e, ShoutFormattingContext.format(p,
+                        () -> parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team)));
+                return;
+            }
 
             // A team that started alone has nobody to receive private chat.
             // Use public arena chat without requiring /shout.
             if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
-                setRecipients(e, a.getPlayers());
-                excludeArenaSpectators(e);
-                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team));
+                setRecipients(e, a.getPlayers(), a.getSpectators());
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_SHOUT), p, team));
             } else {
                 setRecipients(e, team.getMembers());
-                excludeArenaSpectators(e);
-                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             }
             return;
         }
 
         // multi arena lobby chat
-        e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, null));
+        setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, null));
     }
 
     private static String parsePHolders(String content, Player player, @Nullable ITeam team) {
@@ -149,7 +141,7 @@ public class ChatFormatting implements Listener {
                 .replace("{vSuffix}", getChatSupport().getSuffix(player))
                 .replace("{playername}", player.getName())
                 .replace("{level}", getLevelSupport().getLevel(player))
-                .replace("{player}", player.getDisplayName());
+                .replace("{player}", AdventureText.displayName(player));
         if (team != null) {
             String teamFormat = getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_TEAM)
                     .replace("{TeamColor}", team.getColor().chat() + "")
@@ -167,7 +159,7 @@ public class ChatFormatting implements Listener {
         boolean trimming = true;
         while (trimming) {
             before = before.stripTrailing();
-            if (before.length() >= 2 && before.charAt(before.length() - 2) == ChatColor.COLOR_CHAR) {
+            if (before.length() >= 2 && before.charAt(before.length() - 2) == '\u00a7') {
                 before = before.substring(0, before.length() - 2);
             } else if (before.endsWith(">>")) {
                 before = before.substring(0, before.length() - 2);
@@ -177,10 +169,16 @@ public class ChatFormatting implements Listener {
                 trimming = false;
             }
         }
-        return before.stripTrailing() + ' ' + ChatColor.WHITE + "> " + ChatColor.GRAY + "{message}"
+        return before.stripTrailing() + " \u00a7f> \u00a77{message}"
                 + content.substring(messageIndex + "{message}".length());
     }
 
+    private static boolean isShouting(String msg, Language lang) {
+        return msg.startsWith("!") || msg.startsWith("shout") ||
+                msg.startsWith("SHOUT") || msg.startsWith(lang.m(Messages.MEANING_SHOUT));
+    }
+
+    /** Compatibility helper used by command/tests for the fixed public prefixes. */
     static boolean isShouting(String msg) {
         return msg != null && !msg.isEmpty() && SHOUT_PREFIXES.contains(msg.charAt(0));
     }
@@ -193,29 +191,67 @@ public class ChatFormatting implements Listener {
         return teamSizeAtGameStart <= 1;
     }
 
+    private static String clearShout(String msg, Language lang) {
+        if (msg.startsWith("!")) msg = msg.replaceFirst("!", "");
+        if (msg.startsWith("SHOUT")) msg = msg.replaceFirst("SHOUT", "");
+        if (msg.startsWith("shout")) msg = msg.replaceFirst("shout", "");
+        if (msg.startsWith(lang.m(Messages.MEANING_SHOUT))) {
+            msg = msg.replaceFirst(lang.m(Messages.MEANING_SHOUT), "");
+        }
+        return msg.trim();
+    }
+
+    /** Remove a fixed public shout prefix while preserving the existing trim semantics. */
     static String clearShout(String msg) {
         return isShouting(msg) ? msg.substring(1).trim() : msg.trim();
     }
 
     @SafeVarargs
-    public static void setRecipients(AsyncPlayerChatEvent event, List<Player>... target) {
+    public static void setRecipients(AsyncChatEvent event, List<Player>... target) {
         if (!config.getBoolean(ConfigPath.GENERAL_CHAT_GLOBAL)) {
-            event.getRecipients().clear();
+            event.viewers().clear();
             for (List<Player> list : target) {
-                event.getRecipients().addAll(list);
+                event.viewers().addAll(list);
             }
         }
     }
 
-    private static void excludeArenaSpectators(AsyncPlayerChatEvent event) {
-        event.getRecipients().removeIf(recipient -> {
-            IArena arena = Arena.getArenaByPlayer(recipient);
-            return arena != null && arena.isSpectator(recipient);
-        });
+    private static void setRenderer(AsyncChatEvent event, String format) {
+        // The renderer runs once per viewer, preserving the existing recipient split.
+        event.renderer((source, sourceDisplayName, message, viewer) -> render(format, sourceDisplayName, message));
     }
 
-    private static void restrictRecipients(AsyncPlayerChatEvent event, List<Player> allowed) {
-        event.getRecipients().clear();
-        event.getRecipients().addAll(allowed);
+    private static Component render(String format, Component sourceDisplayName, Component message) {
+        if (format == null || format.isEmpty()) {
+            return message;
+        }
+        Component result = Component.empty();
+        int cursor = 0;
+        while (cursor < format.length()) {
+            int messageMarker = format.indexOf("%2$s", cursor);
+            int nameMarker = format.indexOf("%1$s", cursor);
+            int marker;
+            Component replacement;
+            int markerLength;
+            if (messageMarker < 0 && nameMarker < 0) {
+                break;
+            } else if (nameMarker >= 0 && (messageMarker < 0 || nameMarker < messageMarker)) {
+                marker = nameMarker;
+                markerLength = 4;
+                replacement = sourceDisplayName;
+            } else {
+                marker = messageMarker;
+                markerLength = 4;
+                replacement = message;
+            }
+            result = result.append(deserializeLegacy(format.substring(cursor, marker))).append(replacement);
+            cursor = marker + markerLength;
+        }
+        return result.append(deserializeLegacy(format.substring(cursor)));
+    }
+
+    /** Parse both section and ampersand legacy codes at the chat boundary. */
+    private static Component deserializeLegacy(String text) {
+        return AdventureText.ampersand((text == null ? "" : text).replace('\u00a7', '&'));
     }
 }

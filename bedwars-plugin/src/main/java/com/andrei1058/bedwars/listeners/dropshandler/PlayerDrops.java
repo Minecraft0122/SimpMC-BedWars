@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.listeners.dropshandler;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
@@ -149,7 +150,7 @@ public class PlayerDrops {
                                     getMsg(killer, Messages.MEANING_GOLD_SINGULAR) : getMsg(killer, Messages.MEANING_GOLD_PLURAL));
                             break;
                     }
-                    killer.sendMessage(msg.replace("{amount}", String.valueOf(amount)));
+                    AdventureText.send(killer, msg.replace("{amount}", String.valueOf(amount)));
                 }
                 materialDrops.clear();
             }

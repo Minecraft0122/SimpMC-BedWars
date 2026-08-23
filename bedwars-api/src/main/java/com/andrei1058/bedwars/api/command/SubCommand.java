@@ -21,7 +21,7 @@
 package com.andrei1058.bedwars.api.command;
 
 import com.andrei1058.bedwars.api.BedWars;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -49,7 +49,7 @@ public abstract class SubCommand {
     // Command order in main command list
     private int priority = 20;
     // Display name/ info in subCommands list
-    private TextComponent displayInfo;
+    private Component displayInfo;
     // True if this is an arena setup SubCommand
     private boolean arenaSetupCommand = false;
     // Legacy/official permissions accepted in addition to the stable per-command permission.
@@ -95,7 +95,7 @@ public abstract class SubCommand {
     /**
      * This is the command information in the subCommands list of the target parent
      */
-    public void setDisplayInfo(TextComponent displayInfo) {
+    public void setDisplayInfo(Component displayInfo) {
         this.displayInfo = displayInfo;
     }
 
@@ -125,7 +125,7 @@ public abstract class SubCommand {
     /**
      * Get command description for subCommands list
      */
-    public TextComponent getDisplayInfo() {
+    public Component getDisplayInfo() {
         return displayInfo;
     }
 

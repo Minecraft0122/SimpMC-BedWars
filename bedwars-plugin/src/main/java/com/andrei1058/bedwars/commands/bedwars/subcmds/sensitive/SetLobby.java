@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -29,7 +30,7 @@ import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.listeners.BedWarsWorldEnvironment;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -55,11 +56,11 @@ public class SetLobby extends SubCommand {
         if (s instanceof ConsoleCommandSender) return false;
         Player p = (Player) s;
         if (SetupSession.isInSetupSession(p.getUniqueId())){
-            p.sendMessage("§6 ▪ §4此命令只能在主大厅使用，不能在竞技场设置中使用！");
+            AdventureText.send(p, "§6 ▪ §4此命令只能在主大厅使用，不能在竞技场设置中使用！");
             return true;
         }
         config.saveConfigLoc("lobbyLoc", p.getLocation());
-        p.sendMessage("§6 ▪ §7大厅位置已设置！");
+        AdventureText.send(p, "§6 ▪ §7大厅位置已设置！");
         config.reload();
         BedWars.setLobbyWorld(p.getLocation().getWorld().getName());
         BedWarsWorldEnvironment.enforceBrightNoon(p.getWorld());

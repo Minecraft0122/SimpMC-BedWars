@@ -1,5 +1,7 @@
 package com.andrei1058.bedwars.arena.team;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
@@ -43,16 +45,16 @@ public final class PreGameSquadGUI implements Listener {
     public void open(@NotNull Player player) {
         IArena arena = preGameArena(player);
         if (arena == null) {
-            player.sendMessage(ChatColor.GOLD + "[组队] " + ChatColor.RED + "只能在开局前打开组队界面。");
+            AdventureText.send(player, ChatColor.GOLD + "[组队] " + ChatColor.RED + "只能在开局前打开组队界面。");
             return;
         }
         if (arena.getMaxInTeam() <= 1) {
-            player.sendMessage(ChatColor.GOLD + "[组队] " + ChatColor.YELLOW + "当前地图为单人队模式，无需选择队友。");
+            AdventureText.send(player, ChatColor.GOLD + "[组队] " + ChatColor.YELLOW + "当前地图为单人队模式，无需选择队友。");
             return;
         }
 
         SquadHolder holder = new SquadHolder(player.getUniqueId());
-        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TITLE);
+        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, AdventureText.section(TITLE));
         holder.inventory = inventory;
         renderHeader(inventory, player, arena);
         renderActions(inventory, holder, player);
@@ -95,9 +97,9 @@ public final class PreGameSquadGUI implements Listener {
 
         ItemStack info = new ItemStack(Material.BOOK);
         ItemMeta meta = info.getItemMeta();
-        meta.setDisplayName(ChatColor.AQUA + "开局组队 " + ChatColor.GRAY + "(" + members.size() + "/"
+        AdventureText.displayName(meta, ChatColor.AQUA + "开局组队 " + ChatColor.GRAY + "(" + members.size() + "/"
                 + arena.getMaxInTeam() + ")");
-        meta.setLore(List.of(
+        AdventureText.lore(meta, List.of(
                 ChatColor.GRAY + "点击下方玩家头像发送邀请。",
                 ChatColor.GRAY + "收到的邀请会显示为绿色头像。",
                 "",
@@ -151,8 +153,8 @@ public final class PreGameSquadGUI implements Listener {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         meta.setOwningPlayer(owner);
-        meta.setDisplayName(name);
-        meta.setLore(lore);
+        AdventureText.displayName(meta, name);
+        AdventureText.lore(meta, lore);
         item.setItemMeta(meta);
         return item;
     }
@@ -160,8 +162,8 @@ public final class PreGameSquadGUI implements Listener {
     private static ItemStack namedItem(Material material, String name, List<String> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
-        meta.setLore(lore);
+        AdventureText.displayName(meta, name);
+        AdventureText.lore(meta, lore);
         item.setItemMeta(meta);
         return item;
     }

@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
@@ -48,7 +49,7 @@ public class SetMaxInTeam extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null){
-            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
+            AdventureText.send(s, "§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
         int maximum;
@@ -58,13 +59,13 @@ public class SetMaxInTeam extends SubCommand {
             maximum = 0;
         }
         if (maximum < 1) {
-            p.sendMessage("§c▪ §7每队人数必须是大于 0 的整数。");
-            p.sendMessage("§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
+            AdventureText.send(p, "§c▪ §7每队人数必须是大于 0 的整数。");
+            AdventureText.send(p, "§c▪ §7用法：/" + mainCmd + " setMaxInTeam <整数>");
             return true;
         }
         ss.getConfig().getYml().set("maxInTeam", maximum);
         ss.getConfig().save();
-        p.sendMessage("§6 ▪ §7已将每支队伍容量设置为 §e" + maximum
+        AdventureText.send(p, "§6 ▪ §7已将每支队伍容量设置为 §e" + maximum
                 + "§7；全场最低开局人数 minPlayers 保持不变。");
         return true;
     }

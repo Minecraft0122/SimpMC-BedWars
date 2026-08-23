@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.BedWars;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
 import com.andrei1058.bedwars.api.command.ParentCommand;
@@ -49,37 +50,37 @@ public class CreateTeam extends SubCommand {
         Player p = (Player) s;
         SetupSession ss = SetupSession.getSession(p.getUniqueId());
         if (ss == null) {
-            s.sendMessage("§c ▪ §7你当前不在竞技场设置会话中！");
+            AdventureText.send(s, "§c ▪ §7你当前不在竞技场设置会话中！");
             return true;
         }
         if (args.length < 2) {
-            p.sendMessage("§c▪ §7用法：/" + mainCmd + " createTeam §o<名称> §o<颜色>");
+            AdventureText.send(p, "§c▪ §7用法：/" + mainCmd + " createTeam §o<名称> §o<颜色>");
             StringBuilder colors = new StringBuilder("§7");
             for (TeamColor t : TeamColor.selectableValues()) {
                 colors.append(t.chat()).append(t).append(ChatColor.GRAY).append(", ");
             }
             colors = new StringBuilder(colors.substring(0, colors.toString().length() - 2) + ChatColor.GRAY + ".");
-            p.sendMessage("§6 ▪ §7可用颜色：" + colors);
+            AdventureText.send(p, "§6 ▪ §7可用颜色：" + colors);
         } else {
             TeamColor selectedColor;
             try {
                 selectedColor = TeamColor.fromName(args[1]);
             } catch (IllegalArgumentException exception) {
-                p.sendMessage("§c▪ §7无效的颜色！");
+                AdventureText.send(p, "§c▪ §7无效的颜色！");
                 StringBuilder colors = new StringBuilder("§7");
                 for (TeamColor t : TeamColor.selectableValues()) {
                     colors.append(t.chat()).append(t).append(ChatColor.GRAY).append(", ");
                 }
                 colors = new StringBuilder(colors.substring(0, colors.toString().length() - 2) + ChatColor.GRAY + ".");
-                p.sendMessage("§6 ▪ §7可用颜色：" + colors);
+                AdventureText.send(p, "§6 ▪ §7可用颜色：" + colors);
                 return true;
             }
             if (ss.getConfig().getYml().get("Team." + args[0] + ".Color") != null) {
-                p.sendMessage("§c▪ §7队伍 " + args[0] + " 已存在！");
+                AdventureText.send(p, "§c▪ §7队伍 " + args[0] + " 已存在！");
                 return true;
             }
             ss.getConfig().set("Team." + args[0] + ".Color", selectedColor.name());
-            p.sendMessage("§6 ▪ §7已创建队伍 " + selectedColor.chat() + args[0] + "§7！");
+            AdventureText.send(p, "§6 ▪ §7已创建队伍 " + selectedColor.chat() + args[0] + "§7！");
         }
         return true;
     }

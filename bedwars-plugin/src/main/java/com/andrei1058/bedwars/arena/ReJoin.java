@@ -20,6 +20,7 @@
 
 package com.andrei1058.bedwars.arena;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
@@ -145,7 +146,7 @@ public class ReJoin {
     public boolean reJoin(Player player) {
 
         Sounds.playSound("rejoin-allowed", player);
-        player.sendMessage(Language.getMsg(player, Messages.REJOIN_ALLOWED).replace("{arena}", getArena().getDisplayName()));
+        AdventureText.send(player, Language.getMsg(player, Messages.REJOIN_ALLOWED).replace("{arena}", getArena().getDisplayName()));
 
         return resumeThroughArenaLifecycle(arena, player);
     }
@@ -178,11 +179,11 @@ public class ReJoin {
             bwt.setBedDestroyed(true);
             Bukkit.getPluginManager().callEvent(new TeamEliminatedEvent(arena, bwt));
             for (Player p2 : arena.getPlayers()) {
-                p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
+                AdventureText.send(p2, getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
                         .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
             }
             for (Player p2 : arena.getSpectators()) {
-                p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
+                AdventureText.send(p2, getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
                         .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
             }
             arena.checkWinner();

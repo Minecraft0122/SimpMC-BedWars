@@ -60,6 +60,58 @@ jobs:
           java -cp "$classpath" \
             com.andrei1058.bedwars.support.version.v1_21_R3.FireballAccelerationRuntimeProbe
 
+      - name: 配置 JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 覆盖编译 Paper 26.2 API 与运行探针
+        # 必须 clean；只切换依赖属性时 Maven 增量编译不会重新编译源码。
+        run: mvn -B -ntp clean test-compile -Dpaper.api.version=26.2.build.112-stable -DskipTests -s ci_settings.xml
+
+      - name: 验证 Paper 26.2 运行契约
+        shell: bash
+        env:
+          PAPER_URL: https://fill-data.papermc.io/v1/objects/bd3a58cf96874e5ea6643f5f6fe9b4f5bf9e34b795fa078c2f0ee8b98b2f907e/paper-26.2-112.jar
+          PAPER_SHA256: bd3a58cf96874e5ea6643f5f6fe9b4f5bf9e34b795fa078c2f0ee8b98b2f907e
+        run: |
+          set -euo pipefail
+
+          runtime="$RUNNER_TEMP/paper-26.2-contract"
+          mkdir -p "$runtime"
+          curl --fail --location --retry 3 \
+            --user-agent 'SimpMC-BedWars-CI/1.0 (https://github.com/Minecraft0122/SimpMC-BedWars)' \
+            --output "$runtime/paperclip.jar" "$PAPER_URL"
+          echo "$PAPER_SHA256  $runtime/paperclip.jar" | sha256sum --check
+          (cd "$runtime" && java -jar paperclip.jar --help >/dev/null)
+
+          patched_server="$runtime/versions/26.2/paper-26.2.jar"
+          test -f "$patched_server"
+          classpath="bedwars-api/target/test-classes:bedwars-api/target/classes:versionsupport_common/target/classes:versionsupport_v1_21_R3/target/test-classes:versionsupport_v1_21_R3/target/classes:$patched_server"
+          while IFS= read -r library; do
+            classpath="$classpath:$library"
+          done < <(find "$runtime/libraries" -type f -name '*.jar' | sort)
+
+          java -cp "$classpath" \
+            com.andrei1058.spigot.sidebar.PlayerListDisplayNamePacketsRuntimeProbe
+          java -cp "$classpath" \
+            com.andrei1058.bedwars.api.PaperGameRulesRuntimeProbe
+          java -cp "$classpath" \
+            com.andrei1058.bedwars.support.version.v1_21_R3.FireballAccelerationRuntimeProbe
+
+      - name: 恢复 JDK 21 发布环境
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 干净重建发布 JAR
+        # Paper 26.2 覆盖编译会清理 target；发布包必须重新以默认 Paper 1.21.11 API 构建。
+        run: mvn -B -ntp clean package -DskipTests -s ci_settings.xml
+
       - name: 上传插件 JAR
         uses: actions/upload-artifact@v7
         with:

@@ -35,7 +35,7 @@ public class GeneratorsConfig extends ConfigManager {
 
         YamlConfiguration yml = getYml();
         yml.options().header(plugin.getDescription().getName() + "，由 SimpMC 维护。" +
-                "\ngenerators.yml 资源生成器配置，适用于 Paper 1.21.11 服务器。\n");
+                "\ngenerators.yml 资源生成器配置，适用于 Paper 1.21.11 与 26.2 服务器。\n");
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_DELAY, DEFAULT_IRON_DELAY);
         yml.addDefault("Default." + ConfigPath.GENERATOR_IRON_AMOUNT, 2);
         yml.addDefault("Default." + ConfigPath.GENERATOR_GOLD_DELAY, DEFAULT_GOLD_DELAY);

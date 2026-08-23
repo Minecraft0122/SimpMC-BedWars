@@ -20,6 +20,8 @@
 
 package com.andrei1058.bedwars.shop.quickbuy;
 
+import com.andrei1058.bedwars.api.util.AdventureText;
+
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Language;
@@ -122,8 +124,8 @@ public class PlayerQuickBuyCache {
         ItemStack i = emptyItem.clone();
         ItemMeta im = i.getItemMeta();
         if (im != null) {
-            im.setDisplayName(Language.getMsg(player, emptyItemNamePath));
-            im.setLore(Language.getList(player, emptyItemLorePath));
+            AdventureText.displayName(im, Language.getMsg(player, emptyItemNamePath));
+            AdventureText.lore(im, Language.getList(player, emptyItemLorePath));
             i.setItemMeta(im);
         }
         return i;

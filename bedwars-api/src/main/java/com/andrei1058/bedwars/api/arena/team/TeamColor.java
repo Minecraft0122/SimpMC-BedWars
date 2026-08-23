@@ -26,6 +26,8 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 
 import java.util.Locale;
 
@@ -35,38 +37,38 @@ import java.util.Locale;
  * <p>Block, item, dye and armor mappings are kept together so a team cannot
  * accidentally receive two different Minecraft colors. Minecraft has no
  * {@code ChatColor.CYAN}; cyan therefore uses the visually matching
- * {@link ChatColor#AQUA} for text only.</p>
+ * {@link NamedTextColor#AQUA} for text only.</p>
  */
 public enum TeamColor {
 
-    RED(ChatColor.RED, DyeColor.RED, 14, Color.RED,
+    RED(NamedTextColor.RED, DyeColor.RED, 14, Color.RED,
             Material.RED_BED, Material.RED_STAINED_GLASS, Material.RED_STAINED_GLASS_PANE,
             Material.RED_TERRACOTTA, Material.RED_WOOL),
-    BLUE(ChatColor.BLUE, DyeColor.BLUE, 11, Color.BLUE,
+    BLUE(NamedTextColor.BLUE, DyeColor.BLUE, 11, Color.BLUE,
             Material.BLUE_BED, Material.BLUE_STAINED_GLASS, Material.BLUE_STAINED_GLASS_PANE,
             Material.BLUE_TERRACOTTA, Material.BLUE_WOOL),
-    GREEN(ChatColor.GREEN, DyeColor.LIME, 5, Color.LIME,
+    GREEN(NamedTextColor.GREEN, DyeColor.LIME, 5, Color.LIME,
             Material.LIME_BED, Material.LIME_STAINED_GLASS, Material.LIME_STAINED_GLASS_PANE,
             Material.LIME_TERRACOTTA, Material.LIME_WOOL),
-    YELLOW(ChatColor.YELLOW, DyeColor.YELLOW, 4, Color.YELLOW,
+    YELLOW(NamedTextColor.YELLOW, DyeColor.YELLOW, 4, Color.YELLOW,
             Material.YELLOW_BED, Material.YELLOW_STAINED_GLASS, Material.YELLOW_STAINED_GLASS_PANE,
             Material.YELLOW_TERRACOTTA, Material.YELLOW_WOOL),
-    CYAN(ChatColor.AQUA, DyeColor.CYAN, 9, Color.TEAL,
+    CYAN(NamedTextColor.AQUA, DyeColor.CYAN, 9, Color.TEAL,
             Material.CYAN_BED, Material.CYAN_STAINED_GLASS, Material.CYAN_STAINED_GLASS_PANE,
             Material.CYAN_TERRACOTTA, Material.CYAN_WOOL),
-    WHITE(ChatColor.WHITE, DyeColor.WHITE, 0, Color.WHITE,
+    WHITE(NamedTextColor.WHITE, DyeColor.WHITE, 0, Color.WHITE,
             Material.WHITE_BED, Material.WHITE_STAINED_GLASS, Material.WHITE_STAINED_GLASS_PANE,
             Material.WHITE_TERRACOTTA, Material.WHITE_WOOL),
-    PINK(ChatColor.LIGHT_PURPLE, DyeColor.PINK, 6, Color.FUCHSIA,
+    PINK(NamedTextColor.LIGHT_PURPLE, DyeColor.PINK, 6, Color.FUCHSIA,
             Material.PINK_BED, Material.PINK_STAINED_GLASS, Material.PINK_STAINED_GLASS_PANE,
             Material.PINK_TERRACOTTA, Material.PINK_WOOL),
-    GRAY(ChatColor.GRAY, DyeColor.LIGHT_GRAY, 8, Color.GRAY,
+    GRAY(NamedTextColor.GRAY, DyeColor.LIGHT_GRAY, 8, Color.GRAY,
             Material.LIGHT_GRAY_BED, Material.LIGHT_GRAY_STAINED_GLASS, Material.LIGHT_GRAY_STAINED_GLASS_PANE,
             Material.LIGHT_GRAY_TERRACOTTA, Material.LIGHT_GRAY_WOOL),
-    DARK_GREEN(ChatColor.DARK_GREEN, DyeColor.GREEN, 13, Color.GREEN,
+    DARK_GREEN(NamedTextColor.DARK_GREEN, DyeColor.GREEN, 13, Color.GREEN,
             Material.GREEN_BED, Material.GREEN_STAINED_GLASS, Material.GREEN_STAINED_GLASS_PANE,
             Material.GREEN_TERRACOTTA, Material.GREEN_WOOL),
-    DARK_GRAY(ChatColor.DARK_GRAY, DyeColor.GRAY, 7, Color.fromRGB(74, 74, 74),
+    DARK_GRAY(NamedTextColor.DARK_GRAY, DyeColor.GRAY, 7, Color.fromRGB(74, 74, 74),
             Material.GRAY_BED, Material.GRAY_STAINED_GLASS, Material.GRAY_STAINED_GLASS_PANE,
             Material.GRAY_TERRACOTTA, Material.GRAY_WOOL),
 
@@ -75,7 +77,7 @@ public enum TeamColor {
      * New code and newly saved configurations must use {@link #CYAN}.
      */
     @Deprecated
-    AQUA(ChatColor.AQUA, DyeColor.CYAN, 9, Color.TEAL,
+    AQUA(NamedTextColor.AQUA, DyeColor.CYAN, 9, Color.TEAL,
             Material.CYAN_BED, Material.CYAN_STAINED_GLASS, Material.CYAN_STAINED_GLASS_PANE,
             Material.CYAN_TERRACOTTA, Material.CYAN_WOOL);
 
@@ -83,7 +85,7 @@ public enum TeamColor {
             RED, BLUE, GREEN, YELLOW, CYAN, WHITE, PINK, GRAY, DARK_GREEN, DARK_GRAY
     };
 
-    private final ChatColor chatColor;
+    private final NamedTextColor textColor;
     private final DyeColor dyeColor;
     private final byte legacyItemColor;
     private final Color bukkitColor;
@@ -93,10 +95,10 @@ public enum TeamColor {
     private final Material terracottaMaterial;
     private final Material woolMaterial;
 
-    TeamColor(ChatColor chatColor, DyeColor dyeColor, int legacyItemColor, Color bukkitColor,
+    TeamColor(NamedTextColor textColor, DyeColor dyeColor, int legacyItemColor, Color bukkitColor,
               Material bedMaterial, Material glassMaterial, Material glassPaneMaterial,
               Material terracottaMaterial, Material woolMaterial) {
-        this.chatColor = chatColor;
+        this.textColor = textColor;
         this.dyeColor = dyeColor;
         this.legacyItemColor = (byte) legacyItemColor;
         this.bukkitColor = bukkitColor;
@@ -138,7 +140,28 @@ public enum TeamColor {
      * @return chat color for this team color
      */
     public ChatColor chat() {
-        return chatColor;
+        if (textColor == NamedTextColor.BLACK) return ChatColor.BLACK;
+        if (textColor == NamedTextColor.DARK_BLUE) return ChatColor.DARK_BLUE;
+        if (textColor == NamedTextColor.DARK_GREEN) return ChatColor.DARK_GREEN;
+        if (textColor == NamedTextColor.DARK_AQUA) return ChatColor.DARK_AQUA;
+        if (textColor == NamedTextColor.DARK_RED) return ChatColor.DARK_RED;
+        if (textColor == NamedTextColor.DARK_PURPLE) return ChatColor.DARK_PURPLE;
+        if (textColor == NamedTextColor.GOLD) return ChatColor.GOLD;
+        if (textColor == NamedTextColor.GRAY) return ChatColor.GRAY;
+        if (textColor == NamedTextColor.DARK_GRAY) return ChatColor.DARK_GRAY;
+        if (textColor == NamedTextColor.BLUE) return ChatColor.BLUE;
+        if (textColor == NamedTextColor.GREEN) return ChatColor.GREEN;
+        if (textColor == NamedTextColor.AQUA) return ChatColor.AQUA;
+        if (textColor == NamedTextColor.RED) return ChatColor.RED;
+        if (textColor == NamedTextColor.LIGHT_PURPLE) return ChatColor.LIGHT_PURPLE;
+        if (textColor == NamedTextColor.YELLOW) return ChatColor.YELLOW;
+        return ChatColor.WHITE;
+    }
+
+    /** @return the modern Adventure color for this team. */
+    @NotNull
+    public TextColor textColor() {
+        return textColor;
     }
 
     /**
