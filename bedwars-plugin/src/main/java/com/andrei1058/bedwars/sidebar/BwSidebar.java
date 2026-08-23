@@ -87,6 +87,11 @@ public class BwSidebar implements ISidebar {
                 this.arena, renderedArenaState, arena, nextArenaState);
         this.topStatistics = resolveTopStatistics(this.arena, arena, nextArenaState, this.topStatistics,
                 () -> createRestartingTopStatistics(arena));
+        if (this.arena != arena) {
+            // A failed transition must not leave a game-context header/footer
+            // refreshing after the sidebar has already moved to the lobby.
+            this.headerFooter = null;
+        }
         this.arena = arena;
         SidebarLine title = this.normalizeTitle(titleArray);
         List<SidebarLine> lines = this.normalizeLines(lineArray);
@@ -303,7 +308,8 @@ public class BwSidebar implements ISidebar {
             providers.add(new PlaceholderProvider("{requiredXp}", level::getFormattedRequiredXp));
         }
 
-        if (hasNoArena()) {
+        IArena arenaContext = this.arena;
+        if (arenaContext == null) {
             providers.add(new PlaceholderProvider("{on}", () ->
                     String.valueOf(Bukkit.getOnlinePlayers().size()))
             );
@@ -335,13 +341,13 @@ public class BwSidebar implements ISidebar {
                 );
             }
         } else {
-            providers.add(new PlaceholderProvider("{on}", () -> String.valueOf(arena.getPlayers().size())));
-            providers.add(new PlaceholderProvider("{max}", () -> String.valueOf(arena.getMaxPlayers())));
-            providers.add(new PlaceholderProvider("{nextEvent}", this::getNextEventName));
+            providers.add(new PlaceholderProvider("{on}", () -> arenaPlayerCount(arenaContext)));
+            providers.add(new PlaceholderProvider("{max}", () -> String.valueOf(arenaContext.getMaxPlayers())));
+            providers.add(new PlaceholderProvider("{nextEvent}", () -> getNextEventName(arenaContext)));
             providers.add(new PlaceholderProvider("{gameTime}",
-                    () -> ElapsedTimeFormatter.format(arena.getStartTime())));
+                    () -> ElapsedTimeFormatter.format(arenaContext.getStartTime())));
 
-            if (arena.isSpectator(player)) {
+            if (arenaContext.isSpectator(player)) {
                 Language lang = getPlayerLanguage(player);
                 String targetFormat = lang.m(Messages.FORMAT_SPECTATOR_TARGET);
 
@@ -350,7 +356,7 @@ public class BwSidebar implements ISidebar {
                         return "";
                     }
                     Player target = (Player) player.getSpectatorTarget();
-                    ITeam targetTeam = arena.getTeam(target);
+                    ITeam targetTeam = arenaContext.getTeam(target);
 
                     if (null == targetTeam) {
                         return "";
@@ -363,27 +369,27 @@ public class BwSidebar implements ISidebar {
             }
 
             providers.add(new PlaceholderProvider("{time}", () -> {
-                GameState status = this.arena.getStatus();
+                GameState status = arenaContext.getStatus();
                 if (status == GameState.restarting) {
-                    return arena.getRestartingTask() == null
+                    return arenaContext.getRestartingTask() == null
                             ? "0"
-                            : String.valueOf(Math.max(0, arena.getRestartingTask().getRestarting()));
+                            : String.valueOf(Math.max(0, arenaContext.getRestartingTask().getRestarting()));
                 }
                 if (status == GameState.playing) {
-                    return getNextEventTime();
+                    return getNextEventTime(arenaContext);
                 } else {
                     if (status == GameState.starting) {
-                        if (arena.getStartingTask() != null) {
-                            return String.valueOf(arena.getStartingTask().getCountdown() + 1);
+                        if (arenaContext.getStartingTask() != null) {
+                            return String.valueOf(arenaContext.getStartingTask().getCountdown() + 1);
                         }
                     }
                     return dateFormat.format(new Date(System.currentTimeMillis()));
                 }
             }));
 
-            if (null != arena.getStatsHolder()) {
+            if (null != arenaContext.getStatsHolder()) {
 
-                arena.getStatsHolder().get(player).ifPresent(holder -> {
+                arenaContext.getStatsHolder().get(player).ifPresent(holder -> {
                     holder.getStatistic(DefaultStatistics.KILLS).ifPresent(st ->
                             providers.add(new PlaceholderProvider("{kills}", () ->
                                     String.valueOf(st.getDisplayValue(null))
@@ -407,7 +413,7 @@ public class BwSidebar implements ISidebar {
             }
 
             // Dynamic team placeholders
-            for (ITeam currentTeam : SidebarTeamPolicy.displayedTeams(arena)) {
+            for (ITeam currentTeam : SidebarTeamPolicy.displayedTeams(arenaContext)) {
                 boolean isMember = currentTeam.isMember(player) || currentTeam.wasMember(player.getUniqueId());
 
                 providers.add(new PlaceholderProvider("{Team" + currentTeam.getName() + "Status}", () -> {
@@ -447,9 +453,13 @@ public class BwSidebar implements ISidebar {
     }
 
     @NotNull
-    private String getNextEventName() {
-        if (!(arena instanceof Arena)) return "-";
-        Arena arena = (Arena) this.arena;
+    static String arenaPlayerCount(@Nullable IArena arena) {
+        return arena == null ? "0" : String.valueOf(arena.getPlayers().size());
+    }
+
+    @NotNull
+    private String getNextEventName(@NotNull IArena arenaContext) {
+        if (!(arenaContext instanceof Arena arena)) return "-";
         String st = "-";
         switch (arena.getNextEvent()) {
             case EMERALD_GENERATOR_TIER_II:
@@ -479,9 +489,8 @@ public class BwSidebar implements ISidebar {
     }
 
     @NotNull
-    private String getNextEventTime() {
-        if (!(arena instanceof Arena)) return nextEventDateFormat.format((0L));
-        Arena arena = (Arena) this.arena;
+    private String getNextEventTime(@NotNull IArena arenaContext) {
+        if (!(arenaContext instanceof Arena arena)) return nextEventDateFormat.format((0L));
         long time = 0L;
         switch (arena.getNextEvent()) {
             case EMERALD_GENERATOR_TIER_II:

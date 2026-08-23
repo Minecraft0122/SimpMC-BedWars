@@ -3,6 +3,7 @@ package com.andrei1058.spigot.sidebar;
 import io.papermc.paper.scoreboard.numbers.FixedFormat;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -675,7 +676,7 @@ public class Sidebar {
         }
 
         if ((!sharedCollision || newTeam) && team.getColor() != tab.getColor()) {
-            team.setColor(tab.getColor());
+            setTeamColor(team, tab.getColor());
         }
 
         Team.OptionStatus visibility = tab.getNameTagVisibility() == PlayerTab.NameTagVisibility.NEVER
@@ -701,6 +702,45 @@ public class Sidebar {
 
     void renderPlayerListName(@NotNull Player viewer, @NotNull PlayerTab tab) {
         renderPlayerListNames(viewer, List.of(renderPlayerTab(tab)), false);
+    }
+
+    /**
+     * Paper 1.21.11 exposes a modern Adventure setter for scoreboard colors,
+     * while its modern getter throws when the underlying team color is the
+     * reset value. Read the legacy value only for the change check and never
+     * call {@code Team.color()} without arguments.
+     */
+    private static void setTeamColor(@NotNull Team team, @NotNull ChatColor color) {
+        try {
+            team.color(namedColor(color));
+        } catch (UnsupportedOperationException | IllegalArgumentException
+                 | AbstractMethodError | NoSuchMethodError ignored) {
+            // Keep compatibility with older Bukkit implementations and test doubles.
+            team.setColor(color);
+        }
+    }
+
+    @NotNull
+    private static NamedTextColor namedColor(@NotNull ChatColor color) {
+        return switch (color) {
+            case BLACK -> NamedTextColor.BLACK;
+            case DARK_BLUE -> NamedTextColor.DARK_BLUE;
+            case DARK_GREEN -> NamedTextColor.DARK_GREEN;
+            case DARK_AQUA -> NamedTextColor.DARK_AQUA;
+            case DARK_RED -> NamedTextColor.DARK_RED;
+            case DARK_PURPLE -> NamedTextColor.DARK_PURPLE;
+            case GOLD -> NamedTextColor.GOLD;
+            case GRAY -> NamedTextColor.GRAY;
+            case DARK_GRAY -> NamedTextColor.DARK_GRAY;
+            case BLUE -> NamedTextColor.BLUE;
+            case GREEN -> NamedTextColor.GREEN;
+            case AQUA -> NamedTextColor.AQUA;
+            case RED -> NamedTextColor.RED;
+            case LIGHT_PURPLE -> NamedTextColor.LIGHT_PURPLE;
+            case YELLOW -> NamedTextColor.YELLOW;
+            case WHITE -> NamedTextColor.WHITE;
+            default -> NamedTextColor.WHITE;
+        };
     }
 
     void forcePlayerListNameRefresh(@NotNull Player viewer) {
