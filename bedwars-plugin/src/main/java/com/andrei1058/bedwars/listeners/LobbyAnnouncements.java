@@ -26,6 +26,23 @@ public final class LobbyAnnouncements {
                 Arena.isInArena(player), SetupSession.isInSetupSession(player.getUniqueId()));
     }
 
+    /**
+     * Returns whether a player is in a context where a leave action should go
+     * to the proxy's group lobby. BUNGEE mode has no local lobby world, so the
+     * regular lobby-world predicate intentionally cannot be reused there.
+     */
+    public static boolean isProxyLobbyPlayer(Player player) {
+        if (player == null || player.getWorld() == null) return false;
+        boolean inArena = Arena.isInArena(player);
+        boolean inSetup = SetupSession.isInSetupSession(player.getUniqueId());
+        if (inArena || inSetup) return false;
+        return BedWars.getServerType() == ServerType.BUNGEE
+                || isLobbyPlayer(player)
+                // Match the fallback used by lobby protection and join
+                // handling when lobbyLoc is absent or its world is unloaded.
+                || LobbyProtection.isLobbyWorld(player);
+    }
+
     static boolean isLobbyContext(ServerType serverType, String playerWorld, String lobbyWorld,
                                   boolean inArena, boolean inSetup) {
         return serverType != ServerType.BUNGEE && !inArena && !inSetup

@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static com.andrei1058.bedwars.BedWars.plugin;
+import com.andrei1058.bedwars.BedWars;
 
 public class UpgradesConfig extends ConfigManager {
 
@@ -45,7 +45,7 @@ public class UpgradesConfig extends ConfigManager {
     private static final List<Integer> PREVIOUS_ARMOR_TIER_COSTS = List.of(2, 4, 8, 16);
 
     public UpgradesConfig(String name, String dir) {
-        super(plugin, name, dir);
+        super(BedWars.plugin, name, dir);
         YamlConfiguration yml = getYml();
         yml.options().header("SimpMC-BedWars 队伍升级与陷阱配置。\n动作格式和完整示例请参阅 docs/zh_CN/configuration.md。");
         List<String> elements = Arrays.asList("upgrade-swords,10", "upgrade-armor,11", "upgrade-miner,12", "upgrade-forge,13",

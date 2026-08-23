@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Properties;
+import java.util.logging.Level;
+
+import org.bukkit.Bukkit;
 
 public class FileUtil {
 
@@ -26,7 +29,7 @@ public class FileUtil {
 		try (FileInputStream in = new FileInputStream("server.properties")) {
 			properties.load(in);
 		} catch (IOException e) {
-			e.printStackTrace();
+			Bukkit.getLogger().log(Level.WARNING, "Could not read server.properties while changing the main level", e);
 		}
 
 		properties.setProperty("level-name", worldName);
@@ -41,7 +44,7 @@ public class FileUtil {
 		try (FileOutputStream out = new FileOutputStream("server.properties")) {
 			properties.store(out, null);
 		} catch (IOException e) {
-			e.printStackTrace();
+			Bukkit.getLogger().log(Level.WARNING, "Could not save server.properties while changing the main level", e);
 		}
 	}
 }

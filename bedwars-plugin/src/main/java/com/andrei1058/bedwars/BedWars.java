@@ -109,7 +109,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-@SuppressWarnings({"WeakerAccess", "CallToPrintStackTrace"})
+@SuppressWarnings("WeakerAccess")
 public class BedWars extends JavaPlugin {
 
     private static ServerType serverType = ServerType.MULTIARENA;
@@ -146,20 +146,9 @@ public class BedWars extends JavaPlugin {
 
     @Override
     public void onLoad() {
-
-        isPaper = detectPaper();
-        if (!isPaper) {
-            this.getLogger().severe("SimpMC-BedWars 仅支持 Paper 1.21.11 或 Paper 26.2。");
-            this.getLogger().severe("Please run this plugin on Paper or a compatible Paper fork.");
-            serverSoftwareSupport = false;
-            return;
-        }
-
-        if (detectFolia()) {
-            this.getLogger().severe("Folia is not supported by this SimpMC-BedWars build.");
-            serverSoftwareSupport = false;
-            return;
-        }
+        // Paper API is a compile-time/runtime requirement for this build. Do
+        // not retain reflective Bukkit/Spigot compatibility probes here.
+        isPaper = true;
 
         if (!MinecraftVersionPolicy.isSupported(version)) {
             serverSoftwareSupport = false;
@@ -434,7 +423,8 @@ public class BedWars extends JavaPlugin {
             } catch (Exception e) {
                 out.warning("Could not load support for VipFeatures.");
             } catch (MiniGameAlreadyRegistered miniGameAlreadyRegistered) {
-                miniGameAlreadyRegistered.printStackTrace();
+                out.log(java.util.logging.Level.WARNING,
+                        "VipFeatures 已注册其他小游戏，无法注册 BedWars", miniGameAlreadyRegistered);
             }
         }
 
@@ -535,7 +525,8 @@ public class BedWars extends JavaPlugin {
             try {
                 a.disable();
             } catch (Exception ex) {
-                ex.printStackTrace();
+                getLogger().log(java.util.logging.Level.SEVERE,
+                        "无法禁用竞技场 " + a.getArenaName(), ex);
             }
         }
 
@@ -643,31 +634,6 @@ public class BedWars extends JavaPlugin {
     public static void debug(String message) {
         if (debug) {
             plugin.getLogger().info("DEBUG: " + message);
-        }
-    }
-
-    private static boolean detectPaper() {
-        for (String className : Arrays.asList(
-                "com.destroystokyo.paper.PaperConfig",
-                "io.papermc.paper.configuration.Configuration",
-                "io.papermc.paper.plugin.configuration.PluginMeta"
-        )) {
-            try {
-                Class.forName(className);
-                return true;
-            } catch (ClassNotFoundException ignored) {
-            }
-        }
-        return Bukkit.getName().toLowerCase(Locale.ROOT).contains("paper")
-                || Bukkit.getVersion().toLowerCase(Locale.ROOT).contains("paper");
-    }
-
-    private static boolean detectFolia() {
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-            return true;
-        } catch (ClassNotFoundException ignored) {
-            return Bukkit.getName().toLowerCase(Locale.ROOT).contains("folia");
         }
     }
 

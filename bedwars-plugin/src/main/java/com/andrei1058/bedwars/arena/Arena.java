@@ -1779,6 +1779,7 @@ public class Arena implements IArena {
         p.setGameMode(GameMode.ADVENTURE);
         PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
+        clearInventoryForLobby(p);
         refreshLobbyCommandItems(p);
         scheduleLobbyItemRecheck(p);
         LobbyAnnouncements.playerEntered(p);
@@ -1789,8 +1790,19 @@ public class Arena implements IArena {
         int generation = lobbyItemRecheckGenerations.merge(playerId, 1, Integer::sum);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!lobbyItemRecheckGenerations.remove(playerId, generation)) return;
+            if (!isCurrentLobbyPlayer(player)) return;
+            clearInventoryForLobby(player);
             refreshLobbyCommandItems(player);
         }, 15L);
+    }
+
+    /** Clear all player-held state that must never leave the BedWars lobby. */
+    public static void clearInventoryForLobby(Player player) {
+        if (player == null || !player.isOnline()) return;
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(null);
+        player.getOpenInventory().setCursor(null);
+        player.updateInventory();
     }
 
     private void broadcastArenaJoin(Player joined) {
@@ -1824,10 +1836,9 @@ public class Arena implements IArena {
         // Public compatibility API: callers have historically relied on the
         // delayed full clear documented by BedWars.ArenaUtil. Internal lobby
         // transitions use refreshLobbyCommandItems instead.
-        if (!config.getYml().isConfigurationSection(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH)) return;
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!isCurrentLobbyPlayer(p)) return;
-            p.getInventory().clear();
+            clearInventoryForLobby(p);
             refreshLobbyCommandItems(p);
         }, 15L);
     }
@@ -1881,10 +1892,22 @@ public class Arena implements IArena {
     }
 
     private static boolean isCurrentLobbyPlayer(Player player) {
+        if (player == null || !player.isOnline()) return false;
         String playerWorld = player.getWorld() == null ? null : player.getWorld().getName();
-        return LobbyInventoryPolicy.shouldApply(player.isOnline(), isInArena(player),
-                SetupSession.isInSetupSession(player.getUniqueId()), playerWorld,
-                BedWars.config.getLobbyWorldName());
+        boolean inArena = isInArena(player);
+        boolean inSetup = SetupSession.isInSetupSession(player.getUniqueId());
+        String lobbyWorld = BedWars.config.getLobbyWorldName();
+        if (LobbyInventoryPolicy.shouldApply(true, inArena, inSetup, playerWorld, lobbyWorld)) {
+            return true;
+        }
+
+        // Join handling falls back to the first loaded world when lobbyLoc is
+        // missing or temporarily unavailable. Treat that non-arena world as
+        // the lobby too, otherwise the fallback player never receives the
+        // return item and the inventory clear is skipped.
+        return !inArena && !inSetup && playerWorld != null && !playerWorld.isBlank()
+                && Arena.getArenaByIdentifier(playerWorld) == null
+                && (lobbyWorld == null || lobbyWorld.isBlank() || Bukkit.getWorld(lobbyWorld) == null);
     }
 
     private static void removeBedWarsCommandItems(Player player) {
@@ -2926,10 +2949,18 @@ public class Arena implements IArena {
         if (BedWars.getServerType() == ServerType.SHARED) {
             Location loc = playerLocation.get(player);
             if (loc == null) {
-                TeleportManager.teleportC(player, Bukkit.getWorlds().get(0).getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
+                        player, Bukkit.getWorlds().get(0).getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
+                }));
                 plugin.getLogger().log(Level.SEVERE, player.getName() + " was teleported to the main world because lobby location is not set!");
             } else {
-                TeleportManager.teleportC(player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+                CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
+                        player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+                teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
+                }));
             }
         } else if (BedWars.getServerType() == ServerType.MULTIARENA) {
             Location lobby = config.getConfigLoc("lobbyLoc");

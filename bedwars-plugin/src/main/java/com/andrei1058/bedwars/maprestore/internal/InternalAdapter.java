@@ -46,7 +46,6 @@ import java.util.Set;
 import static com.andrei1058.bedwars.BedWars.config;
 import static com.andrei1058.bedwars.BedWars.plugin;
 
-@SuppressWarnings("CallToPrintStackTrace")
 public class InternalAdapter extends RestoreAdapter {
 
     private static final int SETUP_CLOSE_MAX_ATTEMPTS = 240;
@@ -370,13 +369,15 @@ public class InternalAdapter extends RestoreAdapter {
                             keepSpawnLoaded(w);
                             Bukkit.getScheduler().runTaskLater(plugin, s::teleportPlayer, 20L);
                         } catch (Exception ex){
-                            ex.printStackTrace();
+                            getOwner().getLogger().log(java.util.logging.Level.SEVERE,
+                                    "无法创建设置会话世界 " + s.getWorldName(), ex);
                             s.close();
                         }
                         return;
                     }
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    getOwner().getLogger().log(java.util.logging.Level.SEVERE,
+                            "无法初始化设置会话世界 " + s.getWorldName(), ex);
                     s.close();
                     return;
                 }

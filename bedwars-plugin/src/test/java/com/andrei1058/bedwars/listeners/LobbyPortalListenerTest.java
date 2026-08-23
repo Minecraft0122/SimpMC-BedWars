@@ -17,4 +17,12 @@ class LobbyPortalListenerTest {
         assertFalse(LobbyPortalListener.shouldReturnToProxyLobby(
                 true, PlayerTeleportEvent.TeleportCause.END_PORTAL));
     }
+
+    @Test
+    void proxyContextWithoutLocalLobbyStillReturnsFromNetherPortal() {
+        assertTrue(LobbyPortalListener.shouldReturnToProxyLobby(
+                false, true, PlayerTeleportEvent.TeleportCause.NETHER_PORTAL));
+        assertFalse(LobbyPortalListener.shouldReturnToProxyLobby(
+                false, true, PlayerTeleportEvent.TeleportCause.END_PORTAL));
+    }
 }

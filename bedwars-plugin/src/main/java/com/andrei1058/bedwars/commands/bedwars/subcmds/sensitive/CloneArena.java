@@ -94,7 +94,8 @@ public class CloneArena extends SubCommand {
             try {
                 FileUtils.copyFile(yml1, yml2, true);
             } catch (IOException e) {
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE,
+                        "无法复制竞技场配置 " + yml1 + " 到 " + yml2, e);
                 AdventureText.send(p, "§c▪ §7复制地图配置时发生错误，请查看控制台。");
             }
         }

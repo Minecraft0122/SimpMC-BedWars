@@ -26,6 +26,7 @@ import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Level;
 
 public class WorldZipper {
 
@@ -53,7 +54,8 @@ public class WorldZipper {
             try {
                 zipWorldFolder();
             } catch (IOException e) {
-                e.printStackTrace();
+                Bukkit.getLogger().log(Level.SEVERE,
+                        "Could not create the world backup archive " + getBackupFile(), e);
             }
         }
     }

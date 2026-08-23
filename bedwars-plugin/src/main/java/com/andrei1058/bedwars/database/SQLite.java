@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.util.*;
+import java.util.logging.Level;
 
 public class SQLite implements Database {
 
@@ -51,7 +52,7 @@ public class SQLite implements Database {
                     BedWars.plugin.getLogger().severe("Could not create /Cache/shop.db file!");
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                logFailure(Level.SEVERE, "create the SQLite database file", e);
                 return;
             }
         }
@@ -64,9 +65,10 @@ public class SQLite implements Database {
             }
         } catch (SQLException | ClassNotFoundException e) {
             if (e instanceof ClassNotFoundException) {
-                BedWars.plugin.getLogger().severe("Could Not Found SQLite Driver on your system!");
+                logFailure(Level.SEVERE, "load the SQLite JDBC driver", e);
+            } else {
+                logFailure(Level.SEVERE, "open the SQLite database", e);
             }
-            e.printStackTrace();
         }
     }
 
@@ -101,7 +103,7 @@ public class SQLite implements Database {
                 st.executeUpdate(sql);
             }
         }catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "initialize the SQLite schema", e);
         }
     }
 
@@ -118,7 +120,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "query SQLite player statistics", e);
         }
         return false;
     }
@@ -165,7 +167,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save SQLite player statistics", e);
         }
     }
 
@@ -196,7 +198,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load SQLite player statistics", e);
         }
         return stats;
     }
@@ -224,7 +226,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logFailure(Level.WARNING, "update SQLite quick-buy slots", ex);
         }
     }
 
@@ -243,7 +245,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load a SQLite quick-buy slot", e);
         }
         return result;
     }
@@ -262,7 +264,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "check SQLite quick-buy data", e);
         }
         return false;
     }
@@ -284,7 +286,7 @@ public class SQLite implements Database {
             }
         }
         catch (SQLException ex) {
-            ex.printStackTrace();
+            logFailure(Level.WARNING, "read a SQLite statistics column", ex);
             return 0;
         }
         return 0;
@@ -308,7 +310,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load SQLite level data", e);
         }
         return r;
     }
@@ -347,7 +349,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save SQLite level data", e);
         }
     }
 
@@ -372,7 +374,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save SQLite player language", e);
         }
     }
 
@@ -391,7 +393,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load SQLite player language", e);
         }
         return iso;
     }
@@ -436,7 +438,7 @@ public class SQLite implements Database {
                 ps.executeUpdate();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save SQLite quick-buy changes", e);
         }
     }
 
@@ -463,7 +465,7 @@ public class SQLite implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load SQLite quick-buy changes", e);
         }
         return results;
     }
@@ -482,6 +484,10 @@ public class SQLite implements Database {
 
         if (renew)
             this.connection = DriverManager.getConnection(url);
+    }
+
+    private static void logFailure(Level level, String operation, Throwable exception) {
+        BedWars.plugin.getLogger().log(level, "Could not " + operation, exception);
     }
 
     @Override

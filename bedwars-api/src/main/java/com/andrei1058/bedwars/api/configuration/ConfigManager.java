@@ -48,7 +48,7 @@ public class ConfigManager {
     private YamlConfiguration yml;
     private File config;
     private String name;
-    private final Plugin plugin;
+    protected final Plugin plugin;
     private boolean firstTime = false;
 
     /**
@@ -78,7 +78,7 @@ public class ConfigManager {
                     return;
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                plugin.getLogger().log(Level.SEVERE, "Could not create " + config.getPath(), e);
             }
         }
 
@@ -525,7 +525,7 @@ public class ConfigManager {
         try {
             yml.save(config);
         } catch (IOException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "Could not save " + config.getPath(), e);
         }
     }
 

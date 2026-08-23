@@ -129,12 +129,12 @@ public class Interact implements Listener {
                 return;
             }
             if (!nms.isCustomBedWarsItem(i)) return;
-            final String[] customData = nms.getCustomData(i).split("_");
+            final String[] customData = nms.getCustomData(i).split("_", 2);
             if (customData.length >= 2) {
                 if (customData[0].equals("RUNCOMMAND")) {
                     e.setCancelled(true);
                     String command = customData[1].trim();
-                    if (shouldConnectToProxyLobby(command, LobbyProtection.isLobbyWorld(p), BedWars.mainCmd)) {
+                    if (shouldConnectToProxyLobby(command, LobbyAnnouncements.isProxyLobbyPlayer(p), BedWars.mainCmd)) {
                         Bukkit.getScheduler().runTask(plugin, () -> {
                             if (plugin.getProxyLobbyConnector() == null) {
                                 Misc.connectToProxyLobby(p);
@@ -343,6 +343,10 @@ public class Interact implements Listener {
                                     ThreadLocalRandom.current());
                             Fireball fb = p.launchProjectile(Fireball.class, launchVelocity);
                             nms.setFireballAcceleration(fb, launchAcceleration);
+                            // Paper's setter also updates the current velocity;
+                            // restore the configured launch speed after applying
+                            // the persistent acceleration vector.
+                            fb.setVelocity(launchVelocity);
                             if (sneaking) {
                                 p.setVelocity(p.getVelocity().add(
                                         FireballLaunchPhysics.sneakRecoil(launchVelocity, fireballSneakRecoil)));

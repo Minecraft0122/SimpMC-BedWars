@@ -30,6 +30,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import static com.andrei1058.bedwars.BedWars.config;
 
@@ -103,7 +104,7 @@ public class MySQL implements Database {
 
         try (Connection ignored = dataSource.getConnection()) {
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "connect to the MySQL database", e);
             close();
             return false;
         }
@@ -121,7 +122,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "query MySQL player statistics", e);
         }
         return false;
     }
@@ -157,7 +158,7 @@ public class MySQL implements Database {
                 statement.executeUpdate(sql);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "initialize the MySQL schema", e);
         }
     }
 
@@ -201,7 +202,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save MySQL player statistics", e);
         }
     }
 
@@ -231,7 +232,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load MySQL player statistics", e);
         }
         return stats;
     }
@@ -260,7 +261,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logFailure(Level.WARNING, "update MySQL quick-buy slots", ex);
         }
     }
 
@@ -277,7 +278,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logFailure(Level.WARNING, "load a MySQL quick-buy slot", ex);
         }
         return "";
     }
@@ -303,7 +304,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load MySQL quick-buy changes", e);
         }
         return results;
     }
@@ -319,7 +320,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "check MySQL quick-buy data", e);
         }
         return false;
     }
@@ -338,7 +339,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException ex) {
-            ex.printStackTrace();
+            logFailure(Level.WARNING, "read a MySQL statistics column", ex);
             return 0;
         }
         return 0;
@@ -362,7 +363,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load MySQL level data", e);
         }
         return new Object[]{1, 0, "", 0};
     }
@@ -399,7 +400,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save MySQL level data", e);
         }
     }
 
@@ -422,7 +423,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save MySQL player language", e);
         }
     }
 
@@ -439,7 +440,7 @@ public class MySQL implements Database {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "load MySQL player language", e);
         }
         return Language.getDefaultLanguage().getIso();
     }
@@ -482,7 +483,7 @@ public class MySQL implements Database {
                 ps.executeUpdate();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logFailure(Level.WARNING, "save MySQL quick-buy changes", e);
         }
     }
 
@@ -491,6 +492,10 @@ public class MySQL implements Database {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
         }
+    }
+
+    private static void logFailure(Level level, String operation, Throwable exception) {
+        BedWars.plugin.getLogger().log(level, "Could not " + operation, exception);
     }
 
 }

@@ -60,9 +60,6 @@ import org.bukkit.util.Vector;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -88,26 +85,6 @@ public class v1_21_R3 extends VersionSupport {
     );
 
     private static final double NPC_POSITION_EPSILON_SQUARED = 1.0E-6D;
-    private static final ClassValue<Method> FIREBALL_HANDLE_GETTERS = new ClassValue<>() {
-        @Override
-        protected Method computeValue(Class<?> type) {
-            try {
-                return type.getMethod("getHandle");
-            } catch (NoSuchMethodException e) {
-                throw new IllegalStateException("Could not access the Paper fireball handle", e);
-            }
-        }
-    };
-    private static final ClassValue<Field> FIREBALL_ACCELERATION_FIELDS = new ClassValue<>() {
-        @Override
-        protected Field computeValue(Class<?> type) {
-            try {
-                return type.getField("accelerationPower");
-            } catch (NoSuchFieldException e) {
-                throw new IllegalStateException("Could not access the Paper fireball acceleration power", e);
-            }
-        }
-    };
     private static final float NPC_ROTATION_EPSILON = 0.01F;
     private final Map<UUID, LockedShopkeeper> lockedShopkeepers = new HashMap<>();
 
@@ -117,7 +94,14 @@ public class v1_21_R3 extends VersionSupport {
     }
 
     private static String minecraftVersionName(String fallback) {
-        String bukkitVersion = Bukkit.getBukkitVersion();
+        String bukkitVersion;
+        try {
+            bukkitVersion = Bukkit.getBukkitVersion();
+        } catch (RuntimeException ignored) {
+            // Unit tests and early bootstrap can construct the adapter before
+            // Bukkit has installed its Server singleton.
+            bukkitVersion = null;
+        }
         if (bukkitVersion != null && !bukkitVersion.isBlank()) {
             return bukkitVersion.split("-")[0];
         }
@@ -278,7 +262,7 @@ public class v1_21_R3 extends VersionSupport {
     public double getDamage(ItemStack itemStack) {
         if (itemStack == null) return 0D;
         ItemMeta meta = itemStack.getItemMeta();
-        Attribute attackDamage = attribute("attack_damage", "generic.attack_damage", "ATTACK_DAMAGE", "GENERIC_ATTACK_DAMAGE");
+        Attribute attackDamage = attribute("attack_damage");
         if (meta != null) {
             Collection<AttributeModifier> modifiers = attackDamage == null ? null : meta.getAttributeModifiers(attackDamage);
             if (modifiers != null && !modifiers.isEmpty()) {
@@ -697,22 +681,13 @@ public class v1_21_R3 extends VersionSupport {
         if (acceleration == null || acceleration.lengthSquared() == 0D) {
             return fireball;
         }
-        try {
-            Object handle = FIREBALL_HANDLE_GETTERS.get(fireball.getClass()).invoke(fireball);
-            setAccelerationPower(handle, acceleration.length());
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException("Could not access the Paper fireball handle", e);
-        }
+        // Paper's modern setter also assigns a direction and therefore
+        // replaces the current velocity. Keep the public adapter contract:
+        // change persistent acceleration without changing launch speed.
+        Vector velocity = fireball.getVelocity().clone();
+        fireball.setAcceleration(acceleration);
+        fireball.setVelocity(velocity);
         return fireball;
-    }
-
-    static void setAccelerationPower(Object handle, double accelerationPower) {
-        try {
-            Field field = FIREBALL_ACCELERATION_FIELDS.get(handle.getClass());
-            field.setDouble(handle, accelerationPower);
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Could not set the Paper fireball acceleration power", e);
-        }
     }
 
     @Override
@@ -783,9 +758,9 @@ public class v1_21_R3 extends VersionSupport {
         entity.setCanPickupItems(false);
         entity.setAI(true);
 
-        setAttribute(entity, attribute("max_health", "generic.max_health", "MAX_HEALTH", "GENERIC_MAX_HEALTH"), health);
-        setAttribute(entity, attribute("movement_speed", "generic.movement_speed", "MOVEMENT_SPEED", "GENERIC_MOVEMENT_SPEED"), speed);
-        setAttribute(entity, attribute("attack_damage", "generic.attack_damage", "ATTACK_DAMAGE", "GENERIC_ATTACK_DAMAGE"), damage);
+        setAttribute(entity, attribute("max_health"), health);
+        setAttribute(entity, attribute("movement_speed"), speed);
+        setAttribute(entity, attribute("attack_damage"), damage);
         entity.setHealth(Math.min(health, entity.getMaxHealth()));
 
         if (entity instanceof Mob mob) {
@@ -802,15 +777,8 @@ public class v1_21_R3 extends VersionSupport {
         }
     }
 
-    private Attribute attribute(String... candidates) {
-        for (String candidate : candidates) {
-            NamespacedKey key = NamespacedKey.minecraft(candidate.toLowerCase(Locale.ROOT));
-            Attribute attribute = Registry.ATTRIBUTE.get(key);
-            if (attribute != null) {
-                return attribute;
-            }
-        }
-        return null;
+    private Attribute attribute(String key) {
+        return Registry.ATTRIBUTE.getOrThrow(NamespacedKey.minecraft(key));
     }
 
     private void refreshDespawnableTargets() {

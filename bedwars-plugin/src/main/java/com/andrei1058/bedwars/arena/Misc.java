@@ -121,6 +121,10 @@ public class Misc {
 
         try {
             player.sendPluginMessage(plugin, ProxyLobbyConnector.CHANNEL, proxyConnectPayload(lobbyServer));
+            // The Connect request is fire-and-forget. Clear only after the
+            // message was accepted by Bukkit so a failed proxy handoff does
+            // not destroy the player's current inventory.
+            Arena.clearInventoryForLobby(player);
             return true;
         } catch (RuntimeException exception) {
             plugin.getLogger().log(Level.WARNING,

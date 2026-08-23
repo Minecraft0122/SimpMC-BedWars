@@ -44,6 +44,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 public abstract class VersionSupport {
 
@@ -65,7 +66,7 @@ public abstract class VersionSupport {
         try {
             setEggBridgeEffect("MOBSPAWNER_FLAMES");
         } catch (InvalidEffectException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.WARNING, "Could not load the default egg bridge effect", e);
         }
     }
 
@@ -77,30 +78,16 @@ public abstract class VersionSupport {
     /** Send title, subtitle using the native Adventure representation. */
     public void sendTitle(Player p, @Nullable Component title, @Nullable Component subtitle,
                           int fadeIn, int stay, int fadeOut) {
-        // Keep the legacy overload virtual so pre-Adventure version adapters that
-        // override it continue to work. Modern adapters override this method instead.
-        sendTitle(p, AdventureText.section(title), AdventureText.section(subtitle), fadeIn, stay, fadeOut);
-    }
-
-    /**
-     * Legacy source- and binary-compatible bridge for integrations that still
-     * provide language strings. Internal code should prefer the Component overload.
-     */
-    @Deprecated
-    public void sendTitle(Player p, @Nullable String title, @Nullable String subtitle,
-                          int fadeIn, int stay, int fadeOut) {
-        throw new UnsupportedOperationException("Version adapter must implement an Adventure title sender");
+        p.showTitle(net.kyori.adventure.title.Title.title(
+                title == null ? Component.empty() : title,
+                subtitle == null ? Component.empty() : subtitle,
+                net.kyori.adventure.title.Title.Times.times(
+                        AdventureText.ticks(fadeIn), AdventureText.ticks(stay), AdventureText.ticks(fadeOut))));
     }
 
     /** Send action-bar message using the native Adventure representation. */
     public void playAction(Player p, @Nullable Component text) {
-        playAction(p, AdventureText.section(text));
-    }
-
-    /** Legacy source- and binary-compatible bridge; messages are parsed before delivery. */
-    @Deprecated
-    public void playAction(Player p, @Nullable String text) {
-        throw new UnsupportedOperationException("Version adapter must implement an Adventure action-bar sender");
+        p.sendActionBar(text == null ? Component.empty() : text);
     }
 
     /**
@@ -407,18 +394,7 @@ public abstract class VersionSupport {
     public abstract void sendPlayerSpawnPackets(Player player, IArena arena);
 
     /** Get the inventory title using Paper's native Adventure representation. */
-    public Component getInventoryTitle(InventoryEvent e) {
-        // Keep old version adapters working when they only implement the String API.
-        return AdventureText.section(getInventoryName(e));
-    }
-
-    /**
-     * Legacy inventory-name bridge. New code should use {@link #getInventoryTitle(InventoryEvent)}.
-     */
-    @Deprecated
-    public String getInventoryName(InventoryEvent e) {
-        return AdventureText.section(getInventoryTitle(e));
-    }
+    public abstract Component getInventoryTitle(InventoryEvent e);
 
     /**
      * Make item unbreakable.

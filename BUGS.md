@@ -19,6 +19,9 @@
 
 | 编号 | 发现版本 | 修复版本 | 问题 | 根因与处理 | 修复提交 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- |
+| BUG-149 | 11.1.0 | 5.1.0 | 简体中文语言文件加载升级物品时提示 `Missing message key upgrades-name-armor-tier-1`，护甲强化物品名称缺失 | 旧语言文件仍使用 `upgrades-name-*`/`upgrades-lore-*`，而当前常量使用 `upgrades-upgrade-*` 前缀；加载时自动迁移旧键并在读取时提供双向别名，现代默认值不会覆盖管理员自定义文本 | 5.1.0 | 已修复 |
+| BUG-150 | 11.1.0 | 5.1.0 | 地狱门不能从大厅传送到群组大厅，返回群组大厅物品点击无效，离开竞技场后背包物品没有清空 | 代理模式原来被本地大厅判断排除，且已取消的地狱门事件不会进入监听器；共享模式返回本服大厅时没有等待异步传送完成，因而同世界传送不会应用大厅状态；大厅状态现在统一识别 BUNGEE/回退大厅、在传送成功后清空背包并刷新返回物品，代理 Connect 请求成功后也清理玩家物品 | 5.1.0 | 已修复 |
+| BUG-148 | 11.1.0 | 5.1.0 | 启动或语言缺失键时 Paper 提示插件使用 `System.out/err.print` | 缺失语言键路径直接写入标准错误流，Paper 会据此发出作者告警；现在统一使用 `JavaPlugin#getLogger()`，并移除 Paper-only 火球反射探针中的标准输出风险 | 5.1.0 | 已修复 |
 | BUG-147（GitHub #7） | 11.1.0 | 5.0.0 | TAB 队伍颜色刷新时抛出 `IllegalStateException: Team colors must have hex values`，队伍颜色无法应用 | Paper 1.21.11 新注册的 scoreboard team 默认颜色为 `RESET`，没有底层 hex 值；此时读取 Adventure `Team.color()` 会触发前置条件异常。现在使用安全的兼容读取器比较当前颜色，实际写入仍使用现代 `Team.color(NamedTextColor)`，旧实现才回退到 `setColor(ChatColor)` | [c05f583d](https://github.com/Minecraft0122/SimpMC-BedWars/commit/c05f583d31498c8484aee2a8e0c5133dc547bc3d) | 已修复 |
 | BUG-146（GitHub #6） | 11.1.0 | 5.0.0 | 玩家进入服务器或客户端完成世界加载时 TAB 刷新报错并触发事件异常 | 与 BUG-147 共用同一 `Sidebar.applyTab` 读取路径；修复后进入服务器、跨世界重建和周期 TAB 刷新均不再读取新注册 `RESET` 队伍上会抛异常的 Adventure getter，并新增 Paper 行为回归测试 | [c05f583d](https://github.com/Minecraft0122/SimpMC-BedWars/commit/c05f583d31498c8484aee2a8e0c5133dc547bc3d) | 已修复 |
 | BUG-145 | 11.0.1 | 5.0.0 | 尝试在 Paper 26.2 运行时会被版本门禁拒绝；绕过门禁后，世界目录迁移会删除根目录竞技场原图和独立大厅原图，且固定时间维度会因没有 world clock 导致插件启用失败 | 旧实现只接受精确 `1.21.11`，所有地图操作都假设 `Bukkit.getWorldContainer()/世界名`，并对下界和末地无条件调用 `World#setTime`。现在识别 26.2 构建版本，竞技场原图、独立大厅原图和竞技场 ZIP 强制保留旧版根目录格式，Paper 26+ 的维度目录只作临时运行副本并在加载后恢复原图；固定时间维度跳过不可写的时间 API；新旧目录移动事务在复制回退失败时清理半成品 | 5.0.0 | 已修复 |

@@ -52,6 +52,7 @@ public class Language extends ConfigManager {
 
     public Language(Plugin plugin, String iso) {
         super(plugin, "messages_" + iso, plugin.getDataFolder().getPath() + "/Languages");
+        migrateLegacyUpgradeMessageKeys(getYml());
         this.iso = iso;
         migrateLegacyTowerShopItem(getYml());
         addContentMessages(getYml(), "tower", ConfigPath.SHOP_PATH_CATEGORY_UTILITY,
@@ -249,7 +250,7 @@ public class Language extends ConfigManager {
      * Check if a message was set.
      */
     public boolean exists(String path) {
-        return getYml().get(path) != null;
+        return getYml().get(resolveMessagePath(path)) != null;
     }
 
     /**
@@ -283,9 +284,10 @@ public class Language extends ConfigManager {
      * Get a color translated message.
      */
     public String m(String path) {
-        String message = getYml().getString(path);
+        String resolvedPath = resolveMessagePath(path);
+        String message = getYml().getString(resolvedPath);
         if (message == null) {
-            System.err.println("Missing message key " + path + " in language " + getIso());
+            plugin.getLogger().warning("Missing message key " + path + " in language " + getIso());
             message = "MISSING_LANG";
         }
         if (null == serverIp) {
@@ -307,15 +309,57 @@ public class Language extends ConfigManager {
      */
     public List<String> l(String path) {
         List<String> result = new ArrayList<>();
-        List<String> lines = getYml().getStringList(path);
-        if (lines == null) {
-            System.err.println("Missing message list key " + path + " in language " + getIso());
+        String resolvedPath = resolveMessagePath(path);
+        List<String> lines;
+        if (!getYml().isList(resolvedPath)) {
+            plugin.getLogger().warning("Missing message list key " + path + " in language " + getIso());
             lines = Collections.emptyList();
+        } else {
+            lines = getYml().getStringList(resolvedPath);
         }
         for (String line : lines) {
             result.add(AdventureText.section(AdventureText.ampersand(line)));
         }
         return result;
+    }
+
+    /**
+     * Resolve message paths renamed before the Paper-only language schema.
+     * Existing administrator files are migrated in the constructor; this
+     * lookup remains a harmless guard for a file changed while the server is
+     * running or a caller still using the historical public key.
+     */
+    private String resolveMessagePath(String path) {
+        if (path == null || getYml().get(path) != null) return path;
+        if (path.startsWith("upgrades-name-")) {
+            String modern = "upgrades-upgrade-name-" + path.substring("upgrades-name-".length());
+            if (getYml().get(modern) != null) return modern;
+        } else if (path.startsWith("upgrades-upgrade-name-")) {
+            String legacy = "upgrades-name-" + path.substring("upgrades-upgrade-name-".length());
+            if (getYml().get(legacy) != null) return legacy;
+        }
+        if (path.startsWith("upgrades-lore-")) {
+            String modern = "upgrades-upgrade-lore-" + path.substring("upgrades-lore-".length());
+            if (getYml().get(modern) != null) return modern;
+        } else if (path.startsWith("upgrades-upgrade-lore-")) {
+            String legacy = "upgrades-lore-" + path.substring("upgrades-upgrade-lore-".length());
+            if (getYml().get(legacy) != null) return legacy;
+        }
+        return path;
+    }
+
+    static void migrateLegacyUpgradeMessageKeys(@NotNull YamlConfiguration yml) {
+        for (String path : new ArrayList<>(yml.getKeys(true))) {
+            String modern;
+            if (path.startsWith("upgrades-name-")) {
+                modern = "upgrades-upgrade-name-" + path.substring("upgrades-name-".length());
+            } else if (path.startsWith("upgrades-lore-")) {
+                modern = "upgrades-upgrade-lore-" + path.substring("upgrades-lore-".length());
+            } else {
+                continue;
+            }
+            if (yml.get(modern) == null) yml.set(modern, yml.get(path));
+        }
     }
 
     public static HashMap<UUID, Language> getLangByPlayer() {
@@ -341,7 +385,12 @@ public class Language extends ConfigManager {
      * compatibility, while normal plugin commands expose only this code.
      */
     public static boolean isSimplifiedChineseIso(String iso) {
-        return SIMPLIFIED_CHINESE_ISO.equalsIgnoreCase(iso);
+        return SIMPLIFIED_CHINESE_ISO.equalsIgnoreCase(normalizeIso(iso));
+    }
+
+    /** Normalize ISO values coming from legacy databases and proxy payloads. */
+    private static String normalizeIso(String iso) {
+        return iso == null ? null : iso.trim();
     }
 
     /**
@@ -350,6 +399,7 @@ public class Language extends ConfigManager {
      * @return the configured default language when the ISO code is unknown.
      */
     public static Language getLang(String iso) {
+        iso = normalizeIso(iso);
         if (!isSimplifiedChineseIso(iso)) return getDefaultLanguage();
         for (Language l : languages) {
             if (l.iso.equalsIgnoreCase(iso)) {
@@ -640,6 +690,7 @@ public class Language extends ConfigManager {
             return true;
         }
 
+        iso = normalizeIso(iso);
         // Old proxy/database values are deliberately not allowed to revive
         // a language that the plugin no longer ships. Drop any stale
         // in-memory preference so the player immediately falls back to Chinese.

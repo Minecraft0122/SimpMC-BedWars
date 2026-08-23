@@ -250,7 +250,8 @@ public class ArenaSocket {
             try {
                 if (socket != null) socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                BedWars.plugin.getLogger().log(Level.WARNING,
+                        "Could not close lobby socket " + lobby, e);
             }
         }
 
