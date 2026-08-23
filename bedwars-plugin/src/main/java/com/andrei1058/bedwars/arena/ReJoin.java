@@ -41,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -179,6 +180,17 @@ public class ReJoin {
                 && reservationPlayer.equals(candidate.getUniqueId());
     }
 
+    private boolean removeActiveReservation() {
+        Iterator<ReJoin> iterator = reJoinList.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next() == this) {
+                iterator.remove();
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Keep the arena respawn lifecycle as the single owner of game-mode and
      * flight transitions. A separate delayed SURVIVAL write can otherwise
@@ -192,8 +204,14 @@ public class ReJoin {
      * Destroy data and rejoin possibility
      */
     public void destroy(boolean destroyTeam) {
+        if (!removeActiveReservation()) {
+            if (task != null) {
+                task.destroy();
+                task = null;
+            }
+            return;
+        }
         BedWars.debug("ReJoin destroy for " + player.toString());
-        reJoinList.remove(this);
         if (task != null) {
             task.destroy();
             task = null;
@@ -222,7 +240,7 @@ public class ReJoin {
      * Expire this player's reconnect window and remove them from game statistics.
      */
     public void expire() {
-        if (!reJoinList.contains(this)) return;
+        if (!isActiveReservation(reJoinList, this)) return;
         if (bwt != null) {
             bwt.getMembersCache().removeIf(cached -> cached.getUniqueId().equals(player));
         }

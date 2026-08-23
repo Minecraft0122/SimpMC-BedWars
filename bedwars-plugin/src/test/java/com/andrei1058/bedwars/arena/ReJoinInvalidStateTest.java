@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ReJoinInvalidStateTest {
 
     @Test
-    void detachedReservationCannotBeReusedByAStaleJoinCallback() {
+    void rejectsMismatchedPlayerAndDetachedReservationData() {
         UUID playerId = UUID.randomUUID();
         Player player = (Player) Proxy.newProxyInstance(
                 Player.class.getClassLoader(), new Class<?>[]{Player.class},
@@ -21,6 +21,8 @@ class ReJoinInvalidStateTest {
                         ? playerId
                         : defaultValue(method.getReturnType()));
 
+        // A stale callback must match the reservation UUID and an exact active
+        // object; UUID equality alone must not revive an old lifecycle.
         assertTrue(ReJoin.belongsToPlayer(playerId, player));
         assertFalse(ReJoin.belongsToPlayer(UUID.randomUUID(), player));
         assertFalse(ReJoin.belongsToPlayer(null, player));
