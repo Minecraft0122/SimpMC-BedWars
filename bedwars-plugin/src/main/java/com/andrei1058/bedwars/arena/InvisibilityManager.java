@@ -47,7 +47,7 @@ public final class InvisibilityManager {
     }
 
     public static void synchronizePlayerEquipment(IArena arena, Player invisible) {
-        if (arena == null || invisible == null || !arena.getShowTime().containsKey(invisible)) return;
+        if (!hasHiddenEquipment(arena, invisible)) return;
         for (Player viewer : viewers(arena)) {
             synchronizeEquipment(arena, invisible, viewer);
         }
@@ -55,8 +55,34 @@ public final class InvisibilityManager {
 
     public static void synchronizeViewer(IArena arena, Player viewer) {
         if (arena == null || viewer == null) return;
-        for (Player invisible : arena.getShowTime().keySet()) {
+        for (Player respawning : arena.getRespawnSessions().keySet()) {
+            if (!respawning.equals(viewer)) {
+                nms.spigotHidePlayer(respawning, viewer);
+            }
+        }
+        for (Player invisible : hiddenEquipmentPlayers(arena)) {
             synchronizeEquipment(arena, invisible, viewer);
+        }
+    }
+
+    /** Hide a respawning player from every current arena viewer. */
+    public static void hideRespawningPlayer(IArena arena, Player player) {
+        if (arena == null || player == null || nms == null) return;
+        for (Player viewer : viewers(arena)) {
+            if (!player.equals(viewer)) {
+                nms.spigotHidePlayer(player, viewer);
+            }
+        }
+    }
+
+    /** Restore a respawning player's entity and equipment to every arena viewer. */
+    public static void showRespawningPlayer(IArena arena, Player player) {
+        if (arena == null || player == null || nms == null) return;
+        for (Player viewer : viewers(arena)) {
+            if (!player.equals(viewer)) {
+                nms.spigotShowPlayer(player, viewer);
+                nms.showArmor(player, viewer);
+            }
         }
     }
 
@@ -71,10 +97,24 @@ public final class InvisibilityManager {
 
     static boolean shouldHideEquipment(IArena arena, Player invisible, Player viewer) {
         if (arena == null || invisible == null || viewer == null || invisible.equals(viewer)) return false;
+        if (arena.isReSpawning(invisible)) {
+            return arena.isPlayer(viewer) || arena.isSpectator(viewer);
+        }
         if (arena.isSpectator(viewer)) return true;
         if (!arena.isPlayer(viewer)) return false;
         ITeam invisibleTeam = arena.getTeam(invisible);
         return invisibleTeam != null && !invisibleTeam.equals(arena.getTeam(viewer));
+    }
+
+    static boolean hasHiddenEquipment(IArena arena, Player player) {
+        return arena != null && player != null
+                && (arena.getShowTime().containsKey(player) || arena.isReSpawning(player));
+    }
+
+    static Set<Player> hiddenEquipmentPlayers(IArena arena) {
+        Set<Player> hidden = new LinkedHashSet<>(arena.getShowTime().keySet());
+        hidden.addAll(arena.getRespawnSessions().keySet());
+        return hidden;
     }
 
     private static Set<Player> viewers(IArena arena) {

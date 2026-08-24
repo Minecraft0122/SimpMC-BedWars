@@ -114,6 +114,8 @@ class RestartingPlayerStateTest {
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getPlayers" -> players;
                     case "getSpectators" -> spectators;
+                    case "getPlayersSnapshot" -> players;
+                    case "getSpectatorsSnapshot" -> spectators;
                     case "getRespawnSessions" -> respawns;
                     case "getShowTime" -> showTime;
                     case "isSpectator" -> args[0] == spectator;

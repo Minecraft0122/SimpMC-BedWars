@@ -674,9 +674,17 @@ public class Sidebar {
                 && team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
             team.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
         }
-        if (pushOtherTeams && (!sharedCollision || newTeam)
-                && team.getOption(Team.Option.COLLISION_RULE) != Team.OptionStatus.FOR_OTHER_TEAMS) {
-            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
+        // A shared collision team may already exist from an earlier row. Its
+        // collision rule still has to be repaired when a scoreboard is reused.
+        Team.OptionStatus collision = pushOtherTeams
+                ? Team.OptionStatus.FOR_OTHER_TEAMS
+                : tab.getCollisionGroup() != null
+                ? Team.OptionStatus.NEVER
+                : tab.getPlayerListMode() == PlayerTab.PlayerListMode.ACTUAL
+                ? Team.OptionStatus.ALWAYS
+                : null;
+        if (collision != null && team.getOption(Team.Option.COLLISION_RULE) != collision) {
+            team.setOption(Team.Option.COLLISION_RULE, collision);
         }
         if (!team.hasEntry(tab.getPlayer().getName())) {
             team.addEntry(tab.getPlayer().getName());

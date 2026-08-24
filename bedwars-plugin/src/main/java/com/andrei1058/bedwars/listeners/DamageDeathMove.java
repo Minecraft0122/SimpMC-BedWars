@@ -622,8 +622,9 @@ public class DamageDeathMove implements Listener {
                     }
                 }
 
-                // hide armor for those with invisibility potions
-                if (!a.getShowTime().isEmpty()) {
+                // Keep potion and respawn visibility synchronized when a
+                // viewer enters a new chunk.
+                if (!a.getShowTime().isEmpty() || !a.getRespawnSessions().isEmpty()) {
                     InvisibilityManager.synchronizeViewer(a, player);
                 }
             }

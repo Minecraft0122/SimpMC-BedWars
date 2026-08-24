@@ -324,10 +324,10 @@ public class BwTabList {
             ChatColor fallbackColor = team == null ? null : getPlayerListColor(team);
             prepareTabFallback(player, fallbackColor);
             PlayerTab t = handle.playerTabCreate(
-                    playerTabId, player, prefix, suffix, collisionPushingRule(false, player),
+                    playerTabId, player, prefix, suffix, collisionPushingRule(status, false, player),
                     this.sidebar.getPlaceholders(player), fallbackColor == null ? ChatColor.WHITE : fallbackColor,
                     PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
-                    collisionGroup(team, player)
+                    collisionGroup(status, team, player)
             );
             deployTab(t, fallbackColor);
             return;
@@ -346,12 +346,12 @@ public class BwTabList {
 
         PlayerTab teamTab = handle.playerTabCreate(
                 playerTabId,
-                player, prefix, suffix, collisionPushingRule(false, player),
+                player, prefix, suffix, collisionPushingRule(status, false, player),
                 this.sidebar.getPlaceholders(player), fallbackColor == null ? ChatColor.WHITE : fallbackColor,
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
                         : PlayerTab.NameTagVisibility.ALWAYS,
-                PlayerTab.PlayerListMode.ACTUAL, collisionGroup(team, player)
+                PlayerTab.PlayerListMode.ACTUAL, collisionGroup(status, team, player)
         );
         deployTab(teamTab, fallbackColor);
     }
@@ -383,18 +383,19 @@ public class BwTabList {
             return;
         }
         boolean spectatorRow = playerListMode == PlayerTab.PlayerListMode.SPECTATOR;
+        GameState status = sidebar.getArena().getStatus();
         ChatColor fallbackColor = spectator || team == null ? null : getPlayerListColor(team);
         prepareTabFallback(player, fallbackColor);
 
         PlayerTab tab = handle.playerTabCreate(
                 player.getUniqueId().toString(), player, new SidebarLine(), new SidebarLine(),
-                collisionPushingRule(spectatorRow, player),
+                collisionPushingRule(sidebar.getArena().getStatus(), spectatorRow, player),
                 sidebar.getPlaceholders(player),
                 fallbackColor == null ? ChatColor.WHITE : fallbackColor,
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
                         : PlayerTab.NameTagVisibility.ALWAYS,
-                playerListMode, spectator ? null : collisionGroup(team, player)
+                playerListMode, spectator ? null : collisionGroup(status, team, player)
         );
         deployTab(tab, fallbackColor);
     }
@@ -552,13 +553,18 @@ public class BwTabList {
 
     /**
      * A TAB row identifier is unique per player, but collision teams must be
-     * shared by real game-team members. Invisible players stay on a private
-     * row so their name-tag visibility does not hide their teammates; their
-     * private row uses {@link PlayerTab.PushingRule#NEVER} to avoid restoring
-     * teammate collision while the potion is active.
+     * shared by real game-team members. Invisibility rows keep their private
+     * name-tag team and explicitly disable scoreboard collision; this is
+     * separate from the entity-level collidable flag used by projectiles.
      */
     static @Nullable String collisionGroup(@Nullable ITeam team, @NotNull Player player) {
         return collisionGroup(team, player.hasPotionEffect(PotionEffectType.INVISIBILITY));
+    }
+
+    static @Nullable String collisionGroup(@NotNull GameState status, @Nullable ITeam team,
+                                           @NotNull Player player) {
+        if (status != GameState.playing || team == null) return null;
+        return team.getIdentity().toString();
     }
 
     static @Nullable String collisionGroup(@Nullable ITeam team, boolean invisible) {
@@ -566,15 +572,22 @@ public class BwTabList {
         return team.getIdentity().toString();
     }
 
-    private static PlayerTab.PushingRule collisionPushingRule(boolean spectator, @NotNull Player player) {
-        return collisionPushingRule(spectator, player.hasPotionEffect(PotionEffectType.INVISIBILITY));
+    private static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
+                                                               boolean spectator,
+                                                               @NotNull Player player) {
+        return collisionPushingRule(status, spectator, player.hasPotionEffect(PotionEffectType.INVISIBILITY));
     }
 
-    static PlayerTab.PushingRule collisionPushingRule(boolean spectator, boolean invisible) {
-        // Server-side collision is disabled with VersionSupport#setCollide.
-        // Keep the scoreboard state in sync so clients do not predict a
-        // collision that the server rejects.
-        return PlayerTab.PushingRule.NEVER;
+    static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
+                                                       boolean spectator,
+                                                       boolean invisible) {
+        // Visible live players in an active game join a shared collision team.
+        // Invisible rows keep a private name-tag team and use the explicit
+        // NEVER scoreboard collision rule. Waiting and starting players retain
+        // normal entity collision until the round actually begins.
+        return status == GameState.playing && !spectator && !invisible
+                ? PlayerTab.PushingRule.PUSH_OTHER_TEAMS
+                : PlayerTab.PushingRule.NEVER;
     }
 
     /**

@@ -18,12 +18,25 @@ public final class RestartingPlayerState {
     }
 
     public static void prepare(@NotNull IArena arena) {
-        prepare(arena, RestartingPlayerState::clearRespawnSideEffects);
+        prepare(arena, RestartingPlayerState::clearRespawnSideEffects,
+                InvisibilityManager::showRespawningPlayer);
     }
 
     static void prepare(@NotNull IArena arena,
                         @NotNull BiConsumer<IArena, Player> respawnSideEffectCleaner) {
+        // Tests and integrations that provide their own cleanup callback can
+        // manage visibility independently of the Bukkit/NMS runtime.
+        prepare(arena, respawnSideEffectCleaner, (ignoredArena, ignoredPlayer) -> {
+        });
+    }
+
+    private static void prepare(@NotNull IArena arena,
+                                @NotNull BiConsumer<IArena, Player> respawnSideEffectCleaner,
+                                @NotNull BiConsumer<IArena, Player> respawnVisibilityRestorer) {
         Set<Player> respawningPlayers = new LinkedHashSet<>(arena.getRespawnSessions().keySet());
+        for (Player respawning : respawningPlayers) {
+            respawnVisibilityRestorer.accept(arena, respawning);
+        }
         arena.getRespawnSessions().clear();
 
         Set<Player> participants = new LinkedHashSet<>(arena.getPlayers());

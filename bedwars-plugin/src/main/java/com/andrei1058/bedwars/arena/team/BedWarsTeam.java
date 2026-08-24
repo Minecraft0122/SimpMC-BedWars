@@ -181,7 +181,9 @@ public class BedWarsTeam implements ITeam {
         SafeSpawnResolver.teleport(p, spawn);
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
-        nms.setCollide(p, getArena(), false);
+        // Keep the entity collidable so projectiles can still resolve a hit.
+        // Teammate pushing is disabled by the playing scoreboard team below.
+        nms.setCollide(p, getArena(), true);
         sendDefaultInventory(p, true);
         Bukkit.getPluginManager().callEvent(new PlayerFirstSpawnEvent(p, getArena(), this));
     }
@@ -376,7 +378,7 @@ public class BedWarsTeam implements ITeam {
      * Respawn a member
      */
     public void respawnMember(@NotNull Player p) {
-        getArena().getRespawnSessions().remove(p);
+        boolean wasRespawning = getArena().getRespawnSessions().remove(p) != null;
         if (reSpawnInvulnerability.containsKey(p.getUniqueId())) {
             reSpawnInvulnerability.replace(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         } else {
@@ -390,7 +392,10 @@ public class BedWarsTeam implements ITeam {
         SafeSpawnResolver.teleport(p, getSpawn());
         PlayerMotion.disableFlight(p);
         InvisibilityManager.remove(getArena(), p);
-        nms.setCollide(p, arena, false);
+        if (wasRespawning) InvisibilityManager.showRespawningPlayer(getArena(), p);
+        // A respawned player is active again; restore normal entity collision
+        // so arrows and other projectiles can hit them.
+        nms.setCollide(p, arena, true);
         p.setHealth(20);
 
         nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE)), Component.empty(), 0, 20, 10);

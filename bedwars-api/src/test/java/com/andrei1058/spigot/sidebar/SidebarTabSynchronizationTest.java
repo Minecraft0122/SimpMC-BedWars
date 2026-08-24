@@ -792,6 +792,65 @@ class SidebarTabSynchronizationTest {
                 "a shared collision team must still receive later colour updates");
     }
 
+    @Test
+    void sharedCollisionTeamsBlockOnlyTeammatePushing() {
+        Sidebar sidebar = sidebar();
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(team(state));
+        Player target = player("Alice");
+        PlayerTab tab = new PlayerTab(
+                "alice", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                "red-team");
+
+        sidebar.applyTab(scoreboard, tab);
+
+        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision,
+                "members of one shared team must not push each other");
+        assertSame(Team.OptionStatus.ALWAYS, state.visibility,
+                "collision policy must not alter name-tag visibility");
+    }
+
+    @Test
+    void privateInvisibleRowsDisableScoreboardCollisionWithoutSharingNameTags() {
+        Sidebar sidebar = sidebar();
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(team(state));
+        Player target = player("InvisibleAlice");
+        PlayerTab tab = new PlayerTab(
+                "invisible-alice", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.NEVER, PlayerTab.PlayerListMode.ACTUAL,
+                "red-team");
+
+        sidebar.applyTab(scoreboard, tab);
+
+        assertSame(Team.OptionStatus.NEVER, state.collision,
+                "an invisible private row must not restore teammate pushing");
+        assertSame(Team.OptionStatus.NEVER, state.visibility,
+                "the private row must retain hidden name-tag visibility");
+    }
+
+    @Test
+    void activePregameRowsRestoreCollisionAfterAnInvisiblePlayingRow() {
+        Sidebar sidebar = sidebar();
+        TeamState state = new TeamState();
+        Scoreboard scoreboard = scoreboard(team(state));
+        Player target = player("Alice");
+        PlayerTab tab = new PlayerTab(
+                "alice", target, new SidebarLine(), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                null);
+        state.collision = Team.OptionStatus.NEVER;
+
+        sidebar.applyTab(scoreboard, tab);
+
+        assertSame(Team.OptionStatus.ALWAYS, state.collision,
+                "waiting and starting players must not retain the playing invisibility rule");
+    }
+
     private static Sidebar sidebar() {
         return new Sidebar(new SidebarLine(), List.of(), new ConcurrentLinkedQueue<>());
     }
@@ -850,9 +909,14 @@ class SidebarTabSynchronizationTest {
                         state.writeCount++;
                         yield null;
                     }
-                    case "getOption" -> state.visibility;
+                    case "getOption" -> args[0] == Team.Option.COLLISION_RULE
+                            ? state.collision : state.visibility;
                     case "setOption" -> {
-                        state.visibility = (Team.OptionStatus) args[1];
+                        if (args[0] == Team.Option.COLLISION_RULE) {
+                            state.collision = (Team.OptionStatus) args[1];
+                        } else {
+                            state.visibility = (Team.OptionStatus) args[1];
+                        }
                         state.writeCount++;
                         yield null;
                     }
@@ -897,9 +961,14 @@ class SidebarTabSynchronizationTest {
                         state.color = (ChatColor) args[0];
                         yield null;
                     }
-                    case "getOption" -> state.visibility;
+                    case "getOption" -> args[0] == Team.Option.COLLISION_RULE
+                            ? state.collision : state.visibility;
                     case "setOption" -> {
-                        state.visibility = (Team.OptionStatus) args[1];
+                        if (args[0] == Team.Option.COLLISION_RULE) {
+                            state.collision = (Team.OptionStatus) args[1];
+                        } else {
+                            state.visibility = (Team.OptionStatus) args[1];
+                        }
                         yield null;
                     }
                     case "hasEntry" -> state.entries.contains((String) args[0]);
@@ -928,6 +997,7 @@ class SidebarTabSynchronizationTest {
         private ChatColor color = ChatColor.WHITE;
         private NamedTextColor modernColor = NamedTextColor.WHITE;
         private Team.OptionStatus visibility = Team.OptionStatus.ALWAYS;
+        private Team.OptionStatus collision = Team.OptionStatus.ALWAYS;
         private final Set<String> entries = new HashSet<>();
         private int writeCount;
 

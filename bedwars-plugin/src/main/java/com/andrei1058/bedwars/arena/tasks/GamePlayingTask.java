@@ -215,6 +215,7 @@ public class GamePlayingTask implements Runnable, PlayingTask {
                     }
                     ITeam t = a.getTeam(e.getKey());
                     if (t == null){
+                        a.getRespawnSessions().remove(e.getKey());
                         a.addSpectator(e.getKey(), true, null);
                     } else {
                         t.respawnMember(e.getKey());

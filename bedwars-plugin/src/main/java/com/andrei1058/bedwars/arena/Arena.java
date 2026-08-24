@@ -520,6 +520,10 @@ public class Arena implements IArena {
             p.closeInventory();
             players.add(p);
             setArenaByPlayer(p, this);
+            // Waiting and starting players keep normal entity collision. This
+            // also clears the disabled flag left by an earlier respawn.
+            nms.setCollide(p, this, true);
+            InvisibilityManager.synchronizeViewer(this, p);
             LobbyAnnouncements.playerEnteredArena(p);
             PlayerMotion.disableFlight(p);
             p.setHealth(20);
@@ -666,6 +670,7 @@ public class Arena implements IArena {
                     sidebarService.handleElimination(this, p);
                 }
                 synchronizeSpectatorVisibility(p, !playerBefore);
+                InvisibilityManager.synchronizeViewer(this, p);
 
                 if (!playerBefore) {
                     if (staffTeleport == null) {
@@ -768,7 +773,7 @@ public class Arena implements IArena {
     public void removePlayer(@NotNull Player p, boolean disconnect) {
         if (!ArenaDepartureGuard.tryBegin(leaving, p)) return;
         debug("Player removed: " + p.getName() + " arena: " + getArenaName());
-        respawnSessions.remove(p);
+        boolean wasRespawning = respawnSessions.remove(p) != null;
 
         ITeam team = null;
 
@@ -776,6 +781,10 @@ public class Arena implements IArena {
         BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
 
         InvisibilityManager.remove(this, p);
+        if (wasRespawning) InvisibilityManager.showRespawningPlayer(this, p);
+        // A player may leave while waiting for a respawn. Restore the entity
+        // flag before the arena association is removed.
+        nms.setCollide(p, this, true);
 
         if (status == GameState.playing) {
             for (ITeam t : getTeams()) {
@@ -1018,6 +1027,7 @@ public class Arena implements IArena {
         removeArenaByPlayer(p, this);
         p.getInventory().clear();
         p.getInventory().setArmorContents(null);
+        InvisibilityManager.remove(this, p);
         nms.setCollide(p, this, true);
 
         Arena.afkCheck.remove(p.getUniqueId());
@@ -2673,6 +2683,18 @@ public class Arena implements IArena {
             og.destroyData();
         }
         isOnABase.entrySet().removeIf(entry -> entry.getValue().getArena().equals(this));
+        Set<Player> playersToRestore = new LinkedHashSet<>(players);
+        playersToRestore.addAll(spectators);
+        playersToRestore.addAll(respawnSessions.keySet());
+        playersToRestore.addAll(showTime.keySet());
+        for (Player player : playersToRestore) {
+            boolean respawning = respawnSessions.containsKey(player);
+            if (respawning || showTime.containsKey(player)) {
+                InvisibilityManager.remove(this, player);
+            }
+            if (respawning) InvisibilityManager.showRespawningPlayer(this, player);
+            nms.setCollide(player, this, true);
+        }
         for (ITeam bwt : new ArrayList<>(teams)) {
             bwt.destroyData();
         }
@@ -2798,9 +2820,11 @@ public class Arena implements IArena {
                 // back to SURVIVAL when the countdown ends.
                 PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
+                InvisibilityManager.hideRespawningPlayer(this, player);
                 Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
                     if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
                     nms.setCollide(player, this, false);
+                    InvisibilityManager.synchronizePlayerEquipment(this, player);
                     InvisibilityManager.synchronizeViewer(this, player);
                     updateSpectatorCollideRule(player, false);
                 });
