@@ -124,14 +124,7 @@ public class DamageDeathMove implements Listener {
                     return;
                 }
 
-                // todo why did I set this to 1? disabled for now
-                /*if (e.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION) {
-                    e.setDamage(1);
-                    return;
-                }*/
-                //if (e.getCause() == EntityDamageEvent.DamageCause.FALL) {
                 if (isRespawnProtected(p)) e.setCancelled(true);
-                //}
 
             }
         }

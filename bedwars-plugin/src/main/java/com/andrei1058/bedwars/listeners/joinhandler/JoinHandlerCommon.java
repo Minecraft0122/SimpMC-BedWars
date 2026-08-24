@@ -41,7 +41,6 @@ public class JoinHandlerCommon implements Listener {
     // No sensitive data
     protected static void displayCustomerDetails(Player player) {
         if (player == null) return;
-        //TODO IMPROVE, ADD MORE DETAILS
         if (player.getName().equalsIgnoreCase("andrei1058") || player.getName().equalsIgnoreCase("andreea1058") || player.getName().equalsIgnoreCase("Dani3l_FTW")) {
             AdventureText.send(player, "§8[§f" + BedWars.plugin.getName() + " v" + BedWars.plugin.getDescription().getVersion() + "§8]§7§m---------------------------");
             AdventureText.send(player, "");

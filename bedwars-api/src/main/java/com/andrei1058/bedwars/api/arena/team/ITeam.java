@@ -361,9 +361,14 @@ public interface ITeam {
     boolean isBed(Location location);
 
     /**
-     * What happens when one of team beds is destroyed at given location.
+     * Called when one of team beds is destroyed at given location.
+     *
+     * <p>This is an optional extension hook. Implementations that do not need
+     * a callback may use the no-op default.</p>
      */
     default void onBedDestroy(Location location) {
-        throw new RuntimeException("Not implemented yet");
+        // Optional extension hook. The built-in team implementation handles bed
+        // destruction through the arena event pipeline, so third-party teams may
+        // safely omit this callback.
     }
 }

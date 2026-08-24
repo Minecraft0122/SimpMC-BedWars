@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.commands.party;
 
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.party.Party;
 import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.configuration.Permissions;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -164,7 +165,7 @@ public class PartyCommand extends BukkitCommand {
                     AdventureText.send(p, getMsg(p, Messages.COMMAND_PARTY_REMOVE_DENIED_TARGET_NOT_PARTY_MEMBER).replace("{player}", args[1]));
                     return true;
                 }
-                if (!getParty().isMember(p, target)) {
+                if (!isPartyMember(getParty(), p, target)) {
                     AdventureText.send(p, getMsg(p, Messages.COMMAND_PARTY_REMOVE_DENIED_TARGET_NOT_PARTY_MEMBER).replace("{player}", args[1]));
                     return true;
                 }
@@ -183,7 +184,7 @@ public class PartyCommand extends BukkitCommand {
                     return true;
                 }
                 Player target1 = Bukkit.getPlayer(args[1]);
-                if (!getParty().isMember(p, target1)) {
+                if (!isPartyMember(getParty(), p, target1)) {
                     AdventureText.send(p, getMsg(p, Messages.COMMAND_PARTY_REMOVE_DENIED_TARGET_NOT_PARTY_MEMBER).replace("{player}", args[1]));
                     return true;
                 }
@@ -216,6 +217,10 @@ public class PartyCommand extends BukkitCommand {
                 break;
         }
         return false;
+    }
+
+    static boolean isPartyMember(Party party, Player owner, Player target) {
+        return target != null && party != null && party.isMember(owner, target);
     }
 
     private void sendPartyCmds(Player p) {

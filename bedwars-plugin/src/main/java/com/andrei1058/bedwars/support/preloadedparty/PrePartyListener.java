@@ -25,23 +25,27 @@ import com.andrei1058.bedwars.api.events.server.ArenaRestartEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
+/**
+ * @deprecated Pre-loaded parties are keyed by player name, while arena lifecycle
+ * events only expose the arena world name. The old listener could therefore not
+ * identify the party to clean up and is no longer registered by the plugin.
+ */
+@Deprecated
 public class PrePartyListener implements Listener {
 
+    /**
+     * Retained as a no-op method for plugins that still call the legacy listener
+     * directly. Pre-loaded parties are cleaned by the lobby user lifecycle.
+     */
     @EventHandler
-    public void onDisable(ArenaDisableEvent e){
-        PreLoadedParty plp = PreLoadedParty.getPartyByOwner(e.getWorldName());
-        if (plp != null){
-            //todo what was I doing here lmao. no sense
-            PreLoadedParty.getPreLoadedParties().remove(plp);
-        }
+    public void onDisable(ArenaDisableEvent event) {
     }
 
+    /**
+     * Retained as a no-op method for plugins that still call the legacy listener
+     * directly. Pre-loaded parties are cleaned by the lobby user lifecycle.
+     */
     @EventHandler
-    public void onRestart(ArenaRestartEvent e){
-        PreLoadedParty plp = PreLoadedParty.getPartyByOwner(e.getWorldName());
-        if (plp != null){
-            //todo what was I doing here lmao. no sense
-            PreLoadedParty.getPreLoadedParties().remove(plp);
-        }
+    public void onRestart(ArenaRestartEvent event) {
     }
 }

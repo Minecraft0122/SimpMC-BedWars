@@ -20,7 +20,6 @@
 
 package com.andrei1058.bedwars.api.party;
 
-import com.andrei1058.bedwars.api.util.AdventureText;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,10 +56,15 @@ public interface Party {
         return null;
     }
 
+    /**
+     * Transfer party ownership when supported by the provider.
+     *
+     * <p>This is an optional compatibility hook. Providers without a
+     * leadership-transfer API leave the default implementation unchanged.</p>
+     */
     default void promote(@NotNull Player owner, @NotNull Player target) {
-        String msg = "§cNot implemented! Contact an administrator";
-        AdventureText.send(owner, msg);
-        AdventureText.send(target, msg);
+        // Party providers that support leadership changes should override this hook.
+        // Keep the compatibility default side-effect free when they do not.
     }
 
     boolean isInternal();

@@ -187,6 +187,7 @@ public class PartiesAdapter implements Party {
 
     @Override
     public void promote(@NotNull Player owner, @NotNull Player target) {
+        PartiesPromotion.promote(api, owner, target);
     }
 
     @Override
