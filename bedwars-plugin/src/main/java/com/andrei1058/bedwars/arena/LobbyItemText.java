@@ -23,4 +23,12 @@ final class LobbyItemText {
     static List<String> fallbackLore(@Nullable String id, @Nullable String command, @Nullable String mainCommand) {
         return CommandItemAction.isLeaveItemDefinition(id, command, mainCommand) ? RETURN_LORE : List.of();
     }
+
+    static boolean isGeneratedName(@Nullable String value, @NotNull String path) {
+        return ("&cName not set at: &f" + path).equals(value);
+    }
+
+    static boolean isGeneratedLore(List<String> lines, @NotNull String path) {
+        return List.of("&cLore not set at:", " &f" + path).equals(lines);
+    }
 }

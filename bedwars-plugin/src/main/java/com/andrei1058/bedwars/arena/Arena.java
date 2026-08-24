@@ -1900,7 +1900,13 @@ public class Arena implements IArena {
     private static String lobbyItemName(Player player, String id, String command) {
         String path = Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_NAME.replace("%path%", id);
         Language language = Language.getPlayerLanguage(player);
-        if (language.exists(path)) return getMsg(player, path);
+        if (language.exists(path)) {
+            String raw = language.getYml().getString(path);
+            if (!CommandItemAction.isLeaveItemDefinition(id, command, BedWars.mainCmd)
+                    || !LobbyItemText.isGeneratedName(raw, path)) {
+                return getMsg(player, path);
+            }
+        }
         return LobbyItemText.fallbackName(id, command, BedWars.mainCmd);
     }
 
@@ -1908,7 +1914,13 @@ public class Arena implements IArena {
     private static List<String> lobbyItemLore(Player player, String id, String command) {
         String path = Messages.GENERAL_CONFIGURATION_LOBBY_ITEMS_LORE.replace("%path%", id);
         Language language = Language.getPlayerLanguage(player);
-        if (language.exists(path)) return getList(player, path);
+        if (language.exists(path)) {
+            List<String> raw = language.getYml().getStringList(path);
+            if (!CommandItemAction.isLeaveItemDefinition(id, command, BedWars.mainCmd)
+                    || !LobbyItemText.isGeneratedLore(raw, path)) {
+                return getList(player, path);
+            }
+        }
         return LobbyItemText.fallbackLore(id, command, BedWars.mainCmd);
     }
 
