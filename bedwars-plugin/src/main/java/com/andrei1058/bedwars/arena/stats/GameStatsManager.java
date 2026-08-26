@@ -35,7 +35,7 @@ public class GameStatsManager implements GameStatsHolder {
     }
 
     public void register(@NotNull GameStatisticProvider<?> statistic) {
-        if (statistic.getIdentifier().isBlank()) {
+        if (statistic.getIdentifier().trim().isEmpty()) {
             throw new RuntimeException("Identifier cannot be blank: "+ statistic.getClass().getName());
         }
         if (!statistic.getIdentifier().trim().equals(statistic.getIdentifier())) {
@@ -77,7 +77,7 @@ public class GameStatsManager implements GameStatsHolder {
     @Override
     public @NotNull PlayerGameStats getCreate(@NotNull Player holder) {
         Optional<PlayerGameStats> ps = playerSessionStats.getOrDefault(holder.getUniqueId(), Optional.empty());
-        if (ps.isEmpty()) {
+        if (!ps.isPresent()) {
             PlayerGameStats stats = init(holder);
             playerSessionStats.put(holder.getUniqueId(), Optional.of(stats));
             return stats;
@@ -114,7 +114,7 @@ public class GameStatsManager implements GameStatsHolder {
 
     @Override
     public List<String> getRegistered() {
-        return registeredStats.keySet().stream().collect(Collectors.toUnmodifiableList());
+        return Collections.unmodifiableList(registeredStats.keySet().stream().collect(Collectors.toList()));
     }
 
     @Override

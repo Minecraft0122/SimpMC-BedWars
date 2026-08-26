@@ -54,7 +54,7 @@ public class StatisticsOrdered {
 
             if (index >= ordered.size()) {
                 if (boundsPolicy == BoundsPolicy.SKIP) {
-                    if (string.isBlank()){
+                    if (string.trim().isEmpty()){
                         return string;
                     }
 
@@ -101,7 +101,7 @@ public class StatisticsOrdered {
 
             Optional<PlayerGameStats> statsOptional = ordered.get(index);
 
-            if (statsOptional.isEmpty()) {
+            if (!statsOptional.isPresent()) {
                 return string;
             }
 

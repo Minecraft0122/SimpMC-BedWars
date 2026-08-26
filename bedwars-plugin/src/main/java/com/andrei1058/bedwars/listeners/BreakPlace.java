@@ -232,6 +232,31 @@ public class BreakPlace implements Listener {
         }
     }
 
+    /**
+     * Shears should break wool at the same fast pace players expect from the
+     * vanilla BedWars tool. The normal block-break handler below still owns
+     * all arena/protection checks; this event only changes break speed.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onShearsBlockDamage(@NotNull BlockDamageEvent event) {
+        Player player = event.getPlayer();
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null || arena.getStatus() != GameState.playing
+                || !arena.isPlayer(player) || arena.isSpectator(player)
+                || arena.getRespawnSessions().containsKey(player)) {
+            return;
+        }
+
+        if (!isWool(event.getBlock().getType())) {
+            return;
+        }
+
+        org.bukkit.inventory.ItemStack heldItem = nms.getItemInHand(player);
+        if (heldItem != null && heldItem.getType() == Material.SHEARS) {
+            event.setInstaBreak(true);
+        }
+    }
+
     @EventHandler
     public void onBlockDrop(ItemSpawnEvent event) {
         //WHEAT_SEEDS AND BEDs
@@ -621,5 +646,10 @@ public class BreakPlace implements Listener {
 
     public static void removeBuildSession(Player p) {
         buildSession.remove(p);
+    }
+
+    private static boolean isWool(@NotNull Material material) {
+        String name = material.name();
+        return "WOOL".equals(name) || name.endsWith("_WOOL");
     }
 }

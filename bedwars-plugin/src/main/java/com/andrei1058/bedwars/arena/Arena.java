@@ -57,6 +57,7 @@ import com.andrei1058.bedwars.arena.tasks.GamePlayingTask;
 import com.andrei1058.bedwars.arena.tasks.GameRestartingTask;
 import com.andrei1058.bedwars.arena.tasks.GameStartingTask;
 import com.andrei1058.bedwars.arena.tasks.ReJoinTask;
+import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.arena.team.TeamAssigner;
 import com.andrei1058.bedwars.configuration.ArenaConfig;
@@ -492,6 +493,9 @@ public class Arena implements IArena {
 
             p.closeInventory();
             players.add(p);
+            // Spigot 1.8 has no scoreboard collision rule. Clear any stale
+            // no-collision state while the arena is still waiting/starting.
+            nms.setCollide(p, this, true);
             p.setFlying(false);
             p.setAllowFlight(false);
             p.setHealth(20);
@@ -684,6 +688,7 @@ public class Arena implements IArena {
                         BedWars.nms.spigotHidePlayer(on, p);
                     }
                 }
+                synchronizeRespawnVisibility(p);
 
 
                 if (!playerBefore) {
@@ -751,7 +756,16 @@ public class Arena implements IArena {
             leaving.add(p);
         }
         debug("Player removed: " + p.getName() + " arena: " + getArenaName());
-        respawnSessions.remove(p);
+        boolean wasRespawning = respawnSessions.remove(p) != null;
+        nms.setCollide(p, this, true);
+        if (wasRespawning) {
+            for (Player viewer : getPlayers()) {
+                if (!viewer.equals(p)) BedWars.nms.spigotShowPlayer(p, viewer);
+            }
+            for (Player viewer : getSpectators()) {
+                if (!viewer.equals(p)) BedWars.nms.spigotShowPlayer(p, viewer);
+            }
+        }
 
         ITeam team = null;
 
@@ -879,7 +893,9 @@ public class Arena implements IArena {
                                     .replace("{KillerTeamName}", killerTeam.getDisplayName(lang)));
                         }
                     }
-                    PlayerDrops.handlePlayerDrops(this, p, lastDamager, team, killerTeam, cause, new ArrayList<>(Arrays.asList(p.getInventory().getContents())));
+                    List<ItemStack> disconnectDrops = new ArrayList<>(Arrays.asList(p.getInventory().getContents()));
+                    disconnectDrops.removeIf(EnemyTrackerCompass::isTrackingCompass);
+                    PlayerDrops.handlePlayerDrops(this, p, lastDamager, team, killerTeam, cause, disconnectDrops);
                 }
             }
         }
@@ -1146,6 +1162,7 @@ public class Arena implements IArena {
 
         p.closeInventory();
         players.add(p);
+        nms.setCollide(p, this, false);
         for (Player on : players) {
             on.sendMessage(getMsg(on, Messages.COMMAND_REJOIN_PLAYER_RECONNECTED).replace("{playername}", p.getName()).replace("{player}", p.getDisplayName()).replace("{on}", String.valueOf(getPlayers().size())).replace("{max}", String.valueOf(getMaxPlayers())));
         }
@@ -1171,6 +1188,7 @@ public class Arena implements IArena {
         }
 
         reJoin.getBwt().reJoin(p, ev.getRespawnTime());
+        synchronizeRespawnVisibility(p);
         reJoin.destroy(false);
 
         SidebarService.getInstance().giveSidebar(p, this, true);
@@ -1388,7 +1406,7 @@ public class Arena implements IArena {
      * @param player     Target player
      * @param finalKills True if you want to get the Final Kills. False for regular kills.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public int getPlayerKills(Player player, boolean finalKills) {
         if (null == player || null == getStatsHolder()) {
             return 0;
@@ -1398,7 +1416,7 @@ public class Arena implements IArena {
                 stats.getStatistic(finalKills ? DefaultStatistics.KILLS_FINAL : DefaultStatistics.BEDS_DESTROYED)
         );
 
-        if (st.isEmpty()) {
+        if (!st.isPresent()) {
             return 0;
         }
 
@@ -1411,7 +1429,7 @@ public class Arena implements IArena {
      *
      * @param player Target player
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public int getPlayerBedsDestroyed(Player player) {
         if (null == player || null == getStatsHolder()) {
             return 0;
@@ -1420,7 +1438,7 @@ public class Arena implements IArena {
         Optional<GameStatistic<?>> st = getStatsHolder().get(player)
                 .flatMap(stats -> stats.getStatistic(DefaultStatistics.BEDS_DESTROYED));
 
-        if (st.isEmpty()) {
+        if (!st.isPresent()) {
             return 0;
         }
 
@@ -1473,6 +1491,7 @@ public class Arena implements IArena {
      * Set game status without starting stats.
      */
     public void setStatus(GameState status) {
+        GameState previousStatus = this.status;
         if (this.status != GameState.playing && status == GameState.playing) {
             startTime = Instant.now();
         }
@@ -1484,6 +1503,9 @@ public class Arena implements IArena {
             }
         }
         this.status = status;
+        if (previousStatus != status) {
+            updatePlayingCollision(status == GameState.playing);
+        }
     }
 
     /**
@@ -1496,11 +1518,13 @@ public class Arena implements IArena {
             return;
         }
 
+        GameState previousStatus = this.status;
         if (this.status != GameState.playing && status == GameState.playing) {
             startTime = Instant.now();
         }
         this.status = status;
-        Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, status, status));
+        updatePlayingCollision(status == GameState.playing);
+        Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, previousStatus, status));
         refreshSigns();
         if (status == GameState.playing) {
             for (Player p : players) {
@@ -1558,6 +1582,28 @@ public class Arena implements IArena {
             playingTask = new GamePlayingTask(this);
         } else if (status == GameState.restarting) {
             restartingTask = new GameRestartingTask(this);
+        }
+    }
+
+    /**
+     * 1.8.8 does not expose the modern scoreboard collision rule. Keep player
+     * entities non-collidable for the playing phase and restore the normal
+     * state outside the game. The legacy arrow bridge temporarily exposes
+     * valid enemy targets while an arrow is being processed.
+     */
+    private void updatePlayingCollision(boolean playing) {
+        for (Player player : new ArrayList<>(players)) {
+            if (player != null) {
+                nms.setCollide(player, this, !playing);
+            }
+        }
+    }
+
+    private void synchronizeRespawnVisibility(Player viewer) {
+        for (Player respawning : respawnSessions.keySet()) {
+            if (respawning != null && !respawning.equals(viewer)) {
+                BedWars.nms.spigotHidePlayer(respawning, viewer);
+            }
         }
     }
 
@@ -1663,14 +1709,14 @@ public class Arena implements IArena {
     /**
      * Add a kill point to the game stats.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public void addPlayerKill(Player player, boolean finalKill, Player victim) {
     }
 
     /**
      * Add a destroyed bed point to the player temp stats.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public void addPlayerBedDestroyed(Player player) {
     }
 
@@ -1920,7 +1966,7 @@ public class Arena implements IArena {
 
                             String winnerTeamChat = playerLang.m(Messages.GAME_END_TEAM_WON_CHAT);
                             // check if message disabled
-                            if (null != winnerTeamChat && !winnerTeamChat.isBlank()) {
+                            if (null != winnerTeamChat && !winnerTeamChat.trim().isEmpty()) {
                                 receiver.sendMessage(winnerTeamChat.replace("{TeamColor}", winner.getColor().chat().toString())
                                         .replace("{TeamName}", winner.getDisplayName(playerLang)));
                             }
@@ -1994,7 +2040,7 @@ public class Arena implements IArena {
     /**
      * Add a kill to the player temp stats.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public void addPlayerDeath(Player player) {
     }
 
@@ -2236,7 +2282,7 @@ public class Arena implements IArena {
 
     public static List<IArena> getSorted(List<IArena> arenas) {
         List<IArena> sorted = new ArrayList<>(arenas);
-        sorted.sort(new Comparator<>() {
+        sorted.sort(new Comparator<IArena>() {
             @Override
             public int compare(IArena o1, IArena o2) {
                 if (o1.getStatus() == GameState.starting && o2.getStatus() == GameState.starting) {
@@ -2309,7 +2355,7 @@ public class Arena implements IArena {
     /**
      * Get player deaths.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public int getPlayerDeaths(Player player, boolean finalDeaths) {
         if (null == player || null == getStatsHolder()) {
             return 0;
@@ -2319,7 +2365,7 @@ public class Arena implements IArena {
                 stats.getStatistic(finalDeaths ? DefaultStatistics.DEATHS_FINAL : DefaultStatistics.DEATHS)
         );
 
-        if (st.isEmpty()) {
+        if (!st.isPresent()) {
             return 0;
         }
 
@@ -2394,7 +2440,8 @@ public class Arena implements IArena {
             }
         }
         for (Despawnable despawnable : new ArrayList<>(BedWars.nms.getDespawnablesList().values())) {
-            if (despawnable.getTeam().getArena() == this) {
+            if (despawnable != null && despawnable.getTeam() != null
+                    && despawnable.getTeam().getArena() == this) {
                 despawnable.destroy();
             }
         }
@@ -2500,18 +2547,25 @@ public class Arena implements IArena {
             if (!arena.isPlayer(player)) {
                 return false;
             }
+            // Keep the respawning entity non-collidable from the first tick of
+            // the session; the delayed visibility update below is too late for
+            // 1.8 clients that still see the old death position briefly.
+            nms.setCollide(player, this, false);
+            player.setGameMode(GameMode.SPECTATOR);
             player.getInventory().clear();
             if (seconds > 1) {
-                // hide to others
+                respawnSessions.put(player, seconds);
                 for (Player playing : arena.getPlayers()) {
                     if (playing.equals(player)) continue;
                     BedWars.nms.spigotHidePlayer(player, playing);
                 }
+                for (Player spectator : arena.getSpectators()) {
+                    if (spectator.equals(player)) continue;
+                    BedWars.nms.spigotHidePlayer(player, spectator);
+                }
                 TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 player.setAllowFlight(true);
                 player.setFlying(true);
-
-                respawnSessions.put(player, seconds);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                     player.setAllowFlight(true);
                     player.setFlying(true);

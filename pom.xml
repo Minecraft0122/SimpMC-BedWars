@@ -7,28 +7,18 @@
     <groupId>com.andrei1058.bedwars</groupId>
     <artifactId>BedWars1058</artifactId>
     <packaging>pom</packaging>
-    <version>25.2</version>
+    <version>1.0.0</version>
+    <name>SimpMC-BW1.8.8</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.release>8</maven.compiler.release>
+        <spigot.api.version>1.8.8-R0.1-20160221.082514-43</spigot.api.version>
+        <spigot.version>1.8.8-R0.1-20190527.160303-7</spigot.version>
     </properties>
 
     <repositories>
-        <!--Bungeecord Repo-->
-        <!--Only include if using the Spigot API dependency-->
-        <repository>
-            <id>bungeecord-repo</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-        <!--        <repository>-->
-        <!--            <id>gitlab-maven</id>-->
-        <!--            <url>https://gitlab.com/api/v4/groups/4800570/-/packages/maven</url>-->
-        <!--        </repository>-->
-        <!--        <repository>-->
-        <!--            <id>vipfeatures-maven</id>-->
-        <!--            <url>https://gitlab.com/api/v4/projects/6491858/packages/maven</url>-->
-        <!--        </repository>-->
         <repository>
             <id>codemc-nms</id>
             <url>https://repo.codemc.io/repository/nms/</url>
@@ -36,6 +26,10 @@
         <repository>
             <id>codemc-public</id>
             <url>https://repo.codemc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
     </repositories>
 
@@ -53,13 +47,13 @@
             <version>24.0.1</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.36</version>
+            <groupId>net.md-5</groupId>
+            <artifactId>bungeecord-chat</artifactId>
+            <version>1.13-20190406.085523-69</version>
             <scope>provided</scope>
         </dependency>
+
     </dependencies>
 
     <build>
@@ -69,8 +63,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
             <plugin>
@@ -82,7 +75,9 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.1.1</version>
                 <executions>
                     <execution>
                         <id>deploy</id>
@@ -96,34 +91,9 @@
         </plugins>
     </build>
     <modules>
-        <module>bedwars-plugin</module>
         <module>bedwars-api</module>
-        <module>resetadapter_aswm</module>
-        <module>resetadapter_slime</module>
-        <module>resetadapter_slimepaper</module>
-        <module>versionsupport_1_8_R3</module>
-        <module>versionsupport_1_12_R1</module>
         <module>versionsupport_common</module>
-        <module>versionsupport_v1_16_R3</module>
-        <module>versionsupport_v1_17_R1</module>
-        <module>versionsupport_v1_18_R2</module>
-        <module>versionsupport_v1_19_R2</module>
-        <module>versionsupport_v1_19_R3</module>
-        <module>versionsupport_v1_20_R1</module>
-        <module>versionsupport_v1_20_R2</module>
-        <module>versionsupport_v1_20_R3</module>
-        <module>versionsupport_v1_20_R4</module>
-        <module>versionsupport_v1_21_R3</module>
+        <module>versionsupport_1_8_R3</module>
+        <module>bedwars-plugin</module>
     </modules>
-
-    <distributionManagement>
-        <repository>
-            <id>andrei1058-repo</id>
-            <url>https://repo.andrei1058.com/releases</url>
-        </repository>
-        <snapshotRepository>
-            <id>andrei1058-repo</id>
-            <url>https://repo.andrei1058.com/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
 </project>

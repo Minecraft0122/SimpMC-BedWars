@@ -35,6 +35,7 @@ import com.andrei1058.bedwars.api.region.Cuboid;
 import com.andrei1058.bedwars.api.upgrades.EnemyBaseEnterTrap;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.OreGenerator;
+import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
@@ -262,6 +263,7 @@ public class BedWarsTeam implements ITeam {
             }
         }
         sendArmor(p);
+        EnemyTrackerCompass.giveTo(p);
     }
 
     public void defaultSword(Player p, boolean sword) {
@@ -342,10 +344,11 @@ public class BedWarsTeam implements ITeam {
         } else {
             reSpawnInvulnerability.put(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         }
+        p.setGameMode(GameMode.SURVIVAL);
         TeleportManager.teleportC(p, getSpawn(), PlayerTeleportEvent.TeleportCause.PLUGIN);
         p.setVelocity(new Vector(0, 0, 0));
         p.removePotionEffect(PotionEffectType.INVISIBILITY);
-        nms.setCollide(p, arena, true);
+        nms.setCollide(p, arena, false);
         p.setAllowFlight(false);
         p.setFlying(false);
         p.setHealth(20);

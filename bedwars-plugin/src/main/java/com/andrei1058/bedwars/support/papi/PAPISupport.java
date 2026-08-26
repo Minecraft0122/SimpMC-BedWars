@@ -113,7 +113,7 @@ public class PAPISupport extends PlaceholderExpansion {
         // stats placeholders
         if(s.startsWith("stats_")) {
             String targetedStat = s.replaceFirst("stats_", "");
-            if(targetedStat.isEmpty() || targetedStat.isBlank()) {
+            if(targetedStat.trim().isEmpty()) {
                 return null;
             }
             PlayerStats stats = BedWars.getStatsManager().getUnsafe(player.getUniqueId());
@@ -245,9 +245,9 @@ public class PAPISupport extends PlaceholderExpansion {
                     if (null != startTime){
                         Duration time = Duration.ofMillis(Instant.now().minusMillis(startTime.toEpochMilli()).toEpochMilli());
                         if (time.toHours() == 0){
-                            response = String.format("%02d:%02d", time.toMinutes(), time.toSeconds());
+                            response = String.format("%02d:%02d", time.toMinutes(), time.toMillis() / 1000L);
                         } else {
-                            response = String.format("%02d:%02d:%02d", time.toHours(), time.toMinutes(), time.toSeconds());
+                            response = String.format("%02d:%02d:%02d", time.toHours(), time.toMinutes(), time.toMillis() / 1000L);
                         }
                     } else response = "";
                 }

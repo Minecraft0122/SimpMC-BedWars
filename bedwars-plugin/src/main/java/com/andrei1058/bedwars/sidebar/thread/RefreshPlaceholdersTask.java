@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.sidebar.SidebarService;
 public class RefreshPlaceholdersTask implements Runnable {
     @Override
     public void run() {
-        SidebarService.getInstance().refreshPlaceholders();
+        SidebarService service = SidebarService.getInstance();
+        if (service != null) service.refreshPlaceholders();
     }
 }

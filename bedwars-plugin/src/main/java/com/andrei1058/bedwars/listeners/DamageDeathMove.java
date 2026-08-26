@@ -35,6 +35,8 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
+import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
 import com.andrei1058.bedwars.arena.LastHit;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
@@ -147,7 +149,7 @@ public class DamageDeathMove implements Listener {
                 .replace("{amount}", new DecimalFormat("00.#").format(((Player) e.getEntity()).getHealth() - e.getFinalDamage()))
                 .replace("{TeamColor}", team.getColor().chat().toString())
                 .replace("{TeamName}", team.getDisplayName(lang))
-                .replace("{PlayerName}", ChatColor.stripColor(p.getDisplayName()));
+                .replace("{PlayerName}", playerNameWithReset(p));
         damager.sendMessage(message);
     }
 
@@ -167,7 +169,6 @@ public class DamageDeathMove implements Listener {
                 }
 
                 Player damager = null;
-                boolean projectile = false;
                 if (e.getDamager() instanceof Player) {
                     damager = (Player) e.getDamager();
                 } else if (e.getDamager() instanceof Projectile) {
@@ -175,18 +176,15 @@ public class DamageDeathMove implements Listener {
                     if (shooter instanceof Player) {
                         damager = (Player) shooter;
                     } else return;
-                    projectile = true;
-                } else if (e.getDamager() instanceof Player) {
-                    damager = (Player) e.getDamager();
-                    if (a.isReSpawning(damager)) {
-                        e.setCancelled(true);
-                        return;
-                    }
                 } else if (e.getDamager() instanceof TNTPrimed) {
                     TNTPrimed tnt = (TNTPrimed) e.getDamager();
                     if (tnt.getSource() != null) {
                         if (tnt.getSource() instanceof Player) {
                             damager = (Player) tnt.getSource();
+                            if (!isValidPlayerAttacker(a, damager)) {
+                                e.setCancelled(true);
+                                return;
+                            }
                             if (damager.equals(p)) {
                                 if (tntDamageSelf > -1) {
                                     e.setDamage(tntDamageSelf);
@@ -224,12 +222,19 @@ public class DamageDeathMove implements Listener {
                     }
                 }
                 if (damager != null) {
-                    if (a.isSpectator(damager) || a.isReSpawning(damager.getUniqueId())) {
+                    if (!isValidPlayerAttacker(a, damager)) {
                         e.setCancelled(true);
                         return;
                     }
 
-                    if (a.getTeam(p).equals(a.getTeam(damager))) {
+                    ITeam victimTeam = a.getTeam(p);
+                    ITeam attackerTeam = a.getTeam(damager);
+                    if (victimTeam == null || attackerTeam == null) {
+                        e.setCancelled(true);
+                        return;
+                    }
+
+                    if (victimTeam.equals(attackerTeam)) {
                         if (!(e.getDamager() instanceof TNTPrimed)) {
                             e.setCancelled(true);
                         }
@@ -324,6 +329,21 @@ public class DamageDeathMove implements Listener {
         }
     }
 
+    /**
+     * An attacker must belong to the same arena and an active team.  Bukkit can
+     * still deliver a projectile event after its shooter has left or while the
+     * shooter is waiting to respawn; accepting that event would either compare
+     * a null team or record a hit across arenas.
+     */
+    private static boolean isValidPlayerAttacker(IArena arena, Player attacker) {
+        return attacker != null
+                && Arena.getArenaByPlayer(attacker) == arena
+                && arena.isPlayer(attacker)
+                && !arena.isSpectator(attacker)
+                && !arena.isReSpawning(attacker.getUniqueId())
+                && arena.getTeam(attacker) != null;
+    }
+
     @EventHandler
     public void onDeath(@NotNull PlayerDeathEvent e) {
         Player victim = e.getEntity(), killer = e.getEntity().getKiller();
@@ -341,6 +361,25 @@ public class DamageDeathMove implements Listener {
                 victim.spigot().respawn();
                 return;
             }
+
+            // A 1.8 player entity remains at its death coordinates until the
+            // client respawn packet is processed. Disable its server-side
+            // collision and hide it immediately so the dead body cannot block
+            // players during that short transition window.
+            nms.setCollide(victim, a, false);
+            for (Player viewer : a.getPlayers()) {
+                if (!viewer.equals(victim)) {
+                    BedWars.nms.spigotHidePlayer(victim, viewer);
+                }
+            }
+            for (Player viewer : a.getSpectators()) {
+                if (!viewer.equals(victim)) {
+                    BedWars.nms.spigotHidePlayer(victim, viewer);
+                }
+            }
+            // Spectator entities are excluded from the 1.8 server collision
+            // selector, including collisions initiated by other players.
+            victim.setGameMode(org.bukkit.GameMode.SPECTATOR);
             EntityDamageEvent damageEvent = e.getEntity().getLastDamageCause();
 
             ITeam victimsTeam = a.getTeam(victim);
@@ -453,11 +492,11 @@ public class DamageDeathMove implements Listener {
                     Language lang = Language.getPlayerLanguage(on);
                     on.sendMessage(playerKillEvent.getMessage().apply(on).
                             replace("{PlayerColor}", victimsTeam.getColor().chat().toString())
-                            .replace("{PlayerName}", victim.getDisplayName())
+                            .replace("{PlayerName}", playerNameWithReset(victim))
                             .replace("{PlayerNameUnformatted}", victim.getName())
                             .replace("{PlayerTeamName}", victimsTeam.getDisplayName(lang))
                             .replace("{KillerColor}", killersTeam == null ? "" : killersTeam.getColor().chat().toString())
-                            .replace("{KillerName}", killer == null ? "" : killer.getDisplayName())
+                            .replace("{KillerName}", playerNameWithReset(killer))
                             .replace("{KillerNameUnformatted}", killer == null ? "" : killer.getName())
                             .replace("{KillerTeamName}", killersTeam == null ? "" : killersTeam.getDisplayName(lang)));
                 }
@@ -468,17 +507,18 @@ public class DamageDeathMove implements Listener {
                     Language lang = Language.getPlayerLanguage(on);
                     on.sendMessage(playerKillEvent.getMessage().apply(on).
                             replace("{PlayerColor}", victimsTeam.getColor().chat().toString())
-                            .replace("{PlayerName}", victim.getDisplayName())
+                            .replace("{PlayerName}", playerNameWithReset(victim))
                             .replace("{PlayerNameUnformatted}", victim.getName())
                             .replace("{KillerColor}", killersTeam == null ? "" : killersTeam.getColor().chat().toString())
                             .replace("{PlayerTeamName}", victimsTeam.getDisplayName(lang))
-                            .replace("{KillerName}", killer == null ? "" : killer.getDisplayName())
+                            .replace("{KillerName}", playerNameWithReset(killer))
                             .replace("{KillerNameUnformatted}", killer == null ? "" : killer.getName())
                             .replace("{KillerTeamName}", killersTeam == null ? "" : killersTeam.getDisplayName(lang)));
                 }
             }
 
             // handle drops
+            e.getDrops().removeIf(EnemyTrackerCompass::isTrackingCompass);
             if (PlayerDrops.handlePlayerDrops(a, victim, killer, victimsTeam, killersTeam, cause, e.getDrops())) {
                 e.getDrops().clear();
             }
@@ -500,6 +540,11 @@ public class DamageDeathMove implements Listener {
                 victimsTeam.getGenerators().clear();
             }
         }
+    }
+
+    /** Use the real account name and stop team/name colours from leaking. */
+    private static String playerNameWithReset(Player player) {
+        return player == null ? "" : player.getName() + ChatColor.GRAY;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -613,6 +658,13 @@ public class DamageDeathMove implements Listener {
                         }
                     }
                 }
+                if (!a.getRespawnSessions().isEmpty()) {
+                    for (Player respawning : a.getRespawnSessions().keySet()) {
+                        if (!respawning.equals(e.getPlayer())) {
+                            BedWars.nms.spigotHidePlayer(respawning, e.getPlayer());
+                        }
+                    }
+                }
             }
 
             if (a.isSpectator(e.getPlayer()) || a.isReSpawning(e.getPlayer())) {
@@ -624,7 +676,8 @@ public class DamageDeathMove implements Listener {
                 }
             } else {
                 if (a.getStatus() == GameState.playing) {
-                    if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()) {
+                    if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()
+                            && !SelfRescuePlatform.preventsVoidKill(e.getPlayer(), a, e.getTo())) {
                         nms.voidKill(e.getPlayer());
                     }
                     for (ITeam t : a.getTeams()) {

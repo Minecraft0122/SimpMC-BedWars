@@ -26,6 +26,7 @@ import com.andrei1058.bedwars.api.arena.shop.IBuyItem;
 import com.andrei1058.bedwars.api.arena.team.TeamEnchant;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.configuration.Sounds;
+import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -161,6 +162,11 @@ public class BuyItem implements IBuyItem {
             unbreakable = yml.getBoolean(upgradeIdentifier + "." + ConfigPath.SHOP_CATEGORY_CONTENT_IS_UNBREAKABLE);
         }
 
+        String customData = yml.getString(path + ".custom-data");
+        if (customData != null && !customData.trim().isEmpty()) {
+            itemStack = nms.addCustomData(itemStack, customData);
+        }
+
         loaded = true;
     }
 
@@ -241,6 +247,8 @@ public class BuyItem implements IBuyItem {
                 }
                 i.setItemMeta(im);
             }
+
+            SelfRescuePlatform.localizeItem(player, i);
 
             if (permanent) {
                 i = nms.setShopUpgradeIdentifier(i, upgradeIdentifier);

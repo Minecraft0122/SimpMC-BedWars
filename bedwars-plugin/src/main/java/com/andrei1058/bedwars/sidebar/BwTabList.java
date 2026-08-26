@@ -33,6 +33,7 @@ import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
 import com.andrei1058.spigot.sidebar.SidebarLineAnimated;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
@@ -82,7 +83,15 @@ public class BwTabList {
 
         handleHealthIcon();
 
-        if (this.isTabFormattingDisabled()) {
+        boolean formattingDisabled = this.isTabFormattingDisabled();
+        if (formattingDisabled && sidebar.getArena() == null) {
+            return;
+        }
+
+        if (formattingDisabled) {
+            IArena arena = sidebar.getArena();
+            arena.getPlayers().forEach(this::giveUpdateTeamColor);
+            arena.getSpectators().forEach(this::giveUpdateTeamColor);
             return;
         }
 
@@ -231,7 +240,7 @@ public class BwTabList {
 
             PlayerTab tab = handle.playerTabCreate(
                     playerTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
-                    this.sidebar.getPlaceholders(player)
+                    this.sidebar.getPlaceholders(player), ChatColor.WHITE
             );
             deployedPerPlayerTabList.put(player.getUniqueId(), tab);
             return;
@@ -264,7 +273,7 @@ public class BwTabList {
                 PlayerTab tab = handle.playerTabCreate(
                         getPlayerTabIdentifierEliminatedInTeam(exTeam, playerTabId),
                         player, prefix, suffix, PlayerTab.PushingRule.NEVER,
-                        this.sidebar.getPlaceholders(player)
+                        this.sidebar.getPlaceholders(player), getPlayerListColor(exTeam)
                 );
                 deployedPerPlayerTabList.put(player.getUniqueId(), tab);
                 return;
@@ -294,7 +303,7 @@ public class BwTabList {
             PlayerTab tab = handle.playerTabCreate(
                     getPlayerTabIdentifierSpectator(null, playerTabId),
                     player, prefix, suffix, PlayerTab.PushingRule.NEVER,
-                    this.sidebar.getPlaceholders(player)
+                    this.sidebar.getPlaceholders(player), ChatColor.WHITE
             );
             deployedPerPlayerTabList.put(player.getUniqueId(), tab);
             return;
@@ -305,6 +314,7 @@ public class BwTabList {
         if (status != GameState.playing) {
 
             String currentTabId = playerTabId;
+            ITeam currentTeam = arena.getTeam(player);
 
             switch (status) {
                 case waiting:
@@ -316,10 +326,9 @@ public class BwTabList {
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_STARTING_SUFFIX, player, null);
                     break;
                 case restarting:
-                    ITeam team = arena.getTeam(player);
-                    currentTabId = getPlayerTabIdentifierAliveInTeam(team, playerTabId);
+                    currentTabId = getPlayerTabIdentifierAliveInTeam(currentTeam, playerTabId);
 
-                    HashMap<String, String> replacements = getTeamReplacements(team);
+                    HashMap<String, String> replacements = getTeamReplacements(currentTeam);
 
                     prefix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_PREFIX, player, replacements);
                     suffix = getTabText(Messages.FORMATTING_SB_TAB_RESTARTING_WIN1_SUFFIX, player, replacements);
@@ -328,7 +337,8 @@ public class BwTabList {
                     throw new IllegalStateException("Unhandled game status!");
             }
             PlayerTab t = handle.playerTabCreate(
-                    currentTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER, this.sidebar.getPlaceholders(player)
+                    currentTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
+                    this.sidebar.getPlaceholders(player), getPlayerListColor(currentTeam)
             );
             deployedPerPlayerTabList.put(player.getUniqueId(), t);
             return;
@@ -346,7 +356,7 @@ public class BwTabList {
         PlayerTab teamTab = handle.playerTabCreate(
                 getPlayerTabIdentifierAliveInTeam(team, playerTabId),
                 player, prefix, suffix, PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
-                this.sidebar.getPlaceholders(player)
+                this.sidebar.getPlaceholders(player), getPlayerListColor(team)
         );
         deployedPerPlayerTabList.put(player.getUniqueId(), teamTab);
         if (player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
@@ -492,6 +502,28 @@ public class BwTabList {
         replacements.put("{teamColor}", null == team ? "" : team.getColor().chat().toString());
 
         return replacements;
+    }
+
+    private void giveUpdateTeamColor(@NotNull Player player) {
+        IArena arena = sidebar.getArena();
+        Sidebar handle = sidebar.getHandle();
+        if (arena == null || handle == null) {
+            return;
+        }
+        ITeam team = arena.getTeam(player);
+        if (team == null) {
+            team = arena.getExTeam(player.getUniqueId());
+        }
+        PlayerTab tab = handle.playerTabCreate(
+                "color-" + player.getUniqueId(), player,
+                new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                this.sidebar.getPlaceholders(player), getPlayerListColor(team)
+        );
+        deployedPerPlayerTabList.put(player.getUniqueId(), tab);
+    }
+
+    private static ChatColor getPlayerListColor(@Nullable ITeam team) {
+        return team == null ? ChatColor.WHITE : team.getColor().chat();
     }
 
     /**

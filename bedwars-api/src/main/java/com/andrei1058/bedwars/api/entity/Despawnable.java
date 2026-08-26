@@ -57,10 +57,13 @@ public class Despawnable {
     }
 
     public void refresh() {
-        if (e.isDead() || e == null || team == null || team.getArena() == null) {
-            api.getVersionSupport().getDespawnablesList().remove(uuid);
-            if (team.getArena() == null){
-                e.damage(e.getHealth()+100);
+        LivingEntity entity = e;
+        ITeam currentTeam = team;
+        boolean orphaned = currentTeam == null || currentTeam.getArena() == null;
+        if (entity == null || entity.isDead() || orphaned) {
+            api.getVersionSupport().getDespawnablesList().remove(uuid, this);
+            if (entity != null && !entity.isDead() && orphaned) {
+                entity.damage(entity.getHealth() + 100);
             }
             return;
         }

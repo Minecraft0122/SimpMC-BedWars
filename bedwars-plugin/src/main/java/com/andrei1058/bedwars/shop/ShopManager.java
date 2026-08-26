@@ -30,11 +30,15 @@ import com.andrei1058.bedwars.shop.main.ShopCategory;
 import com.andrei1058.bedwars.shop.main.ShopIndex;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.PluginManager;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @SuppressWarnings("WeakerAccess")
 public class ShopManager extends ConfigManager {
@@ -218,7 +222,7 @@ public class ShopManager extends ConfigManager {
             adCategoryContentTier(ConfigPath.SHOP_PATH_CATEGORY_TOOLS, "shears", 19, "tier1",
                     BedWars.getForCurrentVersion("SHEARS", "SHEARS", "SHEARS"), 0, 1, false, 20, "iron", true, false);
             addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_TOOLS, "shears", "tier1", "shears", BedWars.getForCurrentVersion("SHEARS", "SHEARS", "SHEARS"),
-                    0, 1, "", "", "", false);
+                    0, 1, "DIG_SPEED 3", "", "", false);
 
             //pickaxe
             adCategoryContentTier(ConfigPath.SHOP_PATH_CATEGORY_TOOLS, "pickaxe", 20, "tier1",
@@ -357,6 +361,24 @@ public class ShopManager extends ConfigManager {
 
         }
 
+        if (getYml().get(ConfigPath.SHOP_PATH_CATEGORY_UTILITY) != null) {
+            int rescuePlatformSlot = findSelfRescuePlatformSlot();
+            if (rescuePlatformSlot == -1) {
+                BedWars.plugin.getLogger().warning("Could not add the self-rescue platform to the utility shop: no content slot is available.");
+            } else {
+                adCategoryContentTier(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "self-rescue-platform", rescuePlatformSlot, "tier1",
+                        "BLAZE_ROD", 0, 1, false, 2, "emerald", false, false);
+                addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "self-rescue-platform", "tier1", "self-rescue-platform", "BLAZE_ROD",
+                        0, 1, "", "", "Self-Rescue Platform", false);
+                getYml().addDefault(ConfigPath.SHOP_PATH_CATEGORY_UTILITY + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                                + ".self-rescue-platform." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS
+                                + ".tier1." + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH + ".self-rescue-platform.custom-data",
+                        com.andrei1058.bedwars.arena.feature.SelfRescuePlatform.ITEM_DATA);
+            }
+        }
+
+        applyLegacyShearsAcceleration();
+
         if (getYml().get(ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".diamond-armor") != null) {
             getYml().addDefault(ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".diamond-armor" + "." + ConfigPath.SHOP_CATEGORY_CONTENT_WEIGHT, 2);
         }
@@ -409,6 +431,42 @@ public class ShopManager extends ConfigManager {
             if (s.equalsIgnoreCase(ConfigPath.SHOP_SPECIALS_PATH)) continue;
             ShopCategory sc = new ShopCategory(s, getYml());
             if (sc.isLoaded()) shop.addShopCategory(sc);
+        }
+    }
+
+    private int findSelfRescuePlatformSlot() {
+        String contentPath = ConfigPath.SHOP_PATH_CATEGORY_UTILITY + ConfigPath.SHOP_CATEGORY_CONTENT_PATH;
+        String rescuePath = contentPath + ".self-rescue-platform." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT;
+        if (getYml().get(rescuePath) != null) return getYml().getInt(rescuePath);
+
+        Set<Integer> occupied = new HashSet<>();
+        ConfigurationSection contents = getYml().getConfigurationSection(contentPath);
+        if (contents != null) {
+            for (String content : contents.getKeys(false)) {
+                String slotPath = contentPath + "." + content + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT;
+                if (getYml().get(slotPath) != null) occupied.add(getYml().getInt(slotPath));
+            }
+        }
+
+        int[] validSlots = {32, 33, 34, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31};
+        for (int slot : validSlots) {
+            if (!occupied.contains(slot)) return slot;
+        }
+        return -1;
+    }
+
+    /**
+     * Older generated shop files configured the permanent shears without an
+     * efficiency enchantment. Preserve custom shop values, but upgrade that
+     * empty legacy default so 1.8.8 uses its native wool break-speed formula.
+     */
+    private void applyLegacyShearsAcceleration() {
+        String path = ConfigPath.SHOP_PATH_CATEGORY_TOOLS + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                + ".shears." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + ".tier1."
+                + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH + ".shears.enchants";
+        String enchants = getYml().getString(path);
+        if (enchants != null && enchants.trim().isEmpty()) {
+            getYml().set(path, "DIG_SPEED 3");
         }
     }
 

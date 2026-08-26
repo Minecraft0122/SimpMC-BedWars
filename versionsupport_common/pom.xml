@@ -5,12 +5,11 @@
     <parent>
         <artifactId>BedWars1058</artifactId>
         <groupId>com.andrei1058.bedwars</groupId>
-        <version>25.2</version>
+        <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>versionsupport-common</artifactId>
-    <version>${project.parent.version}</version>
 
     <repositories>
         <repository>
@@ -28,14 +27,26 @@
         </dependency>
         <dependency>
             <groupId>org.spigotmc</groupId>
-            <artifactId>spigot</artifactId>
-            <version>1.14.4-R0.1-SNAPSHOT</version>
+            <artifactId>spigot-api</artifactId>
+            <version>${spigot.api.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>com/andrei1058/bedwars/listeners/Interact_1_13Plus.java</exclude>
+                        <exclude>com/andrei1058/bedwars/listeners/ItemDropPickListener.java</exclude>
+                        <exclude>com/andrei1058/bedwars/listeners/SwapItem.java</exclude>
+                        <exclude>com/andrei1058/bedwars/shop/defaultrestore/ShopItemRestoreListener.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
             <plugin>
                 <artifactId>maven-deploy-plugin</artifactId>
                 <configuration>

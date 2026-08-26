@@ -42,6 +42,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -318,20 +319,25 @@ public class OreGenerator implements IGenerator {
 
     @Override
     public void rotate() {
+        ArmorStand holder = item;
+        if (holder == null || holder.isDead() || arena == null || location == null) {
+            rotation.remove(this);
+            return;
+        }
         if (up) {
             if (rotate >= 540) {
                 up = false;
             }
             if (rotate > 500) {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 1), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 1), 0));
             } else if (rotate > 470) {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 2), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 2), 0));
                 /*item.teleport(item.getLocation().add(0, 0.005D, 0));*/
             } else if (rotate > 450) {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 3), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 3), 0));
                 /*item.teleport(item.getLocation().add(0, 0.001D, 0));*/
             } else {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 4), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate += 4), 0));
                 /*item.teleport(item.getLocation().add(0, 0.002D, 0));*/
             }
         } else {
@@ -339,16 +345,16 @@ public class OreGenerator implements IGenerator {
                 up = true;
             }
             if (rotate > 120) {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 4), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 4), 0));
                 /*item.teleport(item.getLocation().subtract(0, 0.002D, 0));*/
             } else if (rotate > 90) {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 3), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 3), 0));
                 /*item.teleport(item.getLocation().add(0, 0.001D, 0));*/
             } else if (rotate > 70) {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 2), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 2), 0));
                 /*item.teleport(item.getLocation().add(0, 0.005D, 0));*/
             } else {
-                item.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 1), 0));
+                holder.setHeadPose(new EulerAngle(0, Math.toRadians(rotate -= 1), 0));
             }
         }
     }
@@ -375,13 +381,14 @@ public class OreGenerator implements IGenerator {
 
     @Override
     public void disable() {
-        if (getOre().getType() == Material.EMERALD || getOre().getType() == Material.DIAMOND) {
-            rotation.remove(this);
+        rotation.remove(this);
+        if (getOre() != null && (getOre().getType() == Material.EMERALD
+                || getOre().getType() == Material.DIAMOND) && armorStands != null) {
             for (IGenHolo a : armorStands.values()) {
-                a.destroy();
+                if (a != null) a.destroy();
             }
         }
-        armorStands.clear();
+        if (armorStands != null) armorStands.clear();
     }
 
     @Override
@@ -393,9 +400,12 @@ public class OreGenerator implements IGenerator {
 
     @Override
     public void enableRotation() {
+        if (location == null || location.getWorld() == null || armorStands == null) {
+            rotation.remove(this);
+            return;
+        }
         //loadDefaults(false);
         //if (getType() == GeneratorType.EMERALD || getType() == GeneratorType.DIAMOND) {
-        rotation.add(this);
         for (Language lan : Language.getLanguages()) {
             IGenHolo h = armorStands.get(lan.getIso());
             if (h == null) {
@@ -406,8 +416,12 @@ public class OreGenerator implements IGenerator {
             hg.updateForAll();
         }
 
-        item = createArmorStand(null, location.clone().add(0, 0.5, 0));
+        if (item == null || item.isDead()) {
+            item = createArmorStand(null, location.clone().add(0, 0.5, 0));
+        }
         item.setHelmet(new ItemStack(type == GeneratorType.DIAMOND ? Material.DIAMOND_BLOCK : Material.EMERALD_BLOCK));
+        rotation.remove(this);
+        rotation.add(this);
         //}
     }
 
@@ -515,11 +529,17 @@ public class OreGenerator implements IGenerator {
 
     public void destroyData() {
         rotation.remove(this);
-        location = null;
-        arena = null;
-        ore = null;
-        bwt = null;
-        armorStands = null;
+        if (armorStands != null) {
+            for (IGenHolo hologram : new ArrayList<>(armorStands.values())) {
+                if (hologram != null) {
+                    hologram.destroy();
+                }
+            }
+            armorStands.clear();
+        }
+        if (item != null && !item.isDead()) {
+            item.remove();
+        }
         item = null;
     }
 }

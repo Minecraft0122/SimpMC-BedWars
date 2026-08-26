@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,6 +62,6 @@ public class PlayerGameStatsContainer implements PlayerGameStats {
 
     @Override
     public List<String> getRegistered() {
-        return statsById.keySet().stream().collect(Collectors.toUnmodifiableList());
+        return Collections.unmodifiableList(statsById.keySet().stream().collect(Collectors.toList()));
     }
 }

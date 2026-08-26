@@ -7,11 +7,10 @@
     <parent>
         <artifactId>BedWars1058</artifactId>
         <groupId>com.andrei1058.bedwars</groupId>
-        <version>25.2</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>versionsupport_1_8_R3</artifactId>
-    <version>${project.parent.version}</version>
 
     <dependencies>
         <dependency>
@@ -24,14 +23,20 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot</artifactId>
-            <version>1.8.8-R0.1-SNAPSHOT</version>
+            <version>${spigot.version}</version>
             <type>jar</type>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.andrei1058.bedwars</groupId>
             <artifactId>versionsupport-common</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

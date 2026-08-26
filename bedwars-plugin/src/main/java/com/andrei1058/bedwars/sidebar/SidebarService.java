@@ -11,6 +11,7 @@ import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.sidebar.ISidebar;
 import com.andrei1058.bedwars.api.sidebar.ISidebarService;
+import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.metrics.MetricsManager;
 import com.andrei1058.bedwars.sidebar.thread.*;
 import com.andrei1058.spigot.sidebar.SidebarManager;
@@ -39,7 +40,7 @@ public class SidebarService implements ISidebarService {
                 return false;
             }
 
-            var log = Bukkit.getLogger();
+            java.util.logging.Logger log = Bukkit.getLogger();
 
             int playerListRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH);
             if (playerListRefreshInterval < 1) {
@@ -75,7 +76,7 @@ public class SidebarService implements ISidebarService {
                     log.warning("Scoreboard title refresh interval is set to: " + titleRefreshInterval);
                     log.warning("If you expect performance issues please increase its timer.");
                 }
-                Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new RefreshTitleTask(), 1L, titleRefreshInterval);
+                Bukkit.getScheduler().runTaskTimer(plugin, new RefreshTitleTask(), 1L, titleRefreshInterval);
             }
             MetricsManager.appendPie("sb_title_refresh_interval", () -> String.valueOf(titleRefreshInterval));
 
@@ -105,10 +106,10 @@ public class SidebarService implements ISidebarService {
             }
             MetricsManager.appendPie("sb_header_footer_refresh_interval", () -> String.valueOf(tabHeaderFooterRefreshInterval));
 
-            var lobbySidebar = config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR) &&
+            boolean lobbySidebar = config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR) &&
                     BedWars.getServerType() == ServerType.MULTIARENA;
             MetricsManager.appendPie("sb_lobby_enable", () -> String.valueOf(lobbySidebar));
-            var gameSidebar = config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR);
+            boolean gameSidebar = config.getBoolean(ConfigPath.SB_CONFIG_SIDEBAR_USE_GAME_SIDEBAR);
             MetricsManager.appendPie("sb_game_enable", () -> String.valueOf(gameSidebar));
 
             BedWars.registerEvents(new ScoreboardListener());
@@ -259,49 +260,72 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshTitles() {
-        if (sidebarHandler == null) return;
-        this.sidebars.forEach((k, v) -> v.getHandle().refreshTitle());
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        for (BwSidebar sidebar : new ArrayList<>(sidebars.values())) {
+            if (isRefreshable(sidebar)) {
+                sidebar.getHandle().refreshTitle();
+            }
+        }
     }
 
     public void refreshPlaceholders() {
-        if (sidebarHandler == null) return;
-        this.sidebars.forEach((k, v) -> v.getHandle().refreshPlaceholders());
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        for (BwSidebar sidebar : new ArrayList<>(sidebars.values())) {
+            if (isRefreshable(sidebar)) {
+                sidebar.getHandle().refreshPlaceholders();
+            }
+        }
     }
 
     public void refreshPlaceholders(IArena arena) {
-        if (sidebarHandler == null) return;
-        this.sidebars.forEach((k, v) -> {
-            if (v.getArena() != null)
-                if (v.getArena().equals(arena)) {
-                    v.getHandle().refreshPlaceholders();
-                }
-        });
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        for (BwSidebar sidebar : new ArrayList<>(sidebars.values())) {
+            if (isRefreshable(sidebar) && arena != null && arena.equals(sidebar.getArena())) {
+                sidebar.getHandle().refreshPlaceholders();
+            }
+        }
     }
 
     public void refreshTabList() {
-        if (sidebarHandler == null) return;
-        this.sidebars.forEach((k, v) -> v.getHandle().playerTabRefreshAnimation());
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        for (BwSidebar sidebar : new ArrayList<>(sidebars.values())) {
+            if (isRefreshable(sidebar)) {
+                sidebar.getHandle().playerTabRefreshAnimation();
+            }
+        }
     }
 
     public void refreshTabHeaderFooter() {
-        if (sidebarHandler == null) return;
-        this.sidebars.forEach((k, v) -> {
-            if (null != v && null != v.getHeaderFooter()) {
-                this.sidebarHandler.sendHeaderFooter(v.getPlayer(), v.getHeaderFooter());
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        for (BwSidebar sidebar : new ArrayList<>(sidebars.values())) {
+            if (isRefreshable(sidebar) && sidebar.getHeaderFooter() != null) {
+                this.sidebarHandler.sendHeaderFooter(sidebar.getPlayer(), sidebar.getHeaderFooter());
             }
-        });
+        }
     }
 
     public void refreshHealth() {
-        if (sidebarHandler == null) return;
-        this.sidebars.forEach((k, v) -> {
-            if (null != v.getArena()) {
-                v.getHandle().playerHealthRefreshAnimation();
-                for (Player player : v.getArena().getPlayers()) {
-                    v.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
+        if (sidebarHandler == null || sidebars.isEmpty()) return;
+        for (BwSidebar sidebar : new ArrayList<>(sidebars.values())) {
+            IArena arena = sidebar == null ? null : sidebar.getArena();
+            if (isRefreshable(sidebar) && arena != null && Arena.getArenas().contains(arena)) {
+                sidebar.getHandle().playerHealthRefreshAnimation();
+                List<Player> players = arena.getPlayers();
+                if (players != null) {
+                    for (Player player : players) {
+                        if (player != null && player.isOnline()) {
+                            sidebar.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
+                        }
+                    }
                 }
             }
-        });
+        }
+    }
+
+    private boolean isRefreshable(@Nullable BwSidebar sidebar) {
+        return sidebar != null && sidebar.getHandle() != null
+                && sidebar.getPlayer().isOnline()
+                && sidebars.get(sidebar.getPlayer().getUniqueId()) == sidebar;
     }
 
     @Override
@@ -310,12 +334,13 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshHealth(IArena arena, Player player, int health) {
-        if (sidebarHandler == null) return;
-        this.sidebars.forEach((k, v) -> {
-            if (null != v.getArena() && v.getArena().equals(arena)) {
-                v.getHandle().setPlayerHealth(player, health);
+        if (sidebarHandler == null || sidebars.isEmpty() || arena == null
+                || !Arena.getArenas().contains(arena) || player == null) return;
+        for (BwSidebar sidebar : new ArrayList<>(sidebars.values())) {
+            if (isRefreshable(sidebar) && arena.equals(sidebar.getArena())) {
+                sidebar.getHandle().setPlayerHealth(player, health);
             }
-        });
+        }
     }
 
     public void handleReJoin(IArena arena, Player player) {

@@ -1,8 +1,7 @@
-name: BedWars1058
-api-version: '1.13'
+name: SimpMC-BW1.8.8
 version: ${project.version}
-author: andrei1058
-description: BedWars minigame by andrei1058
+authors: [andrei1058, Minecraft0122]
+description: 兼容 Spigot 1.8.8 和 1.8.9 的起床战争插件
 main: com.andrei1058.bedwars.BedWars
-softdepend: [Vault,PlaceholderAPI,Citizens,Parties,SlimeWorldManager,VipFeatures,Enhanced-SlimeWorldManager,PartyAndFriends,Spigot-Party-API-PAF]
+softdepend: [Vault,PlaceholderAPI,Citizens,Parties,PartyAndFriends,Spigot-Party-API-PAF]
 #load: STARTUP

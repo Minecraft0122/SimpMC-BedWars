@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.sidebar.SidebarService;
 public class RefreshTabHeaderFooterTask implements Runnable {
     @Override
     public void run() {
-        SidebarService.getInstance().refreshTabHeaderFooter();
+        SidebarService service = SidebarService.getInstance();
+        if (service != null) service.refreshTabHeaderFooter();
     }
 }

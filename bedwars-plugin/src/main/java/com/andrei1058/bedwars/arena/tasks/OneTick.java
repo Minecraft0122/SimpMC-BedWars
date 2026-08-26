@@ -20,7 +20,6 @@
 
 package com.andrei1058.bedwars.arena.tasks;
 
-import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.arena.OreGenerator;
 
 public class OneTick implements Runnable {
@@ -28,8 +27,17 @@ public class OneTick implements Runnable {
     public void run() {
 
         //OneTick generators
-        for (IGenerator h : OreGenerator.getRotation()) {
-            h.rotate();
+        for (OreGenerator generator : OreGenerator.getRotation()) {
+            if (generator == null) {
+                continue;
+            }
+            if (generator.getArena() == null || generator.getLocation() == null
+                    || generator.getHologramHolder() == null
+                    || generator.getHologramHolder().isDead()) {
+                OreGenerator.getRotation().remove(generator);
+                continue;
+            }
+            generator.rotate();
         }
     }
 }
