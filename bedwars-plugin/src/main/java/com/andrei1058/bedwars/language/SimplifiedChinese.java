@@ -1037,6 +1037,8 @@ public class SimplifiedChinese extends Language {
                 "&7喝下后 60 秒内不会触发陷阱", "", "{quick_buy}", "{buy_status}"));
         addContentMessages(yml, "sponge", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}海绵", Arrays.asList("&7花费：{cost} {currency}", "",
                 "&7用来吸水不错", "", "{quick_buy}", "{buy_status}"));
+        addContentMessages(yml, "self-rescue-platform", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}自救平台", Arrays.asList("&7花费：{cost} {currency}", "",
+                "&7掉入虚空时自动生成临时粘液平台", "&7也可以手持右键主动释放", "", "{quick_buy}", "{buy_status}"));
         addContentMessages(yml, "tower", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}袖珍弹出塔", Arrays.asList("&7花费：{cost} {currency}", "",
                 "&7放置后自动生成一座", "&7带梯子的队伍色防御塔。", "", "{quick_buy}", "{buy_status}"));
         addContentMessages(yml, "recall-scroll", ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "{color}回城卷轴", Arrays.asList("&7花费：{cost} {currency}", "",

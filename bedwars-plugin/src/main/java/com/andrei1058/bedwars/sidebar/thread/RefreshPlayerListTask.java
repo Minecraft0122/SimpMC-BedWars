@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.sidebar.SidebarService;
 public class RefreshPlayerListTask implements Runnable {
     @Override
     public void run() {
-        SidebarService.getInstance().refreshTabList();
+        SidebarService service = SidebarService.getInstance();
+        if (service != null) service.refreshTabList();
     }
 }

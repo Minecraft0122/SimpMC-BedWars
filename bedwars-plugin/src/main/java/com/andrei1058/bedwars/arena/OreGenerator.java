@@ -332,6 +332,10 @@ public class OreGenerator implements IGenerator {
 
     @Override
     public void rotate() {
+        if (item == null || item.isDead()) {
+            rotation.remove(this);
+            return;
+        }
         if (up) {
             if (rotate >= 540) {
                 up = false;
@@ -390,10 +394,10 @@ public class OreGenerator implements IGenerator {
 
     @Override
     public void disable() {
-        if (getOre().getType() == Material.EMERALD || getOre().getType() == Material.DIAMOND) {
-            rotation.remove(this);
+        rotation.remove(this);
+        if (getOre() != null && (getOre().getType() == Material.EMERALD || getOre().getType() == Material.DIAMOND)) {
             for (IGenHolo a : armorStands.values()) {
-                a.destroy();
+                if (a != null) a.destroy();
             }
         }
         armorStands.clear();
@@ -410,7 +414,8 @@ public class OreGenerator implements IGenerator {
     public void enableRotation() {
         //loadDefaults(false);
         //if (getType() == GeneratorType.EMERALD || getType() == GeneratorType.DIAMOND) {
-        rotation.add(this);
+        rotation.remove(this);
+        if (location == null || location.getWorld() == null) return;
         for (Language lan : Language.getLanguages()) {
             IGenHolo h = armorStands.get(lan.getIso());
             if (h == null) {
@@ -421,8 +426,11 @@ public class OreGenerator implements IGenerator {
             hg.updateForAll();
         }
 
+        if (item != null && !item.isDead()) item.remove();
         item = createArmorStand(null, location.clone().add(0, 0.5, 0));
+        if (item == null) return;
         item.setHelmet(new ItemStack(type == GeneratorType.DIAMOND ? Material.DIAMOND_BLOCK : Material.EMERALD_BLOCK));
+        rotation.add(this);
         //}
     }
 
@@ -546,5 +554,6 @@ public class OreGenerator implements IGenerator {
             armorStands.clear();
         }
         if (item != null && !item.isDead()) item.remove();
+        item = null;
     }
 }

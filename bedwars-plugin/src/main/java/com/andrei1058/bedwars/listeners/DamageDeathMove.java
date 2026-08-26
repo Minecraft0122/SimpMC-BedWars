@@ -42,6 +42,8 @@ import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.SetupSession;
+import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
+import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.listeners.dropshandler.PlayerDrops;
@@ -150,7 +152,7 @@ public class DamageDeathMove implements Listener {
                 .replace("{amount}", HEALTH_FORMAT.format(p.getHealth() - e.getFinalDamage()))
                 .replace("{TeamColor}", team.getColor().chat().toString())
                 .replace("{TeamName}", team.getDisplayName(lang))
-                .replace("{PlayerName}", AdventureText.plainDisplayName(p));
+                .replace("{PlayerName}", playerNameWithReset(p));
         AdventureText.send(damager, message);
     }
 
@@ -324,6 +326,16 @@ public class DamageDeathMove implements Listener {
         respawnEligibleAtDeath.remove(victim.getUniqueId());
         ITeam killersTeam = null;
         IArena a = Arena.getArenaByPlayer(victim);
+        // A PlayerDeathEvent is fired while the old player entity is still
+        // standing in the arena. Disable its entity collision immediately;
+        // waiting for PlayerRespawnEvent leaves a short (and on some Paper
+        // settings surprisingly long) window where the corpse can block
+        // living players. The normal respawn/spectator paths restore or keep
+        // this flag as appropriate.
+        if (a != null && a.getStatus() == GameState.playing && a.isPlayer(victim)) {
+            BedWars.nms.setCollide(victim, a, false);
+            InvisibilityManager.hideRespawningPlayer(a, victim);
+        }
         if ((BedWars.getServerType() == ServerType.MULTIARENA && BedWars.getLobbyWorld().equals(e.getEntity().getWorld().getName())) || a != null) {
             e.setDeathMessage(null);
         }
@@ -462,11 +474,11 @@ public class DamageDeathMove implements Listener {
                     Language lang = Language.getPlayerLanguage(on);
                     AdventureText.send(on, playerKillEvent.getMessage().apply(on).
                             replace("{PlayerColor}", victimsTeam.getColor().chat().toString())
-                            .replace("{PlayerName}", AdventureText.displayName(victim))
+                            .replace("{PlayerName}", playerNameWithReset(victim))
                             .replace("{PlayerNameUnformatted}", victim.getName())
                             .replace("{PlayerTeamName}", victimsTeam.getDisplayName(lang))
                             .replace("{KillerColor}", killersTeam == null ? "" : killersTeam.getColor().chat().toString())
-                            .replace("{KillerName}", killer == null ? "" : AdventureText.displayName(killer))
+                            .replace("{KillerName}", playerNameWithReset(killer))
                             .replace("{KillerNameUnformatted}", killer == null ? "" : killer.getName())
                             .replace("{KillerTeamName}", killersTeam == null ? "" : killersTeam.getDisplayName(lang)));
                 }
@@ -477,17 +489,18 @@ public class DamageDeathMove implements Listener {
                     Language lang = Language.getPlayerLanguage(on);
                     AdventureText.send(on, playerKillEvent.getMessage().apply(on).
                             replace("{PlayerColor}", victimsTeam.getColor().chat().toString())
-                            .replace("{PlayerName}", AdventureText.displayName(victim))
+                            .replace("{PlayerName}", playerNameWithReset(victim))
                             .replace("{PlayerNameUnformatted}", victim.getName())
                             .replace("{KillerColor}", killersTeam == null ? "" : killersTeam.getColor().chat().toString())
                             .replace("{PlayerTeamName}", victimsTeam.getDisplayName(lang))
-                            .replace("{KillerName}", killer == null ? "" : AdventureText.displayName(killer))
+                            .replace("{KillerName}", playerNameWithReset(killer))
                             .replace("{KillerNameUnformatted}", killer == null ? "" : killer.getName())
                             .replace("{KillerTeamName}", killersTeam == null ? "" : killersTeam.getDisplayName(lang)));
                 }
             }
 
             // handle drops
+            e.getDrops().removeIf(EnemyTrackerCompass::isTrackingCompass);
             if (PlayerDrops.handlePlayerDrops(a, victim, killer, victimsTeam, killersTeam, cause, e.getDrops())) {
                 e.getDrops().clear();
             }
@@ -508,6 +521,11 @@ public class DamageDeathMove implements Listener {
                 victimsTeam.getGenerators().clear();
             }
         }
+    }
+
+    /** Use the real account name and stop team/name colours from leaking. */
+    private static String playerNameWithReset(Player player) {
+        return player == null ? "" : player.getName() + ChatColor.GRAY;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -645,7 +663,8 @@ public class DamageDeathMove implements Listener {
                 }
             } else {
                 if (a.getStatus() == GameState.playing) {
-                    if (to.getBlockY() <= a.getYKillHeight()) {
+                    if (to.getBlockY() <= a.getYKillHeight()
+                            && !SelfRescuePlatform.preventsVoidKill(player, a, to)) {
                         voidRespawns.add(playerId);
                         nms.voidKill(player);
                         return;

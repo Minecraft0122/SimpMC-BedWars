@@ -32,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public final class SafeSpawnResolver {
 
@@ -98,9 +99,19 @@ public final class SafeSpawnResolver {
     }
 
     public static void teleport(@NotNull Player player, @NotNull Location configured) {
+        teleportResult(player, configured);
+    }
+
+    /**
+     * Teleport to a resolved spawn and expose the completion handle to callers
+     * that must synchronize entity state (for example collision) with Paper's
+     * asynchronous teleport path.
+     */
+    public static CompletableFuture<Boolean> teleportResult(@NotNull Player player,
+                                                             @NotNull Location configured) {
         Result result = resolve(configured);
         applyPose(player, result.crawling());
-        TeleportManager.teleportC(player, result.location(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+        return TeleportManager.teleportC(player, result.location(), PlayerTeleportEvent.TeleportCause.PLUGIN);
     }
 
     public static void applyPose(@NotNull Player player, boolean crawling) {

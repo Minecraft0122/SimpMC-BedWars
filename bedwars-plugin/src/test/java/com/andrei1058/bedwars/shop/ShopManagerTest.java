@@ -114,6 +114,39 @@ class ShopManagerTest {
                 + ".custom." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT));
     }
 
+    @Test
+    void migrationAddsSelfRescuePlatformAfterRecallScroll() {
+        YamlConfiguration yml = new YamlConfiguration();
+        yml.createSection(ConfigPath.SHOP_PATH_CATEGORY_UTILITY);
+        ShopManager.migrateRecallScroll(yml);
+
+        ShopManager.migrateSelfRescuePlatform(yml);
+
+        String content = ConfigPath.SHOP_PATH_CATEGORY_UTILITY + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                + ".self-rescue-platform";
+        String tier = content + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + ".tier1";
+        String item = tier + "." + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH + ".self-rescue-platform";
+        assertEquals(33, yml.getInt(content + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT));
+        assertEquals(2, yml.getInt(tier + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_COST));
+        assertEquals("emerald", yml.getString(tier + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_CURRENCY));
+        assertEquals("BLAZE_ROD", yml.getString(item + ".material"));
+        assertEquals(ShopItemIdentifier.SELF_RESCUE_PLATFORM,
+                yml.getString(item + "." + ConfigPath.SHOP_CONTENT_BUY_ITEM_IDENTIFIER));
+    }
+
+    @Test
+    void migrationPreservesAnExistingSelfRescuePlatform() {
+        YamlConfiguration yml = new YamlConfiguration();
+        String content = ConfigPath.SHOP_PATH_CATEGORY_UTILITY + ConfigPath.SHOP_CATEGORY_CONTENT_PATH
+                + ".self-rescue-platform";
+        yml.set(content + ".custom-setting", "keep-me");
+
+        ShopManager.migrateSelfRescuePlatform(yml);
+
+        assertEquals("keep-me", yml.getString(content + ".custom-setting"));
+        assertNull(yml.get(content + ".content-tiers"));
+    }
+
     private static String armorTierPath(String content, String tier) {
         return ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + '.' + content + '.'
                 + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + '.' + tier;

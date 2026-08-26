@@ -34,6 +34,8 @@ import com.andrei1058.bedwars.arena.ArenaManager;
 import com.andrei1058.bedwars.arena.ProxyLobbyConnector;
 import com.andrei1058.bedwars.arena.VoidChunkGenerator;
 import com.andrei1058.bedwars.arena.despawnables.TargetListener;
+import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
+import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
 import com.andrei1058.bedwars.arena.feature.SpoilPlayerTNTFeature;
 import com.andrei1058.bedwars.arena.spectator.SpectatorListeners;
 import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
@@ -174,6 +176,7 @@ public class BedWars extends JavaPlugin {
             language.addChineseDocumentation();
             language.save();
         }
+        SelfRescuePlatform.installLanguageFallbacks();
 
         config = new MainConfig(this, "config");
 
@@ -238,6 +241,7 @@ public class BedWars extends JavaPlugin {
             }, 1L);
 
         // Register events
+        SelfRescuePlatform selfRescuePlatform = new SelfRescuePlatform();
         registerEvents(
                 new EnderPearlLanded(), new QuitAndTeleportListener(), new ArenaWorldProtection(), new BreakPlace(),
                 new PlacedBlockListener(), new DamageDeathMove(),
@@ -246,7 +250,8 @@ public class BedWars extends JavaPlugin {
                 new TargetListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),
                 PreGameSquadManager.getInstance(), PreGameSquadGUI.getInstance(),
-                PreGameTeamSelectionManager.getInstance(), PreGameTeamSelectionGUI.getInstance()
+                PreGameTeamSelectionManager.getInstance(), PreGameTeamSelectionGUI.getInstance(),
+                selfRescuePlatform
         );
 
         if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE)) {
@@ -319,6 +324,8 @@ public class BedWars extends JavaPlugin {
 
         /* Register tasks */
         Bukkit.getScheduler().runTaskTimer(this, new Refresh(), 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(this, new EnemyTrackerCompass(), 1L, 2L);
+        Bukkit.getScheduler().runTaskTimer(this, selfRescuePlatform, 1L, 1L);
         //new Refresh().runTaskTimer(this, 20L, 20L);
 
         if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN)) {

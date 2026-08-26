@@ -479,28 +479,26 @@ public class SidebarService implements ISidebarService {
 
     public void refreshTitles() {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> v.getHandle().refreshTitle());
+        activeSidebars().forEach(sidebar -> sidebar.getHandle().refreshTitle());
     }
 
     public void refreshPlaceholders() {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> v.getHandle().refreshPlaceholders());
+        activeSidebars().forEach(sidebar -> sidebar.getHandle().refreshPlaceholders());
     }
 
     public void refreshPlaceholders(IArena arena) {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> {
-            if (v.getArena() != null)
-                if (v.getArena().equals(arena)) {
-                    v.getHandle().refreshPlaceholders();
-                }
-        });
+        activeSidebars().stream()
+                .filter(sidebar -> sidebar.getArena() == arena)
+                .forEach(sidebar -> sidebar.getHandle().refreshPlaceholders());
     }
 
     public void refreshTabList() {
         if (sidebarHandler == null || sidebars.isEmpty() || tabRefreshBatchTask != null) return;
         pendingTabRefreshes.clear();
-        pendingTabRefreshes.addAll(sidebars.values());
+        pendingTabRefreshes.addAll(activeSidebars());
+        if (pendingTabRefreshes.isEmpty()) return;
         tabRefreshBatchTask = Bukkit.getScheduler().runTaskTimer(
                 BedWars.plugin, this::refreshTabListBatch, 0L, 1L);
     }
@@ -524,29 +522,39 @@ public class SidebarService implements ISidebarService {
 
     public void refreshTabHeaderFooter() {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> {
-            if (null != v && null != v.getHeaderFooter()) {
-                this.sidebarHandler.sendHeaderFooter(v.getPlayer(), v.getHeaderFooter());
+        activeSidebars().forEach(sidebar -> {
+            if (sidebar.getHeaderFooter() != null) {
+                this.sidebarHandler.sendHeaderFooter(sidebar.getPlayer(), sidebar.getHeaderFooter());
             }
         });
     }
 
     public void refreshHealth() {
         if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> {
-            if (Arena.isRegistered(v.getArena())) {
-                boolean displayHealth = SidebarHealthPolicy.shouldDisplay(v.getArena().getStatus(), false);
-                v.getHandle().playerHealthRefreshAnimation();
-                for (Player player : v.getArena().getPlayers()) {
+        activeSidebars().forEach(sidebar -> {
+            IArena arena = sidebar.getArena();
+            if (Arena.isRegistered(arena)) {
+                boolean displayHealth = SidebarHealthPolicy.shouldDisplay(arena.getStatus(), false);
+                sidebar.getHandle().playerHealthRefreshAnimation();
+                for (Player player : arena.getPlayers()) {
                     if (displayHealth) {
-                        v.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
+                        sidebar.getHandle().setPlayerHealth(player, (int) Math.ceil(player.getHealth()));
                     } else {
-                        v.getHandle().clearPlayerHealth(player);
+                        sidebar.getHandle().clearPlayerHealth(player);
                     }
                 }
-                v.getArena().getSpectators().forEach(v.getHandle()::clearPlayerHealth);
+                arena.getSpectators().forEach(sidebar.getHandle()::clearPlayerHealth);
             }
         });
+    }
+
+    private List<BwSidebar> activeSidebars() {
+        return sidebars.values().stream()
+                .filter(Objects::nonNull)
+                .filter(sidebar -> sidebar.getHandle() != null)
+                .filter(sidebar -> sidebar.getPlayer().isOnline())
+                .filter(sidebar -> sidebars.get(sidebar.getPlayer().getUniqueId()) == sidebar)
+                .toList();
     }
 
     @Override
@@ -555,13 +563,13 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshHealth(IArena arena, Player player, int health) {
-        if (sidebarHandler == null || sidebars.isEmpty()) return;
-        this.sidebars.forEach((k, v) -> {
-            if (null != v.getArena() && v.getArena().equals(arena)) {
+        if (sidebarHandler == null || sidebars.isEmpty() || !Arena.isRegistered(arena)) return;
+        activeSidebars().forEach(sidebar -> {
+            if (sidebar.getArena() == arena) {
                 if (SidebarHealthPolicy.shouldDisplay(arena.getStatus(), arena.isSpectator(player))) {
-                    v.getHandle().setPlayerHealth(player, health);
+                    sidebar.getHandle().setPlayerHealth(player, health);
                 } else {
-                    v.getHandle().clearPlayerHealth(player);
+                    sidebar.getHandle().clearPlayerHealth(player);
                 }
             }
         });

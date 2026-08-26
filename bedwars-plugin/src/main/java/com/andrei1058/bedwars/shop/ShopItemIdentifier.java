@@ -6,6 +6,7 @@ import org.bukkit.inventory.ItemStack;
 public final class ShopItemIdentifier {
 
     public static final String RECALL_SCROLL = "recall-scroll";
+    public static final String SELF_RESCUE_PLATFORM = "self-rescue-platform";
     private static final String TAG_KEY = "shop-item-id";
 
     private ShopItemIdentifier() {

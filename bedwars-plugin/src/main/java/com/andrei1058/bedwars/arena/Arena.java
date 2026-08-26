@@ -57,6 +57,7 @@ import com.andrei1058.bedwars.arena.tasks.GamePlayingTask;
 import com.andrei1058.bedwars.arena.tasks.GameRestartingTask;
 import com.andrei1058.bedwars.arena.tasks.GameStartingTask;
 import com.andrei1058.bedwars.arena.tasks.ReJoinTask;
+import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.arena.team.TeamAssigner;
 import com.andrei1058.bedwars.configuration.ArenaConfig;
@@ -900,7 +901,9 @@ public class Arena implements IArena {
                                     .replace("{KillerTeamName}", killerTeam.getDisplayName(lang)));
                         }
                     }
-                    PlayerDrops.handlePlayerDrops(this, p, lastDamager, team, killerTeam, cause, new ArrayList<>(Arrays.asList(p.getInventory().getContents())));
+                    List<ItemStack> disconnectDrops = new ArrayList<>(Arrays.asList(p.getInventory().getContents()));
+                    disconnectDrops.removeIf(EnemyTrackerCompass::isTrackingCompass);
+                    PlayerDrops.handlePlayerDrops(this, p, lastDamager, team, killerTeam, cause, disconnectDrops);
                 }
             }
         }
@@ -2673,7 +2676,8 @@ public class Arena implements IArena {
             }
         }
         for (Despawnable despawnable : new ArrayList<>(BedWars.nms.getDespawnablesList().values())) {
-            if (despawnable.getTeam().getArena() == this) {
+            if (despawnable != null && despawnable.getTeam() != null
+                    && despawnable.getTeam().getArena() == this) {
                 despawnable.destroy();
             }
         }
@@ -2820,6 +2824,11 @@ public class Arena implements IArena {
                 // back to SURVIVAL when the countdown ends.
                 PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
+                // Do this in the same tick as the session creation. The old
+                // death entity is still at the respawn event location, and a
+                // deferred collision update leaves it able to push players
+                // until the next scheduler turn.
+                nms.setCollide(player, this, false);
                 InvisibilityManager.hideRespawningPlayer(this, player);
                 Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
                     if (!player.isOnline() || !respawnSessions.containsKey(player)) return;

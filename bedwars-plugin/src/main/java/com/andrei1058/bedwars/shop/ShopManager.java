@@ -42,7 +42,7 @@ import org.bukkit.plugin.PluginManager;
 @SuppressWarnings("WeakerAccess")
 public class ShopManager extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 7;
+    private static final int CONFIG_VERSION = 8;
 
     public static ShopIndex shop;
 
@@ -363,6 +363,12 @@ public class ShopManager extends ConfigManager {
             addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "recall-scroll", "tier1", "scroll", "PAPER",
                     0, 1, "", "", "&b回城卷轴", false, ShopItemIdentifier.RECALL_SCROLL);
 
+            adCategoryContentTier(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "self-rescue-platform", 33, "tier1",
+                    "BLAZE_ROD", 0, 1, false, 2, "emerald", false, false);
+            addBuyItem(ConfigPath.SHOP_PATH_CATEGORY_UTILITY, "self-rescue-platform", "tier1",
+                    "self-rescue-platform", "BLAZE_ROD", 0, 1, "", "",
+                    "Self-Rescue Platform", false, ShopItemIdentifier.SELF_RESCUE_PLATFORM);
+
         }
 
         if (getYml().get(ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".diamond-armor") != null) {
@@ -397,6 +403,7 @@ public class ShopManager extends ConfigManager {
         updateToLatestVersion(CONFIG_VERSION, config -> {
             migrateLowerBodyArmorOnly(config);
             migrateRecallScroll(config);
+            migrateSelfRescuePlatform(config);
         });
     }
 
@@ -452,6 +459,36 @@ public class ShopManager extends ConfigManager {
         config.set(itemPath + ".name", "&b回城卷轴");
         config.set(itemPath + "." + ConfigPath.SHOP_CONTENT_BUY_ITEM_IDENTIFIER,
                 ShopItemIdentifier.RECALL_SCROLL);
+    }
+
+    static void migrateSelfRescuePlatform(YamlConfiguration config) {
+        String utilityPath = ConfigPath.SHOP_PATH_CATEGORY_UTILITY;
+        String contentPath = utilityPath + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".self-rescue-platform";
+        if (!config.isConfigurationSection(utilityPath) || config.get(contentPath) != null) return;
+
+        int slot = findAvailableUtilitySlot(config);
+        if (slot < 0) return;
+
+        config.set(contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_SLOT, slot);
+        config.set(contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_IS_PERMANENT, false);
+        config.set(contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_IS_DOWNGRADABLE, false);
+
+        String tierPath = contentPath + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + ".tier1";
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_MATERIAL, "BLAZE_ROD");
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_DATA, 0);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_AMOUNT, 1);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_ITEM_ENCHANTED, false);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_COST, 2);
+        config.set(tierPath + ConfigPath.SHOP_CONTENT_TIER_SETTINGS_CURRENCY, "emerald");
+
+        String itemPath = tierPath + "." + ConfigPath.SHOP_CONTENT_BUY_ITEMS_PATH
+                + ".self-rescue-platform";
+        config.set(itemPath + ".material", "BLAZE_ROD");
+        config.set(itemPath + ".data", 0);
+        config.set(itemPath + ".amount", 1);
+        config.set(itemPath + ".name", "Self-Rescue Platform");
+        config.set(itemPath + "." + ConfigPath.SHOP_CONTENT_BUY_ITEM_IDENTIFIER,
+                ShopItemIdentifier.SELF_RESCUE_PLATFORM);
     }
 
     private static int findAvailableUtilitySlot(YamlConfiguration config) {

@@ -58,11 +58,13 @@ public class Despawnable {
     }
 
     public void refresh() {
-        if (e.isDead() || e == null || team == null || team.getArena() == null) {
-            api.getVersionSupport().getDespawnablesList().remove(uuid);
-            if (team.getArena() == null){
-                e.damage(e.getHealth()+100);
-            }
+        if (e == null || e.isDead()) {
+            removeFromRegistry();
+            return;
+        }
+        if (team == null || team.getArena() == null) {
+            e.damage(e.getHealth() + 100);
+            removeFromRegistry();
             return;
         }
         setName();
@@ -70,6 +72,12 @@ public class Despawnable {
         if (despawn == 0) {
             e.damage(e.getHealth()+100);
             api.getVersionSupport().getDespawnablesList().remove(e.getUniqueId());
+        }
+    }
+
+    private void removeFromRegistry() {
+        if (api != null && api.getVersionSupport() != null && uuid != null) {
+            api.getVersionSupport().getDespawnablesList().remove(uuid);
         }
     }
 

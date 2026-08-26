@@ -28,6 +28,7 @@ import com.andrei1058.bedwars.api.arena.shop.IBuyItem;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamEnchant;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
+import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
 import com.andrei1058.bedwars.shop.ShopItemIdentifier;
 import com.andrei1058.bedwars.configuration.Sounds;
 import org.bukkit.ChatColor;
@@ -263,6 +264,8 @@ public class BuyItem implements IBuyItem {
                 }
                 i.setItemMeta(im);
             }
+
+            SelfRescuePlatform.localizeItem(player, i);
 
             if (permanent) {
                 i = nms.setShopUpgradeIdentifier(i, upgradeIdentifier);

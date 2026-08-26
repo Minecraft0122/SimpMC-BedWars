@@ -43,6 +43,7 @@ import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.OreGenerator;
 import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
+import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -302,6 +303,7 @@ public class BedWarsTeam implements ITeam {
             }
         }
         sendArmor(p, clean);
+        EnemyTrackerCompass.giveTo(p);
         if (clean) p.updateInventory();
     }
 
@@ -378,7 +380,7 @@ public class BedWarsTeam implements ITeam {
      * Respawn a member
      */
     public void respawnMember(@NotNull Player p) {
-        boolean wasRespawning = getArena().getRespawnSessions().remove(p) != null;
+        getArena().getRespawnSessions().remove(p);
         if (reSpawnInvulnerability.containsKey(p.getUniqueId())) {
             reSpawnInvulnerability.replace(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         } else {
@@ -389,13 +391,33 @@ public class BedWarsTeam implements ITeam {
         }
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
-        SafeSpawnResolver.teleport(p, getSpawn());
+        // Paper's performance path may complete this teleport asynchronously.
+        // Keep the player non-collidable until the old death location is no
+        // longer occupied; restoring collision immediately would let the
+        // respawning entity block players while the async teleport is pending.
+        java.util.concurrent.CompletableFuture<Boolean> spawnTeleport =
+                SafeSpawnResolver.teleportResult(p, getSpawn());
+        nms.setCollide(p, arena, false);
         PlayerMotion.disableFlight(p);
         InvisibilityManager.remove(getArena(), p);
-        if (wasRespawning) InvisibilityManager.showRespawningPlayer(getArena(), p);
-        // A respawned player is active again; restore normal entity collision
-        // so arrows and other projectiles can hit them.
-        nms.setCollide(p, arena, true);
+        // Death handling hides the entity as soon as PlayerDeathEvent fires.
+        // The instant-respawn path does not create a respawn-session entry,
+        // so relying on wasRespawning here would leave that player hidden
+        // after the teleport. Always restore the entity visibility when a
+        // team member becomes active again.
+        InvisibilityManager.showRespawningPlayer(getArena(), p);
+        // Restore normal collision only after Paper confirms the respawn
+        // teleport. If the player dies or leaves before completion, retain
+        // the non-collidable state owned by that later lifecycle.
+        spawnTeleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+            if (error != null || !Boolean.TRUE.equals(success)
+                    || !p.isOnline() || p.isDead()
+                    || Arena.getArenaByPlayer(p) != getArena()
+                    || getArena().isSpectator(p) || getArena().isReSpawning(p)) {
+                return;
+            }
+            nms.setCollide(p, arena, true);
+        }));
         p.setHealth(20);
 
         nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE)), Component.empty(), 0, 20, 10);

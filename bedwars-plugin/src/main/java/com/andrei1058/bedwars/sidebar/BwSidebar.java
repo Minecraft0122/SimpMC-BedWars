@@ -33,6 +33,8 @@ import static com.andrei1058.bedwars.api.language.Language.*;
 
 public class BwSidebar implements ISidebar {
 
+    private static final String TAB_TITLE = "&fSimpMC Bedwars";
+
     static final int TAB_MIN_WIDTH = 128;
     private static final String TAB_WIDTH_SPACER = " ".repeat(TAB_MIN_WIDTH);
 
@@ -458,9 +460,11 @@ public class BwSidebar implements ISidebar {
 
     @NotNull
     private String getNextEventName(@NotNull IArena arenaContext) {
-        if (!(arenaContext instanceof Arena arena)) return "-";
+        if (!(arenaContext instanceof Arena arena) || !Arena.isRegistered(arena)) return "-";
+        var nextEvent = arena.getNextEvent();
+        if (nextEvent == null) return "-";
         String st = "-";
-        switch (arena.getNextEvent()) {
+        switch (nextEvent) {
             case EMERALD_GENERATOR_TIER_II:
                 st = getMsg(getPlayer(), Messages.NEXT_EVENT_EMERALD_UPGRADE_II);
                 break;
@@ -489,9 +493,12 @@ public class BwSidebar implements ISidebar {
 
     @NotNull
     private String getNextEventTime(@NotNull IArena arenaContext) {
-        if (!(arenaContext instanceof Arena arena)) return nextEventDateFormat.format((0L));
+        if (!(arenaContext instanceof Arena arena) || !Arena.isRegistered(arena)) return "0";
+        var nextEvent = arena.getNextEvent();
+        if (nextEvent == null) return "0";
+        var playingTask = arena.getPlayingTask();
         long time = 0L;
-        switch (arena.getNextEvent()) {
+        switch (nextEvent) {
             case EMERALD_GENERATOR_TIER_II:
             case EMERALD_GENERATOR_TIER_III:
                 time = (arena.upgradeEmeraldsCount) * 1000L;
@@ -501,13 +508,13 @@ public class BwSidebar implements ISidebar {
                 time = (arena.upgradeDiamondsCount) * 1000L;
                 break;
             case GAME_END:
-                time = (arena.getPlayingTask().getGameEndCountdown()) * 1000L;
+                time = playingTask == null ? 0L : playingTask.getGameEndCountdown() * 1000L;
                 break;
             case BEDS_DESTROY:
-                time = (arena.getPlayingTask().getBedsDestroyCountdown()) * 1000L;
+                time = playingTask == null ? 0L : playingTask.getBedsDestroyCountdown() * 1000L;
                 break;
             case ENDER_DRAGON:
-                time = (arena.getPlayingTask().getDragonSpawnCountdown()) * 1000L;
+                time = playingTask == null ? 0L : playingTask.getDragonSpawnCountdown() * 1000L;
                 break;
         }
         return time == 0 ? "0" : nextEventDateFormat.format(new Date(time));
@@ -598,6 +605,7 @@ public class BwSidebar implements ISidebar {
                     language.m(Messages.FORMATTING_SB_TAB_GAME_TIME), arena.getStatus());
             headerLines = ensureTabWidth(headerLines);
         }
+        headerLines = prependTabTitle(headerLines);
 
         this.headerFooter = new TabHeaderFooter(
                 this.normalizeLines(headerLines),
@@ -606,6 +614,19 @@ public class BwSidebar implements ISidebar {
         );
 
         SidebarManager.getInstance().sendHeaderFooter(player, headerFooter);
+    }
+
+    private static List<String> prependTabTitle(List<String> lines) {
+        List<String> result = lines == null ? new ArrayList<>() : new ArrayList<>(lines);
+        if (result.isEmpty()) {
+            result.add(TAB_TITLE);
+            return result;
+        }
+        String visible = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', result.get(0)));
+        if (visible == null || !visible.startsWith("SimpMC Bedwars")) {
+            result.set(0, TAB_TITLE + " " + result.get(0));
+        }
+        return result;
     }
 
     static List<String> selectLobbyHeader(List<String> configuredHeader, List<String> languageHeader) {
