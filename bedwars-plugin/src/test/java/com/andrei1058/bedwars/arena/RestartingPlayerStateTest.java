@@ -2,7 +2,6 @@ package com.andrei1058.bedwars.arena;
 
 import com.andrei1058.bedwars.api.arena.IArena;
 import org.bukkit.GameMode;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 
@@ -85,12 +84,9 @@ class RestartingPlayerStateTest {
 
     private static void assertInteractiveWinner(PlayerState state) {
         assertEquals(GameMode.ADVENTURE, state.gameMode);
-        assertTrue(state.spectatorTargetCleared);
         assertTrue(state.canPickupItems);
         assertFalse(state.allowFlight);
         assertFalse(state.flying);
-        assertTrue(state.velocityReset);
-        assertTrue(state.fallDistanceReset);
         assertEquals(Boolean.TRUE, state.collidable);
         assertTrue(state.invisibilityRemoved);
     }
@@ -100,8 +96,6 @@ class RestartingPlayerStateTest {
         assertTrue(state.canPickupItems);
         assertTrue(state.allowFlight);
         assertTrue(state.flying);
-        assertTrue(state.velocityReset);
-        assertTrue(state.fallDistanceReset);
         assertEquals(Boolean.FALSE, state.collidable);
     }
 
@@ -139,11 +133,6 @@ class RestartingPlayerStateTest {
                         state.gameMode = (GameMode) args[0];
                         yield null;
                     }
-                    case "setSpectatorTarget" -> {
-                        state.spectatorTarget = (Entity) args[0];
-                        state.spectatorTargetCleared = args[0] == null;
-                        yield null;
-                    }
                     case "setCanPickupItems" -> {
                         state.canPickupItems = (boolean) args[0];
                         yield null;
@@ -154,14 +143,6 @@ class RestartingPlayerStateTest {
                     }
                     case "setFlying" -> {
                         state.flying = (boolean) args[0];
-                        yield null;
-                    }
-                    case "setVelocity" -> {
-                        state.velocityReset = true;
-                        yield null;
-                    }
-                    case "setFallDistance" -> {
-                        state.fallDistanceReset = true;
                         yield null;
                     }
                     case "setCollidable" -> {
@@ -179,13 +160,9 @@ class RestartingPlayerStateTest {
         private final String name;
         private final UUID uniqueId;
         private GameMode gameMode;
-        private Entity spectatorTarget;
-        private boolean spectatorTargetCleared;
         private boolean canPickupItems;
         private boolean allowFlight;
         private boolean flying;
-        private boolean velocityReset;
-        private boolean fallDistanceReset;
         private Boolean collidable;
         private boolean invisibilityRemoved;
 

@@ -81,9 +81,6 @@ public final class RestartingPlayerState {
     private static void restoreInteractiveMode(IArena arena, Player player, boolean spectator,
                                                boolean restoreRespawnSideEffects,
                                                BiConsumer<IArena, Player> respawnSideEffectCleaner) {
-        if (player.getGameMode() == GameMode.SPECTATOR) {
-            player.setSpectatorTarget(null);
-        }
         if (player.getGameMode() != GameMode.ADVENTURE) {
             player.setGameMode(GameMode.ADVENTURE);
         }
@@ -95,10 +92,12 @@ public final class RestartingPlayerState {
 
         player.setCanPickupItems(true);
         if (spectator) {
-            PlayerMotion.enableFlight(player);
+            player.setAllowFlight(true);
+            player.setFlying(true);
             player.setCollidable(false);
         } else {
-            PlayerMotion.disableFlight(player);
+            player.setFlying(false);
+            player.setAllowFlight(false);
             player.setCollidable(true);
             if (restoreRespawnSideEffects || arena.getShowTime().containsKey(player)) {
                 respawnSideEffectCleaner.accept(arena, player);

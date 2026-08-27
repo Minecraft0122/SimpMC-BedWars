@@ -39,7 +39,6 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.RestartingPlayerState;
 import com.andrei1058.bedwars.arena.LastHit;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
-import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
@@ -80,7 +79,6 @@ import static com.andrei1058.bedwars.arena.LastHit.getLastHit;
 public class DamageDeathMove implements Listener {
 
     private static final DecimalFormat HEALTH_FORMAT = new DecimalFormat("00.#");
-    private final Map<UUID, Location> deathLocations = new HashMap<>();
     private final Set<UUID> voidRespawns = new HashSet<>();
     private final Map<UUID, Boolean> respawnEligibleAtDeath = new HashMap<>();
     private final double tntJumpBarycenterAlterationInY;
@@ -369,10 +367,8 @@ public class DamageDeathMove implements Listener {
             boolean voidDeath = isVoidDeath(victim, damageEvent, a);
             if (voidDeath) {
                 voidRespawns.add(victim.getUniqueId());
-                deathLocations.remove(victim.getUniqueId());
             } else {
                 voidRespawns.remove(victim.getUniqueId());
-                deathLocations.put(victim.getUniqueId(), victim.getLocation().clone());
             }
 
             BedWars.nms.clearArrowsFromPlayerBody(victim);
@@ -531,8 +527,7 @@ public class DamageDeathMove implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent e) {
         UUID playerId = e.getPlayer().getUniqueId();
-        Location deathLocation = deathLocations.remove(playerId);
-        boolean voidDeath = voidRespawns.remove(playerId);
+        voidRespawns.remove(playerId);
         Boolean eligibleAtDeath = respawnEligibleAtDeath.remove(playerId);
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
         if (a == null) {
@@ -578,11 +573,7 @@ public class DamageDeathMove implements Listener {
                 //respawn session
                 int respawnTime = config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN);
                 if (respawnTime > 1) {
-                    if (voidDeath) {
-                        e.setRespawnLocation(SafeSpawnResolver.resolve(t.getSpawn()).location());
-                    } else {
-                        e.setRespawnLocation(deathLocation == null ? e.getPlayer().getLocation() : deathLocation);
-                    }
+                    e.setRespawnLocation(a.getReSpawnLocation());
                     a.startReSpawnSession(e.getPlayer(), respawnTime);
                 } else {
                     // instant respawn configuration
@@ -598,7 +589,6 @@ public class DamageDeathMove implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID playerId = event.getPlayer().getUniqueId();
-        deathLocations.remove(playerId);
         voidRespawns.remove(playerId);
         respawnEligibleAtDeath.remove(playerId);
     }
@@ -651,15 +641,9 @@ public class DamageDeathMove implements Listener {
                 if (to.getY() < 0) {
                     Location destination = a.isSpectator(player)
                             ? a.getSpectatorLocation() : a.getReSpawnLocation();
-                    PlayerMotion.enableFlight(player);
-                    TeleportManager.teleportC(player, destination, PlayerTeleportEvent.TeleportCause.PLUGIN)
-                            .whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                                if (error != null || !Boolean.TRUE.equals(success) || !player.isOnline()) return;
-                                IArena current = Arena.getArenaByPlayer(player);
-                                if (current == a && (a.isSpectator(player) || a.isReSpawning(player))) {
-                                    PlayerMotion.enableFlight(player);
-                                }
-                            }));
+                    TeleportManager.teleportC(player, destination, PlayerTeleportEvent.TeleportCause.PLUGIN);
+                    player.setAllowFlight(true);
+                    player.setFlying(true);
                 }
             } else {
                 if (a.getStatus() == GameState.playing) {

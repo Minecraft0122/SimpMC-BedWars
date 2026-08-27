@@ -526,7 +526,8 @@ public class Arena implements IArena {
             nms.setCollide(p, this, true);
             InvisibilityManager.synchronizeViewer(this, p);
             LobbyAnnouncements.playerEnteredArena(p);
-            PlayerMotion.disableFlight(p);
+            p.setFlying(false);
+            p.setAllowFlight(false);
             p.setHealth(20);
             broadcastArenaJoin(p);
 
@@ -658,7 +659,8 @@ public class Arena implements IArena {
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!isCurrentSpectator(p)) return;
-                PlayerMotion.enableFlight(p);
+                p.setAllowFlight(true);
+                p.setFlying(true);
             }, 5L);
 
             if (p.getPassenger() != null && p.getPassenger().getType() == EntityType.ARMOR_STAND)
@@ -683,7 +685,8 @@ public class Arena implements IArena {
                     TeleportManager.teleport(p, getSpectatorLocation());
                 }
 
-                PlayerMotion.enableFlight(p);
+                p.setAllowFlight(true);
+                p.setFlying(true);
 
                 /* Spectator items */
                 sendSpectatorCommandItems(p);
@@ -972,7 +975,8 @@ public class Arena implements IArena {
                 }
             }
         }
-        PlayerMotion.disableFlight(p);
+        p.setFlying(false);
+        p.setAllowFlight(false);
 
         //Remove from ReJoin if game ended
         if (status == GameState.restarting) {
@@ -1088,7 +1092,8 @@ public class Arena implements IArena {
             }
         }
 
-        PlayerMotion.disableFlight(p);
+        p.setFlying(false);
+        p.setAllowFlight(false);
 
         //Remove from ReJoin if game ended
         if (ReJoin.exists(p)) {
@@ -1790,7 +1795,8 @@ public class Arena implements IArena {
         }
         if (!isCurrentLobbyPlayer(p)) return;
         p.setGameMode(GameMode.ADVENTURE);
-        PlayerMotion.disableFlight(p);
+        p.setFlying(false);
+        p.setAllowFlight(false);
         p.setCanPickupItems(true);
         clearInventoryForLobby(p);
         refreshLobbyCommandItems(p);
@@ -2822,7 +2828,9 @@ public class Arena implements IArena {
                 // countdown. The session owns interaction blocking and flight;
                 // changing to SPECTATOR here causes an avoidable transition
                 // back to SURVIVAL when the countdown ends.
-                PlayerMotion.enableFlight(player);
+                TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                player.setAllowFlight(true);
+                player.setFlying(true);
                 respawnSessions.put(player, seconds);
                 // Do this in the same tick as the session creation. The old
                 // death entity is still at the respawn event location, and a
@@ -2830,13 +2838,16 @@ public class Arena implements IArena {
                 // until the next scheduler turn.
                 nms.setCollide(player, this, false);
                 InvisibilityManager.hideRespawningPlayer(this, player);
-                Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+                Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                     if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
+                    player.setAllowFlight(true);
+                    player.setFlying(true);
                     nms.setCollide(player, this, false);
                     InvisibilityManager.synchronizePlayerEquipment(this, player);
                     InvisibilityManager.synchronizeViewer(this, player);
                     updateSpectatorCollideRule(player, false);
-                });
+                    TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                }, 10L);
             } else {
                 ITeam team = getTeam(player);
                 team.respawnMember(player);

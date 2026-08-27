@@ -41,7 +41,6 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.OreGenerator;
-import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
 import com.andrei1058.bedwars.configuration.Sounds;
@@ -386,10 +385,6 @@ public class BedWarsTeam implements ITeam {
         } else {
             reSpawnInvulnerability.put(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         }
-        if (p.getGameMode() == GameMode.SPECTATOR) {
-            p.setSpectatorTarget(null);
-        }
-        p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
         // Paper's performance path may complete this teleport asynchronously.
         // Keep the player non-collidable until the old death location is no
@@ -398,7 +393,9 @@ public class BedWarsTeam implements ITeam {
         java.util.concurrent.CompletableFuture<Boolean> spawnTeleport =
                 SafeSpawnResolver.teleportResult(p, getSpawn());
         nms.setCollide(p, arena, false);
-        PlayerMotion.disableFlight(p);
+        p.setVelocity(new Vector(0, 0, 0));
+        p.setAllowFlight(false);
+        p.setFlying(false);
         InvisibilityManager.remove(getArena(), p);
         // Death handling hides the entity as soon as PlayerDeathEvent fires.
         // The instant-respawn path does not create a respawn-session entry,
