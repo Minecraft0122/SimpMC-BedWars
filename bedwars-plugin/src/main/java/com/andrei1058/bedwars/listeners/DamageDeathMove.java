@@ -377,9 +377,6 @@ public class DamageDeathMove implements Listener {
                     BedWars.nms.spigotHidePlayer(victim, viewer);
                 }
             }
-            // Spectator entities are excluded from the 1.8 server collision
-            // selector, including collisions initiated by other players.
-            victim.setGameMode(org.bukkit.GameMode.SPECTATOR);
             EntityDamageEvent damageEvent = e.getEntity().getLastDamageCause();
 
             ITeam victimsTeam = a.getTeam(victim);

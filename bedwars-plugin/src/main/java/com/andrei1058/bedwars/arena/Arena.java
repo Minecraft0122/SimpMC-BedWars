@@ -2551,7 +2551,6 @@ public class Arena implements IArena {
             // the session; the delayed visibility update below is too late for
             // 1.8 clients that still see the old death position briefly.
             nms.setCollide(player, this, false);
-            player.setGameMode(GameMode.SPECTATOR);
             player.getInventory().clear();
             if (seconds > 1) {
                 respawnSessions.put(player, seconds);
