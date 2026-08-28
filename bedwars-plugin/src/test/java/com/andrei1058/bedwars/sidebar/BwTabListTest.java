@@ -114,14 +114,13 @@ class BwTabListTest {
     }
 
     @Test
-    void waitingAndStartingPlayersUseTheirPreGameSelection() {
-        ITeam red = team("red", TeamColor.RED);
-        Player selected = player("Selected");
-        IArena waiting = arena(List.of(red), List.of(selected), List.of(), Map.of(), Map.of(), GameState.waiting);
-        IArena starting = arena(List.of(red), List.of(selected), List.of(), Map.of(), Map.of(), GameState.starting);
+    void waitingAndStartingPlayersRemainUnassignedUntilTheRoundStarts() {
+        Player player = player("Unassigned");
+        IArena waiting = arena(List.of(), List.of(player), List.of(), Map.of(), Map.of(), GameState.waiting);
+        IArena starting = arena(List.of(), List.of(player), List.of(), Map.of(), Map.of(), GameState.starting);
 
-        assertSame(red, BwTabList.resolvePlayerListTeam(waiting, selected, red));
-        assertSame(red, BwTabList.resolvePlayerListTeam(starting, selected, red));
+        assertNull(BwTabList.resolvePlayerListTeam(waiting, player));
+        assertNull(BwTabList.resolvePlayerListTeam(starting, player));
     }
 
     @Test

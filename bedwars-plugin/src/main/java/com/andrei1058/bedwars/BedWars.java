@@ -40,8 +40,6 @@ import com.andrei1058.bedwars.arena.feature.SpoilPlayerTNTFeature;
 import com.andrei1058.bedwars.arena.spectator.SpectatorListeners;
 import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
 import com.andrei1058.bedwars.arena.team.PreGameSquadGUI;
-import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionGUI;
-import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionManager;
 import com.andrei1058.bedwars.arena.stats.DefaultStatsHandler;
 import com.andrei1058.bedwars.arena.tasks.OneTick;
 import com.andrei1058.bedwars.arena.tasks.Refresh;
@@ -250,7 +248,6 @@ public class BedWars extends JavaPlugin {
                 new TargetListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),
                 PreGameSquadManager.getInstance(), PreGameSquadGUI.getInstance(),
-                PreGameTeamSelectionManager.getInstance(), PreGameTeamSelectionGUI.getInstance(),
                 selfRescuePlatform
         );
 

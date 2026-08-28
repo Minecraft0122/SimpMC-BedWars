@@ -97,47 +97,20 @@ class TeamAllocationPlannerTest {
     void doesNotSplitAValidSquadJustToInventAnOpponent() {
         Map<String, List<String>> allocation = TeamAllocationPlanner.allocateBalanced(
                 List.of(List.of("A", "B")), List.of("Red", "Blue", "Green"),
-                4, 2, new Random(5), ignored -> null);
+                4, 2, new Random(5));
 
         assertTrue(allocation.isEmpty());
     }
 
     @Test
-    void honoursCompatibleTeamChoices() {
-        List<List<String>> groups = List.of(
-                List.of("A", "B"), List.of("C"), List.of("D"), List.of("E"));
-        Map<String, String> choices = Map.of("A", "Red", "B", "Red", "D", "Blue");
-
+    void mapsBalancedGroupsOntoConfiguredTeamsWithoutPlayerChoices() {
         Map<String, List<String>> allocation = TeamAllocationPlanner.allocateBalanced(
-                groups, List.of("Red", "Blue", "Green", "Yellow"),
-                3, 2, new Random(43), choices::get);
-
-        assertTrue(allocation.get("Red").containsAll(List.of("A", "B")));
-        assertTrue(allocation.get("Blue").contains("D"));
-        assertEquals(Set.of("A", "B", "C", "D", "E"), flatten(allocation.values().stream().toList()));
-    }
-
-    @Test
-    void impossibleChoicesCannotBlockAnOtherwiseValidRound() {
-        List<List<String>> groups = List.of(List.of("A", "B"), List.of("C", "D"));
-        Map<String, String> choices = Map.of("A", "Red", "B", "Blue");
-
-        Map<String, List<String>> allocation = TeamAllocationPlanner.allocateBalanced(
-                groups, List.of("Red", "Blue"), 2, 2, new Random(47), choices::get);
+                List.of(List.of("A", "B"), List.of("C"), List.of("D")),
+                List.of("Red", "Blue", "Green"), 2, 2, new Random(53));
 
         assertEquals(2, allocation.values().stream().filter(team -> !team.isEmpty()).count());
+        assertEquals(Set.of("Red", "Blue", "Green"), allocation.keySet());
         assertEquals(Set.of("A", "B", "C", "D"), flatten(allocation.values().stream().toList()));
-    }
-
-    @Test
-    void oneTeamPreferenceFallsBackToBalancedOpponents() {
-        Map<String, String> choices = Map.of("A", "Red", "B", "Red");
-
-        Map<String, List<String>> allocation = TeamAllocationPlanner.allocateBalanced(
-                List.of(List.of("A"), List.of("B")), List.of("Red", "Blue", "Green"),
-                2, 2, new Random(53), choices::get);
-
-        assertEquals(2, allocation.values().stream().filter(team -> !team.isEmpty()).count());
     }
 
     private static Set<String> flatten(List<List<String>> allocation) {

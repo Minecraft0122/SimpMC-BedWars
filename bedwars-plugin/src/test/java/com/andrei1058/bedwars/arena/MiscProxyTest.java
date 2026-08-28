@@ -6,6 +6,8 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MiscProxyTest {
 
@@ -18,5 +20,14 @@ class MiscProxyTest {
             assertEquals("hub", input.readUTF());
             assertEquals(0, input.available());
         }
+    }
+
+    @Test
+    void recognizesTheConfiguredLocalLobbyBeforeProxyReturn() {
+        assertTrue(Misc.isConfiguredLobbyWorld("Lobby", "lobby"));
+        assertFalse(Misc.isConfiguredLobbyWorld("arena-solo", "lobby"));
+        assertFalse(Misc.isConfiguredLobbyWorld("lobby", ""));
+        assertFalse(Misc.isConfiguredLobbyWorld(null, "lobby"));
+        assertFalse(Misc.isConfiguredLobbyWorld("lobby", null));
     }
 }

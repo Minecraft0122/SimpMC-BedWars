@@ -63,9 +63,14 @@ public class InventoryListener implements Listener {
         if (cache == null) return;
         if (shopCache == null) return;
 
-        if(ShopIndex.getIndexViewers().contains(p.getUniqueId()) || ShopCategory.getCategoryViewers().contains(p.getUniqueId())) {
+        if (isShopViewer(p)) {
             if (e.getClickedInventory() != null && e.getClickedInventory().getType().equals(InventoryType.PLAYER)) {
-                e.setCancelled(true);
+                // The lower inventory belongs to the player and should stay
+                // sortable while the shop is open. Only block actions which
+                // can also pull from or push into the protected shop menu.
+                if (shouldCancelPlayerInventoryAction(e.getAction())) {
+                    e.setCancelled(true);
+                }
                 return;
             }
         }
@@ -181,6 +186,28 @@ public class InventoryListener implements Listener {
         if (touchesTopInventory(event.getRawSlots(), event.getView().getTopInventory().getSize())) {
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onShopDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!isShopViewer(player)) return;
+
+        // Dragging entirely inside the lower player inventory is sorting. A
+        // drag touching the upper inventory could overwrite shop buttons.
+        if (touchesTopInventory(event.getRawSlots(), event.getView().getTopInventory().getSize())) {
+            event.setCancelled(true);
+        }
+    }
+
+    private static boolean isShopViewer(Player player) {
+        return ShopIndex.getIndexViewers().contains(player.getUniqueId())
+                || ShopCategory.getCategoryViewers().contains(player.getUniqueId())
+                || QuickBuyAdd.getQuickBuyAdds().containsKey(player.getUniqueId());
+    }
+
+    static boolean shouldCancelPlayerInventoryAction(InventoryAction action) {
+        return action == MOVE_TO_OTHER_INVENTORY || action == InventoryAction.COLLECT_TO_CURSOR;
     }
 
     static boolean touchesTopInventory(Iterable<Integer> rawSlots, int topInventorySize) {

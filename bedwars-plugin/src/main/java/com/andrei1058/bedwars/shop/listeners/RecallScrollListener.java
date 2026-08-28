@@ -24,10 +24,13 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Iterator;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 public final class RecallScrollListener implements Listener {
 
@@ -68,7 +71,6 @@ public final class RecallScrollListener implements Listener {
             showActionBar(player, Messages.RECALL_SCROLL_ALREADY_CHANNELING);
             return;
         }
-        BedWars.nms.minusAmount(player, item, 1);
         announce(channel);
         spawnParticles(channel);
         ensureTicker();
@@ -98,9 +100,15 @@ public final class RecallScrollListener implements Listener {
                 continue;
             }
 
-            if (channel.countdown().advance()) {
+            ChannelAdvance advance = advanceChannel(channel.countdown(),
+                    () -> consumeRecallScroll(channel.player()));
+            if (advance != ChannelAdvance.WAITING) {
                 iterator.remove();
-                teleport(channel);
+                if (advance == ChannelAdvance.READY_TO_TELEPORT) {
+                    teleport(channel);
+                } else if (channel.player().isOnline()) {
+                    showActionBar(channel.player(), Messages.RECALL_SCROLL_UNAVAILABLE);
+                }
                 continue;
             }
 
@@ -108,6 +116,51 @@ public final class RecallScrollListener implements Listener {
             spawnParticles(channel);
         }
         stopTickerIfIdle();
+    }
+
+    static ChannelAdvance advanceChannel(RecallScrollCountdown countdown, BooleanSupplier consumeScroll) {
+        if (!countdown.advance()) return ChannelAdvance.WAITING;
+        return consumeScroll.getAsBoolean()
+                ? ChannelAdvance.READY_TO_TELEPORT
+                : ChannelAdvance.MISSING_SCROLL;
+    }
+
+    private static boolean consumeRecallScroll(Player player) {
+        boolean consumed = consumeRecallScroll(player.getInventory(),
+                item -> ShopItemIdentifier.matches(item, ShopItemIdentifier.RECALL_SCROLL));
+        if (consumed) player.updateInventory();
+        return consumed;
+    }
+
+    static boolean consumeRecallScroll(PlayerInventory inventory, Predicate<ItemStack> isRecallScroll) {
+        ItemStack[] storage = inventory.getStorageContents();
+        for (int slot = 0; slot < storage.length; slot++) {
+            ItemStack item = storage[slot];
+            if (!isConsumableRecallScroll(item, isRecallScroll)) continue;
+            consumeFromStorageSlot(inventory, slot, item);
+            return true;
+        }
+
+        ItemStack offHand = inventory.getItemInOffHand();
+        if (!isConsumableRecallScroll(offHand, isRecallScroll)) return false;
+        if (offHand.getAmount() <= 1) inventory.setItemInOffHand(null);
+        else {
+            offHand.setAmount(offHand.getAmount() - 1);
+            inventory.setItemInOffHand(offHand);
+        }
+        return true;
+    }
+
+    private static boolean isConsumableRecallScroll(ItemStack item, Predicate<ItemStack> isRecallScroll) {
+        return item != null && item.getAmount() > 0 && isRecallScroll.test(item);
+    }
+
+    private static void consumeFromStorageSlot(PlayerInventory inventory, int slot, ItemStack item) {
+        if (item.getAmount() <= 1) inventory.setItem(slot, null);
+        else {
+            item.setAmount(item.getAmount() - 1);
+            inventory.setItem(slot, item);
+        }
     }
 
     private static ITeam validTeam(Player player, IArena arena) {
@@ -171,5 +224,11 @@ public final class RecallScrollListener implements Listener {
     }
 
     private record Channel(Player player, IArena arena, ITeam team, RecallScrollCountdown countdown) {
+    }
+
+    enum ChannelAdvance {
+        WAITING,
+        MISSING_SCROLL,
+        READY_TO_TELEPORT
     }
 }

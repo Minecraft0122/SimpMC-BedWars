@@ -526,8 +526,7 @@ public class Arena implements IArena {
             nms.setCollide(p, this, true);
             InvisibilityManager.synchronizeViewer(this, p);
             LobbyAnnouncements.playerEnteredArena(p);
-            p.setFlying(false);
-            p.setAllowFlight(false);
+            PlayerMotion.disableFlight(p);
             p.setHealth(20);
             broadcastArenaJoin(p);
 
@@ -557,9 +556,9 @@ public class Arena implements IArena {
                 SidebarService.getInstance().giveSidebar(p, this, false);
             }
             sendPreGameCommandItems(p);
-            AdventureText.send(p, ChatColor.GOLD + "[选队] " + ChatColor.YELLOW
-                    + "使用 /" + mainCmd + " team 打开游戏队伍选择 GUI。"
-                    + (getMaxInTeam() > 1 ? " 邀请固定队友可使用 /" + mainCmd + " team squad。" : ""));
+            AdventureText.send(p, ChatColor.GOLD + "[组队] " + ChatColor.YELLOW
+                    + "使用 /" + mainCmd + " team 打开邀请组队界面。"
+                    + (getMaxInTeam() > 1 ? " 也可使用 /" + mainCmd + " team invite <玩家>。" : ""));
             for (PotionEffect pf : p.getActivePotionEffects()) {
                 p.removePotionEffect(pf.getType());
             }
@@ -659,8 +658,7 @@ public class Arena implements IArena {
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!isCurrentSpectator(p)) return;
-                p.setAllowFlight(true);
-                p.setFlying(true);
+                PlayerMotion.enableFlight(p);
             }, 5L);
 
             if (p.getPassenger() != null && p.getPassenger().getType() == EntityType.ARMOR_STAND)
@@ -685,8 +683,7 @@ public class Arena implements IArena {
                     TeleportManager.teleport(p, getSpectatorLocation());
                 }
 
-                p.setAllowFlight(true);
-                p.setFlying(true);
+                PlayerMotion.enableFlight(p);
 
                 /* Spectator items */
                 sendSpectatorCommandItems(p);
@@ -975,8 +972,7 @@ public class Arena implements IArena {
                 }
             }
         }
-        p.setFlying(false);
-        p.setAllowFlight(false);
+        PlayerMotion.disableFlight(p);
 
         //Remove from ReJoin if game ended
         if (status == GameState.restarting) {
@@ -1092,8 +1088,7 @@ public class Arena implements IArena {
             }
         }
 
-        p.setFlying(false);
-        p.setAllowFlight(false);
+        PlayerMotion.disableFlight(p);
 
         //Remove from ReJoin if game ended
         if (ReJoin.exists(p)) {
@@ -1795,8 +1790,7 @@ public class Arena implements IArena {
         }
         if (!isCurrentLobbyPlayer(p)) return;
         p.setGameMode(GameMode.ADVENTURE);
-        p.setFlying(false);
-        p.setAllowFlight(false);
+        PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
         clearInventoryForLobby(p);
         refreshLobbyCommandItems(p);
@@ -1900,8 +1894,6 @@ public class Arena implements IArena {
                         SupportPAPI.getSupportPAPI().replace(p,
                                 itemLore),
                         p, "RUNCOMMAND", item.command());
-                stack = CommandItemAction.tagReturnItem(stack, item.id(), item.command(),
-                        BedWars.mainCmd, CommandItemAction.Target.PROXY_LOBBY);
                 p.getInventory().setItem(item.slot(), stack);
             } catch (RuntimeException exception) {
                 warnLobbyItemProblem("build:" + item.id(), "无法创建大厅物品 " + item.id()
@@ -2058,9 +2050,6 @@ public class Arena implements IArena {
                     SupportPAPI.getSupportPAPI().replace(p, getList(p, Messages.GENERAL_CONFIGURATION_WAITING_ITEMS_LORE.replace("%path%", item))),
                     p, "RUNCOMMAND", command);
 
-            i = CommandItemAction.tagReturnItem(i, item, command,
-                    BedWars.mainCmd, CommandItemAction.Target.ARENA_LOBBY);
-
             p.getInventory().setItem(config.getInt(ConfigPath.GENERAL_CONFIGURATION_PRE_GAME_ITEMS_SLOT.replace("%path%", item)), i);
         }
     }
@@ -2102,9 +2091,6 @@ public class Arena implements IArena {
                     SupportPAPI.getSupportPAPI().replace(p, getMsg(p, Messages.GENERAL_CONFIGURATION_SPECTATOR_ITEMS_NAME.replace("%path%", item))),
                     SupportPAPI.getSupportPAPI().replace(p, getList(p, Messages.GENERAL_CONFIGURATION_SPECTATOR_ITEMS_LORE.replace("%path%", item))),
                     p, "RUNCOMMAND", command);
-
-            i = CommandItemAction.tagReturnItem(i, item, command,
-                    BedWars.mainCmd, CommandItemAction.Target.ARENA_LOBBY);
 
             p.getInventory().setItem(config.getInt(ConfigPath.GENERAL_CONFIGURATION_SPECTATOR_ITEMS_SLOT.replace("%path%", item)), i);
         }
@@ -2829,8 +2815,7 @@ public class Arena implements IArena {
                 // changing to SPECTATOR here causes an avoidable transition
                 // back to SURVIVAL when the countdown ends.
                 TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                player.setAllowFlight(true);
-                player.setFlying(true);
+                PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
                 // Do this in the same tick as the session creation. The old
                 // death entity is still at the respawn event location, and a
@@ -2840,8 +2825,7 @@ public class Arena implements IArena {
                 InvisibilityManager.hideRespawningPlayer(this, player);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                     if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
-                    player.setAllowFlight(true);
-                    player.setFlying(true);
+                    PlayerMotion.enableFlight(player);
                     nms.setCollide(player, this, false);
                     InvisibilityManager.synchronizePlayerEquipment(this, player);
                     InvisibilityManager.synchronizeViewer(this, player);

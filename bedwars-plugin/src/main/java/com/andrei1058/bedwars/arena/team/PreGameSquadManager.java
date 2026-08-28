@@ -152,7 +152,9 @@ public final class PreGameSquadManager implements Listener, PreGameSquad {
     @Override
     public List<Player> getAvailableTargets(@NotNull Player player) {
         IArena arena = preGameArena(player);
-        if (arena == null || !isLeader(player)) return List.of();
+        if (arena == null || arena.getMaxInTeam() <= 1 || !isLeader(player)) return List.of();
+        Squad squad = squadsByMember.get(player.getUniqueId());
+        if (squad != null && squad.members.size() >= arena.getMaxInTeam()) return List.of();
         return arena.getPlayers().stream()
                 .filter(candidate -> !candidate.equals(player))
                 .filter(candidate -> !isGrouped(candidate))

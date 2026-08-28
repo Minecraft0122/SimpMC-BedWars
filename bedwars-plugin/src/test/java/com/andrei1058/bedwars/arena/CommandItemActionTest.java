@@ -20,7 +20,7 @@ class CommandItemActionTest {
     }
 
     @Test
-    void parsesOnlyKnownReturnTargets() {
+    void parsesOnlyKnownReturnTargetsForLegacyCompatibility() {
         assertEquals(CommandItemAction.Target.PROXY_LOBBY,
                 CommandItemAction.parseTarget("proxy_lobby"));
         assertEquals(CommandItemAction.Target.ARENA_LOBBY,

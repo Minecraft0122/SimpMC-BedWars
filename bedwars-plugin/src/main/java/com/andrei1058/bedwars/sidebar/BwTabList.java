@@ -29,7 +29,6 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.arena.team.PreGameTeamSelectionManager;
 import com.andrei1058.spigot.sidebar.PlayerTab;
 import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
@@ -407,20 +406,8 @@ public class BwTabList {
     }
 
     static @Nullable ITeam resolvePlayerListTeam(@NotNull IArena arena, @NotNull Player player) {
-        GameState state = arena.getStatus();
-        ITeam selectedTeam = state == GameState.waiting || state == GameState.starting
-                ? PreGameTeamSelectionManager.getInstance().getSelection(arena, player)
-                : null;
-        return resolvePlayerListTeam(arena, player, selectedTeam);
-    }
-
-    static @Nullable ITeam resolvePlayerListTeam(@NotNull IArena arena, @NotNull Player player,
-                                                  @Nullable ITeam selectedTeam) {
         ITeam currentTeam = arena.getTeam(player);
         if (currentTeam != null) return currentTeam;
-        GameState state = arena.getStatus();
-        if ((state == GameState.waiting || state == GameState.starting)
-                && selectedTeam != null) return selectedTeam;
         return arena.getExTeam(player.getUniqueId());
     }
 

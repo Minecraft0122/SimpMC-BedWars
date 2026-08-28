@@ -1,6 +1,7 @@
 package com.andrei1058.bedwars.shop.listeners;
 
 import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -26,5 +27,21 @@ class InventoryListenerTest {
         assertTrue(InventoryListener.isBulkPurchaseClick(ClickType.SHIFT_RIGHT));
         assertFalse(InventoryListener.isBulkPurchaseClick(ClickType.SHIFT_LEFT));
         assertFalse(InventoryListener.isBulkPurchaseClick(ClickType.RIGHT));
+    }
+
+    @Test
+    void allowsOrdinarySortingInsidePlayerInventory() {
+        assertFalse(InventoryListener.shouldCancelPlayerInventoryAction(InventoryAction.PICKUP_ALL));
+        assertFalse(InventoryListener.shouldCancelPlayerInventoryAction(InventoryAction.PLACE_ALL));
+        assertFalse(InventoryListener.shouldCancelPlayerInventoryAction(InventoryAction.HOTBAR_SWAP));
+        assertFalse(InventoryListener.shouldCancelPlayerInventoryAction(InventoryAction.DROP_ONE_SLOT));
+    }
+
+    @Test
+    void blocksActionsThatCanCrossIntoTheShopInventory() {
+        assertTrue(InventoryListener.shouldCancelPlayerInventoryAction(
+                InventoryAction.MOVE_TO_OTHER_INVENTORY));
+        assertTrue(InventoryListener.shouldCancelPlayerInventoryAction(
+                InventoryAction.COLLECT_TO_CURSOR));
     }
 }

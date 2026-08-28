@@ -3,6 +3,7 @@ package com.andrei1058.bedwars.arena;
 import com.andrei1058.bedwars.api.arena.IArena;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
@@ -145,6 +146,14 @@ class RestartingPlayerStateTest {
                         state.flying = (boolean) args[0];
                         yield null;
                     }
+                    case "setVelocity" -> {
+                        state.velocity = (Vector) args[0];
+                        yield null;
+                    }
+                    case "setFallDistance" -> {
+                        state.fallDistance = (float) args[0];
+                        yield null;
+                    }
                     case "setCollidable" -> {
                         state.collidable = (boolean) args[0];
                         yield null;
@@ -163,6 +172,8 @@ class RestartingPlayerStateTest {
         private boolean canPickupItems;
         private boolean allowFlight;
         private boolean flying;
+        private Vector velocity;
+        private float fallDistance;
         private Boolean collidable;
         private boolean invisibilityRemoved;
 

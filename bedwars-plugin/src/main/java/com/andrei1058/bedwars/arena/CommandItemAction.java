@@ -6,9 +6,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Stores actions whose meaning must not depend on the player's current world
- * or on a configurable command string. This is especially important for the
- * three visually identical return-bed items.
+ * Classifies BedWars command items and configured leave items. Command
+ * execution itself stays in the original RUNCOMMAND command-dispatch chain.
+ * The target tag helpers are retained for compatibility with older item data;
+ * return routing is determined by the original command flow.
  */
 public final class CommandItemAction {
 
@@ -23,7 +24,7 @@ public final class CommandItemAction {
     }
 
     /**
-     * Mark configured leave items while preserving their legacy RUNCOMMAND tag.
+     * Retain the legacy target tag while preserving the RUNCOMMAND item data.
      */
     public static ItemStack tagReturnItem(@NotNull ItemStack itemStack, @Nullable String itemId,
                                           @Nullable String command, @Nullable String mainCommand,
@@ -38,7 +39,7 @@ public final class CommandItemAction {
         return parseTarget(BedWars.nms.getTag(itemStack, TARGET_TAG));
     }
 
-    static boolean isCommandItem(@Nullable ItemStack itemStack) {
+    public static boolean isCommandItem(@Nullable ItemStack itemStack) {
         if (itemStack == null || !BedWars.nms.isCustomBedWarsItem(itemStack)) return false;
         String customData = BedWars.nms.getCustomData(itemStack);
         return customData != null && customData.startsWith("RUNCOMMAND_");
@@ -66,4 +67,5 @@ public final class CommandItemAction {
             return null;
         }
     }
+
 }

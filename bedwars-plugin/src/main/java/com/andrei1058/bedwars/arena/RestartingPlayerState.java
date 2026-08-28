@@ -92,12 +92,10 @@ public final class RestartingPlayerState {
 
         player.setCanPickupItems(true);
         if (spectator) {
-            player.setAllowFlight(true);
-            player.setFlying(true);
+            PlayerMotion.enableFlight(player);
             player.setCollidable(false);
         } else {
-            player.setFlying(false);
-            player.setAllowFlight(false);
+            PlayerMotion.disableFlight(player);
             player.setCollidable(true);
             if (restoreRespawnSideEffects || arena.getShowTime().containsKey(player)) {
                 respawnSideEffectCleaner.accept(arena, player);

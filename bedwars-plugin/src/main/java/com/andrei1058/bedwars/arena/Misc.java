@@ -69,40 +69,54 @@ public class Misc {
 
     public static void moveToLobbyOrKick(Player p, @Nullable IArena arena, boolean notAbandon) {
         if (getServerType() != ServerType.BUNGEE) {
-            if (arena != null) {
-                if (arena.isSpectator(p)) {
-                    arena.removeSpectator(p, false);
-                } else {
-                    arena.removePlayer(p, false);
-                    if (!notAbandon && arena.getStatus() == GameState.playing
-                            && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
-                        arena.abandonGame(p);
-                    }
-                }
-                return;
-            }
-
-            Location loc = config.getConfigLoc("lobbyLoc");
-            if (loc == null) { // Can happen when location is not set in config
-                forceKick(p, arena, notAbandon);
-                return;
-            }
-
-            try {
-                if (!p.teleport(loc)) {
-                    Bukkit.getLogger().warning("Could not teleport player to lobby. The teleport was cancelled.");
+            // Keep the original two-stage route: leaving an arena first goes
+            // to this server's lobby; leaving from that lobby goes through the
+            // proxy to the configured group lobby.
+            String lobbyWorld = config.getLobbyWorldName();
+            if (!isConfiguredLobbyWorld(p.getWorld().getName(), lobbyWorld)) {
+                Location loc = config.getConfigLoc("lobbyLoc");
+                if (loc == null) { // Can happen when location is not set in config
+                    forceKick(p, arena, notAbandon);
                     return;
                 }
-            } catch (Exception exception) {
-                plugin.getLogger().log(Level.SEVERE,
-                        "Could not teleport player to lobby! Try setting the lobby again with /bw setLobby", exception);
-                return;
-            }
 
-            Arena.enterLobby(p);
+                try {
+                    if (!p.teleport(loc)) {
+                        Bukkit.getLogger().warning("Could not teleport player to lobby. The teleport was cancelled.");
+                        return;
+                    }
+                } catch (Exception exception) {
+                    plugin.getLogger().log(Level.SEVERE,
+                            "Could not teleport player to lobby! Try setting the lobby again with /bw setLobby", exception);
+                    return;
+                }
+
+                if (arena != null) {
+                    if (arena.isSpectator(p)) {
+                        arena.removeSpectator(p, false);
+                    } else {
+                        arena.removePlayer(p, false);
+                        if (!notAbandon && arena.getStatus() == GameState.playing
+                                && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
+                            arena.abandonGame(p);
+                        }
+                    }
+                } else {
+                    // Preserve Paper's lobby setup for players returning from
+                    // another non-arena world. Arena departures perform the
+                    // same setup from sendToMainLobby after their teleport.
+                    Arena.enterLobby(p);
+                }
+            } else {
+                forceKick(p, arena, notAbandon);
+            }
             return;
         }
         forceKick(p, arena, notAbandon);
+    }
+
+    static boolean isConfiguredLobbyWorld(@Nullable String playerWorld, @Nullable String lobbyWorld) {
+        return playerWorld != null && lobbyWorld != null && playerWorld.equalsIgnoreCase(lobbyWorld);
     }
 
     /**

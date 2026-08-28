@@ -15,20 +15,15 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Capacity-aware allocator. It packs groups into as few active teams as the
- * start requirements allow, keeps normal squads together and treats pre-game
- * team choices as preferences. Only a group larger than one team's capacity
- * may be split.
+ * start requirements allow and keeps normal squads together. Only a group
+ * larger than one team's capacity may be split.
  */
 final class TeamAllocationPlanner {
 
@@ -46,10 +41,9 @@ final class TeamAllocationPlanner {
     }
 
     static <T, K> Map<K, List<T>> allocateBalanced(@NotNull List<List<T>> sourceGroups,
-                                                    @NotNull List<K> configuredTeams,
-                                                    int capacity, int requiredActiveTeams,
-                                                    @NotNull Random random,
-                                                    @NotNull Function<T, K> preferredTeam) {
+                                                     @NotNull List<K> configuredTeams,
+                                                     int capacity, int requiredActiveTeams,
+                                                     @NotNull Random random) {
         if (configuredTeams.isEmpty() || requiredActiveTeams < 1
                 || requiredActiveTeams > configuredTeams.size()) {
             return Map.of();
@@ -59,7 +53,7 @@ final class TeamAllocationPlanner {
         List<List<T>> allocation = findAtomicAllocation(
                 sourceGroups, configuredTeams.size(), capacity, requiredActiveTeams, random);
         if (allocation == null) return Map.of();
-        return mapToConfiguredTeams(allocation, configuredTeams, random, preferredTeam);
+        return mapToConfiguredTeams(allocation, configuredTeams, random);
     }
 
     private static void validateCapacity(List<? extends List<?>> groups, int teamCount, int capacity) {
@@ -129,39 +123,12 @@ final class TeamAllocationPlanner {
     }
 
     private static <T, K> Map<K, List<T>> mapToConfiguredTeams(List<List<T>> allocation,
-                                                               List<K> configuredTeams, Random random,
-                                                               Function<T, K> preferredTeam) {
+                                                               List<K> configuredTeams, Random random) {
         List<K> availableTeams = new ArrayList<>(configuredTeams);
         Collections.shuffle(availableTeams, random);
-        Map<Integer, K> assigned = new HashMap<>();
-        Set<K> used = new LinkedHashSet<>();
-
-        List<PreferenceScore<K>> scores = new ArrayList<>();
-        for (int allocationIndex = 0; allocationIndex < allocation.size(); allocationIndex++) {
-            Map<K, Integer> counts = new LinkedHashMap<>();
-            for (T player : allocation.get(allocationIndex)) {
-                K preference = preferredTeam.apply(player);
-                if (preference != null && configuredTeams.contains(preference)) {
-                    counts.merge(preference, 1, Integer::sum);
-                }
-            }
-            int index = allocationIndex;
-            counts.forEach((team, score) -> scores.add(new PreferenceScore<>(index, team, score)));
-        }
-        scores.sort(Comparator.comparingInt((PreferenceScore<K> score) -> score.score()).reversed());
-        for (PreferenceScore<K> score : scores) {
-            if (assigned.containsKey(score.allocationIndex()) || used.contains(score.team())) continue;
-            assigned.put(score.allocationIndex(), score.team());
-            used.add(score.team());
-        }
-
-        availableTeams.removeAll(used);
         Map<K, List<T>> result = new LinkedHashMap<>();
-        int remainingIndex = 0;
         for (int index = 0; index < allocation.size(); index++) {
-            K team = assigned.get(index);
-            if (team == null) team = availableTeams.get(remainingIndex++);
-            result.put(team, allocation.get(index));
+            result.put(availableTeams.get(index), allocation.get(index));
         }
         return result;
     }
@@ -205,8 +172,5 @@ final class TeamAllocationPlanner {
             if (load > 0) activeTeams++;
         }
         return activeTeams;
-    }
-
-    private record PreferenceScore<K>(int allocationIndex, K team, int score) {
     }
 }

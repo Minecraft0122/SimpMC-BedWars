@@ -589,24 +589,6 @@ public class SidebarService implements ISidebarService {
         updateArenaPlayerTabs(sidebars.values(), arena, player, spectator);
     }
 
-    /** Immediately replay a changed pre-game team preference to every arena viewer. */
-    public void handlePreGameTeamSelection(@NotNull IArena arena,
-                                           @NotNull Collection<Player> affectedPlayers) {
-        if (sidebarHandler == null || sidebars.isEmpty() || affectedPlayers.isEmpty()) return;
-        updatePreGameTeamTabs(sidebars.values(), arena, affectedPlayers);
-    }
-
-    static void updatePreGameTeamTabs(@NotNull Collection<? extends ISidebar> sidebars,
-                                      @NotNull IArena arena,
-                                      @NotNull Collection<Player> affectedPlayers) {
-        for (ISidebar sidebar : sidebars) {
-            if (sidebar == null || sidebar.getArena() != arena) continue;
-            for (Player affected : affectedPlayers) {
-                if (affected.isOnline()) sidebar.giveUpdateTabFormat(affected, false, null);
-            }
-        }
-    }
-
     /**
      * Refresh elimination state after the arena has moved the player out of
      * its active team. Multiple eliminations from the same arena and tick are

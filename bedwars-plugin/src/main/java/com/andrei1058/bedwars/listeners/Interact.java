@@ -29,13 +29,10 @@ import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.arena.CommandItemAction;
-import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
 import com.andrei1058.bedwars.shop.listeners.InventoryListener;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -59,18 +56,13 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class Interact implements Listener {
-
-    private static final Set<UUID> pendingReturnActions = new HashSet<>();
 
     private final double fireballSpeedMultiplier;
     private final double fireballSneakSpeedMultiplier;
@@ -119,74 +111,16 @@ public class Interact implements Listener {
         if (e.getHand() != EquipmentSlot.HAND) return;
         Player p = e.getPlayer();
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR) {
-            ItemStack i = e.getItem();
-            CommandItemAction.Target returnTarget = CommandItemAction.readTarget(i);
-            if (returnTarget != null) {
-                e.setCancelled(true);
-                if (!pendingReturnActions.add(p.getUniqueId())) {
-                    p.updateInventory();
-                    return;
-                }
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    try {
-                        executeReturnItem(p, returnTarget);
-                    } finally {
-                        pendingReturnActions.remove(p.getUniqueId());
-                    }
-                });
-                return;
-            }
+            ItemStack i = BedWars.nms.getItemInHand(p);
             if (!nms.isCustomBedWarsItem(i)) return;
             final String[] customData = nms.getCustomData(i).split("_", 2);
             if (customData.length >= 2) {
                 if (customData[0].equals("RUNCOMMAND")) {
                     e.setCancelled(true);
-                    String command = customData[1].trim();
-                    if (shouldConnectToProxyLobby(command, LobbyAnnouncements.isProxyLobbyPlayer(p), BedWars.mainCmd)) {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            if (plugin.getProxyLobbyConnector() == null) {
-                                Misc.connectToProxyLobby(p);
-                            } else {
-                                plugin.getProxyLobbyConnector().connect(p);
-                            }
-                            // This also covers legacy items created before the
-                            // persistent return target was introduced.
-                            if (p.isOnline()) p.updateInventory();
-                        });
-                    } else {
-                        Bukkit.getScheduler().runTask(plugin, () -> Bukkit.dispatchCommand(p, command));
-                    }
+                    Bukkit.getScheduler().runTask(plugin, () -> Bukkit.dispatchCommand(p, customData[1].trim()));
                 }
             }
         }
-    }
-
-    private static void executeReturnItem(Player player, CommandItemAction.Target target) {
-        if (!player.isOnline()) return;
-        if (target == CommandItemAction.Target.PROXY_LOBBY) {
-            if (plugin.getProxyLobbyConnector() == null) {
-                Misc.connectToProxyLobby(player);
-            } else {
-                plugin.getProxyLobbyConnector().connect(player);
-            }
-            // Proxy plugin messages are fire-and-forget. Re-sync the item
-            // after the cancelled interaction so a failed or direct-backend
-            // handoff cannot leave the client showing an empty slot.
-            if (player.isOnline()) player.updateInventory();
-            return;
-        }
-
-        IArena arena = Arena.getArenaByPlayer(player);
-        if (arena == null) {
-            AdventureText.send(player, ChatColor.RED + "你当前不在竞技场中，无法执行返回操作。");
-            return;
-        }
-        Misc.moveToLobbyOrKick(player, arena, arena.isSpectator(player.getUniqueId()));
-    }
-
-    static boolean shouldConnectToProxyLobby(String command, boolean lobbyPlayer, String mainCommand) {
-        return lobbyPlayer && command != null && mainCommand != null
-                && command.trim().equalsIgnoreCase(mainCommand + " leave");
     }
 
     @EventHandler

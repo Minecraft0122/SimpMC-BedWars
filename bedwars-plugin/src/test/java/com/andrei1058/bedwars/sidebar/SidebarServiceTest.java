@@ -200,27 +200,6 @@ class SidebarServiceTest {
         assertEquals(0, tabRefreshes.get());
     }
 
-    @Test
-    void preGameSelectionRefreshesAffectedRowsForEveryArenaViewerIncludingSelf() {
-        IArena arena = arena();
-        IArena otherArena = arena();
-        Player alice = player("alice");
-        Player bob = player("bob");
-        AtomicInteger firstViewerUpdates = new AtomicInteger();
-        AtomicInteger secondViewerUpdates = new AtomicInteger();
-        AtomicInteger otherArenaUpdates = new AtomicInteger();
-
-        SidebarService.updatePreGameTeamTabs(List.of(
-                sidebar(arena, alice, firstViewerUpdates, new AtomicReference<>()),
-                sidebar(arena, bob, secondViewerUpdates, new AtomicReference<>()),
-                sidebar(otherArena, player("other"), otherArenaUpdates, new AtomicReference<>())
-        ), arena, List.of(alice, bob));
-
-        assertEquals(2, firstViewerUpdates.get());
-        assertEquals(2, secondViewerUpdates.get());
-        assertEquals(0, otherArenaUpdates.get());
-    }
-
     private static IArena arena() {
         return arena(null);
     }

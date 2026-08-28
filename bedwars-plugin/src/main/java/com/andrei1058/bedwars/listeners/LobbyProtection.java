@@ -59,23 +59,23 @@ public final class LobbyProtection implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteract(PlayerInteractEvent event) {
-        if (isProtected(event.getPlayer()) && !isProxyLobbyReturn(event.getAction(), event.getItem())) {
+        if (isProtected(event.getPlayer()) && !isCommandItemClick(event.getAction(), event.getItem())) {
             event.setCancelled(true);
         }
     }
 
     /**
-     * The proxy return item is a command item, not a build interaction. It
-     * must reach {@link Interact#onItemCommand(PlayerInteractEvent)} even
-     * though the rest of the lobby is protected.
+     * Command items are not build interactions. They must reach
+     * {@link Interact#onItemCommand(PlayerInteractEvent)} even though the
+     * rest of the lobby is protected.
      */
-    static boolean isProxyLobbyReturn(Action action, ItemStack item) {
-        return isProxyLobbyTarget(action, CommandItemAction.readTarget(item));
+    static boolean isCommandItemClick(Action action, ItemStack item) {
+        return shouldAllowCommandItem(action, CommandItemAction.isCommandItem(item));
     }
 
-    static boolean isProxyLobbyTarget(Action action, CommandItemAction.Target target) {
+    static boolean shouldAllowCommandItem(Action action, boolean commandItem) {
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return false;
-        return target == CommandItemAction.Target.PROXY_LOBBY;
+        return commandItem;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

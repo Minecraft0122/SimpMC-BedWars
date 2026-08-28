@@ -39,6 +39,7 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.RestartingPlayerState;
 import com.andrei1058.bedwars.arena.LastHit;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
+import com.andrei1058.bedwars.arena.PlayerMotion;
 import com.andrei1058.bedwars.arena.SafeSpawnResolver;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
@@ -59,6 +60,7 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.tag.DamageTypeTags;
@@ -593,6 +595,16 @@ public class DamageDeathMove implements Listener {
         respawnEligibleAtDeath.remove(playerId);
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onToggleFlight(PlayerToggleFlightEvent event) {
+        if (event.isFlying()) return;
+        Player player = event.getPlayer();
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null || (!arena.isSpectator(player) && !arena.isReSpawning(player))) return;
+        event.setCancelled(true);
+        PlayerMotion.enableFlight(player);
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent e) {
         if (!e.hasChangedPosition()) return;
@@ -604,12 +616,15 @@ public class DamageDeathMove implements Listener {
             BedWars.getAPI().getAFKUtil().setPlayerAFK(player, false);
         }
 
-        // Paper 1.21.11 exposes exact block-change checks; everything below is block based.
-        if (!e.hasChangedBlock()) return;
-
         Location from = e.getFrom();
         Location to = e.getTo();
         IArena a = Arena.getArenaByPlayer(player);
+        boolean spectator = a != null && (a.isSpectator(player) || a.isReSpawning(player));
+
+        // The arena bookkeeping below is block based, but spectator flight
+        // transitions can happen within one block (especially on landing).
+        if (!e.hasChangedBlock() && !spectator) return;
+
         if (a != null) {
 
             if (changedChunk(from, to)) {
@@ -637,14 +652,21 @@ public class DamageDeathMove implements Listener {
                 }
             }
 
-            if (a.isSpectator(player) || a.isReSpawning(player)) {
+            if (spectator) {
                 if (to.getY() < 0) {
                     Location destination = a.isSpectator(player)
                             ? a.getSpectatorLocation() : a.getReSpawnLocation();
                     TeleportManager.teleportC(player, destination, PlayerTeleportEvent.TeleportCause.PLUGIN);
-                    player.setAllowFlight(true);
-                    player.setFlying(true);
+                    PlayerMotion.enableFlight(player);
+                } else if (shouldResetSpectatorMotion(
+                        player.getAllowFlight(), player.isFlying(), player.isOnGround(), from.getY(), to.getY())) {
+                    PlayerMotion.enableFlight(player);
+                } else {
+                    // Never let the server accumulate a fall distance while
+                    // the player is being presented as a flying spectator.
+                    player.setFallDistance(0.0F);
                 }
+                return;
             } else {
                 if (a.getStatus() == GameState.playing) {
                     if (to.getBlockY() <= a.getYKillHeight()
@@ -691,6 +713,11 @@ public class DamageDeathMove implements Listener {
         return from.getWorld() != to.getWorld()
                 || (from.getBlockX() >> 4) != (to.getBlockX() >> 4)
                 || (from.getBlockZ() >> 4) != (to.getBlockZ() >> 4);
+    }
+
+    static boolean shouldResetSpectatorMotion(boolean allowFlight, boolean flying, boolean onGround,
+                                              double fromY, double toY) {
+        return !allowFlight || !flying || (onGround && toY < fromY);
     }
 
     private static boolean isExplosionDamage(EntityDamageEvent event) {

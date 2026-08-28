@@ -223,4 +223,13 @@ public abstract class SubCommand {
     public List<String> getTabComplete(CommandSender sender) {
         return getTabComplete();
     }
+
+    /**
+     * Get sender-aware tab suggestions for arguments after this sub-command.
+     * Existing extensions that only implement the original overloads remain
+     * source and binary compatible.
+     */
+    public List<String> getTabComplete(CommandSender sender, String[] args) {
+        return args == null || args.length <= 1 ? getTabComplete(sender) : List.of();
+    }
 }

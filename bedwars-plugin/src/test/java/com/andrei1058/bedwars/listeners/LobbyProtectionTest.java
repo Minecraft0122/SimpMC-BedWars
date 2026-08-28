@@ -1,7 +1,6 @@
 package com.andrei1058.bedwars.listeners;
 
 import com.andrei1058.bedwars.api.server.ServerType;
-import com.andrei1058.bedwars.arena.CommandItemAction;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryAction;
 import org.junit.jupiter.api.Test;
@@ -47,15 +46,10 @@ class LobbyProtectionTest {
     }
 
     @Test
-    void allowsOnlyRightClickOfTheTaggedProxyReturnItem() {
-        assertTrue(LobbyProtection.isProxyLobbyTarget(Action.RIGHT_CLICK_AIR,
-                CommandItemAction.Target.PROXY_LOBBY));
-        assertTrue(LobbyProtection.isProxyLobbyTarget(Action.RIGHT_CLICK_BLOCK,
-                CommandItemAction.Target.PROXY_LOBBY));
-        assertFalse(LobbyProtection.isProxyLobbyTarget(Action.LEFT_CLICK_BLOCK,
-                CommandItemAction.Target.PROXY_LOBBY));
-        assertFalse(LobbyProtection.isProxyLobbyTarget(Action.RIGHT_CLICK_AIR,
-                CommandItemAction.Target.ARENA_LOBBY));
-        assertFalse(LobbyProtection.isProxyLobbyTarget(Action.RIGHT_CLICK_AIR, null));
+    void allowsOnlyRightClickOfCommandItems() {
+        assertTrue(LobbyProtection.shouldAllowCommandItem(Action.RIGHT_CLICK_AIR, true));
+        assertTrue(LobbyProtection.shouldAllowCommandItem(Action.RIGHT_CLICK_BLOCK, true));
+        assertFalse(LobbyProtection.shouldAllowCommandItem(Action.LEFT_CLICK_BLOCK, true));
+        assertFalse(LobbyProtection.shouldAllowCommandItem(Action.RIGHT_CLICK_AIR, false));
     }
 }

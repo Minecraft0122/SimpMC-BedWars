@@ -28,6 +28,14 @@ class DamageDeathMoveTest {
     }
 
     @Test
+    void resetsSpectatorMotionWhenFlightIsLostOrLanding() {
+        assertTrue(DamageDeathMove.shouldResetSpectatorMotion(false, true, false, 10, 10));
+        assertTrue(DamageDeathMove.shouldResetSpectatorMotion(true, false, false, 10, 10));
+        assertTrue(DamageDeathMove.shouldResetSpectatorMotion(true, true, true, 10, 9.9));
+        assertFalse(DamageDeathMove.shouldResetSpectatorMotion(true, true, false, 10, 10.1));
+    }
+
+    @Test
     void distinguishesExplosionDamageFromOrdinaryCombat() {
         assertTrue(DamageDeathMove.isExplosionDamage(EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, true));
         assertTrue(DamageDeathMove.isExplosionDamage(EntityDamageEvent.DamageCause.BLOCK_EXPLOSION, true));
