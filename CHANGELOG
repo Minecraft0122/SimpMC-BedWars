@@ -1,3 +1,8 @@
+## 1.0.2 - 2026-08-28
+
+- 修复 1.8.8 旁观者下降并落地时被反作弊判定为移动异常的问题，落地时恢复飞行并清理速度、摔落状态。
+- 修复打开商店后无法整理下方玩家背包的问题，同时继续阻止跨容器移动到商店菜单。
+
 # 19.11.1
 - fixed issue where you can't open the shop after rejoin
 - fixed issue where you are invisible after rejoin

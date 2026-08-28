@@ -54,6 +54,7 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.projectiles.ProjectileSource;
@@ -608,6 +609,16 @@ public class DamageDeathMove implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onToggleFlight(PlayerToggleFlightEvent event) {
+        if (event.isFlying()) return;
+        Player player = event.getPlayer();
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null || (!arena.isSpectator(player) && !arena.isReSpawning(player))) return;
+        event.setCancelled(true);
+        resetSpectatorMotion(player);
+    }
+
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
         if (Arena.isInArena(e.getPlayer())) {
@@ -666,10 +677,14 @@ public class DamageDeathMove implements Listener {
 
             if (a.isSpectator(e.getPlayer()) || a.isReSpawning(e.getPlayer())) {
                 if (e.getTo().getY() < 0) {
+                    resetSpectatorMotion(e.getPlayer());
                     TeleportManager.teleportC(e.getPlayer(), a.isSpectator(e.getPlayer()) ? a.getSpectatorLocation() : a.getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                    e.getPlayer().setAllowFlight(true);
-                    e.getPlayer().setFlying(true);
-                    // how to remove fall velocity?
+                } else if (!e.getPlayer().getAllowFlight()
+                        || !e.getPlayer().isFlying()
+                        || (e.getPlayer().isOnGround() && e.getTo().getY() < e.getFrom().getY())) {
+                    resetSpectatorMotion(e.getPlayer());
+                } else {
+                    e.getPlayer().setFallDistance(0.0F);
                 }
             } else {
                 if (a.getStatus() == GameState.playing) {
@@ -716,6 +731,13 @@ public class DamageDeathMove implements Listener {
                 }
             }
         }
+    }
+
+    private static void resetSpectatorMotion(Player player) {
+        player.setVelocity(new Vector(0, 0, 0));
+        player.setFallDistance(0.0F);
+        player.setAllowFlight(true);
+        player.setFlying(true);
     }
 
     @EventHandler

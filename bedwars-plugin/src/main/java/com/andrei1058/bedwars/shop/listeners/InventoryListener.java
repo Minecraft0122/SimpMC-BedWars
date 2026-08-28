@@ -60,9 +60,13 @@ public class InventoryListener implements Listener {
         if (cache == null) return;
         if (shopCache == null) return;
 
-        if(ShopIndex.getIndexViewers().contains(p.getUniqueId()) || ShopCategory.getCategoryViewers().contains(p.getUniqueId())) {
+        if (isShopViewer(p)) {
             if (e.getClickedInventory() != null && e.getClickedInventory().getType().equals(InventoryType.PLAYER)) {
-                e.setCancelled(true);
+                // Keep the lower inventory sortable while the shop is open.
+                // Block only actions that can cross into the protected menu.
+                if (shouldCancelPlayerInventoryAction(e.getAction())) {
+                    e.setCancelled(true);
+                }
                 return;
             }
         }
@@ -126,6 +130,32 @@ public class InventoryListener implements Listener {
             }
             e.getWhoClicked().closeInventory();
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onShopDrag(InventoryDragEvent e) {
+        if (!(e.getWhoClicked() instanceof Player)) return;
+        Player p = (Player) e.getWhoClicked();
+        if (!isShopViewer(p)) return;
+
+        // A drag touching the upper inventory could overwrite shop buttons;
+        // a drag entirely in the lower inventory is ordinary sorting.
+        for (int slot : e.getRawSlots()) {
+            if (slot >= 0 && slot < e.getView().getTopInventory().getSize()) {
+                e.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    private static boolean isShopViewer(Player player) {
+        return ShopIndex.getIndexViewers().contains(player.getUniqueId())
+                || ShopCategory.getCategoryViewers().contains(player.getUniqueId())
+                || QuickBuyAdd.getQuickBuyAdds().containsKey(player.getUniqueId());
+    }
+
+    private static boolean shouldCancelPlayerInventoryAction(InventoryAction action) {
+        return action == MOVE_TO_OTHER_INVENTORY || action == InventoryAction.COLLECT_TO_CURSOR;
     }
 
     @EventHandler
