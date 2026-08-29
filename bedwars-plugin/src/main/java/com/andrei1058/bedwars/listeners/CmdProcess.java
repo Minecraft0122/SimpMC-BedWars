@@ -30,6 +30,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
+import java.util.List;
+
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class CmdProcess implements Listener {
@@ -53,10 +55,20 @@ public class CmdProcess implements Listener {
         String[] cmd = e.getMessage().replaceFirst("/", "").split(" ");
         if (cmd.length == 0) return;
         if (Arena.isInArena(p)) {
-            if (!BedWars.config.getList(ConfigPath.CENERAL_CONFIGURATION_ALLOWED_COMMANDS).contains(cmd[0])) {
+            if (!isAllowedInArena(cmd[0], BedWars.config.getList(ConfigPath.CENERAL_CONFIGURATION_ALLOWED_COMMANDS))) {
                 p.sendMessage(getMsg(p, Messages.COMMAND_NOT_ALLOWED_IN_GAME));
                 e.setCancelled(true);
             }
         }
+    }
+
+    static boolean isAllowedInArena(String command, List<?> configuredCommands) {
+        if (command == null) return false;
+        if (command.equalsIgnoreCase("rejoin") || command.equalsIgnoreCase("shout")
+                || command.equalsIgnoreCase("hh") || command.equalsIgnoreCase("h")) return true;
+        if (configuredCommands == null) return false;
+        return configuredCommands.stream()
+                .map(String::valueOf)
+                .anyMatch(command::equalsIgnoreCase);
     }
 }

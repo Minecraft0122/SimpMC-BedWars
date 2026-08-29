@@ -846,7 +846,7 @@ public class Arena implements IArena {
                 }
             } else if (alive_teams == 0 && !BedWars.isShuttingDown()) {
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> changeStatus(GameState.restarting), 10L);
-            } else if (!BedWars.isShuttingDown()) {
+            } else if (disconnect && !BedWars.isShuttingDown()) {
                 //ReJoin feature
                 new ReJoin(p, this, team, cacheList);
             }
@@ -1144,13 +1144,13 @@ public class Arena implements IArena {
         if (reJoin.getArena() != this) return false;
         if (!reJoin.canReJoin()) return false;
 
-        if (reJoin.getTask() != null) {
-            reJoin.getTask().destroy();
-        }
-
         PlayerReJoinEvent ev = new PlayerReJoinEvent(p, this, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN));
         Bukkit.getPluginManager().callEvent(ev);
         if (ev.isCancelled()) return false;
+
+        if (reJoin.getTask() != null) {
+            reJoin.getTask().destroy();
+        }
 
         for (Player on : Bukkit.getOnlinePlayers()) {
             if (on.equals(p)) continue;
@@ -1161,6 +1161,11 @@ public class Arena implements IArena {
         }
 
         p.closeInventory();
+        // A reconnect creates a new Player instance. Remove the previous
+        // departure marker by UUID so a later quit can create a new
+        // reconnect reservation instead of being swallowed as a duplicate.
+        leaving.removeIf(previous -> previous != null
+                && previous.getUniqueId().equals(p.getUniqueId()));
         players.add(p);
         nms.setCollide(p, this, false);
         for (Player on : players) {
@@ -2562,7 +2567,8 @@ public class Arena implements IArena {
                     if (spectator.equals(player)) continue;
                     BedWars.nms.spigotHidePlayer(player, spectator);
                 }
-                TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                // The respawn event has already selected the death-specific
+                // location (team home for void deaths, death position otherwise).
                 player.setAllowFlight(true);
                 player.setFlying(true);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
@@ -2576,7 +2582,6 @@ public class Arena implements IArena {
                     }
 
                     updateSpectatorCollideRule(player, false);
-                    TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 }, 10L);
             } else {
                 ITeam team = getTeam(player);

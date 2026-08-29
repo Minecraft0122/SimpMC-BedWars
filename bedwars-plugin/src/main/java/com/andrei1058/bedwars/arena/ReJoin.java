@@ -143,18 +143,26 @@ public class ReJoin {
      * Make a player re-join the arena
      */
     public boolean reJoin(Player player) {
+        if (player == null || this.player == null || !this.player.equals(player.getUniqueId()) || !canReJoin()) {
+            return false;
+        }
+
+        if (!arena.reJoin(player)) {
+            return false;
+        }
 
         Sounds.playSound("rejoin-allowed", player);
         player.sendMessage(Language.getMsg(player, Messages.REJOIN_ALLOWED).replace("{arena}", getArena().getDisplayName()));
 
         if (player.getGameMode() != GameMode.SURVIVAL) {
             Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
+                if (!player.isOnline()) return;
                 player.setGameMode(GameMode.SURVIVAL);
                 player.setAllowFlight(true);
                 player.setFlying(true);
             }, 20L);
         }
-        return arena.reJoin(player);
+        return true;
     }
 
     /**

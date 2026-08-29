@@ -53,6 +53,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
@@ -62,7 +63,11 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import static com.andrei1058.bedwars.BedWars.*;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -71,6 +76,8 @@ import static com.andrei1058.bedwars.arena.LastHit.getLastHit;
 public class DamageDeathMove implements Listener {
 
     private final double tntJumpBarycenterAlterationInY;
+    private final Map<UUID, Location> deathLocations = new HashMap<>();
+    private final Set<UUID> voidRespawns = new HashSet<>();
     private final double tntJumpStrengthReductionConstant;
     private final double tntJumpYAxisReductionConstant;
     private final double tntDamageSelf;
@@ -390,6 +397,15 @@ public class DamageDeathMove implements Listener {
                 return;
             }
 
+            boolean voidDeath = isVoidDeath(victim, damageEvent, a);
+            if (voidDeath) {
+                voidRespawns.add(victim.getUniqueId());
+                deathLocations.remove(victim.getUniqueId());
+            } else {
+                voidRespawns.remove(victim.getUniqueId());
+                deathLocations.put(victim.getUniqueId(), victim.getLocation().clone());
+            }
+
             BedWars.nms.clearArrowsFromPlayerBody(victim);
             String message = victimsTeam.isBedDestroyed() ? Messages.PLAYER_DIE_UNKNOWN_REASON_FINAL_KILL : Messages.PLAYER_DIE_UNKNOWN_REASON_REGULAR;
             PlayerKillEvent.PlayerKillCause cause = victimsTeam.isBedDestroyed() ? PlayerKillEvent.PlayerKillCause.UNKNOWN_FINAL_KILL : PlayerKillEvent.PlayerKillCause.UNKNOWN;
@@ -547,6 +563,9 @@ public class DamageDeathMove implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent e) {
+        UUID playerId = e.getPlayer().getUniqueId();
+        Location deathLocation = deathLocations.remove(playerId);
+        boolean voidDeath = voidRespawns.remove(playerId);
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
         if (a == null) {
             SetupSession ss = SetupSession.getSession(e.getPlayer().getUniqueId());
@@ -598,7 +617,11 @@ public class DamageDeathMove implements Listener {
                 //respawn session
                 int respawnTime = config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN);
                 if (respawnTime > 1) {
-                    e.setRespawnLocation(a.getReSpawnLocation());
+                    e.setRespawnLocation(selectRespawnLocation(
+                            voidDeath,
+                            deathLocation,
+                            t.getSpawn(),
+                            e.getPlayer().getLocation()));
                     a.startReSpawnSession(e.getPlayer(), respawnTime);
                 } else {
                     // instant respawn configuration
@@ -607,6 +630,13 @@ public class DamageDeathMove implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        deathLocations.remove(playerId);
+        voidRespawns.remove(playerId);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -690,6 +720,7 @@ public class DamageDeathMove implements Listener {
                 if (a.getStatus() == GameState.playing) {
                     if (e.getPlayer().getLocation().getBlockY() <= a.getYKillHeight()
                             && !SelfRescuePlatform.preventsVoidKill(e.getPlayer(), a, e.getTo())) {
+                        voidRespawns.add(e.getPlayer().getUniqueId());
                         nms.voidKill(e.getPlayer());
                     }
                     for (ITeam t : a.getTeams()) {
@@ -738,6 +769,24 @@ public class DamageDeathMove implements Listener {
         player.setFallDistance(0.0F);
         player.setAllowFlight(true);
         player.setFlying(true);
+    }
+
+    private boolean isVoidDeath(Player player, EntityDamageEvent damageEvent, IArena arena) {
+        return voidRespawns.contains(player.getUniqueId())
+                || (damageEvent != null && damageEvent.getCause() == EntityDamageEvent.DamageCause.VOID)
+                || player.getLocation().getBlockY() <= arena.getYKillHeight();
+    }
+
+    /**
+     * Select the temporary location used while a player waits to respawn.
+     * Void deaths return to the team's home; ordinary deaths remain at their
+     * death position so the player can continue spectating the fight there.
+     */
+    static Location selectRespawnLocation(boolean voidDeath, Location deathLocation,
+                                          Location teamSpawn, Location fallback) {
+        Location selected = voidDeath ? teamSpawn : deathLocation;
+        if (selected == null) selected = fallback;
+        return selected == null ? null : selected.clone();
     }
 
     @EventHandler

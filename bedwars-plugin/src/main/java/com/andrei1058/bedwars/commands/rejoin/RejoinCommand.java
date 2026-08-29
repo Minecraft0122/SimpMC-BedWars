@@ -58,15 +58,10 @@ public class RejoinCommand extends BukkitCommand {
             return true;
         }
 
-        if (!rj.canReJoin()) {
+        if (!rj.reJoin(p)) {
             p.sendMessage(Language.getMsg(p, Messages.REJOIN_DENIED));
             Sounds.playSound("rejoin-denied", p);
-            return true;
         }
-
-        p.sendMessage(Language.getMsg(p, Messages.REJOIN_ALLOWED).replace("{arena}", rj.getArena().getDisplayName()));
-        Sounds.playSound("rejoin-allowed", p);
-        rj.reJoin(p);
         return true;
     }
 }
