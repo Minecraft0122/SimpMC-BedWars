@@ -154,8 +154,10 @@ public class CategoryContent implements ICategoryContent {
 
         IContentTier ct;
 
-        //check weight
-        if (shopCache.getCategoryWeight(father) > weight) return;
+        // Keep the built-in armor progression stable when an old shop.yml has
+        // stale or reversed weight values.
+        byte effectiveWeight = getEffectiveWeight();
+        if (shopCache.getCategoryWeight(father) > effectiveWeight) return;
 
         if (shopCache.getContentTier(getIdentifier()) > contentTiers.size()) {
             Bukkit.getLogger().severe("Wrong tier order at: " + getIdentifier());
@@ -234,7 +236,7 @@ public class CategoryContent implements ICategoryContent {
         }
 
 
-        shopCache.setCategoryWeight(father, weight);
+        shopCache.setCategoryWeight(father, effectiveWeight);
     }
 
     /**
@@ -533,6 +535,28 @@ public class CategoryContent implements ICategoryContent {
 
     public String getIdentifier() {
         return identifier;
+    }
+
+    public static boolean isArmorCategoryPath(String identifier) {
+        return identifier != null && identifier.startsWith(
+                ConfigPath.SHOP_PATH_CATEGORY_ARMOR + ConfigPath.SHOP_CATEGORY_CONTENT_PATH + ".");
+    }
+
+    /**
+     * Built-in armor sets have a fixed progression. Keep this order even when
+     * an older persisted shop.yml contains stale/reversed weight values.
+     */
+    byte getEffectiveWeight() {
+        return canonicalWeight(identifier, weight);
+    }
+
+    static byte canonicalWeight(String identifier, byte configuredWeight) {
+        if (isArmorCategoryPath(identifier)) {
+            if (identifier.endsWith(".diamond-armor")) return 2;
+            if (identifier.endsWith(".iron-armor")) return 1;
+            if (identifier.endsWith(".chainmail")) return 0;
+        }
+        return configuredWeight;
     }
 
     public List<IContentTier> getContentTiers() {
