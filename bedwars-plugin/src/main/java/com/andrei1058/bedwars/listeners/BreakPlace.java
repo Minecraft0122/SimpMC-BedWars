@@ -81,7 +81,10 @@ import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class BreakPlace implements Listener {
 
+    static final long SHEARS_BREAK_COOLDOWN_MILLIS = 1000L;
+
     private static final Set<UUID> BUILD_SESSIONS = new HashSet<>();
+    private final Map<UUID, Long> lastShearsBreakAt = new HashMap<>();
     private final boolean allowFireBreak;
     private final BlastProtectionUtil blastProtection;
 
@@ -269,8 +272,8 @@ public class BreakPlace implements Listener {
     }
 
     /**
-     * Keep the shears tool responsive for wool while leaving all protection
-     * decisions to the normal BlockBreakEvent handler below.
+     * Limit wool breaks to roughly one successful block per second while
+     * leaving all protection decisions to the normal BlockBreakEvent handler.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onShearsBlockDamage(@NotNull BlockDamageEvent event) {
@@ -288,7 +291,28 @@ public class BreakPlace implements Listener {
 
         ItemStack heldItem = nms.getItemInHand(player);
         if (heldItem != null && heldItem.getType() == Material.SHEARS) {
+            if (!isShearsBreakReady(lastShearsBreakAt.get(player.getUniqueId()), System.currentTimeMillis())) {
+                event.setCancelled(true);
+                return;
+            }
             event.setInstaBreak(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onShearsBlockBreak(@NotNull BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null || arena.getStatus() != GameState.playing
+                || !arena.isPlayer(player) || arena.isSpectator(player)
+                || arena.getRespawnSessions().containsKey(player)
+                || !isWool(event.getBlock().getType())) {
+            return;
+        }
+
+        ItemStack heldItem = nms.getItemInHand(player);
+        if (heldItem != null && heldItem.getType() == Material.SHEARS) {
+            lastShearsBreakAt.put(player.getUniqueId(), System.currentTimeMillis());
         }
     }
 
@@ -775,6 +799,7 @@ public class BreakPlace implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         removeBuildSession(event.getPlayer());
+        lastShearsBreakAt.remove(event.getPlayer().getUniqueId());
     }
 
     private static boolean isFire(Material material) {
@@ -784,5 +809,9 @@ public class BreakPlace implements Listener {
     private static boolean isWool(@NotNull Material material) {
         String name = material.name();
         return "WOOL".equals(name) || name.endsWith("_WOOL");
+    }
+
+    static boolean isShearsBreakReady(Long lastBreakAt, long now) {
+        return lastBreakAt == null || now - lastBreakAt >= SHEARS_BREAK_COOLDOWN_MILLIS;
     }
 }

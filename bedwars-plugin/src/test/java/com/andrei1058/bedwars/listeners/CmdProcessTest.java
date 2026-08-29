@@ -18,6 +18,12 @@ class CmdProcessTest {
     }
 
     @Test
+    void rejoinIsAlwaysAvailableToArenaPlayers() {
+        assertTrue(CmdProcess.isAllowedInArena("rejoin", List.of()));
+        assertTrue(CmdProcess.isAllowedInArena("REJOIN", List.of()));
+    }
+
+    @Test
     void configuredCommandsAreComparedCaseInsensitively() {
         assertTrue(CmdProcess.isAllowedInArena("BW", List.of("bw", "leave")));
         assertFalse(CmdProcess.isAllowedInArena("plugins", List.of("bw", "leave")));

@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DamageDeathMoveTest {
@@ -64,6 +66,33 @@ class DamageDeathMoveTest {
         assertFalse(DamageDeathMove.requiresManualRespawn(true));
         assertTrue(DamageDeathMove.requiresManualRespawn(false));
         assertTrue(DamageDeathMove.requiresManualRespawn(null));
+    }
+
+    @Test
+    void sendsVoidDeathsToTheTeamHome() {
+        Location death = new Location(null, 12, 40, 8, 30, 10);
+        Location teamHome = new Location(null, 100, 70, -20, 90, 0);
+        Location selected = DamageDeathMove.selectRespawnLocation(true, death, teamHome, null);
+
+        assertEquals(teamHome, selected);
+        assertNotSame(teamHome, selected);
+    }
+
+    @Test
+    void keepsOrdinaryDeathsAtTheirDeathLocation() {
+        Location death = new Location(null, 12, 40, 8, 30, 10);
+        Location teamHome = new Location(null, 100, 70, -20, 90, 0);
+        Location selected = DamageDeathMove.selectRespawnLocation(false, death, teamHome, null);
+
+        assertEquals(death, selected);
+        assertNotSame(death, selected);
+    }
+
+    @Test
+    void fallsBackWhenTheDeathLocationIsUnavailable() {
+        Location fallback = new Location(null, 0, 64, 0);
+        assertEquals(fallback, DamageDeathMove.selectRespawnLocation(false, null, null, fallback));
+        assertEquals(fallback, DamageDeathMove.selectRespawnLocation(true, null, null, fallback));
     }
 
     @Test

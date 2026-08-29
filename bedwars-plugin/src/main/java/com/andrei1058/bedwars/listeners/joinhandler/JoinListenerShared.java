@@ -22,6 +22,7 @@ package com.andrei1058.bedwars.listeners.joinhandler;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.ReJoin;
 import com.andrei1058.bedwars.sidebar.SidebarService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -41,6 +42,9 @@ public class JoinListenerShared implements Listener {
 
         JoinHandlerCommon.displayCustomerDetails(p);
 
+        ReJoin reJoin = ReJoin.getPlayer(p);
+        boolean rejoinAllowed = shouldAutoRejoin(reJoin != null, reJoin != null && reJoin.canReJoin());
+
         // Show commands if player is op and there is no set arenas
         if (p.isOp()) {
             if (Arena.getArenas().isEmpty()) {
@@ -49,19 +53,37 @@ public class JoinListenerShared implements Listener {
         }
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!p.isOnline()) return;
             // Hide new player to players and spectators, and vice versa
             for (Player inArena : Arena.getArenaByPlayer().keySet()){
                 if (inArena.equals(p)) continue;
                 BedWars.nms.spigotHidePlayer(p, inArena);
                 BedWars.nms.spigotHidePlayer(inArena, p);
             }
+
+            // Apply the reconnect after visibility packets, matching the
+            // multi-arena listener and avoiding a stale reservation race.
+            if (rejoinAllowed) {
+                if (Arena.isInArena(p)) return;
+                if (reJoin.canReJoin() && reJoin.reJoin(p)) return;
+                applyLobbyState(p);
+            }
         }, 14L);
 
-        // Give scoreboard
-        if (e.getPlayer().getWorld().getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
-            Arena.enterLobby(e.getPlayer());
-            SidebarService.getInstance().giveSidebar(e.getPlayer(), null, true);
+        if (rejoinAllowed) return;
+        applyLobbyState(p);
+    }
+
+    private static void applyLobbyState(Player p) {
+        if (!p.isOnline() || Arena.isInArena(p)) return;
+        if (p.getWorld().getName().equalsIgnoreCase(BedWars.getLobbyWorld())) {
+            Arena.enterLobby(p);
+            SidebarService.getInstance().giveSidebar(p, null, true);
         }
+    }
+
+    static boolean shouldAutoRejoin(boolean reservationPresent, boolean reservationValid) {
+        return reservationPresent && reservationValid;
     }
 }
 

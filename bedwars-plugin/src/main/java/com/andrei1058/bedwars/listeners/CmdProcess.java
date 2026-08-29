@@ -65,10 +65,17 @@ public class CmdProcess implements Listener {
     }
 
     static boolean isAllowedInArena(String command, List<?> configuredCommands) {
-        if (isShoutCommand(command)) return true;
+        if (command == null) return false;
+        if (isBuiltInArenaCommand(command)) return true;
+        if (configuredCommands == null) return false;
         return configuredCommands.stream()
                 .map(String::valueOf)
                 .anyMatch(command::equalsIgnoreCase);
+    }
+
+    /** Commands implemented by BedWars that must remain usable during a game. */
+    private static boolean isBuiltInArenaCommand(String command) {
+        return isShoutCommand(command) || command.equalsIgnoreCase("rejoin");
     }
 
     private static boolean isShoutCommand(String command) {

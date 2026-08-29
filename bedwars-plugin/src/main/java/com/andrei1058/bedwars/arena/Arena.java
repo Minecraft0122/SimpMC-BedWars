@@ -2814,7 +2814,8 @@ public class Arena implements IArena {
                 // countdown. The session owns interaction blocking and flight;
                 // changing to SPECTATOR here causes an avoidable transition
                 // back to SURVIVAL when the countdown ends.
-                TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                // The respawn event has already selected the death-specific
+                // location (team home for void deaths, death position otherwise).
                 PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
                 // Do this in the same tick as the session creation. The old
@@ -2830,7 +2831,6 @@ public class Arena implements IArena {
                     InvisibilityManager.synchronizePlayerEquipment(this, player);
                     InvisibilityManager.synchronizeViewer(this, player);
                     updateSpectatorCollideRule(player, false);
-                    TeleportManager.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 }, 10L);
             } else {
                 ITeam team = getTeam(player);
