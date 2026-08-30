@@ -1,5 +1,6 @@
 package com.andrei1058.bedwars.listeners;
 
+import org.bukkit.Location;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -60,5 +61,21 @@ public class FireballListenerTest {
         assertEquals(EntityExplodeEvent.class,
                 FireballListener.class.getDeclaredMethod("fireballExplode", EntityExplodeEvent.class)
                         .getParameterTypes()[0]);
+    }
+
+    @Test
+    public void cancelsDirectHitOnlyForActivePlayersInSameArena() {
+        assertTrue(FireballListener.shouldCancelDirectHit(true, true, true, true, true));
+        assertFalse(FireballListener.shouldCancelDirectHit(false, true, true, true, true));
+        assertFalse(FireballListener.shouldCancelDirectHit(true, false, false, true, true));
+        assertFalse(FireballListener.shouldCancelDirectHit(true, true, false, true, true));
+        assertFalse(FireballListener.shouldCancelDirectHit(true, true, true, false, true));
+        assertFalse(FireballListener.shouldCancelDirectHit(true, true, true, true, false));
+    }
+
+    @Test
+    public void rejectsExplosionLocationsWithoutWorld() {
+        assertFalse(FireballListener.hasWorld(null));
+        assertFalse(FireballListener.hasWorld(new Location(null, 0D, 0D, 0D)));
     }
 }

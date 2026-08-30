@@ -65,9 +65,8 @@ public class FireballListener implements Listener {
         IArena arena = Arena.getArenaByPlayer(source);
         if (arena == null || !arena.isPlayer(source)) return;
 
+        if (!hasWorld(location)) return;
         World world = location.getWorld();
-
-        assert world != null;
         Collection<Entity> nearbyEntities = world
                 .getNearbyEntities(location, fireballExplosionSize, fireballExplosionSize, fireballExplosionSize);
         for(Entity entity : nearbyEntities) {
@@ -109,7 +108,19 @@ public class FireballListener implements Listener {
         if(!(e.getDamager() instanceof Fireball)) return;
         if(!(e.getEntity() instanceof Player)) return;
 
-        if(Arena.getArenaByPlayer((Player) e.getEntity()) == null) return;
+        Fireball fireball = (Fireball) e.getDamager();
+        ProjectileSource shooter = fireball.getShooter();
+        if (!(shooter instanceof Player)) return;
+
+        Player source = (Player) shooter;
+        Player target = (Player) e.getEntity();
+        IArena sourceArena = Arena.getArenaByPlayer(source);
+        IArena targetArena = Arena.getArenaByPlayer(target);
+        if (!shouldCancelDirectHit(true,
+                sourceArena != null,
+                sourceArena != null && sourceArena == targetArena,
+                sourceArena != null && sourceArena.isPlayer(source),
+                targetArena != null && targetArena.isPlayer(target))) return;
 
         e.setCancelled(true);
     }
@@ -149,6 +160,19 @@ public class FireballListener implements Listener {
         double radiusSquared = radius > Math.sqrt(Double.MAX_VALUE)
                 ? Double.MAX_VALUE : radius * radius;
         return Double.isFinite(distanceSquared) && distanceSquared <= radiusSquared;
+    }
+
+    static boolean shouldCancelDirectHit(boolean shooterIsPlayer,
+                                         boolean sourceArenaPresent,
+                                         boolean sameArena,
+                                         boolean sourceIsActivePlayer,
+                                         boolean targetIsActivePlayer) {
+        return shooterIsPlayer && sourceArenaPresent && sameArena
+                && sourceIsActivePlayer && targetIsActivePlayer;
+    }
+
+    static boolean hasWorld(Location location) {
+        return location != null && location.getWorld() != null;
     }
 
     static double normalizeExplosionSize(double value) {
