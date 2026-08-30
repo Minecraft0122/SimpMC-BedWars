@@ -10,19 +10,23 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
-import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
 
 import java.util.*;
 
 import static com.andrei1058.bedwars.BedWars.config;
-import static com.andrei1058.bedwars.BedWars.getAPI;
 
 public class FireballListener implements Listener {
+
+    private static final double MIN_FIREBALL_EXPLOSION_SIZE = 0.1D;
+    private static final double MAX_FIREBALL_EXPLOSION_SIZE = 16D;
+    private static final double MAX_FIREBALL_KNOCKBACK = 8D;
 
     private final double fireballExplosionSize;
     private final boolean fireballMakeFire;
@@ -34,10 +38,13 @@ public class FireballListener implements Listener {
     private final double damageTeammates;
 
     public FireballListener() {
-        this.fireballExplosionSize = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE);
+        this.fireballExplosionSize = normalizeExplosionSize(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE));
         this.fireballMakeFire = config.getYml().getBoolean(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE);
-        this.fireballHorizontal = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL) * -1;
-        this.fireballVertical = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL);
+        this.fireballHorizontal = boundedFiniteNonNegative(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL));
+        this.fireballVertical = boundedFiniteNonNegative(
+                config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL));
 
         this.damageSelf = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF);
         this.damageEnemy = config.getYml().getDouble(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY);
@@ -45,17 +52,18 @@ public class FireballListener implements Listener {
     }
 
     @EventHandler
-    public void fireballHit(ProjectileHitEvent e) {
+    public void fireballExplode(EntityExplodeEvent e) {
         if(!(e.getEntity() instanceof Fireball)) return;
-        Location location = e.getEntity().getLocation();
+        if (e.isCancelled()) return;
+        Fireball fireball = (Fireball) e.getEntity();
+        Location location = e.getLocation();
 
-        ProjectileSource projectileSource = e.getEntity().getShooter();
+        ProjectileSource projectileSource = fireball.getShooter();
         if(!(projectileSource instanceof Player)) return;
         Player source = (Player) projectileSource;
 
         IArena arena = Arena.getArenaByPlayer(source);
-
-        Vector vector = location.toVector();
+        if (arena == null || !arena.isPlayer(source)) return;
 
         World world = location.getWorld();
 
@@ -65,20 +73,13 @@ public class FireballListener implements Listener {
         for(Entity entity : nearbyEntities) {
             if(!(entity instanceof Player)) continue;
             Player player = (Player) entity;
-            if(!getAPI().getArenaUtil().isPlaying(player)) continue;
+            if(Arena.getArenaByPlayer(player) != arena || !arena.isPlayer(player)) continue;
 
 
             Vector playerVector = player.getLocation().toVector();
-            Vector normalizedVector = vector.subtract(playerVector).normalize();
-            Vector horizontalVector = normalizedVector.multiply(fireballHorizontal);
-            double y = normalizedVector.getY();
-            if(y < 0 ) y += 1.5;
-            if(y <= 0.5) {
-                y = fireballVertical*1.5; // kb for not jumping
-            } else {
-                y = y*fireballVertical*1.5; // kb for jumping
-            }
-            player.setVelocity(horizontalVector.setY(y));
+            if (!isWithinExplosionRadius(location.toVector(), playerVector, fireballExplosionSize)) continue;
+            player.setVelocity(calculateKnockback(location.toVector(), playerVector,
+                    fireballHorizontal, fireballVertical));
 
             LastHit lh = LastHit.getLastHit(player);
             if (lh != null) {
@@ -103,9 +104,7 @@ public class FireballListener implements Listener {
             }
         }
     }
-
-
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void fireballDirectHit(EntityDamageByEntityEvent e) {
         if(!(e.getDamager() instanceof Fireball)) return;
         if(!(e.getEntity() instanceof Player)) return;
@@ -125,6 +124,41 @@ public class FireballListener implements Listener {
         if(Arena.getArenaByPlayer(player) == null) return;
 
         e.setFire(fireballMakeFire);
+    }
+
+    static Vector calculateKnockback(Vector explosion, Vector player, double horizontal, double vertical) {
+        double safeHorizontal = boundedFiniteNonNegative(horizontal);
+        double safeVertical = boundedFiniteNonNegative(vertical);
+        Vector towardExplosion = explosion.clone().subtract(player);
+        double lengthSquared = towardExplosion.lengthSquared();
+        if (!Double.isFinite(lengthSquared) || lengthSquared <= 1.0E-12D) {
+            return new Vector(0D, safeVertical * 1.5D, 0D);
+        }
+
+        towardExplosion.multiply(1D / Math.sqrt(lengthSquared));
+        Vector knockback = towardExplosion.clone().multiply(-safeHorizontal);
+        double y = towardExplosion.getY();
+        if (y < 0) y += 1.5;
+        y = y <= 0.5 ? safeVertical * 1.5D : y * safeVertical * 1.5D;
+        return knockback.setY(y);
+    }
+
+    static boolean isWithinExplosionRadius(Vector explosion, Vector player, double radius) {
+        if (explosion == null || player == null || !Double.isFinite(radius) || radius < 0D) return false;
+        double distanceSquared = explosion.distanceSquared(player);
+        double radiusSquared = radius > Math.sqrt(Double.MAX_VALUE)
+                ? Double.MAX_VALUE : radius * radius;
+        return Double.isFinite(distanceSquared) && distanceSquared <= radiusSquared;
+    }
+
+    static double normalizeExplosionSize(double value) {
+        return Double.isFinite(value)
+                ? Math.min(MAX_FIREBALL_EXPLOSION_SIZE, Math.max(MIN_FIREBALL_EXPLOSION_SIZE, value))
+                : MIN_FIREBALL_EXPLOSION_SIZE;
+    }
+
+    private static double boundedFiniteNonNegative(double value) {
+        return Double.isFinite(value) ? Math.min(MAX_FIREBALL_KNOCKBACK, Math.max(0D, value)) : 0D;
     }
 
 }
