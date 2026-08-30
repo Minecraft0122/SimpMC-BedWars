@@ -30,11 +30,10 @@ class DamageDeathMoveTest {
     }
 
     @Test
-    void resetsSpectatorMotionWhenFlightIsLostOrLanding() {
-        assertTrue(DamageDeathMove.shouldResetSpectatorMotion(false, true, false, 10, 10));
-        assertTrue(DamageDeathMove.shouldResetSpectatorMotion(true, false, false, 10, 10));
-        assertTrue(DamageDeathMove.shouldResetSpectatorMotion(true, true, true, 10, 9.9));
-        assertFalse(DamageDeathMove.shouldResetSpectatorMotion(true, true, false, 10, 10.1));
+    void recoversSpectatorsOnlyAfterTheyEnterTheVoid() {
+        assertTrue(DamageDeathMove.shouldRecoverSpectatorAfterVoid(-0.1));
+        assertFalse(DamageDeathMove.shouldRecoverSpectatorAfterVoid(0));
+        assertFalse(DamageDeathMove.shouldRecoverSpectatorAfterVoid(10));
     }
 
     @Test

@@ -60,7 +60,6 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.tag.DamageTypeTags;
@@ -604,16 +603,6 @@ public class DamageDeathMove implements Listener {
         respawnEligibleAtDeath.remove(playerId);
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onToggleFlight(PlayerToggleFlightEvent event) {
-        if (event.isFlying()) return;
-        Player player = event.getPlayer();
-        IArena arena = Arena.getArenaByPlayer(player);
-        if (arena == null || (!arena.isSpectator(player) && !arena.isReSpawning(player))) return;
-        event.setCancelled(true);
-        PlayerMotion.enableFlight(player);
-    }
-
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent e) {
         if (!e.hasChangedPosition()) return;
@@ -662,18 +651,11 @@ public class DamageDeathMove implements Listener {
             }
 
             if (spectator) {
-                if (to.getY() < 0) {
+                if (shouldRecoverSpectatorAfterVoid(to.getY())) {
                     Location destination = a.isSpectator(player)
                             ? a.getSpectatorLocation() : a.getReSpawnLocation();
                     TeleportManager.teleportC(player, destination, PlayerTeleportEvent.TeleportCause.PLUGIN);
                     PlayerMotion.enableFlight(player);
-                } else if (shouldResetSpectatorMotion(
-                        player.getAllowFlight(), player.isFlying(), player.isOnGround(), from.getY(), to.getY())) {
-                    PlayerMotion.enableFlight(player);
-                } else {
-                    // Never let the server accumulate a fall distance while
-                    // the player is being presented as a flying spectator.
-                    player.setFallDistance(0.0F);
                 }
                 return;
             } else {
@@ -724,9 +706,8 @@ public class DamageDeathMove implements Listener {
                 || (from.getBlockZ() >> 4) != (to.getBlockZ() >> 4);
     }
 
-    static boolean shouldResetSpectatorMotion(boolean allowFlight, boolean flying, boolean onGround,
-                                              double fromY, double toY) {
-        return !allowFlight || !flying || (onGround && toY < fromY);
+    static boolean shouldRecoverSpectatorAfterVoid(double y) {
+        return y < 0;
     }
 
     private static boolean isExplosionDamage(EntityDamageEvent event) {
