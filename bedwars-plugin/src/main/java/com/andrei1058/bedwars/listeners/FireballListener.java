@@ -15,8 +15,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
-import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.tag.DamageTypeTags;
 import org.bukkit.util.Vector;
@@ -59,9 +59,10 @@ public class FireballListener implements Listener {
     }
 
     @EventHandler
-    public void fireballHit(ProjectileHitEvent e) {
+    public void fireballExplode(EntityExplodeEvent e) {
         if (!(e.getEntity() instanceof Fireball fireball)) return;
-        Location location = fireball.getLocation();
+        if (e.isCancelled()) return;
+        Location location = e.getLocation();
 
         ProjectileSource projectileSource = fireball.getShooter();
         if (!(projectileSource instanceof Player source)) return;

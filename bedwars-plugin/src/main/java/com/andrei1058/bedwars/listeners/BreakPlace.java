@@ -613,7 +613,7 @@ public class BreakPlace implements Listener {
             if (a.getStatus() == GameState.playing) {
                 boolean fireball = e.getEntity() instanceof Fireball;
                 e.blockList().removeIf((b) -> shouldProtectExplosionBlock(
-                        fireball, a.isBlockPlaced(b), a.isTeamBed(b.getLocation()))
+                        fireball, b.getType(), a.isBlockPlaced(b), a.isTeamBed(b.getLocation()))
                         || blastProtection.isProtected(a, e.getLocation(), b, 0.3));
                 return;
             }
@@ -737,8 +737,23 @@ public class BreakPlace implements Listener {
      * placed blocks (glass and other blast barriers still apply); this direct
      * rule closes edge cases where a ray starts and ends inside one map block.
      */
+    static boolean shouldProtectExplosionBlock(boolean fireball, Material material,
+                                               boolean placedBlock, boolean teamBed) {
+        return fireball && (teamBed || isFireballBlastProofMaterial(material) || !placedBlock);
+    }
+
     static boolean shouldProtectExplosionBlock(boolean fireball, boolean placedBlock, boolean teamBed) {
-        return fireball && (teamBed || !placedBlock);
+        return shouldProtectExplosionBlock(fireball, null, placedBlock, teamBed);
+    }
+
+    /**
+     * BedWars defensive end stone and terracotta must survive fireballs even
+     * when a player placed them during the current round.
+     */
+    static boolean isFireballBlastProofMaterial(Material material) {
+        if (material == null) return false;
+        String name = material.name();
+        return name.startsWith("END_STONE") || name.equals("TERRACOTTA") || name.endsWith("_TERRACOTTA");
     }
 
     public static void consumeTowerItem(@NotNull PlayerInventory inventory, @Nullable EquipmentSlot hand) {

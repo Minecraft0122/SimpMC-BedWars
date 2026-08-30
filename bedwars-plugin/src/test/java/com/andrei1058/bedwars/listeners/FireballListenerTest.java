@@ -3,6 +3,7 @@ package com.andrei1058.bedwars.listeners;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.util.Vector;
 import org.junit.jupiter.api.Test;
 
@@ -121,4 +122,12 @@ class FireballListenerTest {
 
         assertEquals(EventPriority.LOWEST, handler.priority());
     }
+
+    @Test
+    void appliesCustomExplosionAfterNativeExplosionProcessing() throws NoSuchMethodException {
+        assertEquals(EntityExplodeEvent.class,
+                FireballListener.class.getDeclaredMethod("fireballExplode", EntityExplodeEvent.class)
+                        .getParameterTypes()[0]);
+    }
+
 }

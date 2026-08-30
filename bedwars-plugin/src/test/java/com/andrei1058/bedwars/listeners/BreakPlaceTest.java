@@ -1,6 +1,7 @@
 package com.andrei1058.bedwars.listeners;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -65,6 +66,22 @@ class BreakPlaceTest {
         assertTrue(BreakPlace.shouldProtectExplosionBlock(true, true, true));
         assertFalse(BreakPlace.shouldProtectExplosionBlock(true, true, false));
         assertFalse(BreakPlace.shouldProtectExplosionBlock(false, false, false));
+    }
+
+    @Test
+    void fireballsNeverDestroyEndStoneOrTerracottaEvenWhenPlayerPlaced() {
+        assertTrue(BreakPlace.isFireballBlastProofMaterial(Material.END_STONE));
+        assertTrue(BreakPlace.isFireballBlastProofMaterial(Material.END_STONE_BRICKS));
+        assertTrue(BreakPlace.isFireballBlastProofMaterial(Material.TERRACOTTA));
+        assertTrue(BreakPlace.isFireballBlastProofMaterial(Material.ORANGE_TERRACOTTA));
+        assertTrue(BreakPlace.isFireballBlastProofMaterial(Material.ORANGE_GLAZED_TERRACOTTA));
+        assertTrue(BreakPlace.shouldProtectExplosionBlock(
+                true, Material.ORANGE_TERRACOTTA, true, false));
+        assertTrue(BreakPlace.shouldProtectExplosionBlock(
+                true, Material.END_STONE, true, false));
+        assertFalse(BreakPlace.isFireballBlastProofMaterial(Material.WHITE_WOOL));
+        assertFalse(BreakPlace.shouldProtectExplosionBlock(
+                true, Material.WHITE_WOOL, true, false));
     }
 
     @Test
