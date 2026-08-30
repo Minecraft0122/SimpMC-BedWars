@@ -48,6 +48,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
@@ -547,7 +548,9 @@ public class BreakPlace implements Listener {
         IArena a = Arena.getArenaByIdentifier(e.getLocation().getWorld().getName());
         if (a != null) {
             if (a.getStatus() == GameState.playing) {
-                e.blockList().removeIf((b) -> blastProtection.isProtected(a, e.getLocation(), b, 0.3));
+                boolean fireball = e.getEntity() instanceof Fireball;
+                e.blockList().removeIf((b) -> shouldProtectFireballBlock(fireball, b.getType())
+                        || blastProtection.isProtected(a, e.getLocation(), b, 0.3));
                 return;
             }
             e.blockList().clear();
@@ -685,5 +688,12 @@ public class BreakPlace implements Listener {
 
     static boolean isShearsBreakReady(Long lastBreakAt, long now) {
         return lastBreakAt == null || now - lastBreakAt >= SHEARS_BREAK_COOLDOWN_MILLIS;
+    }
+
+    static boolean shouldProtectFireballBlock(boolean fireball, Material material) {
+        if (!fireball || material == null) return false;
+        return material == Material.ENDER_STONE
+                || material == Material.HARD_CLAY
+                || material == Material.STAINED_CLAY;
     }
 }
