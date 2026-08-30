@@ -5,6 +5,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class DamageDeathMoveTest {
 
@@ -33,5 +35,12 @@ public class DamageDeathMoveTest {
         Location fallback = new Location(null, 0, 64, 0);
         assertEquals(fallback, DamageDeathMove.selectRespawnLocation(false, null, null, fallback));
         assertEquals(fallback, DamageDeathMove.selectRespawnLocation(true, null, null, fallback));
+    }
+
+    @Test
+    public void recoversSpectatorsOnlyAfterTheyEnterTheVoid() {
+        assertTrue(DamageDeathMove.shouldRecoverSpectatorAfterVoid(-0.1));
+        assertFalse(DamageDeathMove.shouldRecoverSpectatorAfterVoid(0));
+        assertFalse(DamageDeathMove.shouldRecoverSpectatorAfterVoid(10));
     }
 }
