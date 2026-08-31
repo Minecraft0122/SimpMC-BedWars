@@ -66,7 +66,7 @@ public final class ChineseConfigDocumentation {
                 "大厅等待 ARENA 子服确认玩家预加载的时间，单位为秒；超时会释放预约并提示重试，不阻塞主线程。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS,
                 "ARENA 子服向大厅发送全量状态心跳的间隔，单位为秒；状态变化仍会即时上报。仅用于断线恢复。");
-        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, "大厅套接字地址列表，格式为 主机:端口。", "协议没有身份认证和加密，只能填写受信任的内网地址，并使用防火墙禁止公网访问。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, "大厅套接字地址列表，格式为 主机:端口。", "协议使用共享密钥认证但不加密，只能填写受信任的内网地址，并使用防火墙禁止公网访问。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, "游戏各阶段倒计时，单位为秒。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_RESTART,
                 "游戏结束后的竞技场重置倒计时，单位为秒。",
