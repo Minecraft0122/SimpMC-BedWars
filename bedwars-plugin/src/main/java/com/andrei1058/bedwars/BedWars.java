@@ -611,6 +611,15 @@ public class BedWars extends JavaPlugin {
         return bungeeNodeRole;
     }
 
+    /**
+     * A role-specific distribution overrides this hook so its deployment
+     * cannot accidentally boot as the other half of a BUNGEE network.
+     * The shared core returns {@code null} for library and legacy uses.
+     */
+    public BungeeNodeRole getRequiredBungeeNodeRole() {
+        return null;
+    }
+
     public static void setBungeeNodeRole(BungeeNodeRole role) {
         bungeeNodeRole = role == null ? BungeeNodeRole.ARENA : role;
         if (bungeeNodeRole == BungeeNodeRole.LOBBY) {

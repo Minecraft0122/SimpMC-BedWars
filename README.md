@@ -45,7 +45,7 @@
 ## 安装
 
 1. 准备 Paper 1.21.11 + Java 21，或 Paper 26.2 + Java 25。
-2. 将 `SimpMC-BedWars-版本.jar` 放入 `plugins` 目录。
+2. BUNGEE 网络分别将 `SimpMC-BedWars-Lobby-版本.jar` 放入大厅服、`SimpMC-BedWars-Arena-版本.jar` 放入竞技场子服；单服 `MULTIARENA`/`SHARED` 请使用对应的单体兼容发行包。
 3. 首次启动生成配置后完整停服。
 4. 按[安装教程](docs/zh_CN/installation.md)配置服务器模式和大厅。
 5. 重新启动并使用 `/bw setupArena <世界名>` 创建竞技场。
@@ -68,7 +68,7 @@ Vault 是经济接口桥接层，本身不会创建玩家余额。要启用金�
 
 - `MULTIARENA`：一个 Paper 实例承载大厅和多张竞技场，适合独立小游戏服。
 - `SHARED`：与其他玩法共享实例，玩家离开竞技场后恢复进入前状态。
-- `BUNGEE`：代理网络的多竞技场自动扩容模式；同一 JAR 通过 `bungee-settings.node-role` 分为 `LOBBY` 调度服和 `ARENA` 子服，每个竞技场子服可只负责一张地图。
+- `BUNGEE`：代理网络的多竞技场自动扩容模式；发布包分为 `SimpMC-BedWars-Lobby` 调度服和 `SimpMC-BedWars-Arena` 子服，每个竞技场子服可只负责一张地图。两个包会强制各自角色，不再依赖手动填写 `node-role`。
 - `BUNGEE-LEGACY`：一张竞技场占用一个后端实例的传统代理模式。
 
 ## 自行构建
@@ -79,7 +79,7 @@ cd SimpMC-BedWars
 mvn -B clean verify
 ```
 
-构建产物位于 `bedwars-plugin/target/SimpMC-BedWars-版本.jar`。
+构建产物位于 `bedwars-lobby/target/SimpMC-BedWars-Lobby-版本.jar` 和 `bedwars-arena/target/SimpMC-BedWars-Arena-版本.jar`；`bedwars-plugin` 只生成供两个发行包复用的内部核心库。
 
 ## 参与贡献
 

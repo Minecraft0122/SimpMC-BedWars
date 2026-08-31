@@ -17,8 +17,8 @@ Release 标签格式为 `v版本号-提交前八位`。同一版本号发生纯�
 
 ## 首次安装
 
-1. 从项目构建产物中取得 `SimpMC-BedWars-版本.jar`。
-2. 放入服务端 `plugins` 目录。
+1. BUNGEE 网络分别取得 `SimpMC-BedWars-Lobby-版本.jar` 和 `SimpMC-BedWars-Arena-版本.jar`；大厅服只安装 Lobby 包，竞技场子服只安装 Arena 包。单服 `MULTIARENA`/`SHARED` 应使用对应的单体兼容发行包。
+2. 将角色包放入对应服务端的 `plugins` 目录。
 3. 启动服务器，看到插件成功启用后执行 `stop`。
 4. 编辑 `plugins/SimpMC-BedWars/config.yml`。
 5. 再次启动服务器。
@@ -49,7 +49,7 @@ debug: false
 
 ### BUNGEE
 
-面向代理网络和自动扩容。BUNGEE 使用同一个 JAR，通过 `bungee-settings.node-role` 把 Paper 实例分成两种角色：`LOBBY` 只负责大厅、远程竞技场目录和跨服调度；`ARENA` 只负责地图副本、对局和状态上报。两种角色都应连接同一个 MySQL 数据库，但只有 ARENA 节点记录本地对局统计。
+面向代理网络和自动扩容。6.0.0 起 BUNGEE 发布为两个独立 JAR：`SimpMC-BedWars-Lobby-<版本>.jar` 只负责大厅、远程竞技场目录和跨服调度；`SimpMC-BedWars-Arena-<版本>.jar` 只负责地图副本、对局和状态上报。两个包会固定 `serverType: BUNGEE` 及自身角色；旧的 `node-role` 冲突值会被写回正确值。两种角色都应连接同一个 MySQL 数据库，但只有 ARENA 节点记录本地对局统计。
 
 该模式同样视为专用 BedWars 节点，实例内全部世界固定正午与晴天。
 
@@ -57,7 +57,7 @@ debug: false
 
 #### 大厅服配置
 
-大厅服不加载 `Arenas` 目录，也不运行竞技场世界；`lobby-listen` 是 ARENA 子服连接的 TCP 监听地址，不是代理端口。大厅服数量建议保持单活；当前预约表在大厅进程内存中，多个大厅同时调度会重复预约，后续可改用 Redis/SQL 租约。
+大厅服不加载 `Arenas` 目录，也不运行竞技场世界；`lobby-listen` 是 ARENA 子服连接的 TCP 监听地址，不是代理端口。大厅服数量建议保持单活；当前预约表在大厅进程内存中，多个大厅同时调度会重复预约，后续可改用 Redis/SQL 租约。两个 JAR 使用相同的 Bukkit 插件名，因此从旧单体包升级时可继续使用 `plugins/SimpMC-BedWars` 配置目录；每个 Paper 实例只能安装符合自身职责的一个角色包。
 
 ```yaml
 serverType: BUNGEE
@@ -105,7 +105,7 @@ database:
   ssl: true
 ```
 
-复制多个 ARENA 子服时，只需为每台服务器复制同一张地图配置和缓存，修改 `server-id`、`proxy-server` 与代理地址；想承载另一张地图则使用另一台子服并修改 `arena-template`。旧版 BUNGEE 配置若不填写 `node-role`，仍按 ARENA 节点处理；`BUNGEE_LEGACY` 仍保留单实例兼容路径。
+复制多个 ARENA 子服时，只需为每台服务器复制同一张地图配置和缓存，修改 `server-id`、`proxy-server` 与代理地址；想承载另一张地图则使用另一台子服并修改 `arena-template`。旧版 BUNGEE 配置若不填写 `node-role`，仍按 ARENA 节点处理；`BUNGEE_LEGACY` 仍保留单实例兼容路径。6.0.0 的专用大厅/竞技场包只用于 BUNGEE 网络；继续使用单服 `MULTIARENA` 或 `SHARED` 时应选择与该模式兼容的历史单体发行包。
 
 大厅按以下顺序调度：筛选新鲜心跳、按 `group:` 或 `arena:` 选择、锁定一个空闲副本、向子服发送预加载请求，收到所有队员的确认后才通过代理发送 `Connect`。预加载超时或代理消息无法发出会释放预约；代理插件消息本身没有回执，因此实际切服失败仍应检查代理日志。
 
@@ -178,4 +178,4 @@ cd SimpMC-BedWars
 mvn -B clean verify
 ```
 
-最终插件位于 `bedwars-plugin/target/SimpMC-BedWars-版本.jar`。
+最终插件位于 `bedwars-lobby/target/SimpMC-BedWars-Lobby-版本.jar` 和 `bedwars-arena/target/SimpMC-BedWars-Arena-版本.jar`。

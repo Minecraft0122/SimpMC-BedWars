@@ -7,7 +7,7 @@
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>SimpMC-BedWars</artifactId>
     <packaging>pom</packaging>
-    <version>5.2.0</version>
+    <version>6.0.0</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -81,5 +81,7 @@
         <module>versionsupport_common</module>
         <module>versionsupport_v1_21_R3</module>
         <module>bedwars-plugin</module>
+        <module>bedwars-lobby</module>
+        <module>bedwars-arena</module>
     </modules>
 </project>
