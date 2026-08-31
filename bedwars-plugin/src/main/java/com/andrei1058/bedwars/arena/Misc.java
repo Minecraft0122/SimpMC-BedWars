@@ -128,13 +128,28 @@ public class Misc {
     public static boolean connectToProxyLobby(Player player) {
         String lobbyServer = config.getYml().getString(
                 ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER, "hub");
-        if (lobbyServer == null || lobbyServer.isBlank()) {
-            plugin.getLogger().warning("无法发送玩家到代理大厅：config.yml 的 lobbyServer 为空。");
+        return connectToProxyServer(player, lobbyServer, "代理大厅");
+    }
+
+    /**
+     * Send a player to an arbitrary server registered by the BungeeCord or
+     * Velocity proxy. The payload is intentionally the standard BungeeCord
+     * plugin-message format so both proxy implementations can consume it.
+     */
+    @SuppressWarnings("UnstableApiUsage")
+    public static boolean connectToProxyServer(Player player, String serverName) {
+        return connectToProxyServer(player, serverName, "目标服务器");
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private static boolean connectToProxyServer(Player player, String serverName, String description) {
+        if (player == null || !player.isOnline()) return false;
+        if (serverName == null || serverName.isBlank()) {
+            plugin.getLogger().warning("无法发送玩家到" + description + "：目标服务器为空。");
             return false;
         }
-
         try {
-            player.sendPluginMessage(plugin, ProxyLobbyConnector.CHANNEL, proxyConnectPayload(lobbyServer));
+            player.sendPluginMessage(plugin, ProxyLobbyConnector.CHANNEL, proxyConnectPayload(serverName));
             // Plugin messages are fire-and-forget: Bukkit accepting the
             // payload does not prove that the proxy accepted or routed it.
             // Keep the inventory intact here so a failed handoff does not
@@ -143,7 +158,7 @@ public class Misc {
             return true;
         } catch (RuntimeException exception) {
             plugin.getLogger().log(Level.WARNING,
-                    "无法发送玩家 " + player.getName() + " 到代理大厅 " + lobbyServer + '。', exception);
+                    "无法发送玩家 " + player.getName() + " 到" + description + " " + serverName + '。', exception);
             return false;
         }
     }

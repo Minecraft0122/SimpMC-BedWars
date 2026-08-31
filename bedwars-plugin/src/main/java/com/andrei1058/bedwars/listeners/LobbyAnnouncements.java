@@ -22,6 +22,10 @@ public final class LobbyAnnouncements {
 
     public static boolean isLobbyPlayer(Player player) {
         if (player == null || player.getWorld() == null) return false;
+        if (BedWars.isBungeeLobby()) {
+            return !Arena.isInArena(player)
+                    && !SetupSession.isInSetupSession(player.getUniqueId());
+        }
         return isLobbyContext(BedWars.getServerType(), player.getWorld().getName(), BedWars.getLobbyWorld(),
                 Arena.isInArena(player), SetupSession.isInSetupSession(player.getUniqueId()));
     }

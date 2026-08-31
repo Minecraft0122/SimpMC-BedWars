@@ -38,6 +38,31 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.SB_CONFIG_TAB_LOBBY_HEADER, "仅自定义大厅 TAB 顶部文字；空列表沿用语言文件中的加宽样式。", "自定义文字会自动保留内置宽度行；支持 & 颜色代码及 {serverIp}、{on} 等占位符，不会改变大厅页尾或其他游戏状态。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "掉线玩家允许重连的时间，单位为秒；超时后直接视为离开。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_MODE_GAMES_BEFORE_RESTART, "BUNGEE/自动扩容相关设置：重启场次、重启命令、节点 ID、超时及大厅地址。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID,
+                "BUNGEE 子服在代理和对局数据库中的唯一节点 ID；每个子服必须使用不同值，不能沿用默认 bw1。",
+                "该 ID 也用于启动恢复，只会处理本节点上次异常退出的 RUNNING 对局。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE,
+                "BUNGEE 节点角色：ARENA 负责加载地图、运行对局和上报状态；LOBBY 不加载竞技场，只维护远程目录并调度玩家。",
+                "旧版 BUNGEE 配置默认使用 ARENA；拆分部署时大厅服必须设置为 LOBBY。修改后需要完整重启服务器。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER,
+                "本节点在 BungeeCord/Velocity [servers] 中的服务器键名，用于大厅调度后的 Connect。",
+                "留空时使用 server-id；ARENA 子服必须与代理中的后端键名一致，LOBBY 节点不参与竞技场路由。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_ARENA_TEMPLATE,
+                "ARENA 子服负责的地图配置文件名，不含 .yml；同一子服只为此地图自动复制副本。",
+                "留空时保留旧版行为并加载 Arenas 目录中的全部地图；新的拆分部署建议每个子服明确填写一个地图名。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_HOST,
+                "LOBBY 节点监听竞技场状态套接字的绑定地址；建议只绑定内网地址。仅 LOBBY 角色使用。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_PORT,
+                "LOBBY 节点监听竞技场状态套接字的 TCP 端口；每个大厅服端口必须可被 ARENA 子服访问。仅 LOBBY 角色使用。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_SOCKET_SECRET,
+                "竞技场与大厅套接字共享密钥；非空时双方 HELLO 必须完全一致。",
+                "建议设置随机长字符串并用防火墙限制监听端口；留空仅用于受信任的旧网络兼容。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_TIMEOUT_SECONDS,
+                "大厅判定竞技场节点状态过期的时间，单位为秒；过期节点不会被新玩家调度。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS,
+                "大厅等待 ARENA 子服确认玩家预加载的时间，单位为秒；超时会释放预约并提示重试，不阻塞主线程。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS,
+                "ARENA 子服向大厅发送全量状态心跳的间隔，单位为秒；状态变化仍会即时上报。仅用于断线恢复。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, "大厅套接字地址列表，格式为 主机:端口。", "协议没有身份认证和加密，只能填写受信任的内网地址，并使用防火墙禁止公网访问。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, "游戏各阶段倒计时，单位为秒。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_RESTART,
@@ -74,6 +99,30 @@ public final class ChineseConfigDocumentation {
         comment(config, "database.enable", "数据存储设置：关闭时使用 SQLite，开启时连接 MySQL。", "修改连接信息后必须完整重启，切勿公开数据库密码。");
         comment(config, "database.pass", "MySQL 专用账户密码；不要沿用示例值，也不要提交到公开仓库。");
         comment(config, "database.ssl", "MySQL 连接是否启用 TLS；远程数据库建议开启并限制允许连接的来源地址。");
+        comment(config, ConfigPath.MATCH_STATISTICS_ENABLED,
+                "是否记录按对局拆分的统计数据；需要 database.enable=true 且 MySQL 连接成功。",
+                "数据写入独立的 InnoDB 表，不与旧 global_stats 共用开局事务。");
+        comment(config, ConfigPath.MATCH_STATISTICS_TIMEZONE,
+                "竞技场统计时区，默认 Asia/Shanghai；所有子服建议保持一致。",
+                "时间列按该时区生成，数据库同时保存时区名称；无效值会回退为 Asia/Shanghai。");
+        comment(config, ConfigPath.MATCH_STATISTICS_REPORT_INTERVAL_SECONDS,
+                "进行中对局的异步上报间隔，单位为秒；默认 300（5 分钟）。");
+        comment(config, ConfigPath.MATCH_STATISTICS_QUEUE_CAPACITY,
+                "异步统计写入队列容量；队列满时不会阻塞主线程，最终结算会继续重试。");
+        comment(config, ConfigPath.MATCH_STATISTICS_RETRY_DELAY_SECONDS,
+                "MySQL 写入失败后的重试间隔，单位为秒。");
+        comment(config, ConfigPath.MATCH_STATISTICS_FINISH_GRACE_TICKS,
+                "收到游戏结束事件后等待的 tick 数，再写入最终结算；用于接收同一 tick 内的掉线击杀。");
+        comment(config, ConfigPath.MATCH_STATISTICS_VIOLATIONS_ENABLED,
+                "是否启用非法组队和刷人头检测及 VL 保存。",
+                "关闭只停止 VL 累加，不影响普通击杀、最终击杀、拆床和死亡统计。");
+        comment(config, ConfigPath.MATCH_STATISTICS_VIOLATIONS_WARNING_THRESHOLDS,
+                "处罚依据累计 VL 严格超过这些值时在控制台告警；默认 10、20、50、100。",
+                "每个阈值只在累计值首次跨过时打印一次；处罚重置后可以再次告警。");
+        comment(config, ConfigPath.MATCH_STATISTICS_VIOLATIONS_MATCH_LEAVE_THRESHOLD,
+                "单局有效 VL 严格超过此值时，下一 tick 将玩家移出当前对局；默认 25。");
+        comment(config, ConfigPath.MATCH_STATISTICS_VIOLATIONS_CROSS_TEAM_ITEM_TRANSFER,
+                "是否把不同队伍之间重复掉落/拾取铁、金、钻石、绿宝石作为强证据；默认开启。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能设置；Paper 优化通常建议保持开启。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内合成台、附魔台、熔炉、酿造台和铁砧的禁用设置。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,

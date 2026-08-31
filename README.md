@@ -20,7 +20,7 @@
 
 ## 主要功能
 
-- 支持 MULTIARENA、SHARED、BUNGEE 和 BUNGEE-LEGACY 运行模式。
+- 支持 MULTIARENA、SHARED、BUNGEE（LOBBY/ARENA）和 BUNGEE-LEGACY 运行模式。
 - 提供竞技场选择菜单、加入告示牌、Citizens NPC 和命令加入方式。
 - 支持单独配置竞技场分组、队伍、生成器、商店、团队升级、陷阱和初始物品。
 - 默认每 1 秒生成 2 铁、每 4 秒生成 2 金，并支持在 `generators.yml` 中按竞技场分组覆盖。
@@ -38,6 +38,8 @@
 - 插件启动、世界初始化、世界加载和竞技场初始化都会对全部地图强制关闭 Locator Bar。
 - 大厅、出生点、观战点及 NPC 朝向统一吸附到最近的 90 度 yaw，pitch 固定为 0。
 - 支持 PlaceholderAPI、Vault、Citizens、Parties 和 PartyAndFriends 等可选依赖。
+- MySQL 模式下按对局保存编号、UUID、Asia/Shanghai 时间、击杀/最终击杀、拆床、死亡、K/D、胜负、掉线重连和事件流；提供 `bw_player_match_summary` 汇总视图以及可保留犯罪记录、单独清零处罚阈值的 VL 存储。
+- 内置基于多事件时间窗口的非法组队/刷人头证据检测：记录正负 VL、累计阈值告警，并在单局有效 VL 超过 25 时将玩家移出当前对局。
 - 提供公开 API，附属插件可以查询竞技场、控制大厅状态、操作预组队和登记玩家放置方块。
 
 ## 安装
@@ -66,7 +68,7 @@ Vault 是经济接口桥接层，本身不会创建玩家余额。要启用金�
 
 - `MULTIARENA`：一个 Paper 实例承载大厅和多张竞技场，适合独立小游戏服。
 - `SHARED`：与其他玩法共享实例，玩家离开竞技场后恢复进入前状态。
-- `BUNGEE`：代理网络的多竞技场自动扩容模式，需要匹配的代理端接入方案。
+- `BUNGEE`：代理网络的多竞技场自动扩容模式；同一 JAR 通过 `bungee-settings.node-role` 分为 `LOBBY` 调度服和 `ARENA` 子服，每个竞技场子服可只负责一张地图。
 - `BUNGEE-LEGACY`：一张竞技场占用一个后端实例的传统代理模式。
 
 ## 自行构建

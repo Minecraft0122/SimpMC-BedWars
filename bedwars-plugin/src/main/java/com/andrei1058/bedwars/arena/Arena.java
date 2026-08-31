@@ -1940,6 +1940,7 @@ public class Arena implements IArena {
         String playerWorld = player.getWorld() == null ? null : player.getWorld().getName();
         boolean inArena = isInArena(player);
         boolean inSetup = SetupSession.isInSetupSession(player.getUniqueId());
+        if (BedWars.isBungeeLobby()) return !inArena && !inSetup;
         String lobbyWorld = BedWars.config.getLobbyWorldName();
         if (LobbyInventoryPolicy.shouldApply(true, inArena, inSetup, playerWorld, lobbyWorld)) {
             return true;

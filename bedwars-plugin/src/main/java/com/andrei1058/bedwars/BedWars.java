@@ -64,6 +64,9 @@ import com.andrei1058.bedwars.listeners.chat.ChatAFK;
 import com.andrei1058.bedwars.listeners.chat.ChatFormatting;
 import com.andrei1058.bedwars.listeners.joinhandler.*;
 import com.andrei1058.bedwars.lobbysocket.ArenaSocket;
+import com.andrei1058.bedwars.lobbysocket.ArenaListeners;
+import com.andrei1058.bedwars.lobbysocket.LobbyArenaDispatcher;
+import com.andrei1058.bedwars.lobbysocket.LobbySocketServer;
 import com.andrei1058.bedwars.lobbysocket.LoadedUsersCleaner;
 import com.andrei1058.bedwars.lobbysocket.SendTask;
 import com.andrei1058.bedwars.maprestore.internal.InternalAdapter;
@@ -74,6 +77,7 @@ import com.andrei1058.bedwars.money.internal.MoneyListeners;
 import com.andrei1058.bedwars.shop.ShopManager;
 import com.andrei1058.bedwars.sidebar.*;
 import com.andrei1058.bedwars.stats.StatsManager;
+import com.andrei1058.bedwars.stats.match.MatchStatsRecorder;
 import com.andrei1058.bedwars.support.citizens.CitizensListener;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
 import com.andrei1058.bedwars.support.papi.PAPISupport;
@@ -112,6 +116,7 @@ import java.util.*;
 public class BedWars extends JavaPlugin {
 
     private static ServerType serverType = ServerType.MULTIARENA;
+    private static BungeeNodeRole bungeeNodeRole = BungeeNodeRole.ARENA;
     public static boolean debug = false, autoscale = false;
     public static String mainCmd = "bw", link = "https://www.spigotmc.org/resources/50942/";
     public static ConfigManager signs, generators;
@@ -127,7 +132,12 @@ public class BedWars extends JavaPlugin {
     private static Chat chat = new NoChat();
     protected static Level level;
     private static Economy economy = new NoEconomy();
-    private static final String version = Bukkit.getBukkitVersion().split("-")[0];
+    /*
+     * The class can be referenced by lightweight tooling before Bukkit has
+     * installed its Server instance. Refresh this value in onLoad so that an
+     * early "unknown" fallback never leaks into a real server startup.
+     */
+    private static volatile String version = detectServerVersion();
     private static String lobbyWorld = "";
     private static boolean shuttingDown = false;
 
@@ -135,16 +145,30 @@ public class BedWars extends JavaPlugin {
 
     //remote database
     private static Database remoteDatabase;
+    private MatchStatsRecorder matchStatsRecorder;
 
     private boolean serverSoftwareSupport = true;
     private boolean vaultSupportInitialized;
     private boolean vaultRetryListenerRegistered;
     private ProxyLobbyConnector proxyLobbyConnector;
+    private LobbySocketServer lobbySocketServer;
+    private LobbyArenaDispatcher lobbyArenaDispatcher;
 
     private static com.andrei1058.bedwars.api.BedWars api;
 
+    private static String detectServerVersion() {
+        if (Bukkit.getServer() == null) return "unknown";
+        String bukkitVersion = Bukkit.getBukkitVersion();
+        if (bukkitVersion == null || bukkitVersion.isBlank()) return "unknown";
+        return bukkitVersion.split("-")[0];
+    }
+
     @Override
     public void onLoad() {
+        // Bukkit is initialized before plugin lifecycle callbacks. Re-read
+        // the version in case this class was loaded earlier by a test/tool.
+        version = detectServerVersion();
+
         // Paper API is a compile-time/runtime requirement for this build. Do
         // not retain reflective Bukkit/Spigot compatibility probes here.
         isPaper = true;
@@ -256,11 +280,17 @@ public class BedWars extends JavaPlugin {
         }
 
         if (getServerType() == ServerType.BUNGEE) {
-            if (autoscale) {
-                //registerEvents(new ArenaListeners());
+            if (isBungeeLobby()) {
+                lobbySocketServer = new LobbySocketServer(this);
+                lobbyArenaDispatcher = new LobbyArenaDispatcher(this, lobbySocketServer);
+                lobbySocketServer.start();
+                registerEvents(lobbyArenaDispatcher, new BungeeLobbyJoinListener(), new ArenaSelectorListener());
+                out.info("BUNGEE 节点角色为 LOBBY：已启动竞技场状态监听和跨服调度。");
+            } else if (autoscale) {
+                ArenaSocket.lobbies.clear();
                 ArenaSocket.lobbies.addAll(config.getList(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS));
                 new SendTask();
-                registerEvents(new AutoscaleListener(), new JoinListenerBungee());
+                registerEvents(new ArenaListeners(), new AutoscaleListener(), new JoinListenerBungee());
                 Bukkit.getScheduler().runTaskTimer(this, new LoadedUsersCleaner(), 60L, 60L);
             } else {
                 registerEvents(new ServerPingListener(), new JoinListenerBungeeLegacy());
@@ -278,7 +308,9 @@ public class BedWars extends JavaPlugin {
         registerEvents(worldLoadListener);
         worldLoadListener.enforceLoadedWorlds();
 
-        if (!(getServerType() == ServerType.BUNGEE && autoscale)) {
+        if (getServerType() != ServerType.BUNGEE || isBungeeLobby()) {
+            // A dedicated lobby still needs language and player lifecycle
+            // bookkeeping, but arena nodes use their proxy login gate instead.
             registerEvents(new JoinHandlerCommon());
         }
 
@@ -288,7 +320,9 @@ public class BedWars extends JavaPlugin {
         registerEvents(new InvisibilityPotionListener());
 
         /* Load join signs. */
-        loadArenasAndSigns();
+        if (!isBungeeLobby()) {
+            loadArenasAndSigns();
+        }
 
         statsManager = new StatsManager();
 
@@ -351,6 +385,20 @@ public class BedWars extends JavaPlugin {
         } else {
             remoteDatabase = new SQLite();
             remoteDatabase.init();
+        }
+
+        /* Match-level statistics use the shared MySQL pool and an asynchronous
+         * writer. SQLite remains available for the legacy global statistics,
+         * but is intentionally not used as a cross-server match store. */
+        if (!isBungeeLobby() && config.getYml().getBoolean(ConfigPath.MATCH_STATISTICS_ENABLED, true)
+                && remoteDatabase instanceof com.andrei1058.bedwars.database.MySQL) {
+            matchStatsRecorder = new MatchStatsRecorder(this,
+                    (com.andrei1058.bedwars.database.MySQL) remoteDatabase);
+            registerEvents(matchStatsRecorder, matchStatsRecorder.getViolationDetector());
+            matchStatsRecorder.start();
+        } else if (config.getYml().getBoolean(ConfigPath.MATCH_STATISTICS_ENABLED, true)
+                && config.getBoolean("database.enable")) {
+            out.warning("对局统计已启用，但当前不是可用的 MySQL 连接；本次不启动跨服务器对局统计。");
         }
 
         /* Citizens support */
@@ -523,6 +571,12 @@ public class BedWars extends JavaPlugin {
         if (!serverSoftwareSupport) return;
         if (getServerType() == ServerType.BUNGEE) {
             ArenaSocket.disable();
+            if (lobbySocketServer != null) {
+                if (lobbyArenaDispatcher != null) lobbyArenaDispatcher.close();
+                lobbySocketServer.close();
+                lobbySocketServer = null;
+            }
+            lobbyArenaDispatcher = null;
         }
         for (IArena a : new LinkedList<>(Arena.getArenas())) {
             try {
@@ -531,6 +585,11 @@ public class BedWars extends JavaPlugin {
                 getLogger().log(java.util.logging.Level.SEVERE,
                         "无法禁用竞技场 " + a.getArenaName(), ex);
             }
+        }
+
+        if (matchStatsRecorder != null) {
+            matchStatsRecorder.close();
+            matchStatsRecorder = null;
         }
 
         if (remoteDatabase != null) {
@@ -548,7 +607,32 @@ public class BedWars extends JavaPlugin {
         return proxyLobbyConnector;
     }
 
+    public static BungeeNodeRole getBungeeNodeRole() {
+        return bungeeNodeRole;
+    }
+
+    public static void setBungeeNodeRole(BungeeNodeRole role) {
+        bungeeNodeRole = role == null ? BungeeNodeRole.ARENA : role;
+        if (bungeeNodeRole == BungeeNodeRole.LOBBY) {
+            autoscale = false;
+        }
+    }
+
+    public static boolean isBungeeLobby() {
+        return serverType == ServerType.BUNGEE && bungeeNodeRole == BungeeNodeRole.LOBBY;
+    }
+
+    public static boolean isBungeeArenaNode() {
+        return serverType == ServerType.BUNGEE && bungeeNodeRole == BungeeNodeRole.ARENA;
+    }
+
+    public LobbyArenaDispatcher getLobbyArenaDispatcher() {
+        return lobbyArenaDispatcher;
+    }
+
     private void loadArenasAndSigns() {
+
+        if (isBungeeLobby()) return;
 
         api.getRestoreAdapter().convertWorlds();
 
@@ -564,7 +648,18 @@ public class BedWars extends JavaPlugin {
                 }
             }
 
-            if (serverType == ServerType.BUNGEE && !autoscale) {
+            String template = config.getYml().getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_ARENA_TEMPLATE, "");
+            if (serverType == ServerType.BUNGEE && !template.isBlank()) {
+                File selected = files.stream()
+                        .filter(file -> file.getName().equalsIgnoreCase(template.endsWith(".yml")
+                                ? template : template + ".yml"))
+                        .findFirst().orElse(null);
+                if (selected == null) {
+                    this.getLogger().severe("BUNGEE ARENA 节点找不到配置的地图模板：" + template);
+                    return;
+                }
+                new Arena(selected.getName().replace(".yml", ""), null);
+            } else if (serverType == ServerType.BUNGEE && !autoscale) {
                 if (files.isEmpty()) {
                     this.getLogger().log(java.util.logging.Level.WARNING, "Could not find any arena!");
                     return;
@@ -627,7 +722,7 @@ public class BedWars extends JavaPlugin {
 
     public static void setServerType(ServerType serverType) {
         BedWars.serverType = serverType;
-        if (serverType == ServerType.BUNGEE) autoscale = true;
+        if (serverType == ServerType.BUNGEE) autoscale = bungeeNodeRole != BungeeNodeRole.LOBBY;
     }
 
     public static void setAutoscale(boolean autoscale) {
@@ -730,6 +825,11 @@ public class BedWars extends JavaPlugin {
      */
     public static Database getRemoteDatabase() {
         return remoteDatabase;
+    }
+
+    /** Return the match recorder when MySQL match statistics are enabled. */
+    public MatchStatsRecorder getMatchStatsRecorder() {
+        return matchStatsRecorder;
     }
 
     public static StatsManager getStatsManager() {

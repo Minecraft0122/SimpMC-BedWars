@@ -47,14 +47,17 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 
 public class ArenaSocket {
 
     static final int MAX_INCOMING_MESSAGE_LENGTH = 65_536;
-    public static List<String> lobbies = new ArrayList<>();
+    public static List<String> lobbies = java.util.Collections.synchronizedList(new ArrayList<>());
     private static final ConcurrentHashMap<String, RemoteLobby> sockets = new ConcurrentHashMap<>();
     private static final Set<String> connecting = ConcurrentHashMap.newKeySet();
+    private static final String NODE_INSTANCE_ID = UUID.randomUUID().toString();
+    private static final AtomicLong messageSequence = new AtomicLong();
 
     /**
      * Send arena data to the lobbies.
@@ -70,8 +73,13 @@ public class ArenaSocket {
             return;
         }
 
-        for (String lobby : lobbies) {
-            String[] l = lobby.split(":");
+        List<String> configuredLobbies;
+        synchronized (lobbies) {
+            configuredLobbies = List.copyOf(lobbies);
+        }
+        for (String lobby : configuredLobbies) {
+            if (lobby == null || lobby.isBlank()) continue;
+            String[] l = lobby.split(":", 2);
 
             if (l.length != 2) continue;
             if (!Misc.isNumber(l[1])) continue;
@@ -86,6 +94,7 @@ public class ArenaSocket {
                     RemoteLobby rl = new RemoteLobby(socket, lobby);
                     if (rl.out != null && rl.in != null) {
                         sockets.put(lobby, rl);
+                        rl.sendMessage(formatHelloMessage());
                         rl.sendMessage(message);
                     } else {
                         socket.close();
@@ -104,20 +113,64 @@ public class ArenaSocket {
     public static String formatUpdateMessage(IArena a) {
         if (a == null) return "";
         if (a.getWorldName() == null) return "";
+        String arenaName = a.getArenaName() == null || a.getArenaName().isBlank()
+                ? a.getWorldName() : a.getArenaName();
+        String group = a.getGroup() == null || a.getGroup().isBlank() ? "Default" : a.getGroup();
+        String status = a.getStatus() == null ? "RESTARTING" : a.getStatus().toString();
         JsonObject js = new JsonObject();
         js.addProperty("type", "UPDATE");
+        js.addProperty("protocol_version", BungeeProtocol.CURRENT_VERSION);
+        js.addProperty("message_id", UUID.randomUUID().toString());
+        js.addProperty("node_instance_id", NODE_INSTANCE_ID);
+        js.addProperty("sequence", messageSequence.incrementAndGet());
         js.addProperty("server_name", BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
-        js.addProperty("arena_name", a.getArenaName());
+        String proxyServer = BedWars.config.getYml().getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER, "");
+        if (proxyServer == null || proxyServer.isBlank()) {
+            proxyServer = BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID);
+        }
+        js.addProperty("proxy_server", proxyServer);
+        js.addProperty("arena_name", arenaName);
         js.addProperty("arena_identifier", a.getWorldName());
-        js.addProperty("arena_status", a.getStatus().toString().toUpperCase());
+        js.addProperty("arena_status", status.toUpperCase(Locale.ROOT));
         js.addProperty("arena_current_players", a.getPlayers().size());
         js.addProperty("arena_max_players", a.getMaxPlayers());
         js.addProperty("arena_max_in_team", a.getMaxInTeam());
-        js.addProperty("arena_group", a.getGroup().toUpperCase(Locale.ROOT));
+        js.addProperty("arena_group", group.toUpperCase(Locale.ROOT));
         JsonArray arenaGroups = new JsonArray();
-        arenaGroups.add(a.getGroup().toUpperCase(Locale.ROOT));
+        arenaGroups.add(group.toUpperCase(Locale.ROOT));
         js.add("arena_groups", arenaGroups);
         js.addProperty("spectate", a.isAllowSpectate());
+        return js.toString();
+    }
+
+    /** Notify lobbies that one runtime copy is no longer dispatchable. */
+    public static String formatRemoveMessage(String arenaIdentifier) {
+        if (arenaIdentifier == null || arenaIdentifier.isBlank()) return "";
+        JsonObject json = new JsonObject();
+        json.addProperty("type", "REMOVE");
+        json.addProperty("protocol_version", BungeeProtocol.CURRENT_VERSION);
+        json.addProperty("node_instance_id", NODE_INSTANCE_ID);
+        json.addProperty("sequence", messageSequence.incrementAndGet());
+        json.addProperty("server_name", BedWars.config.getString(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
+        json.addProperty("arena_identifier", arenaIdentifier);
+        return json.toString();
+    }
+
+    /** Initial handshake sent before the first arena snapshot on a connection. */
+    public static String formatHelloMessage() {
+        JsonObject js = new JsonObject();
+        js.addProperty("type", "HELLO");
+        js.addProperty("protocol_version", BungeeProtocol.CURRENT_VERSION);
+        js.addProperty("role", BungeeProtocol.ARENA_ROLE);
+        js.addProperty("node_instance_id", NODE_INSTANCE_ID);
+        js.addProperty("server_id", BedWars.config.getYml().getString(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, "bw1"));
+        String proxyServer = BedWars.config.getYml().getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER, "");
+        if (proxyServer == null || proxyServer.isBlank()) proxyServer = BedWars.config.getYml().getString(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, "bw1");
+        js.addProperty("proxy_server", proxyServer);
+        js.addProperty("secret", BedWars.config.getYml().getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_SOCKET_SECRET, ""));
         return js.toString();
     }
 
@@ -127,6 +180,7 @@ public class ArenaSocket {
         private BufferedReader in;
         private String lobby;
         private volatile boolean compute = true;
+        private volatile boolean authenticated;
         private int invalidMessages;
 
         private RemoteLobby(Socket socket, String lobby) {
@@ -165,7 +219,27 @@ public class ArenaSocket {
                         }
                         if (json == null) continue;
                         if (!json.has("type")) continue;
-                        switch (json.get("type").getAsString().toUpperCase()) {
+                        String type = json.get("type").getAsString().toUpperCase(Locale.ROOT);
+                        if (!authenticated) {
+                            if (type.equals("WELCOME")) {
+                                if (!acceptWelcome(json)) disable();
+                            } else if (type.equals("REJECT")) {
+                                warnInvalidMessage("lobby rejected HELLO");
+                                disable();
+                            } else {
+                                warnInvalidMessage("expected WELCOME before control messages");
+                                disable();
+                            }
+                            continue;
+                        }
+                        switch (type) {
+                            case "REQUEST_SNAPSHOT":
+                                Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+                                    for (IArena arena : Arena.getArenas()) {
+                                        sendMessage(formatUpdateMessage(arena));
+                                    }
+                                });
+                                break;
                             //pre load data
                             //pld,worldIdentifier,uuidUser,languageIso,uuidPartyOwner
                             case "PLD":
@@ -183,8 +257,60 @@ public class ArenaSocket {
                                 String arenaIdentifier = json.get("arena_identifier").getAsString();
                                 String language = json.get("lang_iso").getAsString();
                                 String target = json.get("target").getAsString();
+                                String joinMode = json.has("join_mode") && json.get("join_mode").isJsonPrimitive()
+                                        ? json.get("join_mode").getAsString().trim().toUpperCase(Locale.ROOT) : "AUTO";
+                                if (!joinMode.equals("AUTO") && !joinMode.equals("PLAYER")
+                                        && !joinMode.equals("SPECTATOR")) {
+                                    warnInvalidMessage("PLD message contains an invalid join mode");
+                                    continue;
+                                }
+                                String requestId = json.has("request_id") && json.get("request_id").isJsonPrimitive()
+                                        ? json.get("request_id").getAsString() : "";
                                 Bukkit.getScheduler().runTask(BedWars.plugin,
-                                        () -> new LoadedUser(uuid, arenaIdentifier, language, target));
+                                        () -> {
+                                            IArena arena = Arena.getArenaByIdentifier(arenaIdentifier);
+                                            boolean spectator = joinMode.equals("SPECTATOR")
+                                                    || (joinMode.equals("AUTO") && arena != null
+                                                    && arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.playing);
+                                            boolean accepted = arena != null
+                                                    && (spectator
+                                                    ? arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.playing
+                                                    && arena.isAllowSpectate()
+                                                    : (arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.waiting
+                                                    || arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.starting)
+                                                    && hasPreloadCapacity(arena, UUID.fromString(uuid)));
+                                            if (accepted) {
+                                                LoadedUser previous = LoadedUser.getPreLoaded(UUID.fromString(uuid));
+                                                if (previous != null) previous.destroy("重复预加载");
+                                                new LoadedUser(uuid, arenaIdentifier, language, target);
+                                                accepted = LoadedUser.isPreLoaded(UUID.fromString(uuid));
+                                            }
+                                            if (!requestId.isBlank()) {
+                                                JsonObject ready = new JsonObject();
+                                                ready.addProperty("type", "PLD_READY");
+                                                ready.addProperty("protocol_version", BungeeProtocol.CURRENT_VERSION);
+                                                ready.addProperty("request_id", requestId);
+                                                ready.addProperty("uuid", uuid);
+                                                ready.addProperty("accepted", accepted);
+                                                if (!accepted) ready.addProperty("reason", "arena_unavailable");
+                                                sendMessage(ready.toString());
+                                            }
+                                });
+                                break;
+                            case "PLD_CANCEL":
+                                if (!hasStringFields(json, "uuid")) {
+                                    warnInvalidMessage("PLD_CANCEL message is missing fields");
+                                    continue;
+                                }
+                                try {
+                                    UUID cancelled = UUID.fromString(json.get("uuid").getAsString());
+                                    Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
+                                        LoadedUser user = LoadedUser.getPreLoaded(cancelled);
+                                        if (user != null) user.destroy("大厅取消预加载");
+                                    });
+                                } catch (IllegalArgumentException exception) {
+                                    warnInvalidMessage("PLD_CANCEL message contains an invalid UUID");
+                                }
                                 break;
                             case "Q":
                                 if (!hasStringFields(json, "name", "requester")) {
@@ -206,6 +332,31 @@ public class ArenaSocket {
                     }
                 }
             });
+        }
+
+        /**
+         * Confirm that the configured endpoint speaks the lobby protocol before
+         * accepting PLD/PLD_CANCEL control messages. This is not a replacement
+         * for the shared secret, but it prevents accidental connections to an
+         * unrelated service from being treated as an authenticated lobby.
+         */
+        private boolean acceptWelcome(JsonObject json) {
+            int protocol = json.has("protocol_version") && json.get("protocol_version").isJsonPrimitive()
+                    ? json.get("protocol_version").getAsInt() : 0;
+            String sessionId = json.has("session_id") && json.get("session_id").isJsonPrimitive()
+                    ? json.get("session_id").getAsString().trim() : "";
+            if (protocol < 1 || protocol > BungeeProtocol.CURRENT_VERSION || sessionId.isBlank()) {
+                warnInvalidMessage("WELCOME 缺少有效协议版本或会话标识");
+                return false;
+            }
+            try {
+                UUID.fromString(sessionId);
+            } catch (IllegalArgumentException exception) {
+                warnInvalidMessage("WELCOME 的 session_id 无效");
+                return false;
+            }
+            authenticated = true;
+            return true;
         }
 
         /**
@@ -246,7 +397,7 @@ public class ArenaSocket {
         private synchronized void disable() {
             compute = false;
             BedWars.debug("Disabling socket: " + socket);
-            sockets.remove(lobby);
+            sockets.remove(lobby, this);
             try {
                 if (socket != null) socket.close();
             } catch (IOException e) {
@@ -297,6 +448,21 @@ public class ArenaSocket {
         }
         if (character == -1 && message.isEmpty()) return null;
         return message.toString();
+    }
+
+    /**
+     * Re-check capacity on the child node. The lobby reservation is local to
+     * one lobby process, while several lobbies may legitimately target this
+     * same child; counting pending preloads closes that cross-lobby race.
+     */
+    private static boolean hasPreloadCapacity(IArena arena, UUID requestedUuid) {
+        if (arena == null || arena.getMaxPlayers() <= 0 || arena.getWorldName() == null) return false;
+        int pending = 0;
+        for (LoadedUser user : LoadedUser.getLoaded().values()) {
+            if (user == null || user.getUuid() == null || user.getUuid().equals(requestedUuid)) continue;
+            if (arena.getWorldName().equalsIgnoreCase(user.getArenaIdentifier())) pending++;
+        }
+        return arena.getPlayers().size() + pending + 1 <= arena.getMaxPlayers();
     }
 
     private static boolean hasStringFields(JsonObject json, String... fields) {

@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.configuration;
 
 import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.BungeeNodeRole;
 import com.andrei1058.bedwars.api.arena.stats.DefaultStatistics;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
@@ -41,7 +42,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 31;
+    private static final int CONFIG_VERSION = 33;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -112,6 +113,15 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_POWERED_BY, "SimpMC-BedWars");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, "bw1");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT, 5000);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE, "ARENA");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER, "");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_ARENA_TEMPLATE, "");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_HOST, "0.0.0.0");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_PORT, 2019);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_SOCKET_SECRET, "");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_TIMEOUT_SECONDS, 30);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS, 8);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS, 15);
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_HUNGER_WAITING, false);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_HUNGER_INGAME, false);
@@ -163,6 +173,19 @@ public class MainConfig extends ConfigManager {
         yml.addDefault("database.user", "root");
         yml.addDefault("database.pass", "cheese");
         yml.addDefault("database.ssl", false);
+
+        // Match-level statistics are stored in MySQL and never share a
+        // transaction with the legacy global statistics tables.
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_ENABLED, true);
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_TIMEZONE, "Asia/Shanghai");
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_REPORT_INTERVAL_SECONDS, 300);
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_QUEUE_CAPACITY, 10000);
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_RETRY_DELAY_SECONDS, 5);
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_FINISH_GRACE_TICKS, 40);
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_VIOLATIONS_ENABLED, true);
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_VIOLATIONS_WARNING_THRESHOLDS, Arrays.asList(10, 20, 50, 100));
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_VIOLATIONS_MATCH_LEAVE_THRESHOLD, 25);
+        yml.addDefault(ConfigPath.MATCH_STATISTICS_VIOLATIONS_CROSS_TEAM_ITEM_TRANSFER, true);
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, true);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_SPOIL_TNT_PLAYERS, true);
@@ -278,6 +301,15 @@ public class MainConfig extends ConfigManager {
             }
         }
 
+        String configuredRole = yml.getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE, "ARENA");
+        BungeeNodeRole parsedRole = BungeeNodeRole.parse(configuredRole);
+        if (configuredRole != null && !configuredRole.isBlank()
+                && parsedRole == BungeeNodeRole.ARENA
+                && !configuredRole.trim().equalsIgnoreCase("ARENA")) {
+            plugin.getLogger().warning("未知的 BUNGEE 节点角色 " + configuredRole + "，已回退为 ARENA。可选值：ARENA、LOBBY。");
+        }
+        BedWars.setBungeeNodeRole(parsedRole);
+
         BedWars.setLobbyWorld(getLobbyWorldName());
     }
 
@@ -287,6 +319,30 @@ public class MainConfig extends ConfigManager {
                 "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
                 "名称必须与代理配置一致；Velocity 还需在 velocity.toml 的 [advanced] 中启用 bungee-plugin-message-channel。",
                 "大厅里的“回到主大厅”红床会静默直接发送 Connect 请求，不向玩家显示代理信息；默认 hub。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID,
+                "BUNGEE 子服在代理和对局数据库中的唯一节点 ID。每个子服必须使用不同值，不能沿用默认 bw1。",
+                "该 ID 也用于启动恢复：只会收敛本节点上次异常退出的 RUNNING 对局。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE,
+                "BUNGEE 节点角色：ARENA 负责加载地图并运行对局；LOBBY 只监听竞技场节点并负责分配玩家。",
+                "旧版 BUNGEE 配置默认使用 ARENA；大厅服必须明确设置为 LOBBY。修改后需要完整重启服务器。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER,
+                "本节点在 BungeeCord/Velocity [servers] 中的服务器键名，用于大厅调度后的 Connect。",
+                "留空时使用 server-id；每个竞技场节点应与代理配置的键名一致。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_ARENA_TEMPLATE,
+                "ARENA 节点负责的地图配置文件名，不含 .yml；同一节点只为此地图自动复制副本。",
+                "留空时保留旧版行为并加载 Arenas 目录中的全部地图；新部署建议每个子服明确填写一个地图名。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_HOST,
+                "LOBBY 节点监听竞技场状态套接字的绑定地址；建议只绑定内网地址。", "仅 LOBBY 角色使用。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_PORT,
+                "LOBBY 节点监听竞技场状态套接字的 TCP 端口；每个大厅服端口必须可被竞技场节点访问。", "仅 LOBBY 角色使用。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_SOCKET_SECRET,
+                "竞技场与大厅套接字共享密钥；非空时双方 HELLO 必须完全一致。", "建议设置随机长字符串并用防火墙限制监听端口；留空仅用于受信任的旧网络兼容。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_TIMEOUT_SECONDS,
+                "大厅判定竞技场节点状态过期的时间，单位为秒；默认 30 秒。", "过期节点不会被新的玩家调度。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS,
+                "大厅等待竞技场节点确认玩家预加载的时间，单位为秒；默认 8 秒。", "超时会释放预约并提示玩家重试，不会阻塞服务器主线程。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS,
+                "竞技场节点向大厅发送全量状态心跳的间隔，单位为秒；默认 15 秒。", "平时状态变化通过事件立即发送，心跳只用于断线重连后的恢复。");
         setComments("language", "服务器语言固定为 zh_cn（简体中文）；旧语言值会自动迁移。");
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "历史兼容字段；当前版本只提供简体中文，不再加载其他语言。");
@@ -318,6 +374,32 @@ public class MainConfig extends ConfigManager {
                 "火球爆炸、击退、冷却与伤害设置。2.10.20 略微降低默认爆炸范围、击退和敌方伤害。",
                 "迁移器只调整仍使用上一版默认值的配置，不覆盖管理员自定义参数。");
         setComments("database.enable", "是否使用 MySQL；关闭时使用本地 SQLite。", "启用前请正确填写下面的连接信息。");
+        setComments(ConfigPath.MATCH_STATISTICS_ENABLED,
+                "是否记录按对局拆分的统计数据。此功能需要 database.enable=true 且 MySQL 连接成功。",
+                "旧 global_stats 表仍保留给历史 GUI；新数据写入独立的 InnoDB 表，不会在开局事务中锁住旧表。");
+        setComments(ConfigPath.MATCH_STATISTICS_TIMEZONE,
+                "竞技场统计使用的时区，默认 Asia/Shanghai。",
+                "数据库同时保存该时区名称；建议所有子服保持相同配置。无效时区会回退为 Asia/Shanghai 并记录警告。");
+        setComments(ConfigPath.MATCH_STATISTICS_REPORT_INTERVAL_SECONDS,
+                "进行中的对局上报间隔，单位为秒；默认 300（5 分钟）。上报在异步队列中执行，不阻塞主线程。");
+        setComments(ConfigPath.MATCH_STATISTICS_QUEUE_CAPACITY,
+                "统计写入队列容量；队列满时记录警告，下一次周期会上报最新快照，结束结算会持续重试。");
+        setComments(ConfigPath.MATCH_STATISTICS_RETRY_DELAY_SECONDS,
+                "MySQL 写入失败后的重试间隔，单位为秒。短事务失败不会影响新对局开始。");
+        setComments(ConfigPath.MATCH_STATISTICS_FINISH_GRACE_TICKS,
+                "收到游戏结束事件后等待的 tick 数，再写入最终结算；用于接收同一 tick 内的掉线击杀事件。");
+        setComments(ConfigPath.MATCH_STATISTICS_VIOLATIONS_ENABLED,
+                "是否启用非法组队和刷人头检测及 VL 保存。",
+                "关闭只停止 VL 累加，不影响普通击杀、最终击杀、拆床和死亡统计。");
+        setComments(ConfigPath.MATCH_STATISTICS_VIOLATIONS_WARNING_THRESHOLDS,
+                "处罚依据累计 VL 严格超过这些值时在控制台告警；默认 10、20、50、100。",
+                "每个阈值只在累计值首次跨过时打印一次；处罚重置 punishment_total_vl 后允许再次告警。");
+        setComments(ConfigPath.MATCH_STATISTICS_VIOLATIONS_MATCH_LEAVE_THRESHOLD,
+                "单局有效 VL 严格超过此值时，下一 tick 将玩家移出当前对局；默认 25。",
+                "该动作只作用于当前对局，不会因为历史犯罪记录直接踢出玩家。");
+        setComments(ConfigPath.MATCH_STATISTICS_VIOLATIONS_CROSS_TEAM_ITEM_TRANSFER,
+                "是否把不同队伍玩家之间重复掉落/拾取铁、金、钻石、绿宝石计为强证据。",
+                "默认开启；生成器物品、羊毛、工具和一次性死亡掉落不作为此规则的唯一依据。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,

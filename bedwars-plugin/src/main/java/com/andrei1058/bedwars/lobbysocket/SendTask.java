@@ -22,9 +22,9 @@ package com.andrei1058.bedwars.lobbysocket;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.Arena;
 import org.bukkit.Bukkit;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,22 +32,21 @@ import java.util.List;
 public class SendTask {
 
     /**
-     * This is used to send data to new lobby servers to improve data sync
+     * Send an occasional full snapshot so a lobby that restarted, or a socket
+     * that was reconnected without an arena event, can rebuild its directory.
+     * Normal state changes are sent by {@link ArenaListeners} immediately.
      */
     public SendTask() {
+        long heartbeatSeconds = Math.max(5L, BedWars.config.getYml().getLong(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS, 15L));
+        long period = Math.max(100L, heartbeatSeconds * 20L);
         Bukkit.getScheduler().runTaskTimer(BedWars.plugin, () -> {
             List<String> messages = new ArrayList<>();
             for (IArena arena : Arena.getArenas()) {
                 messages.add(ArenaSocket.formatUpdateMessage(arena));
             }
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    for (String message : messages) {
-                        ArenaSocket.sendMessage(message);
-                    }
-                }
-            }.runTaskAsynchronously(BedWars.plugin);
-        }, 100L, 30L);
+            Bukkit.getScheduler().runTaskAsynchronously(BedWars.plugin,
+                    () -> messages.forEach(ArenaSocket::sendMessage));
+        }, 100L, period);
     }
 }

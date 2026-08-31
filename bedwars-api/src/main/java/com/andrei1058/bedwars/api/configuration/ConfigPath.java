@@ -82,7 +82,30 @@ public class ConfigPath {
     public static final String GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS = "bungee-settings.lobby-sockets";
     public static final String GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID = "bungee-settings.server-id";
     public static final String GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT = "bungee-settings.bwp-time-out";
+    /** BUNGEE node role: ARENA keeps the historic arena-node behavior, LOBBY enables dispatch. */
+    public static final String GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE = "bungee-settings.node-role";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER = "bungee-settings.proxy-server";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_ARENA_TEMPLATE = "bungee-settings.arena-template";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_HOST = "bungee-settings.lobby-listen.host";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_LOBBY_LISTEN_PORT = "bungee-settings.lobby-listen.port";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_SOCKET_SECRET = "bungee-settings.socket-secret";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_NODE_TIMEOUT_SECONDS = "bungee-settings.node-timeout-seconds";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS = "bungee-settings.dispatch-timeout-seconds";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS = "bungee-settings.status-heartbeat-seconds";
     public static final String GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER = "lobbyServer";
+
+    /** Match-level statistics are persisted independently from legacy global_stats. */
+    public static final String MATCH_STATISTICS_PATH = "match-statistics";
+    public static final String MATCH_STATISTICS_ENABLED = MATCH_STATISTICS_PATH + ".enabled";
+    public static final String MATCH_STATISTICS_TIMEZONE = MATCH_STATISTICS_PATH + ".timezone";
+    public static final String MATCH_STATISTICS_REPORT_INTERVAL_SECONDS = MATCH_STATISTICS_PATH + ".report-interval-seconds";
+    public static final String MATCH_STATISTICS_QUEUE_CAPACITY = MATCH_STATISTICS_PATH + ".queue-capacity";
+    public static final String MATCH_STATISTICS_RETRY_DELAY_SECONDS = MATCH_STATISTICS_PATH + ".retry-delay-seconds";
+    public static final String MATCH_STATISTICS_FINISH_GRACE_TICKS = MATCH_STATISTICS_PATH + ".finish-grace-ticks";
+    public static final String MATCH_STATISTICS_VIOLATIONS_ENABLED = MATCH_STATISTICS_PATH + ".violations.enabled";
+    public static final String MATCH_STATISTICS_VIOLATIONS_WARNING_THRESHOLDS = MATCH_STATISTICS_PATH + ".violations.warning-thresholds";
+    public static final String MATCH_STATISTICS_VIOLATIONS_MATCH_LEAVE_THRESHOLD = MATCH_STATISTICS_PATH + ".violations.match-leave-threshold";
+    public static final String MATCH_STATISTICS_VIOLATIONS_CROSS_TEAM_ITEM_TRANSFER = MATCH_STATISTICS_PATH + ".violations.cross-team-item-transfer";
 
     public static final String GENERAL_CONFIGURATION_ALLOW_FIRE_EXTINGUISH = "allow-fire-extinguish";
     public static final String GENERAL_CONFIGURATION_ENABLE_HALLOWEEN = "enable-halloween-feature";

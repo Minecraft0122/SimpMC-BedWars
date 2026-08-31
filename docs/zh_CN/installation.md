@@ -49,9 +49,69 @@ debug: false
 
 ### BUNGEE
 
-面向代理网络和自动扩容。竞技场节点、服务器 ID、大厅地址及重启策略在 `bungee-settings` 中配置，并需要匹配的代理端接入方案。
+面向代理网络和自动扩容。BUNGEE 使用同一个 JAR，通过 `bungee-settings.node-role` 把 Paper 实例分成两种角色：`LOBBY` 只负责大厅、远程竞技场目录和跨服调度；`ARENA` 只负责地图副本、对局和状态上报。两种角色都应连接同一个 MySQL 数据库，但只有 ARENA 节点记录本地对局统计。
 
 该模式同样视为专用 BedWars 节点，实例内全部世界固定正午与晴天。
+
+每个 ARENA 子服建议只承载一张地图；`bungee-settings.arena-template` 填写 `Arenas/<地图>.yml` 的文件名（可省略 `.yml`），`auto-scale-clone-limit` 控制该子服同时运行的同名地图副本上限。玩家通过大厅按分组随机选择处于 waiting/starting 且有容量的副本，指定竞技场时则使用指定运行实例。副本由插件从地图缓存自动复制，结束后按既有重启策略回收，不需要为每个副本手写 YAML。
+
+#### 大厅服配置
+
+大厅服不加载 `Arenas` 目录，也不运行竞技场世界；`lobby-listen` 是 ARENA 子服连接的 TCP 监听地址，不是代理端口。大厅服数量建议保持单活；当前预约表在大厅进程内存中，多个大厅同时调度会重复预约，后续可改用 Redis/SQL 租约。
+
+```yaml
+serverType: BUNGEE
+bungee-settings:
+  node-role: LOBBY
+  server-id: bw-lobby-01
+  lobby-listen:
+    host: 10.0.0.10
+    port: 2019
+  socket-secret: "请替换为大厅与所有竞技场共用的随机长字符串"
+
+database:
+  enable: true
+  host: 10.0.0.20
+  port: 3306
+  database: simpmc_bedwars
+  user: bedwars
+  pass: "请替换为实际密码"
+  ssl: true
+```
+
+#### 竞技场子服配置
+
+每个子服都要设置不同的 `server-id`，`proxy-server` 必须是 BungeeCord/Velocity `[servers]` 中该后端的键名；所有节点的 `database` 指向同一个 MySQL，`socket-secret` 与大厅完全一致：
+
+```yaml
+serverType: BUNGEE
+bungee-settings:
+  node-role: ARENA
+  server-id: bw-arena-castle-01    # 其他子服使用不同 ID
+  proxy-server: bw-arena-castle-01 # 代理中的后端键名
+  arena-template: castle            # 对应 Arenas/castle.yml
+  auto-scale-clone-limit: 5         # 本子服同名地图最多同时运行的副本数
+  lobby-sockets:
+    - 10.0.0.10:2019                # 大厅服 lobby-listen 地址
+  socket-secret: "请替换为与大厅相同的随机长字符串"
+
+database:
+  enable: true
+  host: 10.0.0.20
+  port: 3306
+  database: simpmc_bedwars
+  user: bedwars
+  pass: "请替换为实际密码"
+  ssl: true
+```
+
+复制多个 ARENA 子服时，只需为每台服务器复制同一张地图配置和缓存，修改 `server-id`、`proxy-server` 与代理地址；想承载另一张地图则使用另一台子服并修改 `arena-template`。旧版 BUNGEE 配置若不填写 `node-role`，仍按 ARENA 节点处理；`BUNGEE_LEGACY` 仍保留单实例兼容路径。
+
+大厅按以下顺序调度：筛选新鲜心跳、按 `group:` 或 `arena:` 选择、锁定一个空闲副本、向子服发送预加载请求，收到所有队员的确认后才通过代理发送 `Connect`。预加载超时或代理消息无法发出会释放预约；代理插件消息本身没有回执，因此实际切服失败仍应检查代理日志。
+
+常用加入方式：`/bw join random`、`/bw join group:<组名>`、`/bw join arena:<运行时竞技场名>`；大厅 `/bw gui` 会显示远程目录，左键加入 waiting/starting 副本，右键观战允许观战的 playing 副本。
+
+竞技场与大厅套接字是受信任内网的明文 TCP 控制通道，必须使用随机 `socket-secret`、防火墙只允许 ARENA 子服访问 `lobby-listen.port`，禁止直接暴露公网。大厅接受旧协议版本用于兼容，但只有当前协议版本的节点会进入新调度目录。
 
 如果 BedWars 服务器位于 BungeeCord 或兼容代理后方，无论使用 MULTIARENA 还是 BUNGEE 模式，都应把 `config.yml` 的 `lobbyServer` 设置为代理配置中的大厅服务器名称，例如 `hub`。该值不是地址、端口或 MotD；必须对应代理服务器列表中的键：
 

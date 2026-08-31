@@ -58,6 +58,22 @@ public class CmdJoin extends SubCommand {
             AdventureText.send(s, getMsg(p, Messages.COMMAND_JOIN_USAGE));
             return true;
         }
+        if (BedWars.isBungeeLobby()) {
+            // The lobby has no local IArena instances. Keep the familiar
+            // /bw join syntax but resolve the request through the remote
+            // node directory and wait for a PLD_READY acknowledgement.
+            String selector = args[0];
+            if (args.length >= 2 && (args[0].equalsIgnoreCase("group")
+                    || args[0].equalsIgnoreCase("arena") || args[0].equalsIgnoreCase("map"))) {
+                selector = args[0] + ":" + args[1];
+            }
+            if (BedWars.plugin.getLobbyArenaDispatcher() == null) {
+                AdventureText.send(p, "§c▪ §7大厅调度器尚未准备好，请稍后再试。");
+            } else {
+                BedWars.plugin.getLobbyArenaDispatcher().dispatch(p, selector);
+            }
+            return true;
+        }
         if (args[0].equalsIgnoreCase("random")){
             if (!Arena.joinRandomArena(p)){
                 AdventureText.send(s, getMsg(p, Messages.COMMAND_JOIN_NO_EMPTY_FOUND));
@@ -111,6 +127,9 @@ public class CmdJoin extends SubCommand {
 
     @Override
     public List<String> getTabComplete() {
+        if (BedWars.isBungeeLobby() && BedWars.plugin.getLobbyArenaDispatcher() != null) {
+            return BedWars.plugin.getLobbyArenaDispatcher().suggestions();
+        }
         List<String> tab = new ArrayList<>(BedWars.config.getYml().getStringList(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS));
         for (IArena arena : Arena.getArenas()){
             tab.add(arena.getArenaName());

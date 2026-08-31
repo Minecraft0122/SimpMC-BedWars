@@ -24,6 +24,8 @@ import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerJoinArenaEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerLeaveArenaEvent;
 import com.andrei1058.bedwars.api.events.server.ArenaEnableEvent;
+import com.andrei1058.bedwars.api.events.server.ArenaDisableEvent;
+import com.andrei1058.bedwars.api.events.server.ArenaRestartEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
@@ -51,5 +53,17 @@ public class ArenaListeners implements Listener {
     public void onArenaLoad(ArenaEnableEvent e){
         if (e == null) return;
         ArenaSocket.sendMessage(ArenaSocket.formatUpdateMessage(e.getArena()));
+    }
+
+    @EventHandler
+    public void onArenaRestart(ArenaRestartEvent e) {
+        if (e == null) return;
+        ArenaSocket.sendMessage(ArenaSocket.formatRemoveMessage(e.getWorldName()));
+    }
+
+    @EventHandler
+    public void onArenaDisable(ArenaDisableEvent e) {
+        if (e == null) return;
+        ArenaSocket.sendMessage(ArenaSocket.formatRemoveMessage(e.getWorldName()));
     }
 }

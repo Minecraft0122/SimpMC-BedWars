@@ -125,7 +125,10 @@ public final class LobbyProtection implements Listener {
     }
 
     static boolean shouldProtectLobbyDrop(ServerType serverType, String playerWorld, String lobbyWorld,
-                                          boolean assignedToArena, boolean arenaWorld) {
+                                           boolean assignedToArena, boolean arenaWorld) {
+        if (BedWars.isBungeeLobby()) {
+            return playerWorld != null && !playerWorld.isBlank() && !assignedToArena && !arenaWorld;
+        }
         if (serverType != ServerType.MULTIARENA && serverType != ServerType.SHARED) return false;
         if (playerWorld == null || playerWorld.isBlank()) return false;
         if (lobbyWorld != null && !lobbyWorld.isBlank() && playerWorld.equalsIgnoreCase(lobbyWorld)) return true;

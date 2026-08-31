@@ -111,6 +111,20 @@ public class MySQL implements Database {
         return true;
     }
 
+    /**
+     * Open a connection from the plugin's shared Hikari pool.
+     *
+     * <p>Match statistics use the same pool as legacy statistics, but each
+     * operation owns and closes its connection. The caller must never keep a
+     * connection across game ticks.</p>
+     */
+    public Connection openConnection() throws SQLException {
+        if (dataSource == null || dataSource.isClosed()) {
+            throw new SQLException("MySQL connection pool is not available");
+        }
+        return dataSource.getConnection();
+    }
+
     @Override
     public boolean hasStats(UUID uuid) {
         String sql = "SELECT uuid FROM global_stats WHERE uuid = ?;";

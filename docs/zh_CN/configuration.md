@@ -11,6 +11,8 @@
 主配置，包含：
 
 - `serverType`：MULTIARENA、SHARED 或 BUNGEE。
+- BUNGEE 节点通过 `bungee-settings.node-role` 分为 `LOBBY` 和 `ARENA`。`LOBBY` 不加载本地竞技场，只监听 `lobby-listen.host/port`、维护远程目录并调度玩家；`ARENA` 加载地图、自动复制副本并向大厅上报状态。未填写角色时默认为 `ARENA`，以兼容旧版 BUNGEE。
+- BUNGEE 子服的 `server-id` 必须全网唯一；`proxy-server` 是代理 `[servers]` 中的后端键名，`lobby-sockets` 是 ARENA 连接大厅的 `主机:端口` 列表，不能与大厅监听地址混用。`arena-template` 指定单个 `Arenas/<地图>.yml`，留空才保留旧版加载全部地图的行为。
 - `debug`：详细故障日志开关，默认 `false`；生产环境保持关闭。`/bw start debug` 仅表示单队测试开局，不会修改此项或临时开启日志。
 - `lobbyServer`：BungeeCord/Velocity 代理 `[servers]` 中的大厅服务器键名，默认 `hub`；不是 IP、端口或 MotD。主大厅红床会立即静默发送 `Connect`，不查询或向玩家展示代理节点、服务器列表和故障信息；配置问题只通过后端及代理日志排查。
 - `arenaGroups`：全局可用的匹配组名称；`Default` 是内置组，无需写入。每张竞技场地图只能选择其中一个组。
@@ -23,6 +25,7 @@
 - `tnt-jump-settings`、`blast-protection`、`tnt-prime-settings`：TNT 参数。
 - `fireball`：火球速度、射程、爆炸、击退、冷却和伤害。`speed-multiplier: 15` 对应普通初速度 1.5 格/tick；潜行时 `sneak-speed-multiplier: 1.6` 使初速度达到 2.4 格/tick，形成明显的初速度差异。`sneak-acceleration-multiplier: 2.0` 保持不变，持续加速度仍由普通火球的每 tick 0.1 提高到潜行火球的 0.2。每次发射会在 `flight-range.min: 200` 与 `flight-range.max: 300` 之间随机一次最大飞行距离，并按实际路径累计；碰撞、世界边界、服务端视距和未加载区块仍可能让火球提前结束。`sneak-recoil: 0.10` 会沿火球发射速度的完整三维反方向推动玩家，代码硬限制最大为 0.20；`cooldown: 0.4` 的持续射速约为每秒 2.5 发，一个 1 秒窗口内通常可发射 2 至 3 个。`explosion-size` 是以火球位置为球心的三维半径，伤害和击退只对欧氏距离不超过该半径的玩家生效，不会覆盖外接立方体的角落；队友始终不会受到火球伤害，但仍会按原有规则受到击退。2.10.20 的平衡默认值仍为爆炸范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。`make-fire` 只决定爆炸处是否生成火焰，竞技场不会允许火势向周围蔓延。
 - `database`：MySQL；关闭时使用 SQLite。
+- `match-statistics`：按对局保存统计和事件。只有 `database.enable: true` 且 MySQL 连接成功时启用；默认时区为 `Asia/Shanghai`，上报间隔默认 300 秒（5 分钟）。数据写入 `bw_matches`、`bw_match_players`、`bw_match_events`、`bw_match_reports` 和 `bw_player_violation_totals`，均使用 InnoDB 短事务。`bw_player_match_summary` 是按已结束对局汇总的只读视图，可直接用于大厅排行榜和玩家比较；若数据库账户没有 `CREATE VIEW` 权限，明细表仍会正常工作。
 - `performance-settings`：Paper 传送、资源旋转等优化。
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；大厅红床带有独立目标标记，固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会执行代理切服，不传送到本服 `/bw setLobby` 坐标。等待区和观战区红床使用另一目标标记，直接返回本服 BedWars 大厅，不经过命令权限。管理员可以修改显示材质和命令文本，内置 `leave` 项的返回语义仍由其配置节点名确定。4.0.8 起，删除整个物品节点后，后续配置升级不会再次生成；旧架构 15 曾误删的自定义 `leave` 会在当前值仍为内置默认值时，从架构 15 删除前的最后快照，或架构 15–17 中重新配置过的最新 `config.yml.v*.bak` 自动恢复；架构 18 后的删除或改写快照会否决旧值。玩家进入大厅时会立即替换旧 BedWars 命令物品，并在 15 tick 后做一次带实时上下文校验的选择性复核，不再由延迟任务清空正常流程的整个背包；经传送门或附属插件跨世界进入大厅也走同一入口。无效物品只跳过自身，同槽位配置会输出中文警告，代理返回项具有稳定优先级。完整代理示例见[安装文档](installation.md#bungee)。
 - 大厅进入/离开提示只向同样位于 BedWars 大厅的玩家发送；竞技场、观战者和地图设置会话不会收到。大厅世界名直接从 `lobbyLoc` 文本读取，即使该世界在插件加载时尚未加载也能正确识别。大厅和加入 NPC 的旧朝向会自动迁移为最近的 90 度 yaw，pitch 固定为 0。
@@ -33,6 +36,99 @@
 - `game-end`：淘汰玩家和最佳数据展示。
 
 刷新周期通常以 tick 为单位；20 tick 约等于 1 秒。倒计时和重连时间以秒为单位。
+
+### BUNGEE 角色配置
+
+拆分部署时大厅与竞技场使用同一个插件 JAR、不同配置文件。大厅只需要代理大厅和数据库信息，并开启 `node-role: LOBBY`：
+
+```yaml
+serverType: BUNGEE
+bungee-settings:
+  node-role: LOBBY
+  server-id: bw-lobby-01
+  lobby-listen:
+    host: 10.0.0.10
+    port: 2019
+  socket-secret: "与所有 ARENA 子服相同的随机长字符串"
+```
+
+竞技场子服设置 `node-role: ARENA`、唯一 `server-id`、代理后端键名和一张地图模板；同一模板可由 `auto-scale-clone-limit` 自动复制多个运行实例：
+
+```yaml
+serverType: BUNGEE
+bungee-settings:
+  node-role: ARENA
+  server-id: bw-arena-castle-01
+  proxy-server: bw-arena-castle-01
+  arena-template: castle
+  auto-scale-clone-limit: 5
+  lobby-sockets:
+    - 10.0.0.10:2019
+  socket-secret: "与大厅相同的随机长字符串"
+```
+
+大厅目录和预约目前保存在单个大厅进程内存中，因此建议只运行一个活动大厅；如果要多活大厅，必须在外部增加 Redis 或 MySQL TTL 租约并替换预约协调器。套接字是内网明文 TCP，生产环境必须设置共享密钥并用防火墙限制来源。完整代理、端口和启动顺序见[安装文档](installation.md#bungee)。
+
+MySQL 连接配置示例（所有 BUNGEE 子服使用同一个数据库）：
+
+```yaml
+database:
+  enable: true
+  host: 127.0.0.1
+  port: 3306
+  database: simpmc_bedwars
+  user: bedwars
+  pass: "请替换为实际密码"
+  ssl: true
+```
+
+建议为插件创建独立数据库用户，并只授予目标库的 `SELECT`、`INSERT`、`UPDATE`、`CREATE`、`ALTER`、`INDEX` 权限；自动汇总视图需要额外的 `CREATE VIEW` 权限，没有该权限时明细表和对局写入仍会工作。最终 JAR 已内置 MySQL Connector/J，不需要再把驱动单独放进 Paper 的 `lib` 或 `plugins` 目录。修改连接信息后必须完整重启所有相关子服，不要使用 `/reload`。
+
+对局统计配置示例：
+
+```yaml
+match-statistics:
+  enabled: true
+  timezone: Asia/Shanghai
+  report-interval-seconds: 300
+  queue-capacity: 10000
+  retry-delay-seconds: 5
+  finish-grace-ticks: 40
+  violations:
+    enabled: true
+    warning-thresholds: [10, 20, 50, 100]
+    match-leave-threshold: 25
+    cross-team-item-transfer: true
+```
+
+### 对局统计与 VL
+
+每次竞技场进入正式游戏状态都会生成一个 UUID；MySQL 在 `bw_matches.match_no` 中分配递增且唯一的对局编号（事务回滚时可能出现间隔，不应依赖无间隔连续性）。开始、结束时间和所有时间列按 `match-statistics.timezone` 写入，默认使用 `Asia/Shanghai`。进行中的玩家快照每 5 分钟上报一次，事件在发生后进入异步队列，游戏结束后再写入最终快照并把对局标记为 `FINISHED`。队列写入不会在 Bukkit 主线程上等待数据库锁。子服异常退出后再次启动时，只会把同一 `bungee-settings.server-id` 遗留的 `RUNNING` 对局标记为 `ABORTED`，不会修改其他子服的进行中对局。
+
+`bw_match_players` 保存普通击杀、最终击杀、死亡、拆床、K/D、重连/掉线、胜负、本局正向 VL、负向排除证据 `evidence_adjustment` 以及下限为 0 的有效 VL `effective_vl`。`bw_match_events` 保存 `BED_BREAK`、`PLAYER_KILL`、`DISCONNECT_KILL`、`PLAYER_WIN`、`PLAYER_LOSS`、`GAME_END`、`PLAYER_LEAVE`、`RECONNECT` 和 VL 事件，事件带有对局内递增序号，重复提交不会重复插入。`bw_player_violation_totals` 同时保存不可清除的 `crime_total_vl`（累计本局正向 VL）和用于处罚判定的 `punishment_total_vl`（累计本局有效 VL）；因单局超阈值触发 `VIOLATION_EJECT` 后，最终结算事务会自动清零该玩家的 `punishment_total_vl` 和告警位图，只保留 `crime_total_vl`，并记录 `last_punished_at`。若由外部处罚系统执行处罚，可调用插件 API 的 `resetPunishmentVl(UUID)` 做同样的清零。处罚累计值严格超过 `warning-thresholds` 中的 10、20、50、100 时，异步数据库事务提交后在控制台告警，每个处罚周期每个阈值只告警一次。开局、事件和最终结算使用独立的有界关键队列，队列满载时立即告警且不阻塞主线程；最终结算会由记录器继续重试，持续满载时应提高容量或处理数据库延迟。
+
+### 非法组队与刷人头检测
+
+检测器只把成功的敌对伤害作为战斗证据，并在短时间窗口内组合事件；单纯靠近、一起过桥、同时攻击同一目标不会直接产生 VL。
+
+- 不同队伍双方在 6 格内持续 8 秒、双方近期都在和敌人战斗但始终不互殴：双方各 `+2`，只作为辅助证据。
+- 不同队伍的两名玩家在 5 秒窗口内反复攻击同一第三名敌人：重复达到第二、第四次时各 `+1`，最多 `+2`。
+- 反复出现跨队解围/干扰追击者的伤害链：第二次候选事件各 `+2`，仍需距离和时间窗口同时满足。
+- 玩家主动丢出铁、金、钻石或绿宝石后被另一队拾取，同一对玩家在 30 秒内第二次转移时各 `+5`（同一窗口只触发一次）；可用 `cross-team-item-transfer: false` 关闭。
+- 同一受害者在没有对击杀者造成近期有效伤害的情况下重复送出击杀：第二次各 `+3`，第四次再各 `+1`（总计 `+4`）。
+- 双方在 15 秒内正常互相造成伤害、双方互相拆床或在 120 秒内互相击杀：写入 `-3`、`-4`、`-2` 的排除证据，降低本局 `effective_vl`，但不会倒扣两个正向 VL 字段。
+
+单局 `effective_vl` 严格超过 `match-leave-threshold`（默认 25）时，插件记录 `VIOLATION_EJECT` 后在下一 tick 调用 `IArena.removePlayer(player, false)` 将玩家送出当前对局。该检查只看当前 `MatchRecord`，且会在游戏结束事件发出后停止；已经掉线或不在竞技场的玩家只保留审计记录，不会异步操作 Bukkit 世界。被标记处罚的玩家会在最终结算事务中自动清零累计处罚值，犯罪记录不会清除；外部处罚系统仍可按需调用 `resetPunishmentVl(UUID)`。
+
+常用汇总查询示例：
+
+```sql
+SELECT player_uuid, player_name, matches_played, wins, losses,
+       normal_kills, final_kills, deaths, beds_destroyed, kd_ratio,
+       effective_vl, crime_total_vl, punishment_total_vl
+FROM bw_player_match_summary
+ORDER BY wins DESC, kd_ratio DESC;
+```
 
 游戏开始时实际只有一名玩家的队伍不会启用队内私聊：该玩家直接使用 `format-chat-global` 格式向当前竞技场的存活玩家发言，不需要 `/shout` 权限，死亡旁观者不会收到这类对局聊天。判断使用开局人数快照；队友在开局后掉线、重连或被淘汰不会中途切换聊天频道。开局至少两人的队伍继续使用 `format-chat-team` 队内聊天，并可通过 `/shout`、`/hh`、`/h` 或六种前缀主动发到公屏；旁观者聊天仅发送给同场旁观者。7.0.0 起喊话没有插件冷却；主配置架构 28 会删除旧 `shout-cmd-cooldown`，管理员无需再维护该值。
 

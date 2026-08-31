@@ -30,6 +30,8 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.listeners.arenaselector.ArenaSelectorListener;
+import com.andrei1058.bedwars.lobbysocket.ArenaNodeSnapshot;
+import com.andrei1058.bedwars.lobbysocket.LobbyArenaDispatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -46,6 +48,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -65,6 +68,11 @@ public class ArenaGUI {
         if (p.getOpenInventory() == null) return;
         if (!(p.getOpenInventory().getTopInventory().getHolder() instanceof ArenaSelectorHolder)) return;
         ArenaSelectorHolder ash = ((ArenaSelectorHolder) p.getOpenInventory().getTopInventory().getHolder());
+
+        if (BedWars.isBungeeLobby()) {
+            refreshRemoteInv(p, ash);
+            return;
+        }
 
         List<IArena> arenas = availableArenas(ash.getGroup());
 
@@ -144,7 +152,7 @@ public class ArenaGUI {
                 ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS);
         int size = ArenaSelectorPagination.effectiveSize(BedWars.config.getYml()
                         .getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE),
-                configuredSlots, availableArenas(group).size());
+                configuredSlots, selectorEntryCount(group));
         ArenaSelectorHolder ash = new ArenaSelectorHolder(group, Math.max(0, page));
         Inventory inv = Bukkit.createInventory(ash, size, AdventureText.section(Language.getMsg(p, Messages.ARENA_GUI_INV_NAME)));
         ash.attach(inv);
@@ -201,6 +209,130 @@ public class ArenaGUI {
         Sounds.playSound("arena-selector-open", p);
     }
 
+    /** Render the same selector layout from the authenticated lobby directory. */
+    private static void refreshRemoteInv(Player player, ArenaSelectorHolder holder) {
+        Inventory inventory = player.getOpenInventory().getTopInventory();
+        List<Integer> usedSlots = ArenaSelectorPagination.contentSlots(
+                BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_USE_SLOTS),
+                inventory.getSize());
+        List<ArenaNodeSnapshot> arenas = availableRemoteArenas(holder.getGroup());
+        int page = ArenaSelectorPagination.clampPage(holder.getPage(), arenas.size(), usedSlots.size());
+        holder.setPage(page);
+        holder.clearRemoteArenas();
+
+        int arenaKey = page * usedSlots.size();
+        for (Integer slot : usedSlots) {
+            inventory.setItem(slot, new ItemStack(Material.AIR));
+            if (arenaKey >= arenas.size()) continue;
+
+            ArenaNodeSnapshot snapshot = arenas.get(arenaKey++);
+            ItemStack item = remoteStatusItem(snapshot);
+            if (item == null) continue;
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) continue;
+
+            String displayName = remoteDisplayName(snapshot.arenaName());
+            AdventureText.displayName(meta, Language.getMsg(player, Messages.ARENA_GUI_ARENA_CONTENT_NAME)
+                    .replace("{name}", displayName)
+                    .replace("{map_name}", snapshot.arenaName()));
+            List<String> lore = new ArrayList<>();
+            String status = remoteDisplayStatus(player, snapshot);
+            String groups = remoteDisplayGroups(snapshot);
+            boolean defaultOnly = snapshot.groups().size() == 1 && snapshot.groups().contains("DEFAULT");
+            for (String line : Language.getList(player, Messages.ARENA_GUI_ARENA_CONTENT_LORE)) {
+                if (line.contains("{group}") && defaultOnly) continue;
+                lore.add(line.replace("{on}", String.valueOf(snapshot.currentPlayers()))
+                        .replace("{max}", String.valueOf(snapshot.maxPlayers()))
+                        .replace("{status}", status)
+                        .replace("{group}", groups));
+            }
+            AdventureText.lore(meta, lore);
+            item.setItemMeta(meta);
+            item = BedWars.nms.addCustomData(item,
+                    ArenaSelectorListener.REMOTE_ARENA_SELECTOR_IDENTIFIER + slot);
+            inventory.setItem(slot, item);
+            holder.setRemoteArena(slot, snapshot);
+        }
+
+        // A disconnected/starting network should never present a completely
+        // empty menu. Keep one explicit command fallback in the content area.
+        if (arenas.isEmpty() && !usedSlots.isEmpty()) {
+            int slot = usedSlots.getFirst();
+            ItemStack fallback = new ItemStack(Material.PAPER);
+            ItemMeta meta = fallback.getItemMeta();
+            if (meta != null) {
+                AdventureText.displayName(meta, "§e随机加入竞技场");
+                AdventureText.lore(meta, List.of("§7当前没有可用的竞技场节点。", "§7点击后将再次尝试随机加入。"));
+                fallback.setItemMeta(meta);
+            }
+            if (BedWars.plugin.getLobbyArenaDispatcher() != null) {
+                fallback = BedWars.nms.addCustomData(fallback, "RUNCOMMAND_bw join random");
+            }
+            inventory.setItem(slot, fallback);
+        }
+
+        renderPagination(holder, inventory, page,
+                ArenaSelectorPagination.pageCount(arenas.size(), usedSlots.size()));
+        player.updateInventory();
+    }
+
+    private static int selectorEntryCount(String group) {
+        return BedWars.isBungeeLobby() ? availableRemoteArenas(group).size() : availableArenas(group).size();
+    }
+
+    private static List<ArenaNodeSnapshot> availableRemoteArenas(String group) {
+        LobbyArenaDispatcher dispatcher = BedWars.plugin.getLobbyArenaDispatcher();
+        if (dispatcher == null) return List.of();
+        boolean showPlaying = BedWars.config.getBoolean(
+                ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SHOW_PLAYING);
+        return dispatcher.visibleSnapshots(group, showPlaying);
+    }
+
+    private static ItemStack remoteStatusItem(ArenaNodeSnapshot snapshot) {
+        String status = snapshot.status().toLowerCase(Locale.ROOT);
+        if (!(status.equals("waiting") || status.equals("starting") || status.equals("playing"))) return null;
+        String material = yml.getString(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_MATERIAL
+                .replace("%path%", status));
+        if (material == null || material.isBlank()) return null;
+        ItemStack item = BedWars.nms.createItemStack(material, 1,
+                (short) yml.getInt(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_DATA
+                        .replace("%path%", status)));
+        if (item == null) return null;
+        if (yml.getBoolean(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_STATUS_ENCHANTED
+                .replace("%path%", status))) {
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.addEnchant(Enchantment.LURE, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                item.setItemMeta(meta);
+            }
+        }
+        return item;
+    }
+
+    private static String remoteDisplayStatus(Player player, ArenaNodeSnapshot snapshot) {
+        String key = switch (snapshot.status()) {
+            case "WAITING" -> Messages.ARENA_STATUS_WAITING_NAME;
+            case "STARTING" -> Messages.ARENA_STATUS_STARTING_NAME;
+            case "PLAYING" -> Messages.ARENA_STATUS_PLAYING_NAME;
+            default -> Messages.ARENA_STATUS_RESTARTING_NAME;
+        };
+        String full = snapshot.currentPlayers() >= snapshot.maxPlayers()
+                ? Language.getMsg(player, Messages.MEANING_FULL) : "";
+        return Language.getMsg(player, key).replace("{full}", full);
+    }
+
+    private static String remoteDisplayGroups(ArenaNodeSnapshot snapshot) {
+        return snapshot.groups().stream().sorted(String.CASE_INSENSITIVE_ORDER).reduce((left, right) -> left + "," + right)
+                .orElse("DEFAULT");
+    }
+
+    private static String remoteDisplayName(String name) {
+        if (name == null || name.isBlank()) return "未知地图";
+        String normalized = name.replace('_', ' ').replace('-', ' ').trim();
+        return normalized.isEmpty() ? name : Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
+    }
+
     private static void renderPagination(ArenaSelectorHolder holder, Inventory inventory,
                                          int page, int pageCount) {
         int previousSlot = ArenaSelectorPagination.previousSlot(inventory.getSize());
@@ -253,6 +385,7 @@ public class ArenaGUI {
 
         private final String group;
         private final Map<Integer, Integer> pageBySlot = new HashMap<>();
+        private final Map<Integer, ArenaNodeSnapshot> remoteBySlot = new HashMap<>();
         private int page;
         private Inventory inventory;
 
@@ -279,6 +412,18 @@ public class ArenaGUI {
 
         public Integer getPageAt(int slot) {
             return pageBySlot.get(slot);
+        }
+
+        public ArenaNodeSnapshot getRemoteArenaAt(int slot) {
+            return remoteBySlot.get(slot);
+        }
+
+        private void setRemoteArena(int slot, ArenaNodeSnapshot snapshot) {
+            remoteBySlot.put(slot, snapshot);
+        }
+
+        private void clearRemoteArenas() {
+            remoteBySlot.clear();
         }
 
         @Override

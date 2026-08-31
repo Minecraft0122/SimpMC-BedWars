@@ -5,7 +5,7 @@
     <parent>
         <artifactId>SimpMC-BedWars</artifactId>
         <groupId>com.simpmc.bedwars</groupId>
-        <version>5.1.10</version>
+        <version>5.2.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>simpmc-bedwars-plugin</artifactId>
@@ -165,6 +165,14 @@
                     <groupId>org.slf4j</groupId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <!-- The shaded plugin must carry its own JDBC driver; Paper does not
+             provide a MySQL driver for plugin class loaders. -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.4.0</version>
+            <optional>true</optional>
         </dependency>
         <!-- HikariCP Logger -->
         <dependency>

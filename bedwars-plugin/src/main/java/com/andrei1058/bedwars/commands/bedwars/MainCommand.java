@@ -69,7 +69,9 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         new CmdLeave(this, "leave");
         new CmdLang(this, "lang");
         new CmdTeleporter(this, "teleporter");
-        if (getServerType() != ServerType.BUNGEE) {
+        // A dedicated BUNGEE lobby has no local Arena instances, but it still
+        // exposes the selector GUI backed by the remote arena directory.
+        if (getServerType() != ServerType.BUNGEE || BedWars.isBungeeLobby()) {
             new CmdGUI(this, "gui");
         }
         new CmdStats(this, "stats");

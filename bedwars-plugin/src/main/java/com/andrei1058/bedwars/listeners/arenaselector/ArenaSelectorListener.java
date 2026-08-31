@@ -29,6 +29,8 @@ import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ArenaGUI;
 import com.andrei1058.bedwars.configuration.Sounds;
+import com.andrei1058.bedwars.lobbysocket.ArenaNodeSnapshot;
+import com.andrei1058.bedwars.lobbysocket.LobbyArenaDispatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -41,6 +43,8 @@ import org.bukkit.inventory.ItemStack;
 public class ArenaSelectorListener implements Listener {
 
     public static final String ARENA_SELECTOR_GUI_IDENTIFIER = "arena=";
+    /** Marker used by the dedicated lobby GUI; the holder owns the snapshot. */
+    public static final String REMOTE_ARENA_SELECTOR_IDENTIFIER = "remote-arena=";
 
     @EventHandler
     public void onArenaSelectorClick(InventoryClickEvent event) {
@@ -73,6 +77,11 @@ public class ArenaSelectorListener implements Listener {
             Bukkit.dispatchCommand(player, data.split("_")[1]);
         }
 
+        if (BedWars.isBungeeLobby()) {
+            handleRemoteClick(event, player, holder, data);
+            return;
+        }
+
         if (!data.contains(ARENA_SELECTOR_GUI_IDENTIFIER)) return;
 
         String arenaName = data.split("=")[1];
@@ -100,5 +109,41 @@ public class ArenaSelectorListener implements Listener {
         }
 
         player.closeInventory();
+    }
+
+    private void handleRemoteClick(InventoryClickEvent event, Player player,
+                                   ArenaGUI.ArenaSelectorHolder holder, String data) {
+        if (!data.startsWith(REMOTE_ARENA_SELECTOR_IDENTIFIER)) return;
+        ArenaNodeSnapshot snapshot = holder.getRemoteArenaAt(event.getRawSlot());
+        if (snapshot == null) return;
+
+        LobbyArenaDispatcher dispatcher = BedWars.plugin.getLobbyArenaDispatcher();
+        if (dispatcher == null) {
+            AdventureText.send(player, "§c▪ §7大厅调度服务尚未就绪，请稍后再试。 ");
+            return;
+        }
+
+        if (event.getClick() == ClickType.LEFT) {
+            if (!snapshot.isWaitingOrStarting()) {
+                Sounds.playSound("join-denied", player);
+                AdventureText.send(player, Language.getMsg(player, Messages.ARENA_JOIN_DENIED_SELECTOR));
+                return;
+            }
+            // Use the runtime identifier so duplicate map templates on
+            // different nodes cannot redirect this click to another copy.
+            dispatcher.dispatch(player, "arena:" + snapshot.arenaIdentifier());
+            player.closeInventory();
+            return;
+        }
+
+        if (event.getClick() == ClickType.RIGHT) {
+            if ("PLAYING".equals(snapshot.status()) && snapshot.spectate()) {
+                dispatcher.dispatchSpectator(player, "arena:" + snapshot.arenaIdentifier());
+                player.closeInventory();
+            } else {
+                Sounds.playSound("spectate-denied", player);
+                AdventureText.send(player, Language.getMsg(player, Messages.ARENA_SPECTATE_DENIED_SELECTOR));
+            }
+        }
     }
 }
