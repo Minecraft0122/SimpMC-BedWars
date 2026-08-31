@@ -112,7 +112,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "simpmc.org");
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_POWERED_BY, "SimpMC-BedWars");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, "bw1");
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT, 5000);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT, 23000);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE, "ARENA");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER, "");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_ARENA_TEMPLATE, "");
@@ -322,6 +322,9 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID,
                 "BUNGEE 子服在代理和对局数据库中的唯一节点 ID。每个子服必须使用不同值，不能沿用默认 bw1。",
                 "该 ID 也用于启动恢复：只会收敛本节点上次异常退出的 RUNNING 对局。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT,
+                "竞技场子服等待代理登录预加载条目的时间，单位为毫秒；默认 23000。",
+                "该值至少会覆盖大厅预加载确认超时并额外保留 15 秒代理切服余量；旧配置中的较小值会自动按此规则抬高。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE,
                 "BUNGEE 节点角色：ARENA 负责加载地图并运行对局；LOBBY 只监听竞技场节点并负责分配玩家。",
                 "旧版 BUNGEE 配置默认使用 ARENA；大厅服必须明确设置为 LOBBY。修改后需要完整重启服务器。");

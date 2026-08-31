@@ -30,7 +30,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class LoadedUser {
 
-    private static final long waitSeconds = BedWars.config.getYml().getLong(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT);
+    private static final long waitMillis = effectiveTimeoutMillis(
+            BedWars.config.getYml().getLong(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT),
+            BedWars.config.getYml().getInt(
+                    ConfigPath.GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS, 8));
+
+    private static long effectiveTimeoutMillis(long configuredMillis, int dispatchTimeoutSeconds) {
+        return PreloadTimeoutPolicy.effectiveTimeoutMillis(configuredMillis, dispatchTimeoutSeconds);
+    }
 
     private UUID uuid;
     private String partyOwnerOrSpectateTarget = null;
@@ -49,7 +56,7 @@ public class LoadedUser {
                 this.partyOwnerOrSpectateTarget = partyOwnerOrSpectateTarget;
             }
         }
-        this.toleranceTime = System.currentTimeMillis() + waitSeconds;
+        this.toleranceTime = System.currentTimeMillis() + waitMillis;
         Language l = Language.getLang(langIso);
         if (l != null) language = l;
 
@@ -73,7 +80,7 @@ public class LoadedUser {
     }
 
     public void destroy(String reason){
-        BedWars.debug("Destroyed PreLoaded User: " + uuid + " Reason: " + reason + ". Tolerance: " + waitSeconds);
+        BedWars.debug("Destroyed PreLoaded User: " + uuid + " Reason: " + reason + ". Tolerance: " + waitMillis);
         loaded.remove(uuid);
     }
 

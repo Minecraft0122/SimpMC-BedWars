@@ -13,6 +13,7 @@
 - `serverType`：MULTIARENA、SHARED 或 BUNGEE。
 - BUNGEE 节点通过 `bungee-settings.node-role` 分为 `LOBBY` 和 `ARENA`。`LOBBY` 不加载本地竞技场，只监听 `lobby-listen.host/port`、维护远程目录并调度玩家；`ARENA` 加载地图、自动复制副本并向大厅上报状态。未填写角色时默认为 `ARENA`，以兼容旧版 BUNGEE。
 - BUNGEE 子服的 `server-id` 必须全网唯一；`proxy-server` 是代理 `[servers]` 中的后端键名，`lobby-sockets` 是 ARENA 连接大厅的 `主机:端口` 列表，不能与大厅监听地址混用。`arena-template` 指定单个 `Arenas/<地图>.yml`，留空才保留旧版加载全部地图的行为。
+- `bwp-time-out` 是 ARENA 子服预加载玩家等待代理登录的超时时间，单位为毫秒，默认 23000。插件会自动保证它至少覆盖大厅 `dispatch-timeout-seconds` 加 15 秒代理切服余量，旧配置中的 5000 等较小值无需手动修改。
 - `debug`：详细故障日志开关，默认 `false`；生产环境保持关闭。`/bw start debug` 仅表示单队测试开局，不会修改此项或临时开启日志。
 - `lobbyServer`：BungeeCord/Velocity 代理 `[servers]` 中的大厅服务器键名，默认 `hub`；不是 IP、端口或 MotD。主大厅红床会立即静默发送 `Connect`，不查询或向玩家展示代理节点、服务器列表和故障信息；配置问题只通过后端及代理日志排查。
 - `arenaGroups`：全局可用的匹配组名称；`Default` 是内置组，无需写入。每张竞技场地图只能选择其中一个组。

@@ -41,6 +41,9 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID,
                 "BUNGEE 子服在代理和对局数据库中的唯一节点 ID；每个子服必须使用不同值，不能沿用默认 bw1。",
                 "该 ID 也用于启动恢复，只会处理本节点上次异常退出的 RUNNING 对局。");
+        comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT,
+                "ARENA 子服等待代理登录预加载条目的时间，单位为毫秒；默认 23000。",
+                "实际最短时间会覆盖大厅预加载确认超时，并额外保留 15 秒代理切服余量；旧配置中的较小值会自动抬高。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE,
                 "BUNGEE 节点角色：ARENA 负责加载地图、运行对局和上报状态；LOBBY 不加载竞技场，只维护远程目录并调度玩家。",
                 "旧版 BUNGEE 配置默认使用 ARENA；拆分部署时大厅服必须设置为 LOBBY。修改后需要完整重启服务器。");
