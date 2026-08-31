@@ -43,14 +43,21 @@ public class LoadedUser {
     private String partyOwnerOrSpectateTarget = null;
     private long toleranceTime;
     private String arenaIdentifier;
+    private String requestId;
     private Language language = null;
 
     private static final ConcurrentHashMap<UUID, LoadedUser> loaded = new ConcurrentHashMap<>();
 
     public LoadedUser(String uuid, String arenaIdentifier, String langIso, String partyOwnerOrSpectateTarget){
+        this(uuid, arenaIdentifier, langIso, partyOwnerOrSpectateTarget, "");
+    }
+
+    public LoadedUser(String uuid, String arenaIdentifier, String langIso, String partyOwnerOrSpectateTarget,
+                      String requestId){
         if (Bukkit.getWorld(arenaIdentifier) == null) return;
         this.arenaIdentifier = arenaIdentifier;
         this.uuid = UUID.fromString(uuid);
+        this.requestId = requestId == null ? "" : requestId.trim();
         if (partyOwnerOrSpectateTarget != null){
             if (!partyOwnerOrSpectateTarget.isEmpty()) {
                 this.partyOwnerOrSpectateTarget = partyOwnerOrSpectateTarget;
@@ -81,7 +88,17 @@ public class LoadedUser {
 
     public void destroy(String reason){
         BedWars.debug("Destroyed PreLoaded User: " + uuid + " Reason: " + reason + ". Tolerance: " + waitMillis);
-        loaded.remove(uuid);
+        loaded.remove(uuid, this);
+    }
+
+    /**
+     * Remove this preload only when the cancellation belongs to this request.
+     * Blank request IDs retain the legacy UUID-only cancellation behavior.
+     */
+    public boolean destroyIfRequest(String cancellationRequestId, String reason) {
+        if (!PreloadRequestPolicy.matches(requestId, cancellationRequestId)) return false;
+        destroy(reason);
+        return true;
     }
 
     public Language getLanguage() {

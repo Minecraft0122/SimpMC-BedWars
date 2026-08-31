@@ -282,7 +282,7 @@ public class ArenaSocket {
                                             if (accepted) {
                                                 LoadedUser previous = LoadedUser.getPreLoaded(UUID.fromString(uuid));
                                                 if (previous != null) previous.destroy("重复预加载");
-                                                new LoadedUser(uuid, arenaIdentifier, language, target);
+                                                new LoadedUser(uuid, arenaIdentifier, language, target, requestId);
                                                 accepted = LoadedUser.isPreLoaded(UUID.fromString(uuid));
                                             }
                                             if (!requestId.isBlank()) {
@@ -302,11 +302,16 @@ public class ArenaSocket {
                                     warnInvalidMessage("PLD_CANCEL message is missing fields");
                                     continue;
                                 }
+                                String cancellationRequestId = json.has("request_id")
+                                        && json.get("request_id").isJsonPrimitive()
+                                        ? json.get("request_id").getAsString() : "";
                                 try {
                                     UUID cancelled = UUID.fromString(json.get("uuid").getAsString());
                                     Bukkit.getScheduler().runTask(BedWars.plugin, () -> {
                                         LoadedUser user = LoadedUser.getPreLoaded(cancelled);
-                                        if (user != null) user.destroy("大厅取消预加载");
+                                        if (user != null) {
+                                            user.destroyIfRequest(cancellationRequestId, "大厅取消预加载");
+                                        }
                                     });
                                 } catch (IllegalArgumentException exception) {
                                     warnInvalidMessage("PLD_CANCEL message contains an invalid UUID");
