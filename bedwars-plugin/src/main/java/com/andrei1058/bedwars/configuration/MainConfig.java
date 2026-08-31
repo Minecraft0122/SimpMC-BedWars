@@ -312,7 +312,23 @@ public class MainConfig extends ConfigManager {
                 && !configuredRole.trim().equalsIgnoreCase("ARENA")) {
             plugin.getLogger().warning("未知的 BUNGEE 节点角色 " + configuredRole + "，已回退为 ARENA。可选值：ARENA、LOBBY。");
         }
-        BedWars.setBungeeNodeRole(parsedRole);
+        BungeeNodeRole requiredRole = plugin instanceof BedWars bedWars
+                ? bedWars.getRequiredBungeeNodeRole() : null;
+        if (requiredRole != null) {
+            boolean serverTypeMismatch = BedWars.getServerType() != ServerType.BUNGEE;
+            boolean roleMismatch = parsedRole != requiredRole;
+            if (serverTypeMismatch || roleMismatch) {
+                plugin.getLogger().warning(plugin.getDescription().getName() + " 分发包固定为 "
+                        + requiredRole + " 节点；已忽略 config.yml 中不兼容的 serverType/node-role 设置。");
+                yml.set("serverType", ServerType.BUNGEE.name());
+                yml.set(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_NODE_ROLE, requiredRole.name());
+                save();
+            }
+            BedWars.setServerType(ServerType.BUNGEE);
+            BedWars.setBungeeNodeRole(requiredRole);
+        } else {
+            BedWars.setBungeeNodeRole(parsedRole);
+        }
 
         BedWars.setLobbyWorld(getLobbyWorldName());
     }

@@ -112,13 +112,33 @@ jobs:
         # Paper 26.2 覆盖编译会清理 target；发布包必须重新以默认 Paper 1.21.11 API 构建。
         run: mvn -B -ntp clean package -DskipTests -s ci_settings.xml
 
-      - name: 上传插件 JAR
+      - name: 核对角色包清单与入口
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          lobby_path="bedwars-lobby/target/SimpMC-BedWars-Lobby-${version}.jar"
+          arena_path="bedwars-arena/target/SimpMC-BedWars-Arena-${version}.jar"
+          test -f "$lobby_path"
+          test -f "$arena_path"
+          test -z "$(find bedwars-lobby/target -maxdepth 1 -type f -name 'SimpMC-BedWars-Lobby-*.jar' ! -name 'original-*.jar' ! -name "SimpMC-BedWars-Lobby-${version}.jar" -print -quit)"
+          test -z "$(find bedwars-arena/target -maxdepth 1 -type f -name 'SimpMC-BedWars-Arena-*.jar' ! -name 'original-*.jar' ! -name "SimpMC-BedWars-Arena-${version}.jar" -print -quit)"
+
+          grep -Fx "version: ${version}" < <(unzip -p "$lobby_path" plugin.yml)
+          grep -Fx "main: com.andrei1058.bedwars.lobby.LobbyBedWarsPlugin" < <(unzip -p "$lobby_path" plugin.yml)
+          grep -Fx "version: ${version}" < <(unzip -p "$arena_path" plugin.yml)
+          grep -Fx "main: com.andrei1058.bedwars.arena.ArenaBedWarsPlugin" < <(unzip -p "$arena_path" plugin.yml)
+
+      - name: 上传大厅与竞技场插件 JAR
         uses: actions/upload-artifact@v7
         with:
-          name: SimpMC-BedWars
+          name: SimpMC-BedWars-roles
           path: |
-            bedwars-plugin/target/SimpMC-BedWars-*.jar
-            !bedwars-plugin/target/original-*.jar
+            bedwars-lobby/target/SimpMC-BedWars-Lobby-*.jar
+            !bedwars-lobby/target/original-*.jar
+            bedwars-arena/target/SimpMC-BedWars-Arena-*.jar
+            !bedwars-arena/target/original-*.jar
           if-no-files-found: error
 
   release:
@@ -130,10 +150,10 @@ jobs:
       actions: read
       contents: write
     steps:
-      - name: 下载已验证的插件 JAR
+      - name: 下载已验证的大厅与竞技场插件 JAR
         uses: actions/download-artifact@v8
         with:
-          name: SimpMC-BedWars
+          name: SimpMC-BedWars-roles
           path: release
 
       - name: 创建 GitHub Release
@@ -145,28 +165,52 @@ jobs:
         run: |
           set -euo pipefail
 
-          mapfile -t jars < <(find release -maxdepth 1 -type f -name 'SimpMC-BedWars-*.jar' ! -name 'original-*.jar' | sort)
-          if [[ ${#jars[@]} -ne 1 ]]; then
-            echo "错误：预期恰好一个插件 JAR，实际找到 ${#jars[@]} 个。" >&2
-            printf '%s\n' "${jars[@]:-}"
+          # download-artifact may preserve the module/target directory for
+          # multiple upload roots, so do not assume both files are at release/.
+          mapfile -t lobby_jars < <(find release -type f -name 'SimpMC-BedWars-Lobby-*.jar' ! -name 'original-*.jar' | sort)
+          mapfile -t arena_jars < <(find release -type f -name 'SimpMC-BedWars-Arena-*.jar' ! -name 'original-*.jar' | sort)
+          if [[ ${#lobby_jars[@]} -ne 1 || ${#arena_jars[@]} -ne 1 ]]; then
+            echo "错误：预期各有一个大厅和竞技场插件 JAR，实际大厅 ${#lobby_jars[@]} 个、竞技场 ${#arena_jars[@]} 个。" >&2
+            printf '%s\n' "${lobby_jars[@]:-}" "${arena_jars[@]:-}"
             exit 1
           fi
 
-          jar_path="${jars[0]}"
-          jar_name="$(basename "$jar_path")"
-          version="${jar_name#SimpMC-BedWars-}"
+          lobby_path="${lobby_jars[0]}"
+          arena_path="${arena_jars[0]}"
+          lobby_name="$(basename "$lobby_path")"
+          arena_name="$(basename "$arena_path")"
+          version="${lobby_name#SimpMC-BedWars-Lobby-}"
           version="${version%.jar}"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "错误：无法从 $jar_name 解析标准版本号。" >&2
+            echo "错误：无法从 $lobby_name 解析标准版本号。" >&2
             exit 1
           fi
+          if [[ "$arena_name" != "SimpMC-BedWars-Arena-${version}.jar" ]]; then
+            echo "错误：大厅与竞技场 JAR 的版本不一致：$lobby_name / $arena_name。" >&2
+            exit 1
+          fi
+
+          lobby_plugin_yml="$(unzip -p "$lobby_path" plugin.yml)"
+          arena_plugin_yml="$(unzip -p "$arena_path" plugin.yml)"
+          grep -Fx "version: ${version}" <<< "$lobby_plugin_yml"
+          grep -Fx "main: com.andrei1058.bedwars.lobby.LobbyBedWarsPlugin" <<< "$lobby_plugin_yml"
+          grep -Fx "version: ${version}" <<< "$arena_plugin_yml"
+          grep -Fx "main: com.andrei1058.bedwars.arena.ArenaBedWarsPlugin" <<< "$arena_plugin_yml"
 
           short_sha="${GITHUB_SHA:0:8}"
           tag="v${version}-${short_sha}"
           title="SimpMC-BedWars ${version} (${short_sha})"
           commit_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
           checksum_path="release/SHA256SUMS.txt"
-          (cd "$(dirname "$jar_path")" && sha256sum "$(basename "$jar_path")" > "$(basename "$checksum_path")")
+          lobby_relative="${lobby_path#release/}"
+          arena_relative="${arena_path#release/}"
+          (
+            cd release
+            {
+              sha256sum "$lobby_relative" | awk -v name="$lobby_name" '{print $1 "  " name}'
+              sha256sum "$arena_relative" | awk -v name="$arena_name" '{print $1 "  " name}'
+            } > "$(basename "$checksum_path")"
+          )
 
           # 工作流重跑时复用同一提交标签，避免生成重复 Release。
           if gh release view "$tag" >/dev/null 2>&1; then
@@ -174,7 +218,7 @@ jobs:
             exit 0
           fi
 
-          gh release create "$tag" "$jar_path" "$checksum_path" \
+          gh release create "$tag" "$lobby_path" "$arena_path" "$checksum_path" \
             --target "$GITHUB_SHA" \
             --title "$title" \
             --notes "由默认分支提交 [${short_sha}](${commit_url}) 自动构建。构建、测试和 JAR 上传全部成功后才会发布。" \

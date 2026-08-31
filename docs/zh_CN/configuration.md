@@ -40,7 +40,7 @@
 
 ### BUNGEE 角色配置
 
-拆分部署时大厅与竞技场使用同一个插件 JAR、不同配置文件。大厅只需要代理大厅和数据库信息，并开启 `node-role: LOBBY`：
+拆分部署时分别安装 `SimpMC-BedWars-Lobby` 与 `SimpMC-BedWars-Arena`。大厅包会强制 `BUNGEE`/`LOBBY`，竞技场包会强制 `BUNGEE`/`ARENA`；配置中的冲突值会记录警告并自动回写。大厅只需要代理大厅和数据库信息：
 
 ```yaml
 serverType: BUNGEE

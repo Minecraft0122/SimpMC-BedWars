@@ -3,8 +3,8 @@ api-version: '1.21'
 version: ${project.version}
 author: SimpMC
 prefix: SimpMC-BedWars
-description: 面向 Paper 1.21.11 与 26.2 的中文起床战争小游戏插件
-main: com.andrei1058.bedwars.BedWars
+description: ${plugin.description}
+main: ${plugin.main}
 softdepend: [Vault,PlaceholderAPI,Citizens,Parties,VipFeatures,PartyAndFriends,Spigot-Party-API-PAF]
 commands:
   shout:
