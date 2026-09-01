@@ -33,6 +33,14 @@ class PermissionsTest {
     }
 
     @Test
+    void rejoinRequiresAnExplicitPermissionNode() {
+        assertFalse(Permissions.hasCommandPermission(sender(), "rejoin", Permissions.PERMISSION_REJOIN));
+        assertFalse(Permissions.hasCommandPermission(sender("bw.player"), "rejoin", Permissions.PERMISSION_REJOIN));
+        assertTrue(Permissions.hasCommandPermission(sender("bw.rejoin"), "rejoin", Permissions.PERMISSION_REJOIN));
+        assertTrue(Permissions.hasCommandPermission(sender("bw.command.rejoin"), "rejoin", Permissions.PERMISSION_REJOIN));
+    }
+
+    @Test
     void usesDocumentedEnablePermissionAndKeepsLegacyAliasSeparate() {
         assertEquals("bw.enable", Permissions.PERMISSION_ARENA_ENABLE);
         assertEquals("bw.enableRotation", Permissions.PERMISSION_ARENA_ENABLE_LEGACY);

@@ -11,9 +11,9 @@
 package com.andrei1058.bedwars.lobbysocket;
 
 /** Constants shared by the arena client and lobby listener protocol. */
-final class BungeeProtocol {
-    static final int CURRENT_VERSION = 2;
-    static final String ARENA_ROLE = "ARENA";
+public final class BungeeProtocol {
+    public static final int CURRENT_VERSION = 2;
+    public static final String ARENA_ROLE = "ARENA";
 
     private BungeeProtocol() {
     }

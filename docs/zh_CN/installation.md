@@ -109,6 +109,8 @@ database:
 
 大厅按以下顺序调度：筛选新鲜心跳、按 `group:` 或 `arena:` 选择、锁定一个空闲副本、向子服发送预加载请求，收到所有队员的确认后才通过代理发送 `Connect`。预加载超时或代理消息无法发出会释放预约；代理插件消息本身没有回执，因此实际切服失败仍应检查代理日志。
 
+跨服 `/rejoin` 不会重新随机匹配：ARENA 节点在玩家掉线时把 `RC` 重连租约发送给 Lobby，Lobby 根据租约的节点会话和 `proxy-server` 连接回原竞技场。大厅或子服套接字重新连接后，ARENA 会响应快照请求重放未过期租约；因此两个角色包必须使用同一版本，并且 `socket-secret`、`server-id`、`proxy-server` 和大厅地址配置正确。
+
 常用加入方式：`/bw join random`、`/bw join group:<组名>`、`/bw join arena:<运行时竞技场名>`；大厅 `/bw gui` 会显示远程目录，左键加入 waiting/starting 副本，右键观战允许观战的 playing 副本。
 
 竞技场与大厅套接字是受信任内网的明文 TCP 控制通道，必须使用随机 `socket-secret`、防火墙只允许 ARENA 子服访问 `lobby-listen.port`，禁止直接暴露公网。大厅接受旧协议版本用于兼容，但只有当前协议版本的节点会进入新调度目录。

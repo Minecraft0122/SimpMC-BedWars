@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -51,6 +52,8 @@ public final class LobbyArenaDispatcher implements Listener, AutoCloseable {
     private final Map<String, PendingBatch> batches = new LinkedHashMap<>();
     private final Map<String, PendingRequest> requests = new HashMap<>();
     private final Map<UUID, String> playerBatches = new HashMap<>();
+    /** Reconnect leases published by the arena that still owns the match. */
+    private final Map<UUID, LobbySocketServer.RejoinMessage> rejoinReservations = new HashMap<>();
     private boolean closed;
 
     public LobbyArenaDispatcher(BedWars plugin, LobbySocketServer socketServer) {
@@ -58,6 +61,7 @@ public final class LobbyArenaDispatcher implements Listener, AutoCloseable {
         this.socketServer = socketServer;
         this.directory = socketServer.directory();
         socketServer.setReadyHandler(this::onReadyFromSocket);
+        socketServer.setRejoinHandlers(this::onRejoinFromSocket, this::onRejoinRemoveFromSocket);
     }
 
     /**
@@ -72,6 +76,150 @@ public final class LobbyArenaDispatcher implements Listener, AutoCloseable {
     /** Dispatch a single player to an arena that is already in progress as a spectator. */
     public boolean dispatchSpectator(Player requester, String selector) {
         return dispatch(requester, selector, true);
+    }
+
+    /**
+     * Dispatch a reconnecting player to the exact arena node that published
+     * the lease. Reconnects must never be sent through normal random matching:
+     * the team and match state still live on the original arena process.
+     *
+     * @return true when a lease was found and either dispatched or already
+     *         waiting for confirmation
+     */
+    public boolean dispatchRejoin(Player player) {
+        if (closed || player == null || !player.isOnline()) return false;
+        UUID uuid = player.getUniqueId();
+        LobbySocketServer.RejoinMessage lease = activeRejoin(uuid);
+        if (lease == null) return false;
+        if (playerBatches.containsKey(uuid)) {
+            AdventureText.send(player, "§e▪ §7正在等待原竞技场确认，请稍候。 ");
+            return true;
+        }
+        if (!socketServer.isSessionOpen(lease.sessionId())) {
+            rejoinReservations.remove(uuid, lease);
+            return false;
+        }
+
+        // Prefer the latest directory snapshot for display/proxy metadata, but
+        // allow an RC received just before the first UPDATE: the authenticated
+        // socket session is already authoritative for this handoff.
+        ArenaNodeSnapshot advertised = directory.snapshot().stream()
+                .filter(snapshot -> snapshot.sessionId().equals(lease.sessionId()))
+                .filter(snapshot -> snapshot.arenaIdentifier().equalsIgnoreCase(lease.arenaIdentifier()))
+                .findFirst().orElse(null);
+        ArenaNodeSnapshot node = advertised == null
+                ? new ArenaNodeSnapshot(lease.sessionId(), lease.serverId(), lease.proxyServer(),
+                "rejoin-" + lease.sessionId(), lease.arenaIdentifier(), lease.arenaIdentifier(),
+                "PLAYING", 0, 0, 0, Set.of("DEFAULT"), false, 0,
+                System.currentTimeMillis(), true)
+                : new ArenaNodeSnapshot(
+                advertised.sessionId(), advertised.serverId(), advertised.proxyServer(),
+                advertised.nodeInstanceId(), advertised.arenaName(), advertised.arenaIdentifier(),
+                advertised.status(), advertised.currentPlayers(), advertised.maxPlayers(),
+                advertised.maxInTeam(), advertised.groups(), advertised.spectate(),
+                advertised.sequence(), advertised.lastSeenMillis(), advertised.dispatchable());
+        String batchId = UUID.randomUUID().toString();
+        PendingBatch batch = new PendingBatch(batchId, node, List.of(player), "", false,
+                true, lease.reservationId());
+        batches.put(batchId, batch);
+        String requestId = UUID.randomUUID().toString();
+        PendingRequest request = new PendingRequest(requestId, batch, uuid);
+        batch.requests.put(requestId, request);
+        requests.put(requestId, request);
+        playerBatches.put(uuid, batchId);
+        sendPreload(request, player);
+
+        long remainingMillis = Math.max(1_000L, lease.expiresAtMillis() - System.currentTimeMillis());
+        int configuredSeconds = Math.max(1, BedWars.config.getYml().getInt(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS, 8));
+        long timeoutTicks = Math.max(1L, Math.min(configuredSeconds * 20L,
+                (remainingMillis + 49L) / 50L));
+        batch.timeoutTask = Bukkit.getScheduler().runTaskLater(plugin,
+                () -> failBatch(batch, "原竞技场确认超时，请稍后重试。"), timeoutTicks);
+        AdventureText.send(player, "§a▪ §7正在连接你之前的竞技场……");
+        return true;
+    }
+
+    /** Whether the lobby currently knows a valid reconnect lease for a UUID. */
+    public boolean hasRejoin(UUID uuid) {
+        return activeRejoin(uuid) != null;
+    }
+
+    private LobbySocketServer.RejoinMessage activeRejoin(UUID uuid) {
+        if (uuid == null) return null;
+        LobbySocketServer.RejoinMessage lease = rejoinReservations.get(uuid);
+        if (lease != null && !isActiveLease(lease, System.currentTimeMillis())) {
+            rejoinReservations.remove(uuid, lease);
+            return null;
+        }
+        return lease;
+    }
+
+    static boolean isActiveLease(LobbySocketServer.RejoinMessage lease, long nowMillis) {
+        return lease != null && lease.uuid() != null && !lease.uuid().isBlank()
+                && lease.arenaIdentifier() != null && !lease.arenaIdentifier().isBlank()
+                && lease.sessionId() != null && !lease.sessionId().isBlank()
+                && lease.expiresAtMillis() > nowMillis;
+    }
+
+    static boolean matchesRemoval(LobbySocketServer.RejoinMessage current,
+                                   LobbySocketServer.RejoinRemoveMessage removal) {
+        if (current == null || removal == null || current.sessionId() == null
+                || !current.sessionId().equals(removal.sessionId())) return false;
+        return removal.reservationId() == null || removal.reservationId().isBlank()
+                || (current.reservationId() != null && current.reservationId().equals(removal.reservationId()));
+    }
+
+    private void onRejoinFromSocket(LobbySocketServer.RejoinMessage message) {
+        if (closed || message == null) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (closed) return;
+            // A create callback can already be queued when the TCP session
+            // closes. The matching unregister callback will remove its leases;
+            // ignoring a closed session here also prevents an old RC from
+            // replacing a replay received on a newer connection.
+            if (!socketServer.isSessionOpen(message.sessionId())) return;
+            try {
+                UUID uuid = UUID.fromString(message.uuid());
+                if (message.expiresAtMillis() > System.currentTimeMillis()) {
+                    LobbySocketServer.RejoinMessage current = rejoinReservations.get(uuid);
+                    // A reconnect replacement publishes a later expiry. If
+                    // TCP reconnects reorder old/new RC deliveries, retain
+                    // the lease with the newer deadline.
+                    boolean sameLease = current != null && message.reservationId() != null
+                            && message.reservationId().equals(current.reservationId());
+                    boolean currentSessionOpen = current != null
+                            && socketServer.isSessionOpen(current.sessionId());
+                    if (current == null || message.expiresAtMillis() > current.expiresAtMillis()
+                            || (sameLease && !currentSessionOpen)) {
+                        rejoinReservations.put(uuid, message);
+                    }
+                }
+            } catch (IllegalArgumentException ignored) {
+                // The socket listener validates UUIDs before reaching here.
+            }
+        });
+    }
+
+    private void onRejoinRemoveFromSocket(LobbySocketServer.RejoinRemoveMessage message) {
+        if (closed || message == null) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (closed) return;
+            if (message.uuid() == null || message.uuid().isBlank()) {
+                rejoinReservations.entrySet().removeIf(entry ->
+                        entry.getValue().sessionId() != null
+                                && entry.getValue().sessionId().equals(message.sessionId()));
+                return;
+            }
+            try {
+                UUID uuid = UUID.fromString(message.uuid());
+                LobbySocketServer.RejoinMessage current = rejoinReservations.get(uuid);
+                if (!matchesRemoval(current, message)) return;
+                rejoinReservations.remove(uuid, current);
+            } catch (IllegalArgumentException ignored) {
+                // The socket listener validates UUIDs before reaching here.
+            }
+        });
     }
 
     /**
@@ -181,7 +329,11 @@ public final class LobbyArenaDispatcher implements Listener, AutoCloseable {
         json.addProperty("arena_identifier", request.batch.node.arenaIdentifier());
         json.addProperty("lang_iso", Language.getPlayerLanguage(player).getIso());
         json.addProperty("target", request.batch.partyOwner);
-        json.addProperty("join_mode", request.batch.spectator ? "SPECTATOR" : "PLAYER");
+        json.addProperty("join_mode", request.batch.rejoin
+                ? "REJOIN" : request.batch.spectator ? "SPECTATOR" : "PLAYER");
+        if (request.batch.rejoin && !request.batch.reservationId.isBlank()) {
+            json.addProperty("reservation_id", request.batch.reservationId);
+        }
         socketServer.send(request.batch.node, json.toString()).whenComplete((sent, error) ->
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (closed || !requests.containsKey(request.requestId)) return;
@@ -372,6 +524,7 @@ public final class LobbyArenaDispatcher implements Listener, AutoCloseable {
         batches.clear();
         requests.clear();
         playerBatches.clear();
+        rejoinReservations.clear();
     }
 
     private record Selector(String group, String arena) {
@@ -383,6 +536,8 @@ public final class LobbyArenaDispatcher implements Listener, AutoCloseable {
         private final List<Player> players;
         private final String partyOwner;
         private final boolean spectator;
+        private final boolean rejoin;
+        private final String reservationId;
         private final Map<String, PendingRequest> requests = new LinkedHashMap<>();
         private BukkitTask timeoutTask;
         private BukkitTask reservationReleaseTask;
@@ -390,11 +545,18 @@ public final class LobbyArenaDispatcher implements Listener, AutoCloseable {
 
         private PendingBatch(String batchId, ArenaNodeSnapshot node, List<Player> players, String partyOwner,
                              boolean spectator) {
+            this(batchId, node, players, partyOwner, spectator, false, "");
+        }
+
+        private PendingBatch(String batchId, ArenaNodeSnapshot node, List<Player> players, String partyOwner,
+                             boolean spectator, boolean rejoin, String reservationId) {
             this.batchId = batchId;
             this.node = node;
             this.players = List.copyOf(players);
             this.partyOwner = partyOwner;
             this.spectator = spectator;
+            this.rejoin = rejoin;
+            this.reservationId = reservationId == null ? "" : reservationId;
         }
     }
 
