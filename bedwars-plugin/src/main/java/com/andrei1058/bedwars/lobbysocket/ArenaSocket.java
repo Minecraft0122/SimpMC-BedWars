@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.Misc;
+import com.andrei1058.bedwars.arena.ReJoin;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -143,6 +144,45 @@ public class ArenaSocket {
         return js.toString();
     }
 
+    /** Publish a reconnect lease to every authenticated lobby. */
+    public static String formatRejoinCreateMessage(ReJoin rejoin) {
+        if (rejoin == null || rejoin.getPl() == null || rejoin.getArena() == null
+                || rejoin.getArena().getWorldName() == null
+                || rejoin.getArena().getWorldName().isBlank()) {
+            return "";
+        }
+        JsonObject json = new JsonObject();
+        json.addProperty("type", "RC");
+        json.addProperty("protocol_version", BungeeProtocol.CURRENT_VERSION);
+        json.addProperty("reservation_id", rejoin.getReservationId());
+        json.addProperty("uuid", rejoin.getPl().toString());
+        json.addProperty("arena_id", rejoin.getArena().getWorldName());
+        json.addProperty("server", BedWars.config.getString(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
+        json.addProperty("expires_at", rejoin.getExpiresAtMillis());
+        String proxyServer = BedWars.config.getYml().getString(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER, "");
+        if (proxyServer == null || proxyServer.isBlank()) {
+            proxyServer = BedWars.config.getString(
+                    ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID);
+        }
+        json.addProperty("proxy_server", proxyServer);
+        return json.toString();
+    }
+
+    /** Publish removal of a reconnect lease to every authenticated lobby. */
+    public static String formatRejoinRemoveMessage(ReJoin rejoin) {
+        if (rejoin == null || rejoin.getPl() == null) return "";
+        JsonObject json = new JsonObject();
+        json.addProperty("type", "RD");
+        json.addProperty("protocol_version", BungeeProtocol.CURRENT_VERSION);
+        json.addProperty("reservation_id", rejoin.getReservationId());
+        json.addProperty("uuid", rejoin.getPl().toString());
+        json.addProperty("server", BedWars.config.getString(
+                ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
+        return json.toString();
+    }
+
     /** Notify lobbies that one runtime copy is no longer dispatchable. */
     public static String formatRemoveMessage(String arenaIdentifier) {
         if (arenaIdentifier == null || arenaIdentifier.isBlank()) return "";
@@ -238,6 +278,15 @@ public class ArenaSocket {
                                     for (IArena arena : Arena.getArenas()) {
                                         sendMessage(formatUpdateMessage(arena));
                                     }
+                                    // A lobby may reconnect after its in-memory
+                                    // directory has been cleared. Replay every
+                                    // still-valid lease so /rejoin remains
+                                    // available throughout the reconnect window.
+                                    for (ReJoin rejoin : ReJoin.getReJoinList()) {
+                                        if (rejoin != null && rejoin.isLeaseActive()) {
+                                            sendMessage(formatRejoinCreateMessage(rejoin));
+                                        }
+                                    }
                                 });
                                 break;
                             //pre load data
@@ -248,8 +297,9 @@ public class ArenaSocket {
                                     continue;
                                 }
                                 String uuid = json.get("uuid").getAsString();
+                                UUID requestedUuid;
                                 try {
-                                    UUID.fromString(uuid);
+                                    requestedUuid = UUID.fromString(uuid);
                                 } catch (IllegalArgumentException exception) {
                                     warnInvalidMessage("PLD message contains an invalid UUID");
                                     continue;
@@ -260,30 +310,42 @@ public class ArenaSocket {
                                 String joinMode = json.has("join_mode") && json.get("join_mode").isJsonPrimitive()
                                         ? json.get("join_mode").getAsString().trim().toUpperCase(Locale.ROOT) : "AUTO";
                                 if (!joinMode.equals("AUTO") && !joinMode.equals("PLAYER")
-                                        && !joinMode.equals("SPECTATOR")) {
+                                        && !joinMode.equals("SPECTATOR") && !joinMode.equals("REJOIN")) {
                                     warnInvalidMessage("PLD message contains an invalid join mode");
                                     continue;
                                 }
                                 String requestId = json.has("request_id") && json.get("request_id").isJsonPrimitive()
                                         ? json.get("request_id").getAsString() : "";
+                                String rejoinReservationId = json.has("reservation_id")
+                                        && json.get("reservation_id").isJsonPrimitive()
+                                        ? json.get("reservation_id").getAsString().trim() : "";
                                 Bukkit.getScheduler().runTask(BedWars.plugin,
                                         () -> {
                                             IArena arena = Arena.getArenaByIdentifier(arenaIdentifier);
+                                            boolean rejoin = joinMode.equals("REJOIN");
+                                            ReJoin rejoinLease = rejoin ? ReJoin.getPlayer(requestedUuid) : null;
                                             boolean spectator = joinMode.equals("SPECTATOR")
                                                     || (joinMode.equals("AUTO") && arena != null
                                                     && arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.playing);
                                             boolean accepted = arena != null
-                                                    && (spectator
+                                                    && (rejoin
+                                                    ? arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.playing
+                                                    && rejoinLease != null
+                                                    && rejoinLease.getArena() == arena
+                                                    && (rejoinReservationId.isBlank()
+                                                    || rejoinReservationId.equals(rejoinLease.getReservationId()))
+                                                    && rejoinLease.canReJoin()
+                                                    : spectator
                                                     ? arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.playing
                                                     && arena.isAllowSpectate()
                                                     : (arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.waiting
                                                     || arena.getStatus() == com.andrei1058.bedwars.api.arena.GameState.starting)
-                                                    && hasPreloadCapacity(arena, UUID.fromString(uuid)));
+                                                    && hasPreloadCapacity(arena, requestedUuid));
                                             if (accepted) {
-                                                LoadedUser previous = LoadedUser.getPreLoaded(UUID.fromString(uuid));
+                                                LoadedUser previous = LoadedUser.getPreLoaded(requestedUuid);
                                                 if (previous != null) previous.destroy("重复预加载");
                                                 new LoadedUser(uuid, arenaIdentifier, language, target, requestId);
-                                                accepted = LoadedUser.isPreLoaded(UUID.fromString(uuid));
+                                                accepted = LoadedUser.isPreLoaded(requestedUuid);
                                             }
                                             if (!requestId.isBlank()) {
                                                 JsonObject ready = new JsonObject();

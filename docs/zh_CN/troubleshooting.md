@@ -146,6 +146,12 @@ Spigot、Folia、其他 Minecraft 版本，以及只提供 Paper 26 维度目录
 
 7.1.0 起 Paper 最终退出原因为 `KICKED` 的玩家会在普通移除后立即放弃重连资格；网络断开和超时仍保留 `rejoin-time`。同时，成功 `/rejoin` 会按 UUID 清除上一段离场生命周期，避免同一玩家再次被踢时退出逻辑被防重集合跳过。若问题仍存在，请确认反作弊确实通过 Paper/Bukkit 的踢出流程断开玩家，而不是只隐藏、冻结或传送玩家。
 
+## BUNGEE 大厅提示没有可重新加入的竞技场
+
+- 先确认大厅服与所有竞技场子服都已经替换为同一版本的 `SimpMC-BedWars-Lobby-6.0.1.jar` 和 `SimpMC-BedWars-Arena-6.0.1.jar`，并完整停止后重新启动；5.1.10 单体包不会把竞技场的重连预留登记到专用大厅。
+- 检查每台 ARENA 的 `lobby-sockets` 能连到 Lobby 的 `lobby-listen`，所有节点的 `socket-secret` 完全一致；每个 `server-id` 必须唯一，`proxy-server` 必须与代理 `[servers]` 中的键名一致。启动日志应能看到节点 HELLO 成功，掉线时大厅应收到 `RC` 登记。
+- `/rejoin` 需要显式授予 `bw.rejoin`，或者旧权限插件使用兼容节点 `bw.command.rejoin`；`bw.player` 不会授予该命令。无有效租约、对局已结束或 `rejoin-time` 已过期时，提示没有竞技场属于正常结果。
+
 ## TAB 玩家名、观察者样式或头顶名牌不正确
 
 - 若要使用完整队名显示，先确认实际加载的是公开版本 5.1.2，或后续以该版本线为基准发布的版本，并在替换 JAR 后完整重启；不要使用 `/reload`。

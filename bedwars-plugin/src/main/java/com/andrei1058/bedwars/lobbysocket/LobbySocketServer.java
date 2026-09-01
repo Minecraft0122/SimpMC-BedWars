@@ -59,6 +59,10 @@ public final class LobbySocketServer implements AutoCloseable {
     private final ConcurrentHashMap<String, NodeSession> sessionsByServer = new ConcurrentHashMap<>();
     private volatile Consumer<ReadyMessage> readyHandler = ignored -> {
     };
+    private volatile Consumer<RejoinMessage> rejoinHandler = ignored -> {
+    };
+    private volatile Consumer<RejoinRemoveMessage> rejoinRemoveHandler = ignored -> {
+    };
     private volatile ServerSocket listener;
     private volatile boolean running;
 
@@ -73,6 +77,15 @@ public final class LobbySocketServer implements AutoCloseable {
     public void setReadyHandler(Consumer<ReadyMessage> readyHandler) {
         this.readyHandler = readyHandler == null ? ignored -> {
         } : readyHandler;
+    }
+
+    /** Receive reconnect leases published by arena nodes. */
+    public void setRejoinHandlers(Consumer<RejoinMessage> rejoinHandler,
+                                  Consumer<RejoinRemoveMessage> rejoinRemoveHandler) {
+        this.rejoinHandler = rejoinHandler == null ? ignored -> {
+        } : rejoinHandler;
+        this.rejoinRemoveHandler = rejoinRemoveHandler == null ? ignored -> {
+        } : rejoinRemoveHandler;
     }
 
     /** Start binding without making the Bukkit enable thread wait on a socket. */
@@ -132,6 +145,22 @@ public final class LobbySocketServer implements AutoCloseable {
         return sessionFor(snapshot) != null;
     }
 
+    boolean isSessionOpen(String sessionId) {
+        return sessionId != null && sessionForSessionId(sessionId) != null;
+    }
+
+    CompletableFuture<Boolean> send(String sessionId, String message) {
+        NodeSession session = sessionForSessionId(sessionId);
+        if (session == null) return CompletableFuture.completedFuture(false);
+        return session.queueSend(message);
+    }
+
+    private NodeSession sessionForSessionId(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) return null;
+        NodeSession session = sessions.get(sessionId);
+        return session != null && session.isOpen() ? session : null;
+    }
+
     CompletableFuture<Boolean> send(ArenaNodeSnapshot snapshot, String message) {
         NodeSession session = sessionFor(snapshot);
         if (session == null) return CompletableFuture.completedFuture(false);
@@ -164,6 +193,7 @@ public final class LobbySocketServer implements AutoCloseable {
         sessions.remove(session.sessionId, session);
         sessionsByServer.remove(session.serverId, session);
         directory.removeSession(session.sessionId);
+        rejoinRemoveHandler.accept(new RejoinRemoveMessage("", "", session.sessionId));
     }
 
     private void handleReady(NodeSession session, JsonObject json) {
@@ -281,12 +311,87 @@ public final class LobbySocketServer implements AutoCloseable {
                 case "UPDATE" -> handleUpdate(json);
                 case "REMOVE" -> handleRemove(json);
                 case "PLD_READY" -> handleReady(this, json);
+                case "RC" -> handleRejoinCreate(this, json);
+                case "RD" -> handleRejoinRemove(this, json);
                 case "PING", "HEARTBEAT" -> queueSend(pongMessage());
                 default -> {
                     // Keep the protocol forward-compatible with old proxy
                     // integrations; unknown messages are simply ignored.
                 }
             }
+        }
+
+        private void handleRejoinCreate(NodeSession session, JsonObject json) {
+            int advertisedProtocol = intValue(json, "protocol_version", protocolVersion);
+            if (advertisedProtocol != protocolVersion) {
+                invalid("RC 的 protocol_version 与 HELLO 不一致");
+                return;
+            }
+            if (!hasStringFields(json, "uuid", "arena_id")) {
+                invalid("RC 缺少 uuid 或 arena_id");
+                return;
+            }
+            String uuid = boundedString(json, "uuid", 64);
+            String arenaIdentifier = boundedString(json, "arena_id", 256);
+            String messageServer = boundedString(json, "server", 128);
+            String messageProxy = boundedString(json, "proxy_server", 128);
+            String reservationId = boundedString(json, "reservation_id", 128);
+            if (uuid.isBlank() || arenaIdentifier.isBlank()) {
+                invalid("RC 缺少有效重连字段");
+                return;
+            }
+            try {
+                UUID.fromString(uuid);
+            } catch (IllegalArgumentException exception) {
+                invalid("RC 包含无效 UUID");
+                return;
+            }
+            if (!messageServer.isBlank() && !messageServer.equals(session.serverId)) {
+                invalid("RC 的 server-id 与 HELLO 不一致");
+                return;
+            }
+            if (!messageProxy.isBlank() && !messageProxy.equals(session.proxyServer)) {
+                invalid("RC 的 proxy-server 与 HELLO 不一致");
+                return;
+            }
+            long now = System.currentTimeMillis();
+            long defaultSeconds = Math.max(1L, BedWars.config.getYml().getLong(
+                    ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30L));
+            long expiresAt = longValue(json, "expires_at", now + defaultSeconds * 1_000L);
+            if (expiresAt <= now) {
+                rejoinRemoveHandler.accept(new RejoinRemoveMessage(uuid, reservationId, session.sessionId));
+                return;
+            }
+            // Do not allow a malformed or stale node to pin a reservation for
+            // an unbounded period. Keep the arena's configured window intact;
+            // the fixed upper bound only protects against overflow/malformed
+            // values when the two servers use different configurations.
+            long maximum = now + 24L * 60L * 60L * 1_000L;
+            expiresAt = Math.min(expiresAt, maximum);
+            if (reservationId.isBlank()) reservationId = "legacy-" + uuid;
+            rejoinHandler.accept(new RejoinMessage(uuid, arenaIdentifier, session.serverId,
+                    session.proxyServer, reservationId, expiresAt, session.sessionId));
+        }
+
+        private void handleRejoinRemove(NodeSession session, JsonObject json) {
+            int advertisedProtocol = intValue(json, "protocol_version", protocolVersion);
+            if (advertisedProtocol != protocolVersion) {
+                invalid("RD 的 protocol_version 与 HELLO 不一致");
+                return;
+            }
+            if (!hasStringFields(json, "uuid")) {
+                invalid("RD 缺少 uuid");
+                return;
+            }
+            String uuid = boundedString(json, "uuid", 64);
+            try {
+                UUID.fromString(uuid);
+            } catch (IllegalArgumentException exception) {
+                invalid("RD 包含无效 UUID");
+                return;
+            }
+            String reservationId = boundedString(json, "reservation_id", 128);
+            rejoinRemoveHandler.accept(new RejoinRemoveMessage(uuid, reservationId, session.sessionId));
         }
 
         private void handleUpdate(JsonObject json) {
@@ -447,6 +552,15 @@ public final class LobbySocketServer implements AutoCloseable {
         return value;
     }
 
+    private static boolean hasStringFields(JsonObject json, String... fields) {
+        for (String field : fields) {
+            if (!json.has(field) || json.get(field).isJsonNull() || !json.get(field).isJsonPrimitive()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static int intValue(JsonObject json, String key, int fallback) {
         try {
             return json.has(key) ? json.get(key).getAsInt() : fallback;
@@ -481,6 +595,16 @@ public final class LobbySocketServer implements AutoCloseable {
     }
 
     public record ReadyMessage(String requestId, String uuid, boolean accepted, String reason, String sessionId) {
+    }
+
+    /** A reconnect lease published by an authenticated arena node. */
+    public record RejoinMessage(String uuid, String arenaIdentifier, String serverId,
+                                String proxyServer, String reservationId, long expiresAtMillis,
+                                String sessionId) {
+    }
+
+    /** Removes one reconnect lease, or all leases belonging to a closed session. */
+    public record RejoinRemoveMessage(String uuid, String reservationId, String sessionId) {
     }
 
     @Override

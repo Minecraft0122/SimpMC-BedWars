@@ -33,7 +33,6 @@ import com.andrei1058.bedwars.arena.tasks.ReJoinTask;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.lobbysocket.ArenaSocket;
 import com.andrei1058.bedwars.shop.ShopCache;
-import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -53,6 +52,9 @@ public class ReJoin {
     private IArena arena;
     private ITeam bwt;
     private ReJoinTask task = null;
+    /** Identifies one reconnect lease so a delayed remove cannot delete a newer lease. */
+    private final String reservationId = UUID.randomUUID().toString();
+    private long expiresAtMillis;
     private final ArrayList<ShopCache.CachedItem> permanentsAndNonDowngradables = new ArrayList<>();
 
     private static final List<ReJoin> reJoinList = new ArrayList<>();
@@ -70,18 +72,16 @@ public class ReJoin {
         this.bwt = bwt;
         this.player = player.getUniqueId();
         this.arena = arena;
+        long rejoinSeconds = Math.min(86_400L, Math.max(1L, BedWars.config.getYml().getLong(
+                ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, 30L)));
+        this.expiresAtMillis = System.currentTimeMillis() + rejoinSeconds * 1_000L;
         reJoinList.add(this);
         BedWars.debug("Created ReJoin for " + player.getName() + " " + player.getUniqueId() + " at " + arena.getArenaName());
         task = new ReJoinTask(this, arena, bwt);
         this.permanentsAndNonDowngradables.addAll(cachedArmor);
 
         if (BedWars.autoscale) {
-            JsonObject json = new JsonObject();
-            json.addProperty("type", "RC");
-            json.addProperty("uuid", player.getUniqueId().toString());
-            json.addProperty("arena_id", arena.getWorldName());
-            json.addProperty("server", BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
-            ArenaSocket.sendMessage(json.toString());
+            ArenaSocket.sendMessage(ArenaSocket.formatRejoinCreateMessage(this));
         }
     }
 
@@ -104,9 +104,15 @@ public class ReJoin {
      */
     @Nullable
     public static ReJoin getPlayer(@NotNull Player player) {
-        BedWars.debug("ReJoin getPlayer " + player.getUniqueId());
+        return getPlayer(player.getUniqueId());
+    }
+
+    /** Look up a reconnect lease without requiring the player to be online. */
+    @Nullable
+    public static ReJoin getPlayer(@NotNull UUID playerUuid) {
+        BedWars.debug("ReJoin getPlayer " + playerUuid);
         for (ReJoin rj : getReJoinList()) {
-            if (rj.getPl().equals(player.getUniqueId())) {
+            if (rj.getPl().equals(playerUuid)) {
                 return rj;
             }
         }
@@ -124,6 +130,11 @@ public class ReJoin {
         // state still happens to look healthy.
         if (!isActiveReservation(reJoinList, this)) {
             BedWars.debug("ReJoin canReJoin reservation is no longer active");
+            return false;
+        }
+        if (expiresAtMillis <= System.currentTimeMillis()) {
+            BedWars.debug("ReJoin canReJoin reservation has expired");
+            expire();
             return false;
         }
         if (arena == null) {
@@ -216,11 +227,7 @@ public class ReJoin {
             task.destroy();
             task = null;
         }
-        JsonObject json = new JsonObject();
-        json.addProperty("type", "RD");
-        json.addProperty("uuid", player.toString());
-        json.addProperty("server", BedWars.config.getString(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID));
-        ArenaSocket.sendMessage(json.toString());
+        ArenaSocket.sendMessage(ArenaSocket.formatRejoinRemoveMessage(this));
         if (arena != null && bwt != null && destroyTeam && bwt.getMembers().isEmpty() && !bwt.isBedDestroyed()) {
             bwt.setBedDestroyed(true);
             Bukkit.getPluginManager().callEvent(new TeamEliminatedEvent(arena, bwt));
@@ -300,6 +307,26 @@ public class ReJoin {
 
     public ReJoinTask getTask() {
         return task;
+    }
+
+    /** Stable identifier for this player's current reconnect lease. */
+    public String getReservationId() {
+        return reservationId;
+    }
+
+    /** Absolute deadline used by the lobby to discard stale reconnect leases. */
+    public long getExpiresAtMillis() {
+        return expiresAtMillis;
+    }
+
+    /**
+     * Check the local lifecycle before replaying this lease to a newly
+     * connected lobby. This deliberately avoids destroying the lease so a
+     * transient socket failure cannot change arena state.
+     */
+    public boolean isLeaseActive() {
+        return isActiveReservation(reJoinList, this)
+                && expiresAtMillis > System.currentTimeMillis();
     }
 
     public UUID getPl() {

@@ -20,12 +20,14 @@
 
 package com.andrei1058.bedwars.commands.rejoin;
 
+import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.ReJoin;
 import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
+import com.andrei1058.bedwars.lobbysocket.LobbyArenaDispatcher;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.defaults.BukkitCommand;
 import org.bukkit.entity.Player;
@@ -49,6 +51,20 @@ public class RejoinCommand extends BukkitCommand {
         }
 
         ReJoin rj = ReJoin.getPlayer(p);
+
+        // In a dedicated BUNGEE lobby the reconnect lease belongs to the
+        // remote arena process. Ask the lobby dispatcher to send a REJOIN
+        // preload to that exact node instead of looking only at local memory.
+        if (rj == null && BedWars.isBungeeLobby()) {
+            LobbyArenaDispatcher dispatcher = BedWars.plugin.getLobbyArenaDispatcher();
+            if (dispatcher != null && dispatcher.hasRejoin(p.getUniqueId())) {
+                if (!dispatcher.dispatchRejoin(p)) {
+                    AdventureText.send(p, Language.getMsg(p, Messages.REJOIN_DENIED));
+                    Sounds.playSound("rejoin-denied", p);
+                }
+                return true;
+            }
+        }
 
         if (rj == null) {
             AdventureText.send(p, Language.getMsg(p, Messages.REJOIN_NO_ARENA));
