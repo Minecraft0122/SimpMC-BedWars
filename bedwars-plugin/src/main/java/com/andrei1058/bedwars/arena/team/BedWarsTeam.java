@@ -223,12 +223,17 @@ public class BedWarsTeam implements ITeam {
      * Rejoin a team
      */
     public void reJoin(@NotNull Player p) {
-        reJoin(p, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN));
+        addPlayers(p);
+        activateMember(p, false);
     }
 
+    /**
+     * @deprecated Rejoining no longer starts a death-respawn countdown. The
+     * supplied value is retained only for binary compatibility.
+     */
+    @Deprecated
     public void reJoin(@NotNull Player p, int respawnTime) {
-        addPlayers(p);
-        arena.startReSpawnSession(p, respawnTime);
+        reJoin(p);
     }
 
     /**
@@ -385,6 +390,10 @@ public class BedWarsTeam implements ITeam {
      * Respawn a member
      */
     public void respawnMember(@NotNull Player p) {
+        activateMember(p, true);
+    }
+
+    private void activateMember(@NotNull Player p, boolean respawnFeedback) {
         getArena().getRespawnSessions().remove(p);
         if (reSpawnInvulnerability.containsKey(p.getUniqueId())) {
             reSpawnInvulnerability.replace(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
@@ -423,7 +432,9 @@ public class BedWarsTeam implements ITeam {
         }));
         p.setHealth(20);
 
-        nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE)), Component.empty(), 0, 20, 10);
+        if (respawnFeedback) {
+            nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE)), Component.empty(), 0, 20, 10);
+        }
 
         sendDefaultInventory(p, false);
         ShopCache sc = ShopCache.getShopCache(p.getUniqueId());
@@ -449,11 +460,15 @@ public class BedWarsTeam implements ITeam {
                 nms::isSword,
                 nms::isArmor
         );
-        Bukkit.getPluginManager().callEvent(new PlayerReSpawnEvent(p, getArena(), this));
+        if (respawnFeedback) {
+            Bukkit.getPluginManager().callEvent(new PlayerReSpawnEvent(p, getArena(), this));
+        }
         nms.sendPlayerSpawnPackets(p, getArena());
         InvisibilityManager.synchronizeViewer(getArena(), p);
 
-        Sounds.playSound("player-re-spawn", p);
+        if (respawnFeedback) {
+            Sounds.playSound("player-re-spawn", p);
+        }
     }
 
     /**
