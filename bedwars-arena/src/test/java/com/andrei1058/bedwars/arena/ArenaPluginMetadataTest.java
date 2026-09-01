@@ -18,7 +18,7 @@ class ArenaPluginMetadataTest {
             descriptor = new String(input.readAllBytes(), StandardCharsets.UTF_8);
         }
 
-        assertTrue(descriptor.contains("version: 6.0.1"));
+        assertTrue(descriptor.contains("version: 6.0.2"));
         assertTrue(descriptor.contains("main: com.andrei1058.bedwars.arena.ArenaBedWarsPlugin"));
         assertTrue(descriptor.contains("竞技场插件"));
     }

@@ -1162,7 +1162,7 @@ public class Arena implements IArena {
             sc.getCachedItems().add(ci);
         }
 
-        reJoin.getBwt().reJoin(p, ev.getRespawnTime());
+        reJoin.getBwt().reJoin(p);
         reJoin.destroy(false);
 
         // PlayerReJoinEvent is cancellable and therefore fires before the
