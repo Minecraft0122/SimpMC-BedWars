@@ -1,3 +1,9 @@
+## 1.0.7 - 2026-09-02
+
+- 1.8 后端的玩家碰撞状态现在只通过 Spigot `Player.Spigot#setCollidesWithEntities` 写入，使服务端和反作弊读取到一致状态。
+- 移除箭矢 tick 中直接改写 NMS `collidesWithEntities` 字段的兼容桥，避免出现 Bukkit/Spigot 状态与瞬时 NMS 状态不一致。
+- 1.8 协议没有 1.9+ 的 Scoreboard Team `collisionRule`，因此本分支只能公开全实体碰撞开关，不能伪造“仅队友无碰撞”的服务端规则。
+
 ## 1.0.6 - 2026-08-30
 
 - 火球改为在原版爆炸事件中使用最终爆炸中心结算自定义伤害和击退，先取消原生火球伤害，避免近距离冲量叠加造成异常远击退。

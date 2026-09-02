@@ -205,6 +205,9 @@ public class v1_8_R3 extends VersionSupport {
 
     @Override
     public void setCollide(Player p, IArena a, boolean value) {
+        // Spigot 1.8 has no per-team collision rule. Keep the public Spigot
+        // entity state as the single source of truth so anti-cheat plugins see
+        // exactly the same collision state used by the server.
         p.spigot().setCollidesWithEntities(value);
     }
 
@@ -725,7 +728,6 @@ public class v1_8_R3 extends VersionSupport {
     @Override
     public void registerVersionListeners() {
         new VersionCommon(this);
-        getPlugin().getServer().getPluginManager().registerEvents(new LegacyArrowListener(VersionCommon.api), getPlugin());
     }
 
     @Override
