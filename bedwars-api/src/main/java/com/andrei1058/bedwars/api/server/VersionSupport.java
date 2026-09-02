@@ -243,7 +243,9 @@ public abstract class VersionSupport {
     public abstract void setBlockTeamColor(Block block, TeamColor teamColor);
 
     /**
-     * Disable collisions in 1.9+
+     * Refresh the arena collision policy. Implementations must use the
+     * Bukkit/Paper scoreboard team rules rather than changing the entity
+     * collidable flag, which can trigger anti-cheat false positives.
      */
     public abstract void setCollide(Player p, IArena a, boolean value);
 

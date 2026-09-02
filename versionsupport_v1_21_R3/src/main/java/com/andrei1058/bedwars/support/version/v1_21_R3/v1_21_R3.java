@@ -417,10 +417,10 @@ public class v1_21_R3 extends VersionSupport {
 
     @Override
     public void setCollide(Player p, IArena arena, boolean value) {
-        p.setCollidable(value);
-        if (arena != null) {
-            arena.updateSpectatorCollideRule(p, value);
-        }
+        // Collision is controlled by the Bukkit Scoreboard Team rules built
+        // by the TAB service. Do not mutate the entity-level collidable flag:
+        // that packet/state change causes false positives in anti-cheat
+        // plugins and is not needed for teammate collision control.
     }
 
     @Override
