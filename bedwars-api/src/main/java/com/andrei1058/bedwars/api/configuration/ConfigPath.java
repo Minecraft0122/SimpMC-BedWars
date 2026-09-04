@@ -82,6 +82,11 @@ public class ConfigPath {
     public static final String GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS = "bungee-settings.lobby-sockets";
     public static final String GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID = "bungee-settings.server-id";
     public static final String GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT = "bungee-settings.bwp-time-out";
+    /** TCP socket endpoint and credentials used by the v2 lobby protocol. */
+    public static final String GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER = "bungee-settings.proxy-server";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_SOCKET_SECRET = "bungee-settings.socket-secret";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS = "bungee-settings.dispatch-timeout-seconds";
+    public static final String GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS = "bungee-settings.status-heartbeat-seconds";
 
     public static final String GENERAL_CONFIGURATION_ALLOW_FIRE_EXTINGUISH = "allow-fire-extinguish";
     public static final String GENERAL_CONFIGURATION_ENABLE_HALLOWEEN = "enable-halloween-feature";

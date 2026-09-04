@@ -27,7 +27,6 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ReJoin;
-import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.lobbysocket.LoadedUser;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
@@ -63,11 +62,13 @@ public class JoinListenerBungee implements Listener {
 
             // Check if there is an arena to rejoin
             ReJoin reJoin = ReJoin.getPlayer(p);
-            if (reJoin != null) {
-                // If is not allowed to rejoin
-                if (!(p.hasPermission(Permissions.PERMISSION_REJOIN) || reJoin.canReJoin())) {
+            if (proxyUser.expectsRejoin(reJoin != null)) {
+                if (reJoin == null
+                        || proxyUser.isTimedOut()
+                        || !proxyUser.matchesRejoinReservation(reJoin.getReservationId())
+                        || !reJoin.canReJoin()) {
                     e.disallow(PlayerLoginEvent.Result.KICK_OTHER, playerLang.m(Messages.REJOIN_DENIED));
-                    reJoin.destroy(true);
+                    proxyUser.destroy("Rejoin reservation is missing or no longer valid.");
                 }
                 // Stop here, rejoin handled. More will be handled at PlayerJoinEvent
                 return;
@@ -77,7 +78,7 @@ public class JoinListenerBungee implements Listener {
             GameState status = arena != null ? arena.getStatus() : null;
 
             // check if arena is not available, time out etc.
-            if (arena == null || proxyUser.isTimedOut() || status == GameState.restarting) {
+            if (arena == null || proxyUser.isTimedOut() || !proxyUser.acceptsArenaStatus(status)) {
                 e.disallow(PlayerLoginEvent.Result.KICK_OTHER, playerLang.m(Messages.ARENA_STATUS_RESTARTING_NAME));
                 proxyUser.destroy("Time out or game unavailable at PlayerLoginEvent");
                 return;
@@ -151,11 +152,14 @@ public class JoinListenerBungee implements Listener {
 
             // Check if has an arena to ReJoin
             ReJoin reJoin = ReJoin.getPlayer(p);
-            if (reJoin != null) {
+            if (proxyUser.expectsRejoin(reJoin != null)) {
                 // Check if can re-join
-                if (reJoin.canReJoin()) {
+                if (reJoin != null
+                        && !proxyUser.isTimedOut()
+                        && proxyUser.matchesRejoinReservation(reJoin.getReservationId())
+                        && reJoin.canReJoin()
+                        && reJoin.reJoin(p)) {
                     JoinHandlerCommon.displayCustomerDetails(p);
-                    reJoin.reJoin(p);
                     // Cache player language
                     Language.setPlayerLanguage(p.getUniqueId(), playerLang.getIso());
                 } else {
@@ -171,7 +175,7 @@ public class JoinListenerBungee implements Listener {
             GameState status = arena != null ? arena.getStatus() : null;
 
             // Check if the arena is still available or request time-out etc.
-            if (arena == null || proxyUser.isTimedOut() || status == GameState.restarting) {
+            if (arena == null || proxyUser.isTimedOut() || !proxyUser.acceptsArenaStatus(status)) {
                 p.kickPlayer(playerLang.m(Messages.ARENA_STATUS_RESTARTING_NAME));
                 proxyUser.destroy("Time out or game unavailable at PlayerLoginEvent");
                 return;

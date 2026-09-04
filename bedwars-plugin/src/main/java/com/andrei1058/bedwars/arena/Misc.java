@@ -101,12 +101,33 @@ public class Misc {
     }
 
 
+    /**
+     * Connect a player to a VC/Bungee server through the standard plugin
+     * messaging channel. The destination must be the exact server key known
+     * by the proxy.
+     */
     @SuppressWarnings("UnstableApiUsage")
+    public static boolean connectToProxyServer(@Nullable Player p, String serverName) {
+        if (p == null || !p.isOnline() || serverName == null || serverName.trim().isEmpty()) return false;
+        try {
+            ByteArrayDataOutput out = ByteStreams.newDataOutput();
+            out.writeUTF("Connect");
+            out.writeUTF(serverName.trim());
+            p.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    /** Connect a player to the lobby configured for this arena node. */
+    public static boolean connectToProxyLobby(@Nullable Player p) {
+        String lobbyServer = config == null ? null : config.getYml().getString("lobbyServer", "");
+        return connectToProxyServer(p, lobbyServer);
+    }
+
     private static void forceKick(Player p, @Nullable IArena arena, boolean notAbandon) {
-        ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF("Connect");
-        out.writeUTF(config.getYml().getString("lobbyServer"));
-        p.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        connectToProxyLobby(p);
         if (arena != null && !notAbandon && arena.getStatus() == GameState.playing) {
             if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
                 arena.abandonGame(p);

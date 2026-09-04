@@ -96,7 +96,14 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "yourServer.Com");
         yml.addDefault(ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_POWERED_BY, "BedWars1058");
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID, "bw1");
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT, 5000);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT, 23000);
+        // v2 Lobby/Arena socket protocol. Empty values preserve the old
+        // trusted-network behavior, while production deployments should set
+        // a unique proxy server key and a shared random socket secret.
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_PROXY_SERVER, "");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_SOCKET_SECRET, "");
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_DISPATCH_TIMEOUT_SECONDS, 8);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS, 15);
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_HUNGER_WAITING, false);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_HUNGER_INGAME, false);

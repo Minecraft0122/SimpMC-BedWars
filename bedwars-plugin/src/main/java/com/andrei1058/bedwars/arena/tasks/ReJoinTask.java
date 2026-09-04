@@ -24,6 +24,7 @@ import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
+import com.andrei1058.bedwars.arena.ReJoin;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Contract;
@@ -40,16 +41,30 @@ public class ReJoinTask implements Runnable {
 
     private final IArena arena;
     private final ITeam bedWarsTeam;
+    private final ReJoin reJoin;
     private final BukkitTask task;
+    private boolean destroyed;
 
     public ReJoinTask(IArena arena, ITeam bedWarsTeam) {
+        this(null, arena, bedWarsTeam);
+    }
+
+    public ReJoinTask(ReJoin reJoin, IArena arena, ITeam bedWarsTeam) {
+        this.reJoin = reJoin;
         this.arena = arena;
         this.bedWarsTeam = bedWarsTeam;
-        task = Bukkit.getScheduler().runTaskLater(BedWars.plugin, this, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME) * 20L);
+        task = Bukkit.getScheduler().runTaskLater(BedWars.plugin, this,
+                Math.max(1, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME)) * 20L);
+        reJoinTasks.add(this);
     }
 
     @Override
     public void run() {
+        if (reJoin != null) {
+            reJoin.expire();
+            destroy();
+            return;
+        }
         if (arena == null) {
             destroy();
             return;
@@ -79,6 +94,8 @@ public class ReJoinTask implements Runnable {
      * Destroy task
      */
     public void destroy() {
+        if (destroyed) return;
+        destroyed = true;
         reJoinTasks.remove(this);
         task.cancel();
     }
@@ -93,6 +110,6 @@ public class ReJoinTask implements Runnable {
     }
 
     public void cancel() {
-        task.cancel();
+        destroy();
     }
 }

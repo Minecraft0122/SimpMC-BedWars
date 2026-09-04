@@ -15,7 +15,7 @@ Once your bed is destroyed, you cannot respawn.
 This software runs on [Spigot](https://www.spigotmc.org/) and NMS.
 Spigot forks without compiled NMS code are not supported.
 Officially supported servers are [spigot](https://www.spigotmc.org/) and [paper](https://papermc.io/).
-It is required to use **Java 11** or newer.
+This legacy branch is compiled for **Java 8** and can run on Zulu JDK 8.
 
 The internal world restore system is based on zipping and unzipping maps which can become
 heavy if you are still making use of HDDs and you do not have a decent CPU, for a better
@@ -36,7 +36,32 @@ You can find a list of pre-made server setups and a lot of community add-ons [on
 - **SHARED**: can run among other mini-games on the same spigot instance. Games will only be accessible via commands.
 - **MULTIARENA**: will require an entire server instance for hosting the mini-game. It will protect the lobby world and games can be joined via commands, NPCs, signs and GUIs.
 - **BUNGEE-LEGACY**: the old classic bungee mode where a game means an entire server instance. You'll be added to the game when joining the server. Arena status will be displayed as MOTD.
-- **BUNGEE**: a brand new scalable bungee mode. It can host multiple arenas on the same server instance, clone and start new arenas when needed so other players can join. The server can be automatically restarted after a certain amount of games played. This will require installing [BedWarsProxy](https://www.spigotmc.org/resources/bedwarsproxy.66642/) on your lobby servers so players can join. And of course, you can run as many servers as you want in bungee mode.
+- **BUNGEE**: scalable proxy mode. This 1.8 branch runs as an arena node and connects to the SimpMC-BedWars 1.21.11 Lobby JAR for matchmaking and player dispatch.
+
+## 接入 1.21.11 跨服大厅
+
+本分支可作为 Spigot 1.8.8/1.8.9 的 `ARENA` 节点，直接接入 1.21.11 `SimpMC-BedWars-Lobby` 使用的 v2 跨服协议。1.8 子服只加载地图和运行对局，不在 1.8 上安装 Lobby JAR。插件按 Java 8 字节码构建，可使用 Zulu JDK 8 启动。
+
+每个 1.8 子服使用不同的 `server-id`。`proxy-server` 必须与 Velocity/BungeeCord 配置中的后端服务器键名完全一致；`lobby-sockets` 指向 1.21.11 大厅的 `lobby-listen` 地址，`socket-secret` 与大厅保持一致：
+
+```yaml
+serverType: BUNGEE
+lobbyServer: hub
+
+bungee-settings:
+  server-id: bw-legacy-castle-01
+  proxy-server: bw-legacy-castle-01
+  lobby-sockets:
+    - 10.0.0.10:2019
+  socket-secret: "请替换为与 1.21.11 大厅相同的随机长字符串"
+  dispatch-timeout-seconds: 8
+  status-heartbeat-seconds: 15
+  bwp-time-out: 23000
+```
+
+1.21.11 大厅仍按正常 Lobby 配置监听上述地址。它会记录该节点上报的运行实例、人数、状态、分组和观战能力；收到加入请求后先等待 1.8 子服返回 `PLD_READY`，再通过代理执行 `Connect`。玩家掉线时，1.8 子服还会上报带有效期和唯一 reservation-id 的重连租约，因此 `/rejoin` 会返回原竞技场而不是重新随机匹配。
+
+控制套接字是明文 TCP，只应开放在受信任内网。生产环境必须设置随机 `socket-secret`，并用防火墙限制大厅监听端口只允许竞技场子服访问。玩家只能连接代理入口，不应直接连接 1.8 后端端口。
 
 ###### Language | Per player language system:
 - each player can receive messages, holograms, GUIs etc. in their desired language. /bw lang.

@@ -61,6 +61,7 @@ import com.andrei1058.bedwars.listeners.chat.ChatAFK;
 import com.andrei1058.bedwars.listeners.chat.ChatFormatting;
 import com.andrei1058.bedwars.listeners.joinhandler.*;
 import com.andrei1058.bedwars.lobbysocket.ArenaSocket;
+import com.andrei1058.bedwars.lobbysocket.ArenaListeners;
 import com.andrei1058.bedwars.lobbysocket.LoadedUsersCleaner;
 import com.andrei1058.bedwars.lobbysocket.SendTask;
 import com.andrei1058.bedwars.maprestore.internal.InternalAdapter;
@@ -281,10 +282,10 @@ public class BedWars extends JavaPlugin {
 
         if (getServerType() == ServerType.BUNGEE) {
             if (autoscale) {
-                //registerEvents(new ArenaListeners());
+                ArenaSocket.lobbies.clear();
                 ArenaSocket.lobbies.addAll(config.getList(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS));
                 new SendTask();
-                registerEvents(new AutoscaleListener(), new PrePartyListener(), new JoinListenerBungee());
+                registerEvents(new ArenaListeners(), new AutoscaleListener(), new PrePartyListener(), new JoinListenerBungee());
                 Bukkit.getScheduler().runTaskTimerAsynchronously(this, new LoadedUsersCleaner(), 60L, 60L);
             } else {
                 registerEvents(new ServerPingListener(), new JoinListenerBungeeLegacy());

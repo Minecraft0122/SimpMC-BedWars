@@ -18,12 +18,22 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
-        run: mvn -B -U -DskipTests package -s ci_settings.xml
+      - name: Build and test with Maven
+        run: mvn -B -U clean verify -s ci_settings.xml
+
+      - name: Verify plugin jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          plugin_path="bedwars-plugin/target/SimpMC-BW1.8.8-${version}.jar"
+          test -f "$plugin_path"
+          grep -Fx "version: ${version}" < <(unzip -p "$plugin_path" plugin.yml)
+          grep -Fx "main: com.andrei1058.bedwars.BedWars" < <(unzip -p "$plugin_path" plugin.yml)
 
       - name: Upload plugin jar
         uses: actions/upload-artifact@v4
         with:
-          name: BedWars1058-plugin
-          path: bedwars-plugin/target/*.jar
+          name: SimpMC-BW1.8.8-plugin
+          path: bedwars-plugin/target/SimpMC-BW1.8.8-*.jar
           if-no-files-found: error
