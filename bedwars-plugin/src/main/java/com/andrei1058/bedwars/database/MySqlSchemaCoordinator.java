@@ -131,7 +131,11 @@ public final class MySqlSchemaCoordinator {
     private static void releaseNamedLock(Connection connection, String lockName) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("SELECT RELEASE_LOCK(?)")) {
             statement.setString(1, lockName);
-            statement.executeQuery();
+            try (ResultSet ignored = statement.executeQuery()) {
+                /* Consume the single scalar result before returning the
+                 * connection to Hikari so no server-side cursor remains. */
+                if (ignored.next()) ignored.getInt(1);
+            }
         }
     }
 
