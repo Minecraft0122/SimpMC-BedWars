@@ -25,6 +25,7 @@ permissions:
       bw.command.stats: true
       bw.command.team: true
       bw.command.invite: true
+      bw.command.highlight: true
       bw.command.teleporter: true
       bw.command.upgradesmenu: true
       bw.command.party: true
@@ -42,6 +43,7 @@ permissions:
       bw.command.stats: true
       bw.command.team: true
       bw.command.invite: true
+      bw.command.highlight: true
       bw.command.forcestart: true
       bw.command.start: true
       bw.command.setlobby: true

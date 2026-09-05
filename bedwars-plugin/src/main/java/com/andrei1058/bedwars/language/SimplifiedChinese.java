@@ -65,7 +65,7 @@ public class SimplifiedChinese extends Language {
             yml.set("player-die-knocked-final", null);
         }
 
-        yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<游戏/模式>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/" + mainCmd + " start &3（赞助者）"));
+        yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<游戏/模式>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/" + mainCmd + " highlight", "&2▪ &7/" + mainCmd + " start &3（赞助者）"));
         yml.addDefault(Messages.COMMAND_LANG_LIST_HEADER, "{prefix} &2可用的语言：");
         yml.addDefault(Messages.COMMAND_LANG_LIST_FORMAT, "&a▪  &7{iso} - &f{name}");
         yml.addDefault(Messages.COMMAND_LANG_USAGE, "{prefix}&用法：/lang &f&o<iso>");
@@ -133,6 +133,10 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.COMMAND_FORCESTART_SUCCESS, "&c▪ &7游戏开始倒计时缩短！");
         yml.addDefault(Messages.COMMAND_FORCESTART_NO_PERM, "{prefix}&7你不可以强制开始游戏！\n&7请考虑赞助以得到对应权限！");
         yml.addDefault(Messages.COMMAND_COOLDOWN, "&c你不能这么做！ 请等待 {seconds} 秒！");
+        yml.addDefault(Messages.COMMAND_HIGHLIGHT_NOT_IN_GAME, "{prefix}&c你不在进行中的竞技场中！");
+        yml.addDefault(Messages.COMMAND_HIGHLIGHT_NO_TEAMMATES, "{prefix}&e当前没有可高光的队友。");
+        yml.addDefault(Messages.COMMAND_HIGHLIGHT_ENABLED, "{prefix}&a已高光队友：&f{players}");
+        yml.addDefault(Messages.COMMAND_HIGHLIGHT_DISABLED, "{prefix}&7已关闭队友高光。");
         yml.addDefault(Messages.ARENA_JOIN_VIP_KICK, "{prefix}&c抱歉，由于有一位赞助者加入该游戏，因此你被移出了该游戏。\n&a请考虑赞助以支持我们！ &7&o(点击查看)");
         yml.addDefault(Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT, "{prefix}&c玩家不足！ 倒计时取消！");
         yml.addDefault(Messages.ARENA_RESTART_PLAYER_KICK, "{prefix}&e当前游戏正在重启。");
@@ -1132,7 +1136,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_MSG + "3", "&c&l报警陷阱被{color}&l{team}的&7&l{player}&c&l触发了！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_TITLE + "3", "&c&l警报！！！");
         yml.addDefault(Messages.UPGRADES_TRAP_CUSTOM_SUBTITLE + "3", "{color}{team}&f触发了陷阱！");
-        updateToLatestVersion(19, SimplifiedChinese::migrateSchema16);
+        updateToLatestVersion(20, SimplifiedChinese::migrateSchema20);
         setPrefix(m(Messages.PREFIX));
         setPrefixStatic(m(Messages.PREFIX));
     }
@@ -1142,6 +1146,11 @@ public class SimplifiedChinese extends Language {
             migrateLegacyMessages(yml);
         }
         Language.migrateBuiltInTabPlayerRows(yml);
+    }
+
+    static void migrateSchema20(YamlConfiguration yml) {
+        migrateSchema16(yml);
+        migrateCommandHelp(yml, mainCmd);
     }
 
     static void migrateLegacyMessages(YamlConfiguration yml) {
@@ -1166,9 +1175,11 @@ public class SimplifiedChinese extends Language {
     }
 
     static void migrateCommandHelp(YamlConfiguration yml, String commandName) {
-        replaceListIfEqual(yml, Messages.COMMAND_MAIN,
-                List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " start &3（赞助者）"),
-                List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/" + commandName + " start &3（赞助者）"));
+        List<String> oldBuiltIn = List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " start &3（赞助者）");
+        List<String> inviteBuiltIn = List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/" + commandName + " start &3（赞助者）");
+        List<String> currentBuiltIn = List.of("", "&2▪ &7/" + commandName + " stats", "&2▪ &7/" + commandName + " join &o<游戏/模式>", "&2▪ &7/" + commandName + " leave", "&2▪ &7/" + commandName + " lang", "&2▪ &7/" + commandName + " gui", "&2▪ &7/" + commandName + " invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/" + commandName + " highlight", "&2▪ &7/" + commandName + " start &3（赞助者）");
+        replaceListIfEqual(yml, Messages.COMMAND_MAIN, oldBuiltIn, inviteBuiltIn);
+        replaceListIfEqual(yml, Messages.COMMAND_MAIN, inviteBuiltIn, currentBuiltIn);
     }
 
     static void migrateCurrentMessageDefaults(YamlConfiguration yml) {

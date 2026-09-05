@@ -37,6 +37,7 @@ import com.andrei1058.bedwars.arena.despawnables.TargetListener;
 import com.andrei1058.bedwars.arena.feature.EnemyTrackerCompass;
 import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
 import com.andrei1058.bedwars.arena.feature.SpoilPlayerTNTFeature;
+import com.andrei1058.bedwars.arena.feature.TeammateHighlightManager;
 import com.andrei1058.bedwars.arena.spectator.SpectatorListeners;
 import com.andrei1058.bedwars.arena.team.PreGameSquadManager;
 import com.andrei1058.bedwars.arena.team.PreGameSquadGUI;
@@ -272,7 +273,7 @@ public class BedWars extends JavaPlugin {
                 new TargetListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),
                 PreGameSquadManager.getInstance(), PreGameSquadGUI.getInstance(),
-                selfRescuePlatform
+                selfRescuePlatform, TeammateHighlightManager.getInstance()
         );
 
         if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE)) {
@@ -569,6 +570,7 @@ public class BedWars extends JavaPlugin {
     public void onDisable() {
         shuttingDown = true;
         if (!serverSoftwareSupport) return;
+        TeammateHighlightManager.getInstance().clearAll();
         if (getServerType() == ServerType.BUNGEE) {
             ArenaSocket.disable();
             if (lobbySocketServer != null) {

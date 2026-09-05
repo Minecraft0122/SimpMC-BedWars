@@ -35,10 +35,10 @@ public abstract class SubCommand {
 
     private static final Set<String> PLAYER_COMMANDS = Set.of(
             "help", "cmds", "join", "leave", "lang", "teleporter", "gui", "stats",
-            "team", "invite", "upgradesmenu", "party");
+            "team", "invite", "highlight", "upgradesmenu", "party");
     private static final Set<String> PERMISSION_FREE_COMMANDS = Set.of(
             "help", "cmds", "join", "leave", "lang", "teleporter", "gui", "stats",
-            "team", "invite", "upgradesmenu", "party", "arenalist");
+            "team", "invite", "highlight", "upgradesmenu", "party", "arenalist");
 
     // SubCommand name
     private String name;

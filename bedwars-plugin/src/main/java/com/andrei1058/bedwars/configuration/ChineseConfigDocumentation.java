@@ -75,7 +75,12 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_HUNGER_WAITING, "是否允许等待阶段和游戏阶段消耗饥饿值。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ALLOW_FIRE_EXTINGUISH, "玩家是否可以扑灭竞技场中的火焰。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "队伍基地治疗池设置。");
-        comment(config, ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃力度、伤害与重心修正参数。");
+        comment(config, ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y,
+                "TNT 跳跃、爆炸击退与伤害参数；knockback-multiplier 默认 0.90，damage-teammates 和 damage-others 默认分别为 4 和 8。",
+                "击退倍率只影响玩家受到的 TNT 冲量，不改变方块爆炸范围；管理员自定义值会在配置升级时保留。");
+        comment(config, ConfigPath.GENERAL_TNT_KNOCKBACK_MULTIPLIER,
+                "TNT 对玩家的击退倍率，默认 0.90，范围为 0 至 4；0 表示不产生 TNT 击退。",
+                "该值同时作用于 TNT 跳和 TNT 对其他玩家的爆炸冲量，不会改变爆炸破坏范围。");
         comment(config, ConfigPath.GENERAL_TNT_PROTECTION_END_STONE_BLAST, "TNT 对末地石、玻璃等方块的爆炸抗性参数。");
         comment(config, ConfigPath.GENERAL_TNT_AUTO_IGNITE, "TNT 放置后是否自动点燃，以及引信持续 tick 数。");
         comment(config, ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,

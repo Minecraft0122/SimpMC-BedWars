@@ -178,7 +178,13 @@ public class BedWarsTeam implements ITeam {
      */
     public void firstSpawn(Player p) {
         if (p == null) return;
+        // A fresh game spawn must never inherit protection left by an earlier
+        // match or an interrupted respawn session.
+        reSpawnInvulnerability.remove(p.getUniqueId());
         SafeSpawnResolver.teleport(p, spawn);
+        // A player entity can carry vanilla no-damage ticks across a lobby
+        // teleport; clear them before the first playable tick.
+        p.setNoDamageTicks(0);
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
         // Keep the entity collidable so projectiles can still resolve a hit.

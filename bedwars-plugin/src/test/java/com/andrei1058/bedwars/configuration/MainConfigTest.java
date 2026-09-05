@@ -125,6 +125,36 @@ class MainConfigTest {
     }
 
     @Test
+    void slightlyReducesOnlyBuiltInTntDamageDefaults() {
+        YamlConfiguration defaults = new YamlConfiguration();
+        defaults.set(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES, 5.0D);
+        defaults.set(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, 10.0D);
+        YamlConfiguration customized = new YamlConfiguration();
+        customized.set(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES, 3.0D);
+        customized.set(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, -1.0D);
+
+        MainConfig.migrateTntDefaults(defaults, 33);
+        MainConfig.migrateTntDefaults(customized, 33);
+
+        assertEquals(4.0D, defaults.getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES));
+        assertEquals(8.0D, defaults.getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS));
+        assertEquals(3.0D, customized.getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES));
+        assertEquals(-1.0D, customized.getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS));
+    }
+
+    @Test
+    void doesNotRepeatTntDamageMigrationForCurrentSchema() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES, 5.0D);
+        configuration.set(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, 10.0D);
+
+        MainConfig.migrateTntDefaults(configuration, 34);
+
+        assertEquals(5.0D, configuration.getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES));
+        assertEquals(10.0D, configuration.getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS));
+    }
+
+    @Test
     void preservesEarlyLookingValuesWhenTheyWereCustomizedInANewerConfig() {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.set(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3.0);

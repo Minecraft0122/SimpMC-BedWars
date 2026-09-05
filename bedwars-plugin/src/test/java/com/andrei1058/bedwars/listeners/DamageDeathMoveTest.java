@@ -5,6 +5,7 @@ import com.andrei1058.bedwars.api.arena.team.ITeam;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.util.Vector;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
@@ -65,6 +66,30 @@ class DamageDeathMoveTest {
         assertFalse(DamageDeathMove.requiresManualRespawn(true));
         assertTrue(DamageDeathMove.requiresManualRespawn(false));
         assertTrue(DamageDeathMove.requiresManualRespawn(null));
+    }
+
+    @Test
+    void treatsRespawnProtectionAsActiveOnlyBeforeItsExpiry() {
+        assertTrue(DamageDeathMove.isRespawnProtectionActive(1_001L, 1_000L));
+        assertFalse(DamageDeathMove.isRespawnProtectionActive(1_001L, 1_001L));
+        assertFalse(DamageDeathMove.isRespawnProtectionActive(null, 1_000L));
+    }
+
+    @Test
+    void scalesTntJumpAndRejectsNonFiniteVectors() {
+        Vector normal = DamageDeathMove.calculateTntJumpVelocity(
+                new Vector(0, 64, 0), new Vector(2, 64, 0), 4, 0.5, 5, 2, 1.0);
+        Vector nerfed = DamageDeathMove.calculateTntJumpVelocity(
+                new Vector(0, 64, 0), new Vector(2, 64, 0), 4, 0.5, 5, 2, 0.9);
+
+        assertTrue(normal.lengthSquared() > nerfed.lengthSquared());
+        assertTrue(Double.isFinite(nerfed.getX()));
+        assertTrue(Double.isFinite(nerfed.getY()));
+        assertTrue(Double.isFinite(nerfed.getZ()));
+        assertEquals(new Vector(), DamageDeathMove.calculateTntJumpVelocity(
+                new Vector(0, 64, 0), new Vector(0, 64, 0), 4, 0.5, 5, 2, 0.9));
+        assertEquals(new Vector(), DamageDeathMove.calculateTntJumpVelocity(
+                new Vector(Double.NaN, 64, 0), new Vector(2, 64, 0), 4, 0.5, 5, 2, 0.9));
     }
 
     @Test

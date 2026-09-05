@@ -42,7 +42,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 33;
+    private static final int CONFIG_VERSION = 34;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -57,6 +57,9 @@ public class MainConfig extends ConfigManager {
     private static final double FIREBALL_HORIZONTAL_KNOCKBACK_DEFAULT = 1.15;
     private static final double FIREBALL_VERTICAL_KNOCKBACK_DEFAULT = 0.75;
     private static final double FIREBALL_ENEMY_DAMAGE_DEFAULT = 3.5;
+    private static final double TNT_KNOCKBACK_MULTIPLIER_DEFAULT = 0.9;
+    private static final double TNT_DAMAGE_TEAMMATES_DEFAULT = 4.0;
+    private static final double TNT_DAMAGE_OTHERS_DEFAULT = 8.0;
 
     public MainConfig(Plugin plugin, String name) {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
@@ -136,9 +139,10 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, 0.5);
         yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_STRENGTH_REDUCTION, 5);
         yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_Y_REDUCTION, 2);
+        yml.addDefault(ConfigPath.GENERAL_TNT_KNOCKBACK_MULTIPLIER, TNT_KNOCKBACK_MULTIPLIER_DEFAULT);
         yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_SELF, 1);
-        yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES, 5);
-        yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, 10);
+        yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES, TNT_DAMAGE_TEAMMATES_DEFAULT);
+        yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, TNT_DAMAGE_OTHERS_DEFAULT);
 
         // tnt block blast resistance
         yml.addDefault(ConfigPath.GENERAL_TNT_PROTECTION_END_STONE_BLAST, 12f);
@@ -372,7 +376,13 @@ public class MainConfig extends ConfigManager {
                 "0 秒后先把所有玩家安全送回大厅；确认竞技场世界无人后才卸载，传送失败不会踢人。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE, "治疗池功能设置。");
-        setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y, "TNT 跳跃、爆炸保护与伤害设置。");
+        setComments(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y,
+                "TNT 跳跃、爆炸击退、爆炸保护与伤害设置。",
+                "knockback-multiplier 默认 0.90，只缩放 TNT 对玩家的击退，不改变方块爆炸范围；damage-teammates 和 damage-others 的新默认值为 4 和 8。",
+                "管理员自定义值会在配置架构升级时保留。");
+        setComments(ConfigPath.GENERAL_TNT_KNOCKBACK_MULTIPLIER,
+                "TNT 对玩家的击退倍率；默认 0.90。范围为 0 至 4，0 表示不产生 TNT 击退。",
+                "该项同时作用于 TNT 跳和 TNT 对其他玩家的原生爆炸冲量，不会改变爆炸破坏范围。");
         setComments(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE,
                 "火球爆炸、击退、冷却与伤害设置。2.10.20 略微降低默认爆炸范围、击退和敌方伤害。",
                 "迁移器只调整仍使用上一版默认值的配置，不覆盖管理员自定义参数。");
@@ -418,6 +428,7 @@ public class MainConfig extends ConfigManager {
 
     private static boolean migrateLegacyConfig(YamlConfiguration yml, LegacyLobbyItemHistory legacyLobbyItemHistory) {
         int storedConfigVersion = yml.getInt(CONFIG_VERSION_PATH, 0);
+        migrateTntDefaults(yml, storedConfigVersion);
         if (migrateSchema28Only(yml, storedConfigVersion)) {
             migrateFireballDefaults(yml, storedConfigVersion);
             removeRetiredFullArenaCountdownSetting(yml);
@@ -718,6 +729,18 @@ public class MainConfig extends ConfigManager {
             upgradeLegacyNumber(yml, ConfigPath.GENERAL_FIREBALL_SNEAK_SPEED_MULTIPLIER, 1.5,
                     FIREBALL_SNEAK_SPEED_MULTIPLIER_DEFAULT);
         }
+    }
+
+    /**
+     * Reduce only the previous built-in TNT damage defaults. A server owner
+     * that changed either value keeps that choice during the schema upgrade.
+     */
+    static void migrateTntDefaults(YamlConfiguration yml, int storedConfigVersion) {
+        if (storedConfigVersion >= CONFIG_VERSION) return;
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES,
+                5.0, TNT_DAMAGE_TEAMMATES_DEFAULT);
+        upgradeLegacyNumber(yml, ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS,
+                10.0, TNT_DAMAGE_OTHERS_DEFAULT);
     }
 
     static void addFireballFlightRangeDefaults(YamlConfiguration yml) {

@@ -48,6 +48,7 @@ import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.listeners.dropshandler.PlayerDrops;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
+import io.papermc.paper.event.entity.EntityKnockbackEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -67,8 +68,10 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -89,6 +92,8 @@ public class DamageDeathMove implements Listener {
     private final double tntDamageSelf;
     private final double tntDamageTeammates;
     private final double tntDamageOthers;
+    private final double tntKnockbackMultiplier;
+    private final List<PendingTntExplosion> pendingTntExplosions = new ArrayList<>();
 
     public DamageDeathMove() {
         this.tntJumpBarycenterAlterationInY = config.getYml().getDouble(ConfigPath.GENERAL_TNT_JUMP_BARYCENTER_IN_Y);
@@ -97,6 +102,8 @@ public class DamageDeathMove implements Listener {
         this.tntDamageSelf = config.getYml().getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_SELF);
         this.tntDamageTeammates = config.getYml().getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES);
         this.tntDamageOthers = config.getYml().getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS);
+        this.tntKnockbackMultiplier = boundedTntKnockbackMultiplier(
+                config.getYml().getDouble(ConfigPath.GENERAL_TNT_KNOCKBACK_MULTIPLIER, 0.9D));
     }
 
     @EventHandler
@@ -184,6 +191,12 @@ public class DamageDeathMove implements Listener {
                     e.setCancelled(true);
                     return;
                 }
+                // DamageDeathMove also owns the plugin-level respawn
+                // protection. Check it before TNT applies any custom motion.
+                if (isRespawnProtected(p)) {
+                    e.setCancelled(true);
+                    return;
+                }
 
                 ITeam victimTeam = a.getTeam(p);
                 Player damager = null;
@@ -206,12 +219,10 @@ public class DamageDeathMove implements Listener {
                                 }
                                 // tnt jump. credits to feargames.it
                                 LivingEntity damaged = (LivingEntity) e.getEntity();
-                                Vector distance = damaged.getLocation().subtract(0, tntJumpBarycenterAlterationInY, 0).toVector().subtract(tnt.getLocation().toVector());
-                                Vector direction = distance.clone().normalize();
-                                double force = ((tnt.getYield() * tnt.getYield()) / (tntJumpStrengthReductionConstant + distance.length()));
-                                Vector resultingForce = direction.clone().multiply(force);
-                                resultingForce.setY(resultingForce.getY() / (distance.length() + tntJumpYAxisReductionConstant));
-                                damaged.setVelocity(resultingForce);
+                                damaged.setVelocity(calculateTntJumpVelocity(
+                                        tnt.getLocation().toVector(), damaged.getLocation().toVector(), tnt.getYield(),
+                                        tntJumpBarycenterAlterationInY, tntJumpStrengthReductionConstant,
+                                        tntJumpYAxisReductionConstant, tntKnockbackMultiplier));
                             } else {
                                 damagerTeam = a.getTeam(damager);
                                 if (victimTeam != null && victimTeam.equals(damagerTeam)) {
@@ -243,11 +254,6 @@ public class DamageDeathMove implements Listener {
                         return;
                     }
 
-                    // protection after re-spawn
-                    if (isRespawnProtected(p)) {
-                        e.setCancelled(true);
-                        return;
-                    }
                     // but if the damageR is the re-spawning player remove protection
                     BedWarsTeam.reSpawnInvulnerability.remove(damager.getUniqueId());
 
@@ -301,6 +307,61 @@ public class DamageDeathMove implements Listener {
                 }
             }
         }*/
+    }
+
+    /**
+     * Record a TNT explosion so Paper's native explosion knockback can be
+     * scaled without changing the TNT block-destruction radius. The record is
+     * removed on the next tick, after all knockback events for this explosion
+     * have been delivered.
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onTntExplosion(EntityExplodeEvent event) {
+        if (!(event.getEntity() instanceof TNTPrimed tnt)) return;
+        Location location = event.getLocation();
+        if (location.getWorld() == null) return;
+        IArena arena = Arena.getArenaByIdentifier(location.getWorld().getName());
+        if (arena == null || arena.getStatus() != GameState.playing) return;
+
+        UUID source = tnt.getSource() instanceof Player player ? player.getUniqueId() : null;
+        PendingTntExplosion pending = new PendingTntExplosion(
+                arena, location.getWorld().getName(), location.toVector(), source,
+                Math.max(0.0D, tnt.getYield()));
+        pendingTntExplosions.add(pending);
+        Bukkit.getScheduler().runTask(plugin, () -> pendingTntExplosions.remove(pending));
+    }
+
+    /**
+     * Scale only TNT explosion knockback. Fireballs use their own velocity
+     * path and therefore do not create a pending TNT record.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onTntKnockback(EntityKnockbackEvent event) {
+        if (event.getCause() != EntityKnockbackEvent.Cause.EXPLOSION) return;
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null || arena.getStatus() != GameState.playing || !arena.isPlayer(player)) return;
+        if (isRespawnProtected(player)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        PendingTntExplosion pending = findPendingTntExplosion(player, arena);
+        if (pending == null) return;
+        pending.processedTargets.add(player.getUniqueId());
+
+        if (pending.source != null && pending.source.equals(player.getUniqueId())) {
+            event.setKnockback(calculateTntJumpVelocity(
+                    pending.position, player.getLocation().toVector(), pending.yield,
+                    tntJumpBarycenterAlterationInY, tntJumpStrengthReductionConstant,
+                    tntJumpYAxisReductionConstant, tntKnockbackMultiplier));
+        } else {
+            Vector knockback = event.getKnockback();
+            if (knockback != null) {
+                event.setKnockback(scaleTntKnockback(knockback, tntKnockbackMultiplier));
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -790,13 +851,78 @@ public class DamageDeathMove implements Listener {
         return !Boolean.TRUE.equals(immediateRespawn);
     }
 
+    static boolean isRespawnProtectionActive(Long expiresAt, long now) {
+        return expiresAt != null && expiresAt > now;
+    }
+
     private static boolean isRespawnProtected(Player player) {
         UUID playerId = player.getUniqueId();
         Long expiresAt = BedWarsTeam.reSpawnInvulnerability.get(playerId);
         if (expiresAt == null) return false;
-        if (expiresAt > System.currentTimeMillis()) return true;
+        if (isRespawnProtectionActive(expiresAt, System.currentTimeMillis())) return true;
         BedWarsTeam.reSpawnInvulnerability.remove(playerId, expiresAt);
         return false;
+    }
+
+    /**
+     * Calculate the TNT jump vector without mutating either input vector.
+     * Invalid or coincident positions produce a zero vector instead of NaN or
+     * infinity, which would otherwise poison the player's motion state.
+     */
+    static Vector calculateTntJumpVelocity(Vector tntPosition, Vector playerPosition, double yield,
+                                            double barycenterAlterationInY, double strengthReduction,
+                                            double yAxisReduction, double knockbackMultiplier) {
+        if (!isFiniteVector(tntPosition) || !isFiniteVector(playerPosition)) {
+            return new Vector();
+        }
+
+        Vector distance = playerPosition.clone().subtract(tntPosition);
+        if (distance.lengthSquared() <= 1.0E-18D) return new Vector();
+        double safeBarycenter = Double.isFinite(barycenterAlterationInY) ? barycenterAlterationInY : 0.0D;
+        distance.setY(distance.getY() - safeBarycenter);
+        double length = distance.length();
+        if (!Double.isFinite(length) || length <= 1.0E-9D) return new Vector();
+
+        double safeYield = Double.isFinite(yield) ? Math.max(0.0D, yield) : 0.0D;
+        double safeStrengthReduction = Double.isFinite(strengthReduction)
+                ? Math.max(0.0D, strengthReduction) : 0.0D;
+        double safeYAxisReduction = Double.isFinite(yAxisReduction)
+                ? Math.max(0.0D, yAxisReduction) : 0.0D;
+        double denominator = safeStrengthReduction + length;
+        double force = denominator <= 1.0E-9D ? 0.0D : (safeYield * safeYield) / denominator;
+        if (!Double.isFinite(force)) return new Vector();
+
+        double safeMultiplier = boundedTntKnockbackMultiplier(knockbackMultiplier);
+        Vector result = distance.multiply(1.0D / length).multiply(force * safeMultiplier);
+        result.setY(result.getY() / (length + safeYAxisReduction));
+        return isFiniteVector(result) ? result : new Vector();
+    }
+
+    static double boundedTntKnockbackMultiplier(double value) {
+        return Double.isFinite(value) ? Math.min(4.0D, Math.max(0.0D, value)) : 0.9D;
+    }
+
+    private static Vector scaleTntKnockback(Vector knockback, double multiplier) {
+        if (!isFiniteVector(knockback)) return new Vector();
+        return knockback.clone().multiply(boundedTntKnockbackMultiplier(multiplier));
+    }
+
+    private PendingTntExplosion findPendingTntExplosion(Player player, IArena arena) {
+        UUID playerId = player.getUniqueId();
+        String worldName = player.getWorld().getName();
+        Vector playerPosition = player.getLocation().toVector();
+        for (PendingTntExplosion pending : pendingTntExplosions) {
+            if (pending.arena != arena || !pending.worldName.equals(worldName)
+                    || pending.processedTargets.contains(playerId)) continue;
+            double radius = Math.max(4.0D, Math.min(8.0D, pending.yield + 1.0D));
+            if (pending.position.distanceSquared(playerPosition) <= radius * radius) return pending;
+        }
+        return null;
+    }
+
+    private static boolean isFiniteVector(Vector vector) {
+        return vector != null && Double.isFinite(vector.getX())
+                && Double.isFinite(vector.getY()) && Double.isFinite(vector.getZ());
     }
 
     private boolean isVoidDeath(Player player, EntityDamageEvent damageEvent, IArena arena) {
@@ -867,6 +993,24 @@ public class DamageDeathMove implements Listener {
             nms.spawnSilverfish(loc, t, shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_SPEED), shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_HEALTH),
                     shop.getInt(ConfigPath.SHOP_SPECIAL_SILVERFISH_DESPAWN),
                     BedWars.shop.getYml().getDouble(ConfigPath.SHOP_SPECIAL_SILVERFISH_DAMAGE));
+        }
+    }
+
+    private static final class PendingTntExplosion {
+        private final IArena arena;
+        private final String worldName;
+        private final Vector position;
+        private final UUID source;
+        private final double yield;
+        private final Set<UUID> processedTargets = new HashSet<>();
+
+        private PendingTntExplosion(IArena arena, String worldName, Vector position,
+                                    UUID source, double yield) {
+            this.arena = arena;
+            this.worldName = worldName;
+            this.position = position.clone();
+            this.source = source;
+            this.yield = yield;
         }
     }
 }

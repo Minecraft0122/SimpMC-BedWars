@@ -29,6 +29,7 @@ class SubCommandPermissionTest {
     void officialPermissionFreeCommandsWorkWithoutAnyGrant() {
         assertTrue(new TestCommand(new TestParent(), "join").hasPermission(sender()));
         assertTrue(new TestCommand(new TestParent(), "party").hasPermission(sender()));
+        assertTrue(new TestCommand(new TestParent(), "highlight").hasPermission(sender()));
         assertTrue(new TestCommand(new TestParent(), "arenaList").hasPermission(sender()));
         assertFalse(new TestCommand(new TestParent(), "shout").hasPermission(sender()));
         assertFalse(new TestCommand(new TestParent(), "rejoin").hasPermission(sender()));
@@ -37,6 +38,7 @@ class SubCommandPermissionTest {
     @Test
     void playerBundleDoesNotBypassOfficialRestrictedCommands() {
         assertTrue(new TestCommand(new TestParent(), "join").hasPermission(sender("bw.player")));
+        assertTrue(new TestCommand(new TestParent(), "highlight").hasPermission(sender("bw.player")));
         assertFalse(new TestCommand(new TestParent(), "shout").hasPermission(sender("bw.player")));
         assertFalse(new TestCommand(new TestParent(), "rejoin").hasPermission(sender("bw.player")));
         assertFalse(new TestCommand(new TestParent(), "reload").hasPermission(sender("bw.player")));

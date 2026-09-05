@@ -238,4 +238,33 @@ class SimplifiedChineseMigrationTest {
 
         assertTrue(language.getStringList(Messages.COMMAND_MAIN).contains("&2▪ &7/bw invite &o<大厅或未开局竞技场玩家>"));
     }
+
+    @Test
+    void addsTeammateHighlightToTheExistingBuiltInCommandHelp() {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(Messages.COMMAND_MAIN, List.of("", "&2▪ &7/bw stats", "&2▪ &7/bw join &o<游戏/模式>",
+                "&2▪ &7/bw leave", "&2▪ &7/bw lang", "&2▪ &7/bw gui",
+                "&2▪ &7/bw invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/bw start &3（赞助者）"));
+
+        SimplifiedChinese.migrateCommandHelp(language, "bw");
+
+        assertTrue(language.getStringList(Messages.COMMAND_MAIN)
+                .contains("&2▪ &7/bw highlight"));
+    }
+
+    @Test
+    void schemaTwentyRunsTheCommandHelpMigration() {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(ConfigManager.CONFIG_VERSION_PATH, 19);
+        language.set(Messages.COMMAND_MAIN, List.of("", "&2▪ &7/bw stats", "&2▪ &7/bw join &o<游戏/模式>",
+                "&2▪ &7/bw leave", "&2▪ &7/bw lang", "&2▪ &7/bw gui",
+                "&2▪ &7/bw invite &o<大厅或未开局竞技场玩家>", "&2▪ &7/bw start &3（赞助者）"));
+
+        assertTrue(ConfigManager.applyVersionedMigration(language, 20,
+                SimplifiedChinese::migrateSchema20));
+
+        assertTrue(language.getStringList(Messages.COMMAND_MAIN)
+                .contains("&2▪ &7/bw highlight"));
+        assertEquals(20, language.getInt(ConfigManager.CONFIG_VERSION_PATH));
+    }
 }

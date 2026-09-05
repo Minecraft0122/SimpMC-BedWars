@@ -104,6 +104,10 @@ public class Messages {
     public static String COMMAND_FORCESTART_SUCCESS = "cmd-start";
     public static String COMMAND_FORCESTART_NO_PERM = "cmd-start-no-perm";
     public static String COMMAND_COOLDOWN = "cmd-cooldown";
+    public static String COMMAND_HIGHLIGHT_NOT_IN_GAME = "cmd-highlight-not-in-game";
+    public static String COMMAND_HIGHLIGHT_NO_TEAMMATES = "cmd-highlight-no-teammates";
+    public static String COMMAND_HIGHLIGHT_ENABLED = "cmd-highlight-enabled";
+    public static String COMMAND_HIGHLIGHT_DISABLED = "cmd-highlight-disabled";
 
     /**
      * Arena join/ leave related

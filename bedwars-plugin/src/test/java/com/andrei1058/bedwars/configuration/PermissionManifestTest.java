@@ -30,7 +30,7 @@ class PermissionManifestTest {
                 .filter(permission -> permission.getName().equals("bw.command.*"))
                 .findFirst().orElseThrow();
         Set<String> common = Set.of("help", "cmds", "join", "leave", "lang", "gui", "stats", "team",
-                "invite", "teleporter", "upgradesmenu", "party");
+                "invite", "highlight", "teleporter", "upgradesmenu", "party");
 
         for (String command : common) {
             assertTrue(player.getChildren().getOrDefault("bw.command." + command, false), command);

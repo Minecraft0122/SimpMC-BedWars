@@ -269,6 +269,7 @@ public class ConfigPath {
     public static final String GENERAL_TNT_JUMP_BARYCENTER_IN_Y = GENERAL_TNT_JUMP_PATH + ".barycenter-alteration-in-y";
     public static final String GENERAL_TNT_JUMP_STRENGTH_REDUCTION = GENERAL_TNT_JUMP_PATH + ".strength-reduction-constant";
     public static final String GENERAL_TNT_JUMP_Y_REDUCTION = GENERAL_TNT_JUMP_PATH + ".y-axis-reduction-constant";
+    public static final String GENERAL_TNT_KNOCKBACK_MULTIPLIER = GENERAL_TNT_JUMP_PATH + ".knockback-multiplier";
     public static final String GENERAL_TNT_JUMP_DAMAGE_SELF = GENERAL_TNT_JUMP_PATH + ".damage-self";
     public static final String GENERAL_TNT_JUMP_DAMAGE_TEAMMATES = GENERAL_TNT_JUMP_PATH + ".damage-teammates";
     public static final String GENERAL_TNT_JUMP_DAMAGE_OTHERS = GENERAL_TNT_JUMP_PATH + ".damage-others";

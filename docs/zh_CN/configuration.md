@@ -23,7 +23,7 @@
 - `rejoin-time`：普通断线或网络超时的重连窗口，默认 30 秒；服务器命令、封禁或反作弊造成的踢出不会保留重连资格。
 - `countdowns`：开局、床消失、决战、结束和复活倒计时。
 - `party-settings`：内部及外部组队集成。
-- `tnt-jump-settings`、`blast-protection`、`tnt-prime-settings`：TNT 参数。
+- `tnt-jump-settings`、`blast-protection`、`tnt-prime-settings`：TNT 参数。`knockback-multiplier` 默认 `0.90`，只缩放 TNT 对玩家的击退；`damage-teammates` 和 `damage-others` 默认分别为 `4` 和 `8`，不会改变方块爆炸范围。升级时只有仍使用旧内置默认值 `5`/`10` 的配置会迁移为新值，管理员自定义值保留。
 - `fireball`：火球速度、射程、爆炸、击退、冷却和伤害。`speed-multiplier: 15` 对应普通初速度 1.5 格/tick；潜行时 `sneak-speed-multiplier: 1.6` 使初速度达到 2.4 格/tick，形成明显的初速度差异。`sneak-acceleration-multiplier: 2.0` 保持不变，持续加速度仍由普通火球的每 tick 0.1 提高到潜行火球的 0.2。每次发射会在 `flight-range.min: 200` 与 `flight-range.max: 300` 之间随机一次最大飞行距离，并按实际路径累计；碰撞、世界边界、服务端视距和未加载区块仍可能让火球提前结束。`sneak-recoil: 0.10` 会沿火球发射速度的完整三维反方向推动玩家，代码硬限制最大为 0.20；`cooldown: 0.4` 的持续射速约为每秒 2.5 发，一个 1 秒窗口内通常可发射 2 至 3 个。`explosion-size` 是以火球位置为球心的三维半径，伤害和击退只对欧氏距离不超过该半径的玩家生效，不会覆盖外接立方体的角落；队友始终不会受到火球伤害，但仍会按原有规则受到击退。2.10.20 的平衡默认值仍为爆炸范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。`make-fire` 只决定爆炸处是否生成火焰，竞技场不会允许火势向周围蔓延。
 - `database`：MySQL；关闭时使用 SQLite。
 - `match-statistics`：按对局保存统计和事件。只有 `database.enable: true` 且 MySQL 连接成功时启用；默认时区为 `Asia/Shanghai`，上报间隔默认 300 秒（5 分钟）。数据写入 `bw_matches`、`bw_match_players`、`bw_match_events`、`bw_match_reports` 和 `bw_player_violation_totals`，均使用 InnoDB 短事务。`bw_player_match_summary` 是按已结束对局汇总的只读视图，可直接用于大厅排行榜和玩家比较；若数据库账户没有 `CREATE VIEW` 权限，明细表仍会正常工作。
