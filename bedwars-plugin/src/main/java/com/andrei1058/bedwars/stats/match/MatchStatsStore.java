@@ -12,6 +12,7 @@ package com.andrei1058.bedwars.stats.match;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.database.MySQL;
+import com.andrei1058.bedwars.database.MySqlSchemaCoordinator;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -26,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -290,8 +292,11 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     private void createSchema(Connection connection) throws SQLException {
-        try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_matches (" +
+        try (MySqlSchemaCoordinator.Lease ignored = MySqlSchemaCoordinator.acquire(
+                connection, "match-statistics", 30, 2);
+             Statement statement = connection.createStatement()) {
+            if (!MySqlSchemaCoordinator.tableExists(connection, "bw_matches")) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_matches (" +
                     "match_uuid CHAR(36) NOT NULL, " +
                     "match_no BIGINT NOT NULL AUTO_INCREMENT, " +
                     "server_id VARCHAR(64) NOT NULL, " +
@@ -311,8 +316,10 @@ public final class MatchStatsStore implements AutoCloseable {
                     "KEY idx_bw_matches_status (status, started_at), " +
                     "KEY idx_bw_matches_server_status (server_id, status)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
 
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_players (" +
+            if (!MySqlSchemaCoordinator.tableExists(connection, "bw_match_players")) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_players (" +
                     "match_uuid CHAR(36) NOT NULL, " +
                     "player_uuid CHAR(36) NOT NULL, " +
                     "player_name VARCHAR(128) NULL, " +
@@ -334,8 +341,10 @@ public final class MatchStatsStore implements AutoCloseable {
                     "PRIMARY KEY (match_uuid, player_uuid), " +
                     "KEY idx_bw_match_players_player (player_uuid)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
 
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_events (" +
+            if (!MySqlSchemaCoordinator.tableExists(connection, "bw_match_events")) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_events (" +
                     "event_uuid CHAR(36) NOT NULL, " +
                     "match_uuid CHAR(36) NOT NULL, " +
                     "event_sequence BIGINT NOT NULL, " +
@@ -348,8 +357,10 @@ public final class MatchStatsStore implements AutoCloseable {
                     "UNIQUE KEY uq_bw_match_events_sequence (match_uuid, event_sequence), " +
                     "KEY idx_bw_match_events_match_time (match_uuid, occurred_at)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
 
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_reports (" +
+            if (!MySqlSchemaCoordinator.tableExists(connection, "bw_match_reports")) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_reports (" +
                     "report_id BIGINT NOT NULL AUTO_INCREMENT, " +
                     "match_uuid CHAR(36) NOT NULL, " +
                     "report_number INT UNSIGNED NOT NULL, " +
@@ -361,8 +372,10 @@ public final class MatchStatsStore implements AutoCloseable {
                     "UNIQUE KEY uq_bw_match_reports_number (match_uuid, report_number), " +
                     "KEY idx_bw_match_reports_captured (captured_at)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
 
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_player_violation_totals (" +
+            if (!MySqlSchemaCoordinator.tableExists(connection, "bw_player_violation_totals")) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_player_violation_totals (" +
                     "player_uuid CHAR(36) NOT NULL, " +
                     "crime_total_vl INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "punishment_total_vl INT UNSIGNED NOT NULL DEFAULT 0, " +
@@ -371,13 +384,20 @@ public final class MatchStatsStore implements AutoCloseable {
                     "updated_at DATETIME(3) NOT NULL, " +
                     "PRIMARY KEY (player_uuid)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
 
             /* Add columns introduced after the initial match-statistics
              * release without taking a long-lived application lock. */
-            addColumnIfMissing(statement, "ALTER TABLE bw_match_players ADD COLUMN evidence_adjustment INT NOT NULL DEFAULT 0 AFTER kill_boosting_vl");
-            addColumnIfMissing(statement, "ALTER TABLE bw_match_players ADD COLUMN effective_vl INT UNSIGNED NOT NULL DEFAULT 0 AFTER evidence_adjustment");
-            addColumnIfMissing(statement, "ALTER TABLE bw_player_violation_totals ADD COLUMN punishment_warning_mask TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER punishment_total_vl");
-            modifyColumnIfNeeded(statement, "ALTER TABLE bw_match_players MODIFY COLUMN outcome VARCHAR(24) NOT NULL DEFAULT 'UNKNOWN'");
+            addColumnIfMissing(connection, "bw_match_players", "evidence_adjustment",
+                    "ALTER TABLE bw_match_players ADD COLUMN evidence_adjustment INT NOT NULL DEFAULT 0 AFTER kill_boosting_vl, " +
+                            "ALGORITHM=INPLACE, LOCK=NONE");
+            addColumnIfMissing(connection, "bw_match_players", "effective_vl",
+                    "ALTER TABLE bw_match_players ADD COLUMN effective_vl INT UNSIGNED NOT NULL DEFAULT 0 AFTER evidence_adjustment, " +
+                            "ALGORITHM=INPLACE, LOCK=NONE");
+            addColumnIfMissing(connection, "bw_player_violation_totals", "punishment_warning_mask",
+                    "ALTER TABLE bw_player_violation_totals ADD COLUMN punishment_warning_mask TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER punishment_total_vl, " +
+                            "ALGORITHM=INPLACE, LOCK=NONE");
+            widenOutcomeColumnIfNeeded(connection);
 
             /*
              * A read-only aggregation surface for lobby dashboards and
@@ -385,36 +405,7 @@ public final class MatchStatsStore implements AutoCloseable {
              * may create tables but not views, so a missing VIEW privilege is
              * logged without preventing match writes from starting.
              */
-            try {
-                statement.executeUpdate("CREATE OR REPLACE VIEW bw_player_match_summary AS " +
-                        "SELECT p.player_uuid AS player_uuid, MAX(p.player_name) AS player_name, " +
-                        "COUNT(*) AS matches_played, SUM(p.normal_kills) AS normal_kills, " +
-                        "SUM(p.final_kills) AS final_kills, SUM(p.normal_kills + p.final_kills) AS total_kills, " +
-                        "SUM(p.deaths) AS deaths, SUM(p.beds_destroyed) AS beds_destroyed, " +
-                        "CASE WHEN SUM(p.deaths)=0 THEN NULL ELSE ROUND(SUM(p.normal_kills + p.final_kills) / SUM(p.deaths), 4) END AS kd_ratio, " +
-                        "SUM(p.illegal_team_vl) AS illegal_team_vl, SUM(p.kill_boosting_vl) AS kill_boosting_vl, " +
-                        "SUM(p.evidence_adjustment) AS evidence_adjustment, " +
-                        "SUM(CASE WHEN p.effective_vl=0 AND (p.illegal_team_vl > 0 OR p.kill_boosting_vl > 0 OR p.evidence_adjustment <> 0) " +
-                        "THEN GREATEST(0, CAST(p.illegal_team_vl AS SIGNED) + CAST(p.kill_boosting_vl AS SIGNED) + p.evidence_adjustment) " +
-                        "ELSE p.effective_vl END) AS effective_vl, " +
-                        "SUM(p.reconnects) AS reconnects, SUM(p.disconnects) AS disconnects, " +
-                        "SUM(CASE WHEN p.outcome='WIN' THEN 1 ELSE 0 END) AS wins, " +
-                        "SUM(CASE WHEN p.outcome='LOSS' THEN 1 ELSE 0 END) AS losses, " +
-                        "SUM(CASE WHEN p.outcome='ABANDONED' THEN 1 ELSE 0 END) AS abandoned, " +
-                        "SUM(CASE WHEN p.outcome='DISCONNECTED' THEN 1 ELSE 0 END) AS disconnected, " +
-                        "SUM(CASE WHEN p.outcome='AFK_REMOVED' THEN 1 ELSE 0 END) AS afk_removed, " +
-                        "SUM(CASE WHEN p.outcome='VIOLATION_REMOVED' THEN 1 ELSE 0 END) AS violation_removed, " +
-                        "COALESCE(MAX(v.crime_total_vl), 0) AS crime_total_vl, " +
-                        "COALESCE(MAX(v.punishment_total_vl), 0) AS punishment_total_vl " +
-                        "FROM bw_match_players p INNER JOIN bw_matches m ON m.match_uuid=p.match_uuid " +
-                        "LEFT JOIN bw_player_violation_totals v ON v.player_uuid=p.player_uuid " +
-                        "WHERE m.status='FINISHED' GROUP BY p.player_uuid");
-            } catch (SQLException exception) {
-                if (BedWars.plugin != null) {
-                    BedWars.plugin.getLogger().log(Level.WARNING,
-                            "无法创建玩家对局汇总视图 bw_player_match_summary；明细表仍可正常写入。", exception);
-                }
-            }
+            ensureSummaryView(connection, statement);
         }
     }
 
@@ -670,9 +661,13 @@ public final class MatchStatsStore implements AutoCloseable {
         return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
     }
 
-    private static void addColumnIfMissing(Statement statement, String sql) throws SQLException {
+    private static void addColumnIfMissing(Connection connection, String tableName,
+                                           String columnName, String sql) throws SQLException {
+        if (findColumn(connection, tableName, columnName).exists()) return;
         try {
-            statement.executeUpdate(sql);
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate(sql);
+            }
         } catch (SQLException exception) {
             /* MySQL error 1060 / SQLState 42S21 means another startup (or a
              * previous plugin version) already created this column. */
@@ -680,19 +675,151 @@ public final class MatchStatsStore implements AutoCloseable {
                 throw exception;
             }
         }
+        if (!findColumn(connection, tableName, columnName).exists()) {
+            throw new SQLException("MySQL reported success but column is still missing: " +
+                    tableName + '.' + columnName);
+        }
     }
 
-    private static void modifyColumnIfNeeded(Statement statement, String sql) throws SQLException {
-        try {
-            statement.executeUpdate(sql);
-        } catch (SQLException exception) {
-            /* Existing installations may use a restricted account. A failed
-             * compatibility ALTER must not stop normal match writes. */
-            if (BedWars.plugin != null) {
-                BedWars.plugin.getLogger().log(Level.WARNING,
-                        "无法更新对局统计字段兼容性；请确认数据库账号具备 ALTER 权限。", exception);
+    private static void widenOutcomeColumnIfNeeded(Connection connection) throws SQLException {
+        ColumnDefinition outcome = findColumn(connection, "bw_match_players", "outcome");
+        if (!outcome.exists() || outcome.characterLength() <= 0L) {
+            throw new SQLException("Cannot verify bw_match_players.outcome from information_schema");
+        }
+        if (!needsOutcomeColumnWidening(outcome.characterLength())) return;
+
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("ALTER TABLE bw_match_players " +
+                    "MODIFY COLUMN outcome VARCHAR(24) NOT NULL DEFAULT 'UNKNOWN', " +
+                    "ALGORITHM=INPLACE, LOCK=NONE");
+        }
+        ColumnDefinition migrated = findColumn(connection, "bw_match_players", "outcome");
+        if (!outcomeColumnIsCompatible(migrated.exists(), migrated.characterLength())) {
+            throw new SQLException("Online migration did not widen bw_match_players.outcome to VARCHAR(24)");
+        }
+    }
+
+    static boolean needsOutcomeColumnWidening(long characterLength) {
+        return characterLength > 0L && characterLength < 24L;
+    }
+
+    static boolean outcomeColumnIsCompatible(boolean exists, long characterLength) {
+        return exists && characterLength >= 24L;
+    }
+
+    private static ColumnDefinition findColumn(Connection connection, String tableName,
+                                               String columnName) throws SQLException {
+        String sql = "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS " +
+                "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, columnName);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) return new ColumnDefinition(false, -1L);
+                long characterLength = result.getLong(1);
+                return new ColumnDefinition(true, result.wasNull() ? 0L : characterLength);
             }
         }
+    }
+
+    private static void ensureSummaryView(Connection connection, Statement statement) {
+        SummaryViewState state;
+        try {
+            state = summaryViewState(connection);
+        } catch (SQLException exception) {
+            logOptionalViewFailure("无法检查玩家对局汇总视图；为避免重复 DDL，本次不尝试重建。", exception);
+            return;
+        }
+
+        if (state == SummaryViewState.CURRENT) return;
+        if (state == SummaryViewState.UNINSPECTABLE) {
+            logOptionalViewFailure("无法读取玩家对局汇总视图的列；为避免每个节点重复重建，本次已跳过。" +
+                    "请确认数据库账号拥有该视图的 SELECT 权限。", null);
+            return;
+        }
+
+        String prefix = state == SummaryViewState.MISSING ? "CREATE VIEW " : "CREATE OR REPLACE VIEW ";
+        try {
+            statement.executeUpdate(prefix + "bw_player_match_summary AS " + summaryViewSelect());
+        } catch (SQLException exception) {
+            logOptionalViewFailure("无法创建或升级玩家对局汇总视图 bw_player_match_summary；" +
+                    "明细表仍可正常写入。升级已有视图需要 CREATE VIEW 与 DROP 权限。", exception);
+        }
+    }
+
+    private static SummaryViewState summaryViewState(Connection connection) throws SQLException {
+        String objectSql = "SELECT TABLE_TYPE FROM information_schema.TABLES " +
+                "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='bw_player_match_summary'";
+        try (PreparedStatement statement = connection.prepareStatement(objectSql);
+             ResultSet result = statement.executeQuery()) {
+            if (!result.next()) return SummaryViewState.MISSING;
+            if (!"VIEW".equalsIgnoreCase(result.getString(1))) {
+                throw new SQLException("bw_player_match_summary exists but is not a view");
+            }
+        }
+
+        Set<String> columns = new HashSet<>();
+        String columnsSql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS " +
+                "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='bw_player_match_summary'";
+        try (PreparedStatement statement = connection.prepareStatement(columnsSql);
+             ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                String column = result.getString(1);
+                if (column != null) columns.add(column.toLowerCase(java.util.Locale.ROOT));
+            }
+        }
+        if (columns.isEmpty()) return SummaryViewState.UNINSPECTABLE;
+        return columns.containsAll(expectedSummaryViewColumns())
+                ? SummaryViewState.CURRENT : SummaryViewState.OUTDATED;
+    }
+
+    static Set<String> expectedSummaryViewColumns() {
+        return Set.of("player_uuid", "player_name", "matches_played", "normal_kills",
+                "final_kills", "total_kills", "deaths", "beds_destroyed", "kd_ratio",
+                "illegal_team_vl", "kill_boosting_vl", "evidence_adjustment", "effective_vl",
+                "reconnects", "disconnects", "wins", "losses", "abandoned", "disconnected",
+                "afk_removed", "violation_removed", "crime_total_vl", "punishment_total_vl");
+    }
+
+    private static String summaryViewSelect() {
+        return "SELECT p.player_uuid AS player_uuid, MAX(p.player_name) AS player_name, " +
+                "COUNT(*) AS matches_played, SUM(p.normal_kills) AS normal_kills, " +
+                "SUM(p.final_kills) AS final_kills, SUM(p.normal_kills + p.final_kills) AS total_kills, " +
+                "SUM(p.deaths) AS deaths, SUM(p.beds_destroyed) AS beds_destroyed, " +
+                "CASE WHEN SUM(p.deaths)=0 THEN NULL ELSE ROUND(SUM(p.normal_kills + p.final_kills) / SUM(p.deaths), 4) END AS kd_ratio, " +
+                "SUM(p.illegal_team_vl) AS illegal_team_vl, SUM(p.kill_boosting_vl) AS kill_boosting_vl, " +
+                "SUM(p.evidence_adjustment) AS evidence_adjustment, " +
+                "SUM(CASE WHEN p.effective_vl=0 AND (p.illegal_team_vl > 0 OR p.kill_boosting_vl > 0 OR p.evidence_adjustment <> 0) " +
+                "THEN GREATEST(0, CAST(p.illegal_team_vl AS SIGNED) + CAST(p.kill_boosting_vl AS SIGNED) + p.evidence_adjustment) " +
+                "ELSE p.effective_vl END) AS effective_vl, " +
+                "SUM(p.reconnects) AS reconnects, SUM(p.disconnects) AS disconnects, " +
+                "SUM(CASE WHEN p.outcome='WIN' THEN 1 ELSE 0 END) AS wins, " +
+                "SUM(CASE WHEN p.outcome='LOSS' THEN 1 ELSE 0 END) AS losses, " +
+                "SUM(CASE WHEN p.outcome='ABANDONED' THEN 1 ELSE 0 END) AS abandoned, " +
+                "SUM(CASE WHEN p.outcome='DISCONNECTED' THEN 1 ELSE 0 END) AS disconnected, " +
+                "SUM(CASE WHEN p.outcome='AFK_REMOVED' THEN 1 ELSE 0 END) AS afk_removed, " +
+                "SUM(CASE WHEN p.outcome='VIOLATION_REMOVED' THEN 1 ELSE 0 END) AS violation_removed, " +
+                "COALESCE(MAX(v.crime_total_vl), 0) AS crime_total_vl, " +
+                "COALESCE(MAX(v.punishment_total_vl), 0) AS punishment_total_vl " +
+                "FROM bw_match_players p INNER JOIN bw_matches m ON m.match_uuid=p.match_uuid " +
+                "LEFT JOIN bw_player_violation_totals v ON v.player_uuid=p.player_uuid " +
+                "WHERE m.status='FINISHED' GROUP BY p.player_uuid";
+    }
+
+    private static void logOptionalViewFailure(String message, Throwable exception) {
+        if (BedWars.plugin == null) return;
+        if (exception == null) BedWars.plugin.getLogger().warning(message);
+        else BedWars.plugin.getLogger().log(Level.WARNING, message, exception);
+    }
+
+    private record ColumnDefinition(boolean exists, long characterLength) {
+    }
+
+    private enum SummaryViewState {
+        MISSING,
+        CURRENT,
+        OUTDATED,
+        UNINSPECTABLE
     }
 
     private static String uuid(UUID uuid) {

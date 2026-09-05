@@ -12,6 +12,7 @@ package com.andrei1058.bedwars.discipline;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.database.MySQL;
+import com.andrei1058.bedwars.database.MySqlSchemaCoordinator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -127,8 +128,12 @@ public final class DisciplineStore implements AutoCloseable {
     }
 
     private void initializeSchema() {
-        try (Connection connection = database.openConnection(); Statement statement = connection.createStatement()) {
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_player_discipline (" +
+        try (Connection connection = database.openConnection();
+             MySqlSchemaCoordinator.Lease ignored = MySqlSchemaCoordinator.acquire(
+                     connection, "discipline", 30, 2);
+             Statement statement = connection.createStatement()) {
+            if (!MySqlSchemaCoordinator.tableExists(connection, "bw_player_discipline")) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_player_discipline (" +
                     "player_uuid CHAR(36) NOT NULL, " +
                     "afk_strikes INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "abandonment_strikes INT UNSIGNED NOT NULL DEFAULT 0, " +
@@ -140,7 +145,9 @@ public final class DisciplineStore implements AutoCloseable {
                     "PRIMARY KEY (player_uuid), " +
                     "KEY idx_bw_player_discipline_cooldown (cooldown_until)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_discipline_penalties (" +
+            }
+            if (!MySqlSchemaCoordinator.tableExists(connection, "bw_discipline_penalties")) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_discipline_penalties (" +
                     "penalty_id BIGINT NOT NULL AUTO_INCREMENT, " +
                     "player_uuid CHAR(36) NOT NULL, " +
                     "match_uuid CHAR(36) NULL, " +
@@ -155,6 +162,7 @@ public final class DisciplineStore implements AutoCloseable {
                     "UNIQUE KEY uq_bw_discipline_dedupe (dedupe_key), " +
                     "KEY idx_bw_discipline_player_time (player_uuid, issued_at)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
         } catch (SQLException exception) {
             logFailure("创建纪律表", exception);
             throw new DisciplineStoreException(exception);

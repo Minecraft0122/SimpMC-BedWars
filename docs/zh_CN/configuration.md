@@ -26,7 +26,7 @@
 - `tnt-jump-settings`、`blast-protection`、`tnt-prime-settings`：TNT 参数。`knockback-multiplier` 默认 `0.90`，只缩放 TNT 对玩家的击退；`damage-teammates` 和 `damage-others` 默认分别为 `4` 和 `8`，不会改变方块爆炸范围。升级时只有仍使用旧内置默认值 `5`/`10` 的配置会迁移为新值，管理员自定义值保留。
 - `fireball`：火球速度、射程、爆炸、击退、冷却和伤害。`speed-multiplier: 15` 对应普通初速度 1.5 格/tick；潜行时 `sneak-speed-multiplier: 1.6` 使初速度达到 2.4 格/tick，形成明显的初速度差异。`sneak-acceleration-multiplier: 2.0` 保持不变，持续加速度仍由普通火球的每 tick 0.1 提高到潜行火球的 0.2。每次发射会在 `flight-range.min: 200` 与 `flight-range.max: 300` 之间随机一次最大飞行距离，并按实际路径累计；碰撞、世界边界、服务端视距和未加载区块仍可能让火球提前结束。`sneak-recoil: 0.10` 会沿火球发射速度的完整三维反方向推动玩家，代码硬限制最大为 0.20；`cooldown: 0.4` 的持续射速约为每秒 2.5 发，一个 1 秒窗口内通常可发射 2 至 3 个。`explosion-size` 是以火球位置为球心的三维半径，伤害和击退只对欧氏距离不超过该半径的玩家生效，不会覆盖外接立方体的角落；队友始终不会受到火球伤害，但仍会按原有规则受到击退。2.10.20 的平衡默认值仍为爆炸范围 3.25、水平击退 1.15、垂直击退 0.75、敌方伤害 3.5。`make-fire` 只决定爆炸处是否生成火焰，竞技场不会允许火势向周围蔓延。
 - `database`：MySQL；关闭时使用 SQLite。
-- `match-statistics`：按对局保存统计和事件。只有 `database.enable: true` 且 MySQL 连接成功时启用；默认时区为 `Asia/Shanghai`，上报间隔默认 300 秒（5 分钟）。数据写入 `bw_matches`、`bw_match_players`、`bw_match_events`、`bw_match_reports` 和 `bw_player_violation_totals`，均使用 InnoDB 短事务。`bw_player_match_summary` 是按已结束对局汇总的只读视图，可直接用于大厅排行榜和玩家比较；若数据库账户没有 `CREATE VIEW` 权限，明细表仍会正常工作。
+- `match-statistics`：按对局保存统计和事件。只有 `database.enable: true` 且 MySQL 连接成功时启用；默认时区为 `Asia/Shanghai`，上报间隔默认 300 秒（5 分钟）。数据写入 `bw_matches`、`bw_match_players`、`bw_match_events`、`bw_match_reports` 和 `bw_player_violation_totals`，均使用 InnoDB 短事务。`bw_player_match_summary` 是按已结束对局汇总的只读视图，可直接用于大厅排行榜和玩家比较；若数据库账户没有视图权限，明细表仍会正常工作。
 - `discipline`：跨大厅与竞技场节点共享的挂机、逃跑和单局违规处罚。状态写入 `bw_player_discipline`，每次处罚写入 `bw_discipline_penalties`；只锁定单个玩家行并使用幂等键，不会持有影响新对局的全表事务。没有 MySQL 时不会阻塞服务器启动，但不会提供跨服冷却。
 - `performance-settings`：Paper 传送、资源旋转等优化。
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床；大厅红床带有独立目标标记，固定连接代理配置中的 `lobbyServer`，MULTIARENA 模式也会执行代理切服，不传送到本服 `/bw setLobby` 坐标。等待区和观战区红床使用另一目标标记，直接返回本服 BedWars 大厅，不经过命令权限。管理员可以修改显示材质和命令文本，内置 `leave` 项的返回语义仍由其配置节点名确定。4.0.8 起，删除整个物品节点后，后续配置升级不会再次生成；旧架构 15 曾误删的自定义 `leave` 会在当前值仍为内置默认值时，从架构 15 删除前的最后快照，或架构 15–17 中重新配置过的最新 `config.yml.v*.bak` 自动恢复；架构 18 后的删除或改写快照会否决旧值。玩家进入大厅时会立即替换旧 BedWars 命令物品，并在 15 tick 后做一次带实时上下文校验的选择性复核，不再由延迟任务清空正常流程的整个背包；经传送门或附属插件跨世界进入大厅也走同一入口。无效物品只跳过自身，同槽位配置会输出中文警告，代理返回项具有稳定优先级。完整代理示例见[安装文档](installation.md#bungee)。
@@ -84,7 +84,7 @@ database:
   ssl: true
 ```
 
-建议为插件创建独立数据库用户，并只授予目标库的 `SELECT`、`INSERT`、`UPDATE`、`CREATE`、`ALTER`、`INDEX` 权限；自动汇总视图需要额外的 `CREATE VIEW` 权限，没有该权限时明细表和对局写入仍会工作。最终 JAR 已内置 MySQL Connector/J，不需要再把驱动单独放进 Paper 的 `lib` 或 `plugins` 目录。修改连接信息后必须完整重启所有相关子服，不要使用 `/reload`。
+建议使用 MySQL 8.0 或更新版本，并为插件创建独立数据库用户，只授予目标库的 `SELECT`、`INSERT`、`UPDATE`、`CREATE`、`ALTER`、`INDEX` 权限。首次创建自动汇总视图需要 `CREATE VIEW`；自动升级已有视图还需要仅对 `bw_player_match_summary` 授予 `DROP`。没有这些视图权限时，明细表和对局写入仍会工作。最终 JAR 已内置 MySQL Connector/J，不需要再把驱动单独放进 Paper 的 `lib` 或 `plugins` 目录。修改连接信息后必须完整重启所有相关子服，不要使用 `/reload`。
 
 对局统计配置示例：
 
@@ -120,7 +120,7 @@ discipline:
 
 ### 对局统计与 VL
 
-每次竞技场进入正式游戏状态都会生成一个 UUID；MySQL 在 `bw_matches.match_no` 中分配递增且唯一的对局编号（事务回滚时可能出现间隔，不应依赖无间隔连续性）。开始、结束时间和所有时间列按 `match-statistics.timezone` 写入，默认使用 `Asia/Shanghai`。进行中的玩家快照每 5 分钟上报一次，事件在发生后进入异步队列，游戏结束后再写入最终快照并把对局标记为 `FINISHED`。队列写入不会在 Bukkit 主线程上等待数据库锁。子服异常退出后再次启动时，只会把同一 `bungee-settings.server-id` 遗留的 `RUNNING` 对局标记为 `ABORTED`，不会修改其他子服的进行中对局。
+每次竞技场进入正式游戏状态都会生成一个 UUID；MySQL 在 `bw_matches.match_no` 中分配递增且唯一的对局编号（事务回滚时可能出现间隔，不应依赖无间隔连续性）。开始、结束时间和所有时间列按 `match-statistics.timezone` 写入，默认使用 `Asia/Shanghai`。进行中的玩家快照每 5 分钟上报一次，事件在发生后进入异步队列，游戏结束后再写入最终快照并把对局标记为 `FINISHED`。队列写入不会在 Bukkit 主线程上等待数据库锁。多个节点同时启动时，统计和纪律结构升级会先取得数据库级命名锁，再重新检查结构；字段升级要求 InnoDB 在线 DDL、使用 `LOCK=NONE`，并把元数据锁等待限制为 2 秒。无法安全升级时只会暂停对应统计写入器并告警，不会卡住竞技场开局。子服异常退出后再次启动时，只会把同一 `bungee-settings.server-id` 遗留的 `RUNNING` 对局标记为 `ABORTED`，不会修改其他子服的进行中对局。
 
 `bw_match_players` 保存普通击杀、最终击杀、死亡、拆床、K/D、重连/掉线、胜负、本局正向 VL、负向排除证据 `evidence_adjustment` 以及下限为 0 的有效 VL `effective_vl`；自动移出的玩家结果分别为 `AFK_REMOVED` 或 `VIOLATION_REMOVED`。`bw_match_events` 保存 `BED_BREAK`、`PLAYER_KILL`、`DISCONNECT_KILL`、`PLAYER_WIN`、`PLAYER_LOSS`、`GAME_END`、`PLAYER_LEAVE`、`RECONNECT` 和 VL 事件，事件带有对局内递增序号，重复提交不会重复插入。`bw_player_violation_totals` 同时保存不可清除的 `crime_total_vl`（累计本局正向 VL）和用于处罚判定的 `punishment_total_vl`（累计本局有效 VL）；因单局超阈值触发 `VIOLATION_EJECT` 后，最终结算事务会自动清零该玩家的 `punishment_total_vl` 和告警位图，只保留 `crime_total_vl`，并记录 `last_punished_at`。若由外部处罚系统执行处罚，可调用插件 API 的 `resetPunishmentVl(UUID)` 做同样的清零。处罚累计值严格超过 `warning-thresholds` 中的 10、20、50、100 时，异步数据库事务提交后在控制台告警，每个处罚周期每个阈值只告警一次。开局、事件和最终结算使用独立的有界关键队列，队列满载时立即告警且不阻塞主线程；最终结算会由记录器继续重试，持续满载时应提高容量或处理数据库延迟。
 
