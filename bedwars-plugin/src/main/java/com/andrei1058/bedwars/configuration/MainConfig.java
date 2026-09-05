@@ -42,7 +42,8 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 34;
+    private static final int CONFIG_VERSION = 35;
+    private static final int TNT_BALANCE_CONFIG_VERSION = 34;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -190,6 +191,19 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.MATCH_STATISTICS_VIOLATIONS_WARNING_THRESHOLDS, Arrays.asList(10, 20, 50, 100));
         yml.addDefault(ConfigPath.MATCH_STATISTICS_VIOLATIONS_MATCH_LEAVE_THRESHOLD, 25);
         yml.addDefault(ConfigPath.MATCH_STATISTICS_VIOLATIONS_CROSS_TEAM_ITEM_TRANSFER, true);
+
+        // Persistent discipline is written to its own short transactions and
+        // is safe to use on both lobby and arena nodes.
+        yml.addDefault(ConfigPath.DISCIPLINE_ENABLED, true);
+        yml.addDefault(ConfigPath.DISCIPLINE_VOLUNTARY_LEAVE, true);
+        yml.addDefault(ConfigPath.DISCIPLINE_DISCONNECT_TIMEOUT, true);
+        yml.addDefault(ConfigPath.DISCIPLINE_AFK_ENABLED, true);
+        yml.addDefault(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS, 60);
+        yml.addDefault(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS, 120);
+        yml.addDefault(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS, 180);
+        yml.addDefault(ConfigPath.DISCIPLINE_AFK_COOLDOWNS, Arrays.asList(0, 600, 3600, 86400));
+        yml.addDefault(ConfigPath.DISCIPLINE_ABANDONMENT_COOLDOWNS, Arrays.asList(300, 900, 3600, 86400));
+        yml.addDefault(ConfigPath.DISCIPLINE_VIOLATION_COOLDOWNS, Collections.singletonList(1800));
 
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, true);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_SPOIL_TNT_PLAYERS, true);
@@ -429,6 +443,30 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.MATCH_STATISTICS_VIOLATIONS_CROSS_TEAM_ITEM_TRANSFER,
                 "是否把不同队伍玩家之间重复掉落/拾取铁、金、钻石、绿宝石计为强证据。",
                 "默认开启；生成器物品、羊毛、工具和一次性死亡掉落不作为此规则的唯一依据。");
+        setComments(ConfigPath.DISCIPLINE_ENABLED,
+                "是否启用挂机、主动逃跑、掉线超时和单局违规的自动处罚。",
+                "处罚记录写入独立的 MySQL 表；数据库不可用时不会阻塞新对局。");
+        setComments(ConfigPath.DISCIPLINE_VOLUNTARY_LEAVE,
+                "玩家在进行中的对局主动使用 /bw leave 时是否记为逃跑。默认开启。",
+                "等待区、重启中和旁观离开不会记为逃跑。");
+        setComments(ConfigPath.DISCIPLINE_DISCONNECT_TIMEOUT,
+                "掉线玩家超过 rejoin-time 仍未回来时是否记为逃跑。默认开启。",
+                "在重连窗口内回来不会增加逃跑记录。");
+        setComments(ConfigPath.DISCIPLINE_AFK_ENABLED,
+                "是否启用挂机警告和自动移出。死亡、重生倒计时、旁观和跨服传送期间暂停计时。",
+                "默认 60 秒警告、120 秒最终警告、180 秒移出。");
+        setComments(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS,
+                "挂机首次警告时间，单位为秒。必须小于最终警告和移出时间。");
+        setComments(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS,
+                "挂机最终警告时间，单位为秒。必须小于移出时间。");
+        setComments(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS,
+                "挂机移出时间，单位为秒。移出后本局记录为 AFK_REMOVED。");
+        setComments(ConfigPath.DISCIPLINE_AFK_COOLDOWNS,
+                "挂机处罚冷却秒数，依次对应第 1、2、3、5 次及以上。默认 0、600、3600、86400。");
+        setComments(ConfigPath.DISCIPLINE_ABANDONMENT_COOLDOWNS,
+                "逃跑处罚冷却秒数，依次对应第 1、2、3、5 次及以上。默认 300、900、3600、86400。");
+        setComments(ConfigPath.DISCIPLINE_VIOLATION_COOLDOWNS,
+                "单局违规超过 VL 阈值后的冷却秒数。默认每次 1800 秒；可填多个值按次数递进。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN, "性能优化开关；通常建议保持启用。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLE_CRAFTING, "竞技场内工作方块及合成功能限制。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
@@ -448,6 +486,7 @@ public class MainConfig extends ConfigManager {
         if (migrateSchema28Only(yml, storedConfigVersion)) {
             migrateFireballDefaults(yml, storedConfigVersion);
             removeRetiredFullArenaCountdownSetting(yml);
+            migrateDisciplineDefaults(yml);
             return false;
         }
         migrateFireballDefaults(yml, yml.getInt(CONFIG_VERSION_PATH, 0));
@@ -502,7 +541,51 @@ public class MainConfig extends ConfigManager {
         }
         migrateLobbyLocation(yml);
         migrateNpcLocations(yml);
+        migrateDisciplineDefaults(yml);
         return restoredLobbyItem;
+    }
+
+    /** Keep the discipline section ordered and repair malformed legacy values. */
+    static void migrateDisciplineDefaults(YamlConfiguration yml) {
+        ensurePositive(yml, ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS, 60);
+        ensurePositive(yml, ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS, 120);
+        ensurePositive(yml, ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS, 180);
+        /* Preserve a valid administrator warning even when the following
+         * thresholds still contain older defaults. Falling back to 120/180
+         * after a custom 300-second warning would leave an invalid sequence.
+         * Reserve two integer values so every repaired sequence can remain
+         * strictly increasing even for an extreme configured value. */
+        int warning = Math.min(yml.getInt(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS, 60),
+                Integer.MAX_VALUE - 2);
+        int finalWarning = yml.getInt(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS, 120);
+        if (finalWarning <= warning || finalWarning == Integer.MAX_VALUE) {
+            finalWarning = nextAfkThreshold(warning, 120);
+        }
+        int removal = yml.getInt(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS, 180);
+        if (removal <= finalWarning) {
+            removal = nextAfkThreshold(finalWarning, 180);
+        }
+        yml.set(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS, warning);
+        yml.set(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS, finalWarning);
+        yml.set(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS, removal);
+        ensureCooldownList(yml, ConfigPath.DISCIPLINE_AFK_COOLDOWNS, Arrays.asList(0, 600, 3600, 86400));
+        ensureCooldownList(yml, ConfigPath.DISCIPLINE_ABANDONMENT_COOLDOWNS, Arrays.asList(300, 900, 3600, 86400));
+        ensureCooldownList(yml, ConfigPath.DISCIPLINE_VIOLATION_COOLDOWNS, Collections.singletonList(1800));
+    }
+
+    private static int nextAfkThreshold(int lowerBound, int fallback) {
+        return Math.max(fallback, lowerBound + 1);
+    }
+
+    private static void ensurePositive(YamlConfiguration yml, String path, int fallback) {
+        if (yml.getInt(path, fallback) <= 0) yml.set(path, fallback);
+    }
+
+    private static void ensureCooldownList(YamlConfiguration yml, String path, List<Integer> fallback) {
+        List<Integer> values = yml.getIntegerList(path);
+        if (values.isEmpty() || values.stream().anyMatch(value -> value < 0)) {
+            yml.set(path, fallback);
+        }
     }
 
     /**
@@ -752,7 +835,7 @@ public class MainConfig extends ConfigManager {
      * that changed either value keeps that choice during the schema upgrade.
      */
     static void migrateTntDefaults(YamlConfiguration yml, int storedConfigVersion) {
-        if (storedConfigVersion >= CONFIG_VERSION) return;
+        if (storedConfigVersion >= TNT_BALANCE_CONFIG_VERSION) return;
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES,
                 5.0, TNT_DAMAGE_TEAMMATES_DEFAULT);
         upgradeLegacyNumber(yml, ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS,

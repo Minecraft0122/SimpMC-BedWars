@@ -188,6 +188,7 @@ public class Interact implements Listener {
     public void onInteract(PlayerInteractEvent e) {
         if (e == null) return;
         Player p = e.getPlayer();
+        Arena.markAfkActivity(p.getUniqueId());
         Arena.afkCheck.remove(p.getUniqueId());
         if (BedWars.getAPI().getAFKUtil().isPlayerAFK(e.getPlayer())) {
             BedWars.getAPI().getAFKUtil().setPlayerAFK(e.getPlayer(), false);

@@ -27,6 +27,8 @@ import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
+import com.andrei1058.bedwars.arena.AfkPolicy;
+import com.andrei1058.bedwars.discipline.DisciplineService;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.util.AdventureText;
@@ -39,6 +41,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.time.Instant;
 
 import static com.andrei1058.bedwars.BedWars.nms;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -48,12 +56,15 @@ public class GamePlayingTask implements Runnable, PlayingTask {
     private Arena arena;
     private BukkitTask task;
     private int beds_destroy_countdown, dragon_spawn_countdown, game_end_countdown;
+    private final Map<UUID, AfkPolicy.State> afkStates = new HashMap<>();
+    private final AfkPolicy afkPolicy;
 
     public GamePlayingTask(Arena arena) {
         this.arena = arena;
         this.beds_destroy_countdown = BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_BEDS_DESTROY_COUNTDOWN);
         this.dragon_spawn_countdown = BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_DRAGON_SPAWN_COUNTDOWN);
         this.game_end_countdown = BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_GAME_END_COUNTDOWN);
+        this.afkPolicy = createAfkPolicy();
         this.task = Bukkit.getScheduler().runTaskTimer(BedWars.plugin, this, 0, 20L);
     }
 
@@ -189,20 +200,7 @@ public class GamePlayingTask implements Runnable, PlayingTask {
             }
         }
 
-        /* AFK SYSTEM FOR PLAYERS */
-        int current = 0;
-        for (Player p : getArena().getPlayers()) {
-            if (Arena.afkCheck.get(p.getUniqueId()) == null) {
-                Arena.afkCheck.put(p.getUniqueId(), current);
-            } else {
-                current = Arena.afkCheck.get(p.getUniqueId());
-                current++;
-                Arena.afkCheck.replace(p.getUniqueId(), current);
-                if (current == 45) {
-                    BedWars.getAPI().getAFKUtil().setPlayerAFK(p, true);
-                }
-            }
-        }
+        runAfkDiscipline();
 
         /* RESPAWN SESSION */
         if (!getArena().getRespawnSessions().isEmpty()) {
@@ -249,6 +247,84 @@ public class GamePlayingTask implements Runnable, PlayingTask {
 
     public void cancel() {
         task.cancel();
+        afkStates.clear();
+    }
+
+    /**
+     * Evaluate the immutable AFK policy once per second. Existing activity
+     * listeners mark a separate concurrent activity signal; the legacy
+     * Arena.afkCheck map remains available to API integrations while the
+     * actual timer and warning stages live in AfkPolicy.State.
+     */
+    private void runAfkDiscipline() {
+        if (BedWars.plugin == null) return;
+        DisciplineService discipline = BedWars.plugin.getDisciplineService();
+        if (discipline != null) {
+            if (!discipline.afkEnabled()) return;
+        } else if (!BedWars.config.getYml().getBoolean(ConfigPath.DISCIPLINE_AFK_ENABLED, true)) {
+            return;
+        }
+        Instant now = Instant.now();
+        Set<UUID> present = new HashSet<>();
+        List<Player> players = List.copyOf(getArena().getPlayers());
+        for (Player player : players) {
+            UUID uuid = player.getUniqueId();
+            present.add(uuid);
+            // Keep the public legacy map populated with elapsed seconds for
+            // integrations which still read Arena.afkCheck. Activity itself
+            // is consumed from the separate dirty set below.
+            int legacyIdleSeconds = Arena.afkCheck.getOrDefault(uuid, 0);
+            boolean paused = !player.isOnline() || player.isDead()
+                    || getArena().getRespawnSessions().containsKey(player);
+            AfkPolicy.State state = afkStates.get(uuid);
+            boolean activity = Arena.consumeAfkActivity(uuid);
+            if (state == null) {
+                state = afkPolicy.initialState(now);
+                legacyIdleSeconds = 0;
+            } else if (activity) {
+                state = afkPolicy.recordActivity(state, now);
+                legacyIdleSeconds = 0;
+                if (BedWars.getAPI().getAFKUtil().isPlayerAFK(player)) {
+                    BedWars.getAPI().getAFKUtil().setPlayerAFK(player, false);
+                }
+            } else if (!paused && legacyIdleSeconds < Integer.MAX_VALUE) {
+                legacyIdleSeconds++;
+            }
+            Arena.afkCheck.put(uuid, legacyIdleSeconds);
+
+            AfkPolicy.Evaluation evaluation = afkPolicy.evaluate(state, now, paused);
+            afkStates.put(uuid, evaluation.state());
+            switch (evaluation.decision()) {
+                case WARNING -> AdventureText.send(player, getMsg(player, Messages.DISCIPLINE_AFK_WARNING)
+                        .replace("{seconds}", String.valueOf(Math.max(1L,
+                                afkPolicy.removalSeconds() - evaluation.idleSeconds()))));
+                case FINAL_WARNING -> AdventureText.send(player, getMsg(player, Messages.DISCIPLINE_AFK_FINAL_WARNING));
+                case REMOVE -> {
+                    AdventureText.send(player, getMsg(player, Messages.DISCIPLINE_AFK_REMOVED));
+                    if (discipline != null) discipline.markAfk(player, getArena());
+                    afkStates.remove(uuid);
+                    Arena.afkCheck.remove(uuid);
+                    Arena.clearAfkActivity(uuid);
+                    getArena().removePlayer(player, false);
+                }
+                case NONE -> { }
+            }
+        }
+        afkStates.keySet().removeIf(uuid -> !present.contains(uuid));
+    }
+
+    private AfkPolicy createAfkPolicy() {
+        if (BedWars.plugin == null || BedWars.plugin.getDisciplineService() == null) {
+            return AfkPolicy.defaults();
+        }
+        DisciplineService discipline = BedWars.plugin.getDisciplineService();
+        try {
+            return new AfkPolicy(true, discipline.afkWarningSeconds(),
+                    discipline.afkFinalWarningSeconds(), discipline.afkRemovalSeconds());
+        } catch (IllegalArgumentException exception) {
+            BedWars.plugin.getLogger().warning("挂机时间配置无效，已回退为 60/120/180 秒。");
+            return AfkPolicy.defaults();
+        }
     }
 }
 

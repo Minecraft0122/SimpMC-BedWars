@@ -72,6 +72,34 @@ class MainConfigTest {
     }
 
     @Test
+    void disciplineMigrationPreservesCustomAfkWarningAndRepairsFollowingThresholds() {
+        YamlConfiguration oldDefaults = new YamlConfiguration();
+        oldDefaults.set(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS, 300);
+        oldDefaults.set(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS, 120);
+        oldDefaults.set(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS, 180);
+
+        MainConfig.migrateDisciplineDefaults(oldDefaults);
+
+        assertEquals(300, oldDefaults.getInt(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS));
+        assertEquals(301, oldDefaults.getInt(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS));
+        assertEquals(302, oldDefaults.getInt(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS));
+    }
+
+    @Test
+    void disciplineMigrationPreservesEveryValidAfkThresholdBeforeTheBrokenOne() {
+        YamlConfiguration custom = new YamlConfiguration();
+        custom.set(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS, 300);
+        custom.set(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS, 450);
+        custom.set(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS, 180);
+
+        MainConfig.migrateDisciplineDefaults(custom);
+
+        assertEquals(300, custom.getInt(ConfigPath.DISCIPLINE_AFK_WARNING_SECONDS));
+        assertEquals(450, custom.getInt(ConfigPath.DISCIPLINE_AFK_FINAL_WARNING_SECONDS));
+        assertEquals(451, custom.getInt(ConfigPath.DISCIPLINE_AFK_REMOVAL_SECONDS));
+    }
+
+    @Test
     void expandsOnlyTheUnchangedArenaSelectorLayout() {
         YamlConfiguration defaults = new YamlConfiguration();
         defaults.set(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE, 27);

@@ -57,6 +57,10 @@ public class CmdLeave extends SubCommand {
         update(p.getUniqueId());
         IArena a = Arena.getArenaByPlayer(p);
 
+        if (a != null && BedWars.plugin != null && BedWars.plugin.getDisciplineService() != null) {
+            BedWars.plugin.getDisciplineService().markVoluntaryLeave(p, a);
+        }
+
         Misc.moveToLobbyOrKick(p, a, a != null && a.isSpectator(p.getUniqueId()));
         return true;
     }

@@ -182,7 +182,7 @@ public final class IllegalTeamDetector implements Listener, AutoCloseable {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onRejoin(PlayerReJoinEvent event) {
-        if (!enabled) return;
+        if (!enabled || event.isCancelled()) return;
         clearPlayer(event.getArena(), event.getPlayer().getUniqueId());
     }
 

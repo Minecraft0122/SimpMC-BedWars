@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
+import com.andrei1058.bedwars.arena.ReJoin;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.arena.matchmaking.ArenaInviteManager;
@@ -100,8 +101,22 @@ public class QuitAndTeleportListener implements Listener {
     }
 
     static void removeArenaPlayerOnQuit(IArena arena, Player player, PlayerQuitEvent.QuitReason reason) {
+        boolean finalAbandonment = PlayerQuitPolicy.abandonsGame(reason);
+        if (finalAbandonment && BedWars.plugin != null
+                && BedWars.plugin.getDisciplineService() != null) {
+            BedWars.plugin.getDisciplineService().markKicked(player, arena);
+        }
         arena.removePlayer(player, true);
-        if (PlayerQuitPolicy.abandonsGame(reason)) arena.abandonGame(player);
+        if (finalAbandonment) {
+            // removePlayer creates the reconnect lifecycle. Mark that lifecycle
+            // as already punished before destroying it, so a delayed timeout
+            // callback cannot add a second strike for the same kicked departure.
+            ReJoin reJoin = ReJoin.getPlayer(player);
+            if (reJoin != null && reJoin.getArena() == arena) {
+                reJoin.tryMarkAbandonmentPenaltyRecorded();
+            }
+            arena.abandonGame(player);
+        }
     }
 
     /**

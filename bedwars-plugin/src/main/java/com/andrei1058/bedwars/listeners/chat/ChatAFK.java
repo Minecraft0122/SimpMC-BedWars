@@ -33,6 +33,7 @@ public class ChatAFK implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
+        Arena.markAfkActivity(event.getPlayer().getUniqueId());
         Arena.afkCheck.remove(event.getPlayer().getUniqueId());
         if (BedWars.getAPI().getAFKUtil().isPlayerAFK(event.getPlayer())) {
             // go sync

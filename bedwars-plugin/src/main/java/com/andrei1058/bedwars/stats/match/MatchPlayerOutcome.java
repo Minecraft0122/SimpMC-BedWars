@@ -18,5 +18,9 @@ public enum MatchPlayerOutcome {
     WIN,
     LOSS,
     ABANDONED,
-    DISCONNECTED
+    DISCONNECTED,
+    /** Removed from a running match after the configured AFK timeout. */
+    AFK_REMOVED,
+    /** Removed from a running match after the single-match VL threshold. */
+    VIOLATION_REMOVED
 }

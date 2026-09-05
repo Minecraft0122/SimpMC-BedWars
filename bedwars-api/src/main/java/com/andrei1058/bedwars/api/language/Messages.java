@@ -109,6 +109,14 @@ public class Messages {
     public static String COMMAND_HIGHLIGHT_ENABLED = "cmd-highlight-enabled";
     public static String COMMAND_HIGHLIGHT_DISABLED = "cmd-highlight-disabled";
 
+    /** Automatic discipline and anti-abuse messages. */
+    public static String DISCIPLINE_AFK_WARNING = "discipline-afk-warning";
+    public static String DISCIPLINE_AFK_FINAL_WARNING = "discipline-afk-final-warning";
+    public static String DISCIPLINE_AFK_REMOVED = "discipline-afk-removed";
+    public static String DISCIPLINE_ABANDONED = "discipline-abandoned";
+    public static String DISCIPLINE_VIOLATION_REMOVED = "discipline-violation-removed";
+    public static String DISCIPLINE_COOLDOWN = "discipline-cooldown";
+
     /**
      * Arena join/ leave related
      */

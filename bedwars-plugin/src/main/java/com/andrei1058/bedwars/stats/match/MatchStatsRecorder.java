@@ -24,6 +24,8 @@ import com.andrei1058.bedwars.api.events.player.PlayerLeaveArenaEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerReJoinEvent;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
+import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.database.MySQL;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -156,6 +158,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onArenaJoin(PlayerJoinArenaEvent event) {
+        if (event.isCancelled()) return;
         MatchRecord record = getRecord(event.getArena());
         if (record == null || event.isSpectator()) return;
         registerPlayer(record, event.getArena(), event.getPlayer());
@@ -164,6 +167,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onArenaRejoin(PlayerReJoinEvent event) {
+        if (event.isCancelled()) return;
         MatchRecord record = getRecord(event.getArena());
         if (record == null) return;
         Player player = event.getPlayer();
@@ -327,13 +331,45 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
         return violationDetector;
     }
 
+    /** Return the UUID of the currently recorded match for an arena. */
+    @Nullable
+    public UUID matchUuid(IArena arena) {
+        MatchRecord record = getRecord(arena);
+        return record == null ? null : record.getMatchUuid();
+    }
+
+    /** Mark a voluntary or expired departure without changing the arena lifecycle. */
+    public void markAbandonment(IArena arena, UUID playerUuid, String reason) {
+        MatchRecord record = getRecord(arena);
+        if (!isOpenForMatch(arena, record) || playerUuid == null) return;
+        MatchPlayerStats stats = record.getStats().registerPlayer(playerUuid,
+                playerName(playerUuid), teamId(arena, playerUuid));
+        stats.setOutcome(MatchPlayerOutcome.ABANDONED);
+        enqueueEvent(record, "PLAYER_ABANDONED", playerUuid, null,
+                reason == null ? null : "reason=" + reason);
+    }
+
+    /** Mark a player removed by the AFK policy. */
+    public void markAfkRemoved(IArena arena, UUID playerUuid) {
+        MatchRecord record = getRecord(arena);
+        if (!isOpenForMatch(arena, record) || playerUuid == null) return;
+        MatchPlayerStats stats = record.getStats().registerPlayer(playerUuid,
+                playerName(playerUuid), teamId(arena, playerUuid));
+        stats.setOutcome(MatchPlayerOutcome.AFK_REMOVED);
+        enqueueEvent(record, "AFK_REMOVE", playerUuid, null, null);
+    }
+
     @Nullable
     MatchRecord recordForDetector(IArena arena) {
         return getRecord(arena);
     }
 
     boolean isOpenForViolation(IArena arena, @Nullable MatchRecord record) {
-        return violationTracking && record != null && !record.isFinished()
+        return violationTracking && isOpenForMatch(arena, record);
+    }
+
+    boolean isOpenForMatch(IArena arena, @Nullable MatchRecord record) {
+        return arena != null && record != null && !record.isFinished()
                 && !gameEndAnnounced.contains(record) && arena.getStatus() == GameState.playing;
     }
 
@@ -351,14 +387,19 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
             punishmentResets.computeIfAbsent(record, ignored -> new HashSet<>()).add(playerUuid);
         }
         MatchPlayerStats stats = record.getStats().getPlayer(playerUuid).orElse(null);
-        if (stats != null) stats.setOutcome(MatchPlayerOutcome.ABANDONED);
+        if (stats != null) stats.setOutcome(MatchPlayerOutcome.VIOLATION_REMOVED);
         enqueueEvent(record, "VIOLATION_EJECT", playerUuid, null,
                 "rule=" + rule + ";effective_vl=" + currentVl + ";threshold=" + matchLeaveVlThreshold);
+        if (plugin.getDisciplineService() != null) {
+            plugin.getDisciplineService().markViolation(arena, playerUuid, rule);
+        }
         Bukkit.getScheduler().runTask(plugin, () -> {
             MatchRecord current = getRecord(arena);
             Player player = Bukkit.getPlayer(playerUuid);
             if (!isOpenForViolation(arena, current) || player == null || !player.isOnline()
                     || !arena.isPlayer(player)) return;
+            AdventureText.send(player, com.andrei1058.bedwars.api.language.Language.getMsg(
+                    player, Messages.DISCIPLINE_VIOLATION_REMOVED));
             LastHit lastHit = LastHit.getLastHit(player);
             if (lastHit != null) lastHit.remove();
             arena.removePlayer(player, false);
@@ -485,7 +526,9 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
     /** Keep an earlier voluntary leave or disconnect visible in aggregates. */
     private static void preserveDepartureOutcome(MatchPlayerStats stats) {
         MatchPlayerOutcome current = stats.snapshot().outcome();
-        if (current != MatchPlayerOutcome.ABANDONED && current != MatchPlayerOutcome.DISCONNECTED) {
+        if (current != MatchPlayerOutcome.ABANDONED && current != MatchPlayerOutcome.DISCONNECTED
+                && current != MatchPlayerOutcome.AFK_REMOVED
+                && current != MatchPlayerOutcome.VIOLATION_REMOVED) {
             stats.setOutcome(MatchPlayerOutcome.LOSS);
         }
     }

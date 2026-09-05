@@ -107,6 +107,19 @@ public class ConfigPath {
     public static final String MATCH_STATISTICS_VIOLATIONS_MATCH_LEAVE_THRESHOLD = MATCH_STATISTICS_PATH + ".violations.match-leave-threshold";
     public static final String MATCH_STATISTICS_VIOLATIONS_CROSS_TEAM_ITEM_TRANSFER = MATCH_STATISTICS_PATH + ".violations.cross-team-item-transfer";
 
+    /** Persistent discipline and anti-abuse policy. */
+    public static final String DISCIPLINE_PATH = "discipline";
+    public static final String DISCIPLINE_ENABLED = DISCIPLINE_PATH + ".enabled";
+    public static final String DISCIPLINE_VOLUNTARY_LEAVE = DISCIPLINE_PATH + ".voluntary-leave-punishment";
+    public static final String DISCIPLINE_DISCONNECT_TIMEOUT = DISCIPLINE_PATH + ".disconnect-timeout-punishment";
+    public static final String DISCIPLINE_AFK_ENABLED = DISCIPLINE_PATH + ".afk.enabled";
+    public static final String DISCIPLINE_AFK_WARNING_SECONDS = DISCIPLINE_PATH + ".afk.warning-seconds";
+    public static final String DISCIPLINE_AFK_FINAL_WARNING_SECONDS = DISCIPLINE_PATH + ".afk.final-warning-seconds";
+    public static final String DISCIPLINE_AFK_REMOVAL_SECONDS = DISCIPLINE_PATH + ".afk.removal-seconds";
+    public static final String DISCIPLINE_AFK_COOLDOWNS = DISCIPLINE_PATH + ".afk.cooldowns";
+    public static final String DISCIPLINE_ABANDONMENT_COOLDOWNS = DISCIPLINE_PATH + ".abandonment.cooldowns";
+    public static final String DISCIPLINE_VIOLATION_COOLDOWNS = DISCIPLINE_PATH + ".violation.cooldowns";
+
     public static final String GENERAL_CONFIGURATION_ALLOW_FIRE_EXTINGUISH = "allow-fire-extinguish";
     public static final String GENERAL_CONFIGURATION_ENABLE_HALLOWEEN = "enable-halloween-feature";
 

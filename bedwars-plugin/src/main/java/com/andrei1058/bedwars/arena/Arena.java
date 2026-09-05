@@ -116,8 +116,29 @@ public class Arena implements IArena {
     private static final Set<String> warnedLobbyItemProblems = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, Integer> lobbyItemRecheckGenerations = new ConcurrentHashMap<>();
     private static int gamesBeforeRestart = config.getInt(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_MODE_GAMES_BEFORE_RESTART);
-    public static HashMap<UUID, Integer> afkCheck = new HashMap<>();
+    /** Legacy AFK timer map retained for API compatibility. */
+    public static Map<UUID, Integer> afkCheck = new ConcurrentHashMap<>();
+    /** Activity dirty-signal shared with synchronous and asynchronous listeners. */
+    private static final Set<UUID> afkActivity = ConcurrentHashMap.newKeySet();
     public static HashMap<UUID, Integer> magicMilk = new HashMap<>();
+
+    /** Mark meaningful player activity for the per-arena AFK state machine. */
+    public static void markAfkActivity(UUID playerUuid) {
+        // The legacy map is populated by the arena task only for tracked
+        // participants. This guard prevents lobby chat/movement from growing
+        // the global activity set indefinitely.
+        if (playerUuid != null && afkCheck.containsKey(playerUuid)) afkActivity.add(playerUuid);
+    }
+
+    /** Consume one activity signal; a missing signal means no activity occurred. */
+    public static boolean consumeAfkActivity(UUID playerUuid) {
+        return playerUuid != null && afkActivity.remove(playerUuid);
+    }
+
+    /** Clear activity state when a player leaves or a new match starts. */
+    public static void clearAfkActivity(UUID playerUuid) {
+        if (playerUuid != null) afkActivity.remove(playerUuid);
+    }
 
 
     private List<Player> players = new ArrayList<>();
@@ -779,6 +800,7 @@ public class Arena implements IArena {
         ITeam team = null;
 
         Arena.afkCheck.remove(p.getUniqueId());
+        clearAfkActivity(p.getUniqueId());
         BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
 
         InvisibilityManager.remove(this, p);
@@ -1034,6 +1056,7 @@ public class Arena implements IArena {
         nms.setCollide(p, this, true);
 
         Arena.afkCheck.remove(p.getUniqueId());
+        clearAfkActivity(p.getUniqueId());
         BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
 
         if (getServerType() == ServerType.SHARED) {
@@ -1606,10 +1629,12 @@ public class Arena implements IArena {
         if (status == GameState.playing) {
             for (Player p : players) {
                 Arena.afkCheck.remove(p.getUniqueId());
+                clearAfkActivity(p.getUniqueId());
                 BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
             }
             for (Player p : spectators) {
                 Arena.afkCheck.remove(p.getUniqueId());
+                clearAfkActivity(p.getUniqueId());
                 BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
             }
 

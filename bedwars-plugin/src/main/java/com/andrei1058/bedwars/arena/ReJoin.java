@@ -54,6 +54,8 @@ public class ReJoin {
     private ReJoinTask task = null;
     /** Identifies one reconnect lease so a delayed remove cannot delete a newer lease. */
     private final String reservationId = UUID.randomUUID().toString();
+    /** A kick and its later timeout belong to one departure and must count only once. */
+    private final AbandonmentPenaltyState abandonmentPenaltyState = new AbandonmentPenaltyState();
     private long expiresAtMillis;
     private final ArrayList<ShopCache.CachedItem> permanentsAndNonDowngradables = new ArrayList<>();
 
@@ -248,6 +250,9 @@ public class ReJoin {
      */
     public void expire() {
         if (!isActiveReservation(reJoinList, this)) return;
+        if (BedWars.plugin != null && BedWars.plugin.getDisciplineService() != null) {
+            BedWars.plugin.getDisciplineService().markReconnectExpired(this);
+        }
         if (bwt != null) {
             bwt.getMembersCache().removeIf(cached -> cached.getUniqueId().equals(player));
         }
@@ -312,6 +317,15 @@ public class ReJoin {
     /** Stable identifier for this player's current reconnect lease. */
     public String getReservationId() {
         return reservationId;
+    }
+
+    /**
+     * Claim the abandonment penalty for this reconnect lifecycle.
+     *
+     * @return true only for the first kick/timeout path which records it
+     */
+    public boolean tryMarkAbandonmentPenaltyRecorded() {
+        return abandonmentPenaltyState.tryRecord();
     }
 
     /** Absolute deadline used by the lobby to discard stale reconnect leases. */

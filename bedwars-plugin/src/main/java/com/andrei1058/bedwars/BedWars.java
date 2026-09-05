@@ -54,6 +54,7 @@ import com.andrei1058.bedwars.commands.shout.ShoutCommand;
 import com.andrei1058.bedwars.configuration.*;
 import com.andrei1058.bedwars.database.Database;
 import com.andrei1058.bedwars.database.SQLite;
+import com.andrei1058.bedwars.discipline.DisciplineService;
 import com.andrei1058.bedwars.halloween.HalloweenSpecial;
 import com.andrei1058.bedwars.language.SimplifiedChinese;
 import com.andrei1058.bedwars.levels.internal.InternalLevel;
@@ -147,6 +148,7 @@ public class BedWars extends JavaPlugin {
     //remote database
     private static Database remoteDatabase;
     private MatchStatsRecorder matchStatsRecorder;
+    private DisciplineService disciplineService;
 
     private boolean serverSoftwareSupport = true;
     private boolean vaultSupportInitialized;
@@ -388,6 +390,18 @@ public class BedWars extends JavaPlugin {
             remoteDatabase.init();
         }
 
+        /* Cross-server discipline state is independent from match statistics.
+         * Lobby nodes also start this service so a cooldown is known before a
+         * player is dispatched to an arena node. */
+        if (remoteDatabase instanceof com.andrei1058.bedwars.database.MySQL) {
+            disciplineService = new DisciplineService(this,
+                    (com.andrei1058.bedwars.database.MySQL) remoteDatabase);
+            registerEvents(disciplineService);
+            disciplineService.start();
+        } else {
+            out.warning("纪律处罚需要 MySQL；当前使用 SQLite，本节点只保留本地对局逻辑，不启用跨服冷却。 ");
+        }
+
         /* Match-level statistics use the shared MySQL pool and an asynchronous
          * writer. SQLite remains available for the legacy global statistics,
          * but is intentionally not used as a cross-server match store. */
@@ -592,6 +606,11 @@ public class BedWars extends JavaPlugin {
         if (matchStatsRecorder != null) {
             matchStatsRecorder.close();
             matchStatsRecorder = null;
+        }
+
+        if (disciplineService != null) {
+            disciplineService.close();
+            disciplineService = null;
         }
 
         if (remoteDatabase != null) {
@@ -841,6 +860,11 @@ public class BedWars extends JavaPlugin {
     /** Return the match recorder when MySQL match statistics are enabled. */
     public MatchStatsRecorder getMatchStatsRecorder() {
         return matchStatsRecorder;
+    }
+
+    /** Cross-server anti-abuse service, or {@code null} when MySQL is unavailable. */
+    public DisciplineService getDisciplineService() {
+        return disciplineService;
     }
 
     public static StatsManager getStatsManager() {

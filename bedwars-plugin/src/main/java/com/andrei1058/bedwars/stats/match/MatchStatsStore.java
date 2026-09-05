@@ -328,7 +328,7 @@ public final class MatchStatsStore implements AutoCloseable {
                     "effective_vl INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "reconnects INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "disconnects INT UNSIGNED NOT NULL DEFAULT 0, " +
-                    "outcome VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN', " +
+                    "outcome VARCHAR(24) NOT NULL DEFAULT 'UNKNOWN', " +
                     "vl_applied TINYINT(1) NOT NULL DEFAULT 0, " +
                     "updated_at DATETIME(3) NOT NULL, " +
                     "PRIMARY KEY (match_uuid, player_uuid), " +
@@ -377,6 +377,7 @@ public final class MatchStatsStore implements AutoCloseable {
             addColumnIfMissing(statement, "ALTER TABLE bw_match_players ADD COLUMN evidence_adjustment INT NOT NULL DEFAULT 0 AFTER kill_boosting_vl");
             addColumnIfMissing(statement, "ALTER TABLE bw_match_players ADD COLUMN effective_vl INT UNSIGNED NOT NULL DEFAULT 0 AFTER evidence_adjustment");
             addColumnIfMissing(statement, "ALTER TABLE bw_player_violation_totals ADD COLUMN punishment_warning_mask TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER punishment_total_vl");
+            modifyColumnIfNeeded(statement, "ALTER TABLE bw_match_players MODIFY COLUMN outcome VARCHAR(24) NOT NULL DEFAULT 'UNKNOWN'");
 
             /*
              * A read-only aggregation surface for lobby dashboards and
@@ -401,6 +402,8 @@ public final class MatchStatsStore implements AutoCloseable {
                         "SUM(CASE WHEN p.outcome='LOSS' THEN 1 ELSE 0 END) AS losses, " +
                         "SUM(CASE WHEN p.outcome='ABANDONED' THEN 1 ELSE 0 END) AS abandoned, " +
                         "SUM(CASE WHEN p.outcome='DISCONNECTED' THEN 1 ELSE 0 END) AS disconnected, " +
+                        "SUM(CASE WHEN p.outcome='AFK_REMOVED' THEN 1 ELSE 0 END) AS afk_removed, " +
+                        "SUM(CASE WHEN p.outcome='VIOLATION_REMOVED' THEN 1 ELSE 0 END) AS violation_removed, " +
                         "COALESCE(MAX(v.crime_total_vl), 0) AS crime_total_vl, " +
                         "COALESCE(MAX(v.punishment_total_vl), 0) AS punishment_total_vl " +
                         "FROM bw_match_players p INNER JOIN bw_matches m ON m.match_uuid=p.match_uuid " +
@@ -675,6 +678,19 @@ public final class MatchStatsStore implements AutoCloseable {
              * previous plugin version) already created this column. */
             if (exception.getErrorCode() != 1060 && !"42S21".equals(exception.getSQLState())) {
                 throw exception;
+            }
+        }
+    }
+
+    private static void modifyColumnIfNeeded(Statement statement, String sql) throws SQLException {
+        try {
+            statement.executeUpdate(sql);
+        } catch (SQLException exception) {
+            /* Existing installations may use a restricted account. A failed
+             * compatibility ALTER must not stop normal match writes. */
+            if (BedWars.plugin != null) {
+                BedWars.plugin.getLogger().log(Level.WARNING,
+                        "无法更新对局统计字段兼容性；请确认数据库账号具备 ALTER 权限。", exception);
             }
         }
     }

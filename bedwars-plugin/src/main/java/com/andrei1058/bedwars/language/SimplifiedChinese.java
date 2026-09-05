@@ -137,6 +137,12 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.COMMAND_HIGHLIGHT_NO_TEAMMATES, "{prefix}&e当前没有可高光的队友。");
         yml.addDefault(Messages.COMMAND_HIGHLIGHT_ENABLED, "{prefix}&a已高光队友：&f{players}");
         yml.addDefault(Messages.COMMAND_HIGHLIGHT_DISABLED, "{prefix}&7已关闭队友高光。");
+        yml.addDefault(Messages.DISCIPLINE_AFK_WARNING, "{prefix}&e检测到你长时间没有活动，再过 {seconds} 秒将被移出本局。");
+        yml.addDefault(Messages.DISCIPLINE_AFK_FINAL_WARNING, "{prefix}&c你即将因挂机被移出本局，请立即移动或进行有效操作！");
+        yml.addDefault(Messages.DISCIPLINE_AFK_REMOVED, "{prefix}&c你因挂机已被移出本局；重复挂机会受到进入冷却处罚。");
+        yml.addDefault(Messages.DISCIPLINE_ABANDONED, "{prefix}&c你在进行中的对局中离开，已记录一次逃跑。当前冷却：{seconds} 秒。");
+        yml.addDefault(Messages.DISCIPLINE_VIOLATION_REMOVED, "{prefix}&c你的单局违规等级超过阈值，已被移出本局。");
+        yml.addDefault(Messages.DISCIPLINE_COOLDOWN, "{prefix}&c你暂时不能加入竞技场，还需等待 {seconds} 秒。原因：{reason}");
         yml.addDefault(Messages.ARENA_JOIN_VIP_KICK, "{prefix}&c抱歉，由于有一位赞助者加入该游戏，因此你被移出了该游戏。\n&a请考虑赞助以支持我们！ &7&o(点击查看)");
         yml.addDefault(Messages.ARENA_START_COUNTDOWN_STOPPED_INSUFF_PLAYERS_CHAT, "{prefix}&c玩家不足！ 倒计时取消！");
         yml.addDefault(Messages.ARENA_RESTART_PLAYER_KICK, "{prefix}&e当前游戏正在重启。");

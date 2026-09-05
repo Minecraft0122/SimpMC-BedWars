@@ -670,6 +670,7 @@ public class DamageDeathMove implements Listener {
 
         Player player = e.getPlayer();
         UUID playerId = player.getUniqueId();
+        Arena.markAfkActivity(playerId);
         Arena.afkCheck.remove(playerId);
         if (BedWars.getAPI().getAFKUtil().isPlayerAFK(player)) {
             BedWars.getAPI().getAFKUtil().setPlayerAFK(player, false);

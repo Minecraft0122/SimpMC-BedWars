@@ -80,6 +80,7 @@ public class API implements com.andrei1058.bedwars.api.BedWars {
                     Bukkit.getPluginManager().callEvent(new PlayerAfkEvent(player, PlayerAfkEvent.AFKType.END));
                 }
                 Arena.afkCheck.remove(player.getUniqueId());
+                Arena.clearAfkActivity(player.getUniqueId());
             }
         }
 
