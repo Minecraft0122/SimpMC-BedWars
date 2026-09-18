@@ -219,12 +219,11 @@ public class BwTabList {
             prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_LOBBY_PREFIX, player, null);
             suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_LOBBY_SUFFIX, player, null);
 
-            prepareTabFallback(player, null);
             PlayerTab tab = handle.playerTabCreate(
                     playerTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
                     this.sidebar.getPlaceholders(player)
             );
-            deployTab(tab, null);
+            deployTab(tab);
             return;
         }
 
@@ -259,14 +258,13 @@ public class BwTabList {
                     throw new IllegalStateException("Unhandled game status!");
             }
             ChatColor fallbackColor = team == null ? null : getPlayerListColor(team);
-            prepareTabFallback(player, fallbackColor);
             PlayerTab t = handle.playerTabCreate(
                     playerTabId, player, prefix, suffix, collisionPushingRule(status, false, player),
                     this.sidebar.getPlaceholders(player), fallbackColor == null ? ChatColor.WHITE : fallbackColor,
                     PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
                     collisionGroup(status, team, player)
             );
-            deployTab(t, fallbackColor);
+            deployTab(t);
             return;
         }
 
@@ -279,7 +277,6 @@ public class BwTabList {
         prefix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, player, replacements);
         suffix = getPlayerRowText(Messages.FORMATTING_SB_TAB_PLAYING_SUFFIX, player, replacements);
         ChatColor fallbackColor = team == null ? null : getPlayerListColor(team);
-        prepareTabFallback(player, fallbackColor);
 
         PlayerTab teamTab = handle.playerTabCreate(
                 playerTabId,
@@ -291,7 +288,7 @@ public class BwTabList {
                 PlayerTab.PlayerListMode.ACTUAL, collisionGroup(status, team, player)
         );
         teamTab.setItalic(arena.isReSpawning(player));
-        deployTab(teamTab, fallbackColor);
+        deployTab(teamTab);
     }
 
     /** Recreate an existing row so Sidebar sends a forced one-entry update. */
@@ -323,7 +320,6 @@ public class BwTabList {
         boolean spectatorRow = playerListMode == PlayerTab.PlayerListMode.SPECTATOR;
         GameState status = sidebar.getArena().getStatus();
         ChatColor fallbackColor = team == null ? null : getPlayerListColor(team);
-        prepareTabFallback(player, fallbackColor);
 
         PlayerTab tab = handle.playerTabCreate(
                 player.getUniqueId().toString(), player, new SidebarLine(), new SidebarLine(),
@@ -336,12 +332,12 @@ public class BwTabList {
                 playerListMode, spectator ? null : collisionGroup(status, team, player)
         );
         tab.setItalic(!spectator && arena.isReSpawning(player));
-        deployTab(tab, fallbackColor);
+        deployTab(tab);
     }
 
     static @Nullable PlayerTab.PlayerListMode resolveMinimalPlayerListMode(
             @Nullable ITeam team, boolean spectator) {
-        if (spectator) return PlayerTab.PlayerListMode.SPECTATOR;
+        if (spectator) return null;
         return team == null ? null : PlayerTab.PlayerListMode.ACTUAL;
     }
 
@@ -377,31 +373,27 @@ public class BwTabList {
 
     private void removeDeployedTab(@NotNull UUID playerId) {
         PlayerTab playerTab = deployedPerPlayerTabList.remove(playerId);
-        if (playerTab != null) {
-            TabColorFallback.release(sidebar.getPlayer().getUniqueId(), playerTab.getPlayer());
-        }
         if (playerTab != null && sidebar.getHandle() != null) {
             sidebar.getHandle().removeTab(playerTab.getIdentifier());
         }
     }
 
-    private void deployTab(@NotNull PlayerTab tab, @Nullable ChatColor fallbackColor) {
+    private void deployTab(@NotNull PlayerTab tab) {
         UUID targetId = tab.getPlayer().getUniqueId();
         deployedPerPlayerTabList.put(targetId, tab);
-        UUID ownerId = sidebar.getPlayer().getUniqueId();
-        if (fallbackColor == null) {
-            TabColorFallback.release(ownerId, tab.getPlayer());
-        } else {
-            TabColorFallback.claim(ownerId, tab.getPlayer(), fallbackColor);
-        }
     }
 
-    private void prepareTabFallback(@NotNull Player player, @Nullable ChatColor fallbackColor) {
-        UUID ownerId = sidebar.getPlayer().getUniqueId();
-        if (fallbackColor == null) {
-            TabColorFallback.release(ownerId, player);
-        } else {
-            TabColorFallback.claim(ownerId, player, fallbackColor);
+    void refreshPlayerListState() {
+        IArena arena = sidebar.getArena();
+        if (arena == null) return;
+        for (PlayerTab tab : List.copyOf(deployedPerPlayerTabList.values())) {
+            Player player = tab.getPlayer();
+            if (!player.isOnline() || arena.isSpectator(player)) {
+                removeDeployedTab(player.getUniqueId());
+                continue;
+            }
+            tab.setColor(getPlayerListColor(resolvePlayerListTeam(arena, player)));
+            tab.setItalic(arena.isReSpawning(player));
         }
     }
 
@@ -673,7 +665,6 @@ public class BwTabList {
     public void onSidebarRemoval() {
         requestPlayerListOrderUpdate();
         sidebar.getHandle().clearLines();
-        TabColorFallback.releaseOwner(sidebar.getPlayer().getUniqueId());
         deployedPerPlayerTabList.clear();
         sidebar.getHandle().removeTabs();
     }

@@ -140,6 +140,10 @@ public class BwSidebar implements ISidebar {
         return player;
     }
 
+    BwTabList getTabList() {
+        return tabList;
+    }
+
     @SuppressWarnings("ConstantConditions")
     public SidebarLine normalizeTitle(@Nullable List<String> titleArray) {
         if (null == titleArray || titleArray.isEmpty()) {

@@ -133,6 +133,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void giveSidebar(@NotNull Player player, @Nullable IArena arena, boolean delay) {
+        ArenaPlayerListNames.synchronize(player, Arena.getArenaByPlayer(player));
         if (sidebarHandler == null || !player.isOnline()) return;
         // Callers can outlive an arena transition (for example the delayed
         // lobby cleanup). Always render the player's current registry state.
@@ -344,6 +345,7 @@ public class SidebarService implements ISidebarService {
     /** Replay only the PlayerInfo row rebuilt by Paper's showPlayer path. */
     void handlePlayerShown(@NotNull Player viewer, @NotNull Player target) {
         if (!viewer.isOnline() || !target.isOnline()) return;
+        ArenaPlayerListNames.synchronize(target, Arena.getArenaByPlayer(target));
         BwSidebar sidebar = sidebars.get(viewer.getUniqueId());
         if (sidebar != null && shouldReplayPlayerShown(
                 sidebar.getArena(), target.getUniqueId(), pendingEliminationRefreshes)) {
@@ -371,6 +373,7 @@ public class SidebarService implements ISidebarService {
      * a lobby at this point.
      */
     void synchronizeJoinedPlayer(@NotNull Player joinedPlayer) {
+        ArenaPlayerListNames.synchronize(joinedPlayer, Arena.getArenaByPlayer(joinedPlayer));
         if (sidebarHandler == null || !joinedPlayer.isOnline()) return;
         IArena joinedArena = Arena.getArenaByPlayer(joinedPlayer);
         if (joinedArena == null) {
@@ -431,6 +434,7 @@ public class SidebarService implements ISidebarService {
 
     /** Remove scoreboards that still reference an arena being destroyed. */
     public void removeArena(@NotNull IArena arena) {
+        ArenaPlayerListNames.release(arena);
         pendingEliminationRefreshes.remove(arena);
         List<BwSidebar> stale = sidebars.values().stream()
                 .filter(sidebar -> sidebar.getArena() == arena)
@@ -440,6 +444,7 @@ public class SidebarService implements ISidebarService {
 
     /** Restore every client-owned TAB/scoreboard value before plugin unload. */
     void shutdown() {
+        ArenaPlayerListNames.clear();
         delayedSidebarTasks.values().forEach(BukkitTask::cancel);
         delayedSidebarTasks.clear();
         if (tabRefreshBatchTask != null) tabRefreshBatchTask.cancel();
@@ -495,6 +500,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void refreshTabList() {
+        ArenaPlayerListNames.refresh();
         if (sidebarHandler == null || sidebars.isEmpty() || tabRefreshBatchTask != null) return;
         pendingTabRefreshes.clear();
         pendingTabRefreshes.addAll(activeSidebars());
@@ -515,6 +521,7 @@ public class SidebarService implements ISidebarService {
             Player player = sidebar.getPlayer();
             if (player.isOnline() && sidebars.get(player.getUniqueId()) == sidebar
                     && sidebar.getHandle() != null) {
+                sidebar.getTabList().refreshPlayerListState();
                 sidebar.getHandle().playerTabRefreshAnimation();
             }
         }
@@ -576,6 +583,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleReJoin(IArena arena, Player player) {
+        ArenaPlayerListNames.synchronize(player, arena);
         if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (null != v.getArena() && v.getArena().equals(arena)) {
@@ -585,6 +593,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleRespawnState(IArena arena, Player player) {
+        ArenaPlayerListNames.synchronize(player, arena);
         if (sidebarHandler == null || sidebars.isEmpty()) return;
         this.sidebars.forEach((k, v) -> {
             if (v.getArena() == arena) v.giveUpdateTabFormat(player, false);
@@ -592,6 +601,7 @@ public class SidebarService implements ISidebarService {
     }
 
     public void handleJoin(IArena arena, Player player, @Nullable Boolean spectator) {
+        ArenaPlayerListNames.synchronize(player, arena);
         if (sidebarHandler == null || sidebars.isEmpty()) return;
         updateArenaPlayerTabs(sidebars.values(), arena, player, spectator);
     }
@@ -637,6 +647,9 @@ public class SidebarService implements ISidebarService {
 
     private void flushArenaEliminationRefresh(@NotNull IArena arena,
                                                @NotNull Collection<Player> eliminatedPlayers) {
+        eliminatedPlayers.stream()
+                .filter(player -> isCurrentElimination(arena, player, Arena::getArenaByPlayer))
+                .forEach(player -> ArenaPlayerListNames.synchronize(player, arena));
         if (sidebarHandler == null || sidebars.isEmpty()) return;
 
         List<BwSidebar> arenaSidebars = sidebars.values().stream()

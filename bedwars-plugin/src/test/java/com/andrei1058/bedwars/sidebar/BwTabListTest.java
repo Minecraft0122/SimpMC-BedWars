@@ -56,15 +56,13 @@ class BwTabListTest {
     }
 
     @Test
-    void minimalFormattingStillCreatesPureSpectatorRows() {
+    void minimalFormattingExcludesSpectatorsRegardlessOfTheirFormerTeam() {
         ITeam red = team("red", TeamColor.RED);
 
         assertSame(PlayerTab.PlayerListMode.ACTUAL,
                 BwTabList.resolveMinimalPlayerListMode(red, false));
-        assertSame(PlayerTab.PlayerListMode.SPECTATOR,
-                BwTabList.resolveMinimalPlayerListMode(red, true));
-        assertSame(PlayerTab.PlayerListMode.SPECTATOR,
-                BwTabList.resolveMinimalPlayerListMode(null, true));
+        assertNull(BwTabList.resolveMinimalPlayerListMode(red, true));
+        assertNull(BwTabList.resolveMinimalPlayerListMode(null, true));
         assertEquals(null, BwTabList.resolveMinimalPlayerListMode(null, false));
     }
 

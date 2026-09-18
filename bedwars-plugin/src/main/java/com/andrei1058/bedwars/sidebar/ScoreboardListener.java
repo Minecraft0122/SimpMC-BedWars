@@ -22,6 +22,7 @@ package com.andrei1058.bedwars.sidebar;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent;
 import com.andrei1058.bedwars.api.events.player.*;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
@@ -47,6 +48,11 @@ import java.util.UUID;
 public class ScoreboardListener implements Listener {
 
     private final Set<UUID> awaitingInitialClientLoad = new HashSet<>();
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void gameStateChanged(@NotNull GameStateChangeEvent event) {
+        ArenaPlayerListNames.synchronize(event.getArena());
+    }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDamage(@NotNull EntityDamageEvent e) {
@@ -131,6 +137,7 @@ public class ScoreboardListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void serverQuit(@NotNull PlayerQuitEvent event) {
+        ArenaPlayerListNames.release(event.getPlayer());
         awaitingInitialClientLoad.remove(event.getPlayer().getUniqueId());
         SidebarService.getInstance().removePlayerFromTabs(event.getPlayer());
     }
@@ -145,6 +152,7 @@ public class ScoreboardListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void arenaLeave(@NotNull PlayerLeaveArenaEvent e) {
+        ArenaPlayerListNames.release(e.getPlayer());
         SidebarService.getInstance().removePlayerFromTabs(e.getPlayer());
         if (BedWars.getServerType() == ServerType.MULTIARENA || BedWars.getServerType() == ServerType.SHARED) {
             // add player to scoreboard tab list

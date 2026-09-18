@@ -96,19 +96,23 @@ final class PlayerListDisplayNamePackets implements PlayerListDisplayNameRendere
     public boolean render(@NotNull Player viewer, @NotNull Collection<RenderedName> names) {
         if (names.isEmpty()) return true;
         try {
-            ArrayList<Object> entries = new ArrayList<>(names.size());
-            for (RenderedName name : names) {
-                Object renderedName = legacyComponent.invoke(null, name.legacyDisplayName());
-                entries.add(entryConstructor.newInstance(
-                        name.target().getUniqueId(), null, false, 0, null,
-                        renderedName, false, 0, null));
-            }
-            send(viewer, entriesPacket.newInstance(displayNameAction, entries));
+            send(viewer, createDisplayNamePacket(names));
             return true;
         } catch (ReflectiveOperationException exception) {
             logPacketFailure(viewer, exception);
             return false;
         }
+    }
+
+    private Object createDisplayNamePacket(Collection<RenderedName> names) throws ReflectiveOperationException {
+        ArrayList<Object> entries = new ArrayList<>(names.size());
+        for (RenderedName name : names) {
+            Object renderedName = legacyComponent.invoke(null, name.legacyDisplayName());
+            entries.add(entryConstructor.newInstance(
+                    name.target().getUniqueId(), null, false, 0, null,
+                    renderedName, false, 0, null));
+        }
+        return entriesPacket.newInstance(displayNameAction, entries);
     }
 
     @Override
