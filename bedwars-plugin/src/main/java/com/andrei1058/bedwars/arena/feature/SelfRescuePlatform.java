@@ -28,12 +28,14 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -71,11 +73,18 @@ public final class SelfRescuePlatform implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         Location to = event.getTo();
-        if (to == null || event.getFrom().getBlockY() == to.getBlockY()) return;
+        if (to == null) return;
+        Player player = event.getPlayer();
+        if (!temporaryBlocks.isEmpty() && player.getFallDistance() > 0.0F) {
+            IArena arena = activeArena(player);
+            if (arena != null && (isOnPlatform(player, arena, event.getFrom())
+                    || isOnPlatform(player, arena, to))) player.setFallDistance(0.0F);
+        }
+        if (event.getFrom().getBlockY() == to.getBlockY()) return;
         tryAutomaticDeploy(event.getPlayer(), to);
     }
 
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onUse(PlayerInteractEvent event) {
         if (!isActivationAction(event.getAction())) return;
         Player player = event.getPlayer();
@@ -98,6 +107,38 @@ public final class SelfRescuePlatform implements Listener {
     static boolean isActivationAction(Action action) {
         return action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK
                 || action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK;
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onFallDamage(EntityDamageEvent event) {
+        if (event.getCause() != EntityDamageEvent.DamageCause.FALL
+                || temporaryBlocks.isEmpty() || !(event.getEntity() instanceof Player player)) return;
+        IArena arena = activeArena(player);
+        if (arena == null || !isOnPlatform(player, arena, player.getLocation())) return;
+        player.setFallDistance(0.0F);
+        event.setCancelled(true);
+    }
+
+    private boolean isOnPlatform(Player player, IArena arena, Location location) {
+        if (!arena.getWorld().equals(location.getWorld())) return false;
+        double surfaceY = Math.rint(location.getY());
+        if (Math.abs(location.getY() - surfaceY) > 1.0E-5) return false;
+        Location current = player.getLocation();
+        BoundingBox feet = player.getBoundingBox().shift(location.getX() - current.getX(),
+                location.getY() - current.getY(), location.getZ() - current.getZ());
+        int blockY = (int) surfaceY - 1;
+        int minX = (int) Math.floor(feet.getMinX() + 1.0E-5);
+        int maxX = (int) Math.floor(feet.getMaxX() - 1.0E-5);
+        int minZ = (int) Math.floor(feet.getMinZ() + 1.0E-5);
+        int maxZ = (int) Math.floor(feet.getMaxZ() - 1.0E-5);
+        String worldKey = location.getWorld().getUID() + ":";
+        for (int blockX = minX; blockX <= maxX; blockX++) {
+            for (int blockZ = minZ; blockZ <= maxZ; blockZ++) {
+                TemporaryBlock block = temporaryBlocks.get(worldKey + blockX + ":" + blockY + ":" + blockZ);
+                if (block != null && block.arena == arena && block.block.getType() == Material.SLIME_BLOCK) return true;
+            }
+        }
+        return false;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -376,7 +417,7 @@ public final class SelfRescuePlatform implements Listener {
     }
 
     private boolean isAir(Block block) {
-        return block.getType().isAir();
+        return block.isEmpty();
     }
 
     private boolean isValidY(World world, int y) {
