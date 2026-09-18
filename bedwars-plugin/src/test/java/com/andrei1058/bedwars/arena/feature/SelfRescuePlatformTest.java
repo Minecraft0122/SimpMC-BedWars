@@ -14,7 +14,6 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.block.Action;
@@ -53,6 +52,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -363,7 +363,10 @@ class SelfRescuePlatformTest {
     }
 
     private EntityDamageEvent damage(EntityDamageEvent.DamageCause cause) {
-        return new EntityDamageEvent(player, cause, mock(DamageSource.class), 10);
+        EntityDamageEvent event = mock(EntityDamageEvent.class, CALLS_REAL_METHODS);
+        when(event.getEntity()).thenReturn(player);
+        when(event.getCause()).thenReturn(cause);
+        return event;
     }
 
     private Block block(int blockX, int blockY, int blockZ) {
