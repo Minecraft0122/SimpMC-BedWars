@@ -143,8 +143,8 @@ TAB 相关常用项：
 - `scoreboard-settings.tab-header-footer.refresh-interval`：TAB 页首页尾动态内容刷新周期，默认 `20` tick。游戏时间复用此任务和内容缓存；小于 1 时按现有配置语义关闭动态刷新。
 - `scoreboard-settings.tab-header-footer.lobby-header`：仅配置大厅 TAB 顶部文字。空列表沿用语言文件中的默认内容；非空时逐行填写，系统仍会自动保留内置宽度行。支持 `&` 颜色代码和 `{serverIp}`、`{on}` 等占位符，大厅页尾及竞技场各状态不会被覆盖。
 - `scoreboard-settings.player-list.format-lobby-list`：显示大厅玩家前后缀，默认开启。
-- `scoreboard-settings.player-list.names-refresh-interval`：TAB 动态文字刷新周期，默认 `1200` tick（60 秒），小于 1 时关闭周期刷新。玩家行平时由开局、登录、重连、重生和切换可见性等事件即时同步；周期刷新先核对 Paper 玩家列表名称及玩家当前队伍、重生状态，再重放完整显示名，并检查 scoreboard 是否发生漂移。名称或 Team 元数据未变化时不重复写入。关闭周期刷新不会关闭事件同步。
-- 游戏进行中的存活玩家及结算阶段仍有原队伍归属的参赛玩家，内置行前缀默认使用 `{teamColor}{teamName} `，在玩家名前显示带队伍颜色的完整队名。管理员仍可使用 `{teamName}`、`{teamLetter}` 和 `{teamColor}` 自定义前后缀。插件通过 Paper 的 `Player.playerListName(Component)` 维护目标玩家的队伍色名称，再按查看者发送带语言前后缀的完整显示名。颜色独立于查看者的侧边栏生命周期；删除某个查看者的行不会清除目标玩家颜色。离场、断线和插件关闭时恢复接管前的名称，若离场前已有其他插件写入新名称则保留其新值。
+- `scoreboard-settings.player-list.names-refresh-interval`：TAB 动态文字刷新周期，默认 `1200` tick（60 秒），小于 1 时关闭周期刷新。玩家行平时由开局、登录、重连、重生和切换可见性等事件即时同步；周期刷新按当前队伍、重生状态重放完整显示名，并检查 scoreboard 是否发生漂移。行显示名或 Team 元数据未变化时不重复写入。关闭周期刷新不会关闭事件同步。
+- 游戏进行中的存活玩家及结算阶段仍有原队伍归属的参赛玩家，内置行前缀默认使用 `{teamColor}{teamName} `，在玩家名前显示带队伍颜色的完整队名。管理员仍可使用 `{teamName}`、`{teamLetter}` 和 `{teamColor}` 自定义前后缀。插件通过 Paper scoreboard team 维护队伍颜色、碰撞和头顶名牌，再按查看者发送带语言前后缀的完整 PlayerInfo 显示名。颜色独立于某个查看者的单次 TAB 刷新；加入、重连、重新可见和重生时会重新发送当前行。
 - 等待重生的玩家保留队伍色并以斜体显示，复活后恢复普通字体；最终淘汰与开局后加入的纯旁观者不创建对局队伍行，Paper 基础名称使用灰色斜体，不继承原队伍颜色。即使关闭侧边栏、页首页尾和完整 TAB 格式，核心队伍色与队伍排序仍生效。等待和倒计时阶段尚未正式分队；正式开局后显示实际颜色。队伍按红→黄→绿→深绿→青→蓝→粉排列，非光谱色白→灰→深灰置后；同队存活与等待重生玩家按完整玩家名字典序排列。旧 `teammate-color` 配置会自动删除；`format-tab.playing.game-time` 保留管理员已有文本。
 - scoreboard Team 独立负责头顶名牌颜色和碰撞；进行中的存活玩家共享真实队伍并使用 `FOR_OTHER_TEAMS`，只关闭同队玩家之间的推动，敌队保持碰撞。观战和死亡等待的实体级无碰撞由 Paper API 单独管理。
 - 存活、已淘汰和纯旁观三种游戏中页首都会插入本局已进行时间。`{gameTime}` 显示 `MM:SS`，超过一小时显示 `HH:MM:SS`；`{time}` 仍表示下一事件倒计时。等待、开局倒计时和重置阶段不会显示继续增长的本局时间。竞技场 TAB 页首还会在地图信息后显示 `{gameId}` 对局编号；将语言文件的 `format-tab.game-id` 设为空字符串可隐藏。将语言文件的 `format-tab.playing.game-time` 设为空字符串可隐藏该行；若自定义页首已经直接包含 `{gameTime}`，插件不会重复插入。
