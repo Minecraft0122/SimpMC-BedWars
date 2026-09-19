@@ -83,6 +83,10 @@ class MatchIdentityLifecycleTest {
                 finishes.add(call.getArgument(0));
                 return true;
             });
+            when(store.enqueueFinishForShutdown(any(), anySet())).thenAnswer(call -> {
+                finishes.add(call.getArgument(0));
+                return true;
+            });
         });
         recorder = new MatchStatsRecorder(mock(BedWars.class), mock(MatchStatsDatabase.class));
         winner = player("Winner");

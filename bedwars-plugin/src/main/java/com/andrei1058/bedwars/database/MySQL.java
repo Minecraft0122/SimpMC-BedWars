@@ -125,6 +125,11 @@ public class MySQL implements Database {
         return dataSource.getConnection();
     }
 
+    /** 待写记录绑定数据库目标；不包含用户名或口令。 */
+    public String storageIdentity() {
+        return "mysql:" + host.toLowerCase(Locale.ROOT) + ':' + port + '/' + database;
+    }
+
     @Override
     public boolean hasStats(UUID uuid) {
         String sql = "SELECT uuid FROM global_stats WHERE uuid = ?;";

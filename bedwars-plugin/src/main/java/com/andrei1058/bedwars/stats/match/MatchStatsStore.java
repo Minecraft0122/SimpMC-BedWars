@@ -15,11 +15,14 @@ import com.andrei1058.bedwars.api.stats.KillDeathRatio;
 import com.andrei1058.bedwars.database.MySQL;
 
 import java.math.BigDecimal;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.SQLTransientException;
+import java.sql.SQLRecoverableException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -30,6 +33,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -42,7 +48,7 @@ import java.util.logging.Level;
 /**
  * Asynchronous MySQL/SQLite writer for match-level statistics.
  *
- * <p>Every queued operation owns a short transaction. No transaction is held
+ * <p>Lifecycle writes and bounded event batches own short transactions. No transaction is held
  * while a game is running, and the match number is allocated by the database's
  * auto-increment column. This keeps the start path independent from any
  * aggregate/player-statistics row locks.</p>
@@ -55,6 +61,7 @@ public final class MatchStatsStore implements AutoCloseable {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     private final MatchStatsDatabase database;
+    private final MatchWriterConnection writerConnection;
     private final ZoneId zone;
     private final String serverId;
     private final int retryDelaySeconds;
@@ -69,6 +76,15 @@ public final class MatchStatsStore implements AutoCloseable {
     private final BlockingQueue<QueuedOperation> criticalQueue;
     private final ExecutorService executor;
     private volatile boolean running;
+    private volatile boolean acceptingCritical;
+    private final MatchWriteJournal journal;
+    private final Object pendingLock = new Object();
+    private final Map<UUID, QueuedOperation> unconfirmed = new LinkedHashMap<>();
+    private final Set<UUID> orderedPlayersBlocked = new HashSet<>();
+    private final Set<UUID> deferredMatches = new HashSet<>();
+    private final Object wakeup = new Object();
+    private volatile boolean persistenceFailed;
+    private volatile boolean shutdownDeadlineExceeded;
 
     public MatchStatsStore(MySQL database, ZoneId zone, String serverId,
                            int queueCapacity, int retryDelaySeconds) {
@@ -93,6 +109,7 @@ public final class MatchStatsStore implements AutoCloseable {
         if (queueCapacity < 100) throw new IllegalArgumentException("queueCapacity must be at least 100");
         if (retryDelaySeconds < 1) throw new IllegalArgumentException("retryDelaySeconds must be positive");
         this.database = Objects.requireNonNull(database, "database");
+        this.writerConnection = new MatchWriterConnection(database);
         this.zone = Objects.requireNonNull(zone, "zone");
         this.serverId = Objects.requireNonNull(serverId, "serverId");
         this.retryDelaySeconds = retryDelaySeconds;
@@ -110,12 +127,15 @@ public final class MatchStatsStore implements AutoCloseable {
             return thread;
         });
         this.criticalQueue = new ArrayBlockingQueue<>(queueCapacity);
+        this.journal = new MatchWriteJournal(database.pendingWritesDirectory(), database.storageIdentity());
     }
 
     /** Start the writer; schema creation is deliberately off the server thread. */
     public synchronized void start() {
-        if (running) return;
+        if (acceptingCritical) return;
+        if (executor.isShutdown()) throw new IllegalStateException("已关闭的统计写入器不能重新启动");
         running = true;
+        acceptingCritical = true;
         executor.submit(this::runWorker);
     }
 
@@ -131,7 +151,7 @@ public final class MatchStatsStore implements AutoCloseable {
                 connection -> {
                     matchNumber[0] = writeStart(connection, snapshot);
                     return List.of();
-                }, true, () -> callback.accept(matchNumber[0])));
+                }, true, () -> callback.accept(matchNumber[0]), PendingMatchWrite.start(snapshot)));
     }
 
     public boolean enqueueEvent(MatchEventSnapshot event) {
@@ -139,7 +159,7 @@ public final class MatchStatsStore implements AutoCloseable {
                 connection -> {
                     writeEvent(connection, event);
                     return List.of();
-                }, true));
+                }, true, () -> { }, PendingMatchWrite.event(event)));
     }
 
     public boolean enqueueReport(MatchRecordSnapshot snapshot) {
@@ -161,10 +181,27 @@ public final class MatchStatsStore implements AutoCloseable {
      * prematurely reset a punishment record.
      */
     public boolean enqueueFinish(MatchRecordSnapshot snapshot, Set<UUID> punishedPlayers) {
+        return enqueueCritical(finishOperation(snapshot, punishedPlayers));
+    }
+
+    /** 仅供关闭流程：队列已满时仍保留最终快照，由紧随其后的 close() 转存。 */
+    boolean enqueueFinishForShutdown(MatchRecordSnapshot snapshot, Set<UUID> punishedPlayers) {
+        QueuedOperation operation = finishOperation(snapshot, punishedPlayers);
+        synchronized (pendingLock) {
+            if (!acceptingCritical) return false;
+            unconfirmed.put(operation.pending.operationId(), operation);
+            criticalQueue.offer(operation);
+            synchronized (wakeup) { wakeup.notifyAll(); }
+            return true;
+        }
+    }
+
+    private QueuedOperation finishOperation(MatchRecordSnapshot snapshot, Set<UUID> punishedPlayers) {
         List<UUID> resetPlayers = punishedPlayers == null ? List.of() : punishedPlayers.stream()
                 .filter(Objects::nonNull).distinct().sorted().toList();
-        return enqueueCritical(new QueuedOperation("finish " + snapshot.matchUuid(),
-                connection -> writeFinish(connection, snapshot, resetPlayers), true));
+        return new QueuedOperation("finish " + snapshot.matchUuid(),
+                connection -> writeFinish(connection, snapshot, resetPlayers), true,
+                () -> { }, PendingMatchWrite.finish(snapshot, resetPlayers));
     }
 
     /**
@@ -178,7 +215,7 @@ public final class MatchStatsStore implements AutoCloseable {
                 connection -> {
                     resetPunishmentVl(connection, uuid, punishedAt);
                     return List.of();
-                }, true));
+                }, true, () -> { }, PendingMatchWrite.reset(uuid, punishedAt)));
     }
 
     public int queuedOperations() {
@@ -186,11 +223,17 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     private boolean enqueueCritical(QueuedOperation operation) {
-        if (!running) {
-            logQueueRejection(operation, "对局统计写入器未启动");
-            return false;
+        synchronized (pendingLock) {
+            if (!acceptingCritical) {
+                logQueueRejection(operation, "对局统计写入器未启动");
+                return false;
+            }
+            if (criticalQueue.offer(operation)) {
+                if (operation.pending != null) unconfirmed.put(operation.pending.operationId(), operation);
+                synchronized (wakeup) { wakeup.notifyAll(); }
+                return true;
+            }
         }
-        if (criticalQueue.offer(operation)) return true;
         logQueueRejection(operation, "对局统计关键写入队列已满");
         return false;
     }
@@ -200,7 +243,10 @@ public final class MatchStatsStore implements AutoCloseable {
             logQueueRejection(operation, "对局统计写入器未启动");
             return false;
         }
-        if (queue.offer(operation)) return true;
+        if (queue.offer(operation)) {
+            synchronized (wakeup) { wakeup.notifyAll(); }
+            return true;
+        }
         logQueueRejection(operation, "对局统计写入队列已满");
         return false;
     }
@@ -212,34 +258,51 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     private void runWorker() {
+        try {
         if (!initializeSchemaWithRetry()) {
-            /* Keep the bounded queues intact for diagnostics or a later
-             * explicit restart, while stopping producers from growing them
-             * indefinitely after schema setup has failed. */
+            // 保留有界队列，允许关闭时生成的最终快照入队并统一转存。
             running = false;
             return;
         }
-        while (running || !criticalQueue.isEmpty() || !queue.isEmpty()) {
+        while (!shutdownDeadlineExceeded && !persistenceFailed && (running || !criticalQueue.isEmpty() || !queue.isEmpty())) {
             try {
-                QueuedOperation operation = criticalQueue.poll();
-                if (operation == null) operation = queue.poll(500, TimeUnit.MILLISECONDS);
+                QueuedOperation operation;
+                synchronized (wakeup) {
+                    operation = criticalQueue.poll();
+                    if (operation == null) operation = queue.poll();
+                    if (operation == null && running) wakeup.wait();
+                }
                 if (operation == null) continue;
-                executeWithRetry(operation);
+                if (operation.pending != null && operation.pending.orderedPlayers().stream().anyMatch(orderedPlayersBlocked::contains)) {
+                    defer(operation);
+                    continue;
+                }
+                if (isEvent(operation)) executeEventBatch(operation);
+                else executeWithRetry(operation);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
                 return;
             }
         }
+        } finally {
+            running = false;
+            persistUnconfirmed();
+            try { writerConnection.close(); }
+            catch (SQLException exception) { logFailure("关闭对局写连接", exception, 1); }
+        }
     }
 
     private boolean initializeSchemaWithRetry() {
         for (int attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS && running; attempt++) {
-            try (Connection connection = database.openConnection()) {
-                createSchema(connection);
-                recoverStaleMatches(connection);
+            try {
+                writerConnection.withConnection(connection -> { createSchema(connection); return null; });
+                replayPending();
+                if (persistenceFailed) return false;
+                writerConnection.withConnection(connection -> { recoverUnblockedStaleMatches(connection); return null; });
                 return true;
-            } catch (SQLException exception) {
+            } catch (SQLException | IOException exception) {
                 logFailure("创建对局统计表", exception, attempt);
+                if (exception instanceof SQLException sql && !isRetryable(sql)) break;
                 if (attempt < MAX_SCHEMA_ATTEMPTS && sleepBeforeRetry(attempt)) continue;
                 break;
             }
@@ -253,12 +316,15 @@ public final class MatchStatsStore implements AutoCloseable {
 
     private void executeWithRetry(QueuedOperation operation) {
         int attempt = 0;
-        while (running || attempt == 0) {
+        while (!shutdownDeadlineExceeded && (running || attempt == 0)) {
             attempt++;
-            try (Connection connection = database.openConnection()) {
-                connection.setAutoCommit(false);
-                List<VlWarning> warnings = operation.writer.write(connection);
-                connection.commit();
+            try {
+                List<VlWarning> warnings = writerConnection.inTransaction(connection -> {
+                    boolean execute = operation.pending == null || operation.pending.kind() != PendingMatchWrite.Kind.RESET
+                            || insertResetReceipt(connection, operation.pending.operationId());
+                    return execute ? operation.writer.write(connection) : List.of();
+                });
+                confirm(operation);
                 logWarnings(warnings);
                 try {
                     operation.afterCommit.run();
@@ -269,6 +335,10 @@ public final class MatchStatsStore implements AutoCloseable {
                 return;
             } catch (SQLException exception) {
                 logFailure(operation.description, exception, attempt);
+                if (operation.critical && !isRetryable(exception)) {
+                    defer(operation);
+                    return;
+                }
                 if (operation.critical) {
                     /* Lifecycle and event rows are idempotent. Keep retrying
                     * while the plugin is alive so a short MySQL outage
@@ -276,6 +346,7 @@ public final class MatchStatsStore implements AutoCloseable {
                      * queue still prevents an outage from growing memory
                      * without limit. */
                     if (sleepBeforeRetry(Math.min(attempt, MAX_ATTEMPTS))) continue;
+                    defer(operation);
                     if (BedWars.plugin != null) {
                         BedWars.plugin.getLogger().warning(
                                 "关键对局统计写入因统计线程停止而中止，未确认已保存：" + operation.description);
@@ -287,7 +358,155 @@ public final class MatchStatsStore implements AutoCloseable {
                     BedWars.plugin.getLogger().warning("已放弃本次对局统计写入：" + operation.description);
                 }
                 return;
+            } catch (RuntimeException exception) {
+                logFailure(operation.description, exception, attempt);
+                if (operation.critical) defer(operation);
+                return;
             }
+        }
+    }
+
+    private static boolean isEvent(QueuedOperation operation) {
+        return operation != null && operation.pending != null && operation.pending.kind() == PendingMatchWrite.Kind.EVENT;
+    }
+
+    private void executeEventBatch(QueuedOperation first) {
+        List<QueuedOperation> batch = new ArrayList<>();
+        batch.add(first);
+        // 只合并已到达的相邻事件；不等待凑批，也不跨过开局/结算/重置的顺序边界。
+        while (batch.size() < 64 && isEvent(criticalQueue.peek())) batch.add(criticalQueue.poll());
+        if (batch.size() == 1) {
+            executeWithRetry(first);
+            return;
+        }
+        try {
+            writerConnection.inTransaction(connection -> {
+                writeEvents(connection, batch.stream().map(operation -> operation.pending.event()).toList());
+                return null;
+            });
+            batch.forEach(this::confirm);
+        } catch (SQLException | RuntimeException exception) {
+            // 批处理已回滚，逐条重试才能隔离一条坏数据而保留其余事件。
+            logFailure("批量写入对局事件，转为逐条重试", exception, 1);
+            for (QueuedOperation operation : batch) {
+                if (persistenceFailed || shutdownDeadlineExceeded) break;
+                executeWithRetry(operation);
+            }
+        }
+    }
+
+    private static boolean isRetryable(SQLException exception) {
+        if (exception instanceof SQLTransientException || exception instanceof SQLRecoverableException) return true;
+        String state = exception.getSQLState();
+        if (state != null && (state.startsWith("08") || state.startsWith("40") || state.startsWith("HYT"))) return true;
+        return Set.of(5, 6, 8, 10, 13, 14, 1205, 1213, 2006, 2013).contains(exception.getErrorCode());
+    }
+
+    private boolean insertResetReceipt(Connection connection, UUID operationId) throws SQLException {
+        String sql = (database.isSqlite() ? "INSERT OR IGNORE" : "INSERT IGNORE")
+                + " INTO bw_match_write_receipts (operation_uuid) VALUES (?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, operationId.toString());
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    private void confirm(QueuedOperation operation) {
+        if (operation.pending == null || shutdownDeadlineExceeded) return;
+        synchronized (pendingLock) {
+            unconfirmed.remove(operation.pending.operationId());
+        }
+        try { journal.remove(operation.pending.operationId()); }
+        catch (IOException exception) { logFailure("删除已提交的对局待写记录", exception, 1); }
+    }
+
+    private void defer(QueuedOperation operation) {
+        if (operation.pending == null) return;
+        orderedPlayersBlocked.addAll(operation.pending.orderedPlayers());
+        if (operation.pending.match() != null) deferredMatches.add(operation.pending.match().matchUuid());
+        try {
+            journal.save(operation.pending);
+            synchronized (pendingLock) { unconfirmed.remove(operation.pending.operationId()); }
+            if (BedWars.plugin != null) BedWars.plugin.getLogger().warning(
+                    "已保留对局待写记录，修复数据库后会在下次启动重试：" + operation.description);
+        } catch (IOException exception) {
+            logFailure("保存对局待写记录 " + operation.description, exception, 1);
+            // 不能继续消费后续关键操作，否则它们可能先于本操作落盘。
+            persistenceFailed = true;
+            running = false;
+            synchronized (wakeup) { wakeup.notifyAll(); }
+        }
+    }
+
+    private void persistUnconfirmed() {
+        // shutdownNow 的中断不能让 FileChannel.force 抛 ClosedByInterruptException。
+        boolean interrupted = Thread.interrupted();
+        try {
+        List<QueuedOperation> pending;
+        synchronized (pendingLock) {
+            pending = new ArrayList<>(unconfirmed.values());
+        }
+        for (QueuedOperation operation : pending) {
+            if (operation.pending == null) continue;
+            try { journal.save(operation.pending); }
+            catch (IOException exception) {
+                logFailure("保存未确认的对局写入 " + operation.description, exception, 1);
+                persistenceFailed = true;
+                break;
+            }
+        }
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt();
+        }
+    }
+
+    private void replayPending() throws IOException {
+        for (PendingMatchWrite pending : journal.readAll()) {
+            if (persistenceFailed || shutdownDeadlineExceeded) break;
+            QueuedOperation operation = restoredOperation(pending);
+            synchronized (pendingLock) { unconfirmed.putIfAbsent(pending.operationId(), operation); }
+            if (pending.orderedPlayers().stream().anyMatch(orderedPlayersBlocked::contains)) defer(operation);
+            else executeWithRetry(operation);
+        }
+    }
+
+    private QueuedOperation restoredOperation(PendingMatchWrite pending) {
+        SqlWriter writer = switch (pending.kind()) {
+            case START -> connection -> { writeStart(connection, pending.match()); return List.of(); };
+            case EVENT -> connection -> { writeEvent(connection, pending.event()); return List.of(); };
+            case FINISH -> connection -> writeFinish(connection, pending.match(), pending.punishedPlayers());
+            case RESET -> connection -> { resetPunishmentVl(connection, pending.resetPlayer(), pending.resetAt()); return List.of(); };
+        };
+        return new QueuedOperation("恢复 " + pending.kind() + ' ' + pending.operationId(), writer, true, () -> { }, pending);
+    }
+
+    private void recoverUnblockedStaleMatches(Connection connection) throws SQLException {
+        if (deferredMatches.isEmpty()) {
+            recoverStaleMatches(connection);
+            return;
+        }
+        // 尚未回放成功的最终快照保留 RUNNING，避免恢复标记抢先封存该对局。
+        String sql = "SELECT match_uuid, arena_timezone FROM bw_matches WHERE server_id=? AND status='RUNNING'";
+        List<String[]> stale = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, serverId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    String match = result.getString(1);
+                    if (deferredMatches.stream().noneMatch(id -> id.toString().equals(match))) {
+                        stale.add(new String[]{match, result.getString(2)});
+                    }
+                }
+            }
+        }
+        try (PreparedStatement statement = connection.prepareStatement("UPDATE bw_matches SET status='ABORTED', end_reason='SERVER_RESTART', ended_at=?, last_seen_at=? WHERE match_uuid=? AND status='RUNNING'")) {
+            Instant recoveredAt = Instant.now();
+            for (String[] row : stale) {
+                String timestamp = sqlTime(recoveredAt, row[1]);
+                statement.setString(1, timestamp); statement.setString(2, timestamp); statement.setString(3, row[0]);
+                statement.addBatch();
+            }
+            statement.executeBatch();
         }
     }
 
@@ -322,7 +541,23 @@ public final class MatchStatsStore implements AutoCloseable {
             createMysqlSchema(connection);
         }
         migrateKd(connection);
+        MatchHistoryIndex.initialize(connection, database.isSqlite());
+        migrateViolationActivity(connection);
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_write_receipts (operation_uuid VARCHAR(36) PRIMARY KEY)"
+                    + (database.isSqlite() ? "" : " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"));
+        }
         createSummaryView(connection);
+    }
+
+    private void migrateViolationActivity(Connection connection) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("ALTER TABLE bw_player_violation_totals ADD COLUMN last_activity_ms BIGINT NOT NULL DEFAULT 0");
+        } catch (SQLException exception) {
+            if (exception.getErrorCode() != 1060 && !"42S21".equals(exception.getSQLState())
+                    && !(database.isSqlite() && exception.getMessage() != null
+                    && exception.getMessage().contains("duplicate column name"))) throw exception;
+        }
     }
 
     private void createMysqlSchema(Connection connection) throws SQLException {
@@ -550,25 +785,40 @@ public final class MatchStatsStore implements AutoCloseable {
         StoredMatch match = lockMatch(connection, snapshot.matchUuid());
         if ("RUNNING".equals(match.status())) {
             // 重试开局只补充缺失的参赛者，不覆盖已有的较新计数。
-            writePlayers(connection, snapshot, true);
+            writePlayers(connection, snapshot, true, match.number());
         }
         return match.number();
     }
 
+    private static final String EVENT_SQL = "INSERT INTO bw_match_events (event_uuid, match_uuid, event_sequence, event_type, actor_uuid, target_uuid, details, occurred_at) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE event_uuid=VALUES(event_uuid)";
+
     void writeEvent(Connection connection, MatchEventSnapshot event) throws SQLException {
-        String sql = "INSERT INTO bw_match_events (event_uuid, match_uuid, event_sequence, event_type, actor_uuid, target_uuid, details, occurred_at) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE event_uuid=VALUES(event_uuid)";
-        try (PreparedStatement statement = prepare(connection, sql)) {
-            statement.setString(1, event.eventId().toString());
-            statement.setString(2, event.matchUuid().toString());
-            statement.setLong(3, event.sequence());
-            statement.setString(4, event.eventType());
-            statement.setString(5, uuid(event.actorUuid()));
-            statement.setString(6, uuid(event.targetUuid()));
-            statement.setString(7, event.details());
-            statement.setString(8, sqlTime(event.occurredAt()));
+        try (PreparedStatement statement = prepare(connection, EVENT_SQL)) {
+            bindEvent(statement, event);
             statement.executeUpdate();
         }
+    }
+
+    void writeEvents(Connection connection, List<MatchEventSnapshot> events) throws SQLException {
+        try (PreparedStatement statement = prepare(connection, EVENT_SQL)) {
+            for (MatchEventSnapshot event : events) {
+                bindEvent(statement, event);
+                statement.addBatch();
+            }
+            statement.executeBatch();
+        }
+    }
+
+    private void bindEvent(PreparedStatement statement, MatchEventSnapshot event) throws SQLException {
+        statement.setString(1, event.eventId().toString());
+        statement.setString(2, event.matchUuid().toString());
+        statement.setLong(3, event.sequence());
+        statement.setString(4, event.eventType());
+        statement.setString(5, uuid(event.actorUuid()));
+        statement.setString(6, uuid(event.targetUuid()));
+        statement.setString(7, event.details());
+        statement.setString(8, sqlTime(event.occurredAt()));
     }
 
     void writeReport(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
@@ -576,7 +826,7 @@ public final class MatchStatsStore implements AutoCloseable {
         StoredMatch match = lockMatch(connection, snapshot.matchUuid());
         // 关键队列可能先提交最终结算，普通队列中的旧快照必须保持只读。
         if (!"RUNNING".equals(match.status()) || snapshot.lastEventSequence() < match.sequence()) return;
-        writePlayers(connection, snapshot, false);
+        writePlayers(connection, snapshot, false, match.number());
         String sql = "INSERT INTO bw_match_reports (match_uuid, report_number, status, captured_at, player_count, last_event_sequence) "
                 + "VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE captured_at=VALUES(captured_at), status=VALUES(status), "
                 + "player_count=VALUES(player_count), last_event_sequence=VALUES(last_event_sequence)";
@@ -595,8 +845,9 @@ public final class MatchStatsStore implements AutoCloseable {
     List<VlWarning> writeFinish(Connection connection, MatchRecordSnapshot snapshot,
                                        List<UUID> punishedPlayers) throws SQLException {
         ensureMatch(connection, snapshot, "RUNNING");
-        if (!"RUNNING".equals(lockMatch(connection, snapshot.matchUuid()).status())) return List.of();
-        writePlayers(connection, snapshot, false);
+        StoredMatch match = lockMatch(connection, snapshot.matchUuid());
+        if (!"RUNNING".equals(match.status())) return List.of();
+        writePlayers(connection, snapshot, false, match.number());
         String sql = "UPDATE bw_matches SET status=?, winner_team=?, end_reason=?, ended_at=?, last_seen_at=?, "
                 + "last_event_sequence=? WHERE match_uuid=? AND status='RUNNING'";
         try (PreparedStatement statement = prepare(connection, sql)) {
@@ -609,6 +860,7 @@ public final class MatchStatsStore implements AutoCloseable {
             statement.setString(7, snapshot.matchUuid().toString());
             statement.executeUpdate();
         }
+        MatchHistoryIndex.recordFinish(connection, database.isSqlite(), snapshot);
         List<VlWarning> warnings = applyViolationTotals(connection, snapshot);
         for (UUID playerUuid : punishedPlayers) {
             resetPunishmentVl(connection, playerUuid, snapshot.capturedAt());
@@ -673,16 +925,16 @@ public final class MatchStatsStore implements AutoCloseable {
         statement.setString(6, snapshot.timezone());
     }
 
-    private void writePlayers(Connection connection, MatchRecordSnapshot snapshot, boolean insertOnly) throws SQLException {
+    private void writePlayers(Connection connection, MatchRecordSnapshot snapshot, boolean insertOnly, long matchNumber) throws SQLException {
         String sql = "INSERT INTO bw_match_players (match_uuid, player_uuid, player_name, team_id, normal_kills, final_kills, deaths, beds_destroyed, "
-                + "kd_ratio, illegal_team_vl, kill_boosting_vl, evidence_adjustment, effective_vl, reconnects, disconnects, outcome, updated_at) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
-                + (insertOnly ? "player_uuid=VALUES(player_uuid)"
+                + "kd_ratio, illegal_team_vl, kill_boosting_vl, evidence_adjustment, effective_vl, reconnects, disconnects, outcome, updated_at, match_no) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
+                + (insertOnly ? "player_uuid=VALUES(player_uuid), match_no=VALUES(match_no)"
                 : "player_name=VALUES(player_name), team_id=VALUES(team_id), normal_kills=VALUES(normal_kills), "
                 + "final_kills=VALUES(final_kills), deaths=VALUES(deaths), beds_destroyed=VALUES(beds_destroyed), kd_ratio=VALUES(kd_ratio), "
                 + "illegal_team_vl=VALUES(illegal_team_vl), kill_boosting_vl=VALUES(kill_boosting_vl), evidence_adjustment=VALUES(evidence_adjustment), "
                 + "effective_vl=VALUES(effective_vl), reconnects=VALUES(reconnects), "
-                + "disconnects=VALUES(disconnects), outcome=VALUES(outcome), updated_at=VALUES(updated_at)");
+                + "disconnects=VALUES(disconnects), outcome=VALUES(outcome), updated_at=VALUES(updated_at), match_no=VALUES(match_no)");
         try (PreparedStatement statement = prepare(connection, sql)) {
             for (MatchPlayerSnapshot player : snapshot.playerStats().players()) {
                 statement.setString(1, snapshot.matchUuid().toString());
@@ -702,6 +954,7 @@ public final class MatchStatsStore implements AutoCloseable {
                 statement.setInt(15, player.disconnects());
                 statement.setString(16, player.outcome().name());
                 statement.setString(17, sqlTime(snapshot.capturedAt(), snapshot.timezone()));
+                statement.setLong(18, matchNumber);
                 statement.addBatch();
             }
             statement.executeBatch();
@@ -709,83 +962,91 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     private List<VlWarning> applyViolationTotals(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
-        String select = "SELECT vl_applied FROM bw_match_players WHERE match_uuid=? AND player_uuid=? FOR UPDATE";
-        String ensureTotals = "INSERT INTO bw_player_violation_totals (player_uuid, crime_total_vl, punishment_total_vl, punishment_warning_mask, updated_at) VALUES (?, 0, 0, 0, ?) " +
-                "ON DUPLICATE KEY UPDATE player_uuid=VALUES(player_uuid)";
-        String selectTotals = "SELECT crime_total_vl, punishment_total_vl, punishment_warning_mask FROM bw_player_violation_totals WHERE player_uuid=? FOR UPDATE";
-        String updateTotals = "UPDATE bw_player_violation_totals SET crime_total_vl=?, punishment_total_vl=?, punishment_warning_mask=?, updated_at=? WHERE player_uuid=?";
-        String mark = "UPDATE bw_match_players SET vl_applied=1 WHERE match_uuid=? AND player_uuid=?";
-        List<MatchPlayerSnapshot> players = new ArrayList<>(snapshot.playerStats().players());
-        players.sort(Comparator.comparing(MatchPlayerSnapshot::playerUuid));
+        List<MatchPlayerSnapshot> players = snapshot.playerStats().players().stream()
+                .filter(player -> player.rawVl() > 0 || player.totalVl() > 0)
+                .sorted(Comparator.comparing(MatchPlayerSnapshot::playerUuid)).toList();
         List<VlWarning> warnings = new ArrayList<>();
-
-        for (MatchPlayerSnapshot player : players) {
-            boolean applied;
-            try (PreparedStatement statement = prepare(connection, select)) {
+        if (!players.isEmpty()) {
+            // 父对局行已锁定；一次读取本局标记，避免每名玩家都往返数据库。
+            Set<UUID> unapplied = new java.util.HashSet<>();
+            try (PreparedStatement statement = prepare(connection,
+                    "SELECT player_uuid FROM bw_match_players WHERE match_uuid=? AND vl_applied=0 FOR UPDATE")) {
                 statement.setString(1, snapshot.matchUuid().toString());
-                statement.setString(2, player.playerUuid().toString());
                 try (ResultSet result = statement.executeQuery()) {
-                    applied = result.next() && result.getBoolean(1);
+                    while (result.next()) unapplied.add(UUID.fromString(result.getString(1)));
                 }
             }
-            if (applied) continue;
-
-            int crimeAmount = player.rawVl();
-            int punishmentAmount = player.totalVl();
-            if (crimeAmount > 0 || punishmentAmount > 0) {
-                String now = sqlTime(snapshot.capturedAt());
-                try (PreparedStatement statement = prepare(connection, ensureTotals)) {
-                    statement.setString(1, player.playerUuid().toString());
-                    statement.setString(2, now);
-                    statement.executeUpdate();
+            String ensureSql = "INSERT INTO bw_player_violation_totals (player_uuid, crime_total_vl, punishment_total_vl, punishment_warning_mask, updated_at) VALUES (?, 0, 0, 0, ?) "
+                    + "ON DUPLICATE KEY UPDATE player_uuid=VALUES(player_uuid)";
+            String selectSql = "SELECT crime_total_vl, punishment_total_vl, punishment_warning_mask FROM bw_player_violation_totals WHERE player_uuid=? FOR UPDATE";
+            String updateSql = "UPDATE bw_player_violation_totals SET crime_total_vl=?, punishment_total_vl=?, punishment_warning_mask=?, updated_at=?, last_activity_ms=GREATEST(last_activity_ms, ?) WHERE player_uuid=?";
+            try (PreparedStatement ensure = prepare(connection, ensureSql);
+                 PreparedStatement select = prepare(connection, selectSql);
+                 PreparedStatement update = prepare(connection, updateSql)) {
+                String now = sqlTime(snapshot.capturedAt(), snapshot.timezone());
+                // 所有服都按 UUID 顺序锁定累计行，避免交叉结算时反向抢锁。
+                for (MatchPlayerSnapshot player : players) {
+                    if (!unapplied.contains(player.playerUuid())) continue;
+                    ensure.setString(1, player.playerUuid().toString());
+                    ensure.setString(2, now);
+                    ensure.addBatch();
                 }
-                int crimeTotal;
-                int punishmentTotal;
-                int warningMask;
-                try (PreparedStatement statement = prepare(connection, selectTotals)) {
-                    statement.setString(1, player.playerUuid().toString());
-                    try (ResultSet result = statement.executeQuery()) {
+                ensure.executeBatch();
+                for (MatchPlayerSnapshot player : players) {
+                    if (!unapplied.contains(player.playerUuid())) continue;
+                    select.setString(1, player.playerUuid().toString());
+                    int crimeTotal;
+                    int punishmentTotal;
+                    int warningMask;
+                    try (ResultSet result = select.executeQuery()) {
                         if (!result.next()) throw new SQLException("无法锁定玩家 VL 汇总行 " + player.playerUuid());
                         crimeTotal = result.getInt(1);
                         punishmentTotal = result.getInt(2);
                         warningMask = result.getInt(3);
                     }
+                    int newCrimeTotal = saturatingAdd(crimeTotal, player.rawVl());
+                    int newPunishmentTotal = saturatingAdd(punishmentTotal, player.totalVl());
+                    ViolationThresholdPolicy.Evaluation evaluation = ViolationThresholdPolicy.evaluate(
+                            punishmentTotal, newPunishmentTotal, warningMask, warningThresholds);
+                    for (int threshold : evaluation.crossedThresholds()) {
+                        warnings.add(new VlWarning(player.playerUuid(), player.playerName(),
+                                snapshot.matchUuid(), threshold, newPunishmentTotal));
+                    }
+                    update.setInt(1, newCrimeTotal);
+                    update.setInt(2, newPunishmentTotal);
+                    update.setInt(3, evaluation.warningMask());
+                    update.setString(4, now);
+                    update.setLong(5, snapshot.capturedAt().toEpochMilli());
+                    update.setString(6, player.playerUuid().toString());
+                    update.addBatch();
                 }
-                int newCrimeTotal = saturatingAdd(crimeTotal, crimeAmount);
-                int newPunishmentTotal = saturatingAdd(punishmentTotal, punishmentAmount);
-                ViolationThresholdPolicy.Evaluation evaluation = ViolationThresholdPolicy.evaluate(
-                        punishmentTotal, newPunishmentTotal, warningMask, warningThresholds);
-                for (int threshold : evaluation.crossedThresholds()) {
-                    warnings.add(new VlWarning(player.playerUuid(), player.playerName(),
-                            snapshot.matchUuid(), threshold, newPunishmentTotal));
-                }
-                try (PreparedStatement statement = prepare(connection, updateTotals)) {
-                    statement.setInt(1, newCrimeTotal);
-                    statement.setInt(2, newPunishmentTotal);
-                    statement.setInt(3, evaluation.warningMask());
-                    statement.setString(4, now);
-                    statement.setString(5, player.playerUuid().toString());
-                    statement.executeUpdate();
-                }
+                update.executeBatch();
             }
-            try (PreparedStatement statement = prepare(connection, mark)) {
-                statement.setString(1, snapshot.matchUuid().toString());
-                statement.setString(2, player.playerUuid().toString());
-                statement.executeUpdate();
-            }
+        }
+        // 零违规对局只需这一次批量标记，不读取或锁定玩家累计表。
+        try (PreparedStatement statement = prepare(connection,
+                "UPDATE bw_match_players SET vl_applied=1 WHERE match_uuid=? AND vl_applied=0")) {
+            statement.setString(1, snapshot.matchUuid().toString());
+            statement.executeUpdate();
         }
         return warnings;
     }
 
     private void resetPunishmentVl(Connection connection, UUID playerUuid, Instant punishedAt) throws SQLException {
-        String sql = "UPDATE bw_player_violation_totals SET punishment_total_vl=0, punishment_warning_mask=0, last_punished_at=?, updated_at=? " +
-                "WHERE player_uuid=?";
+        String sql = "UPDATE bw_player_violation_totals SET punishment_total_vl=0, punishment_warning_mask=0, last_punished_at=?, updated_at=?, last_activity_ms=? " +
+                "WHERE player_uuid=? AND last_activity_ms<=?";
         try (PreparedStatement statement = prepare(connection, sql)) {
             String timestamp = sqlTime(punishedAt);
             statement.setString(1, timestamp);
             statement.setString(2, timestamp);
-            statement.setString(3, playerUuid.toString());
-            statement.executeUpdate();
+            statement.setLong(3, punishedAt.toEpochMilli());
+            statement.setString(4, playerUuid.toString());
+            statement.setLong(5, punishedAt.toEpochMilli());
+            int changed = statement.executeUpdate();
+            if (changed == 0 && BedWars.plugin != null) {
+                BedWars.plugin.getLogger().warning("未重置玩家 " + playerUuid
+                        + " 的处罚累计：记录不存在，或处罚后已有新结算/重置，已保留较新的累计。");
+            }
         }
     }
 
@@ -827,22 +1088,34 @@ public final class MatchStatsStore implements AutoCloseable {
 
     @Override
     public synchronized void close() {
+        close(15, TimeUnit.SECONDS);
+    }
+
+    synchronized void close(long timeout, TimeUnit unit) {
         if (!running && executor.isShutdown()) return;
+        synchronized (pendingLock) { acceptingCritical = false; }
         running = false;
+        synchronized (wakeup) { wakeup.notifyAll(); }
         executor.shutdown();
         try {
-            if (!executor.awaitTermination(15, TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(timeout, unit)) {
+                shutdownDeadlineExceeded = true;
                 executor.shutdownNow();
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
+            shutdownDeadlineExceeded = true;
             executor.shutdownNow();
+        } finally {
+            // 线程仍被驱动阻塞时也保存其未确认操作；RESET receipt 避免提交结果未知时重复清零。
+            persistUnconfirmed();
         }
     }
 
-    private record QueuedOperation(String description, SqlWriter writer, boolean critical, Runnable afterCommit) {
+    private record QueuedOperation(String description, SqlWriter writer, boolean critical, Runnable afterCommit,
+                                   PendingMatchWrite pending) {
         private QueuedOperation(String description, SqlWriter writer, boolean critical) {
-            this(description, writer, critical, () -> { });
+            this(description, writer, critical, () -> { }, null);
         }
     }
 

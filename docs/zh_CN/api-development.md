@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>5.6.0</version>
+    <version>5.6.1</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -86,6 +86,14 @@ history.findMatch(matchUuid).whenComplete((found, error) -> {
 不要在 Bukkit 主线程调用查询 future 的 `join()` 或 `get()` 等待数据库。上述 `Instant` 字符串使用 UTC；需要北京时间等本地展示时，可在附属插件中用 `DateTimeFormatter.withZone(ZoneId.of("Asia/Shanghai"))` 格式化。
 
 `getCurrentMatch` 在比赛未开始时为空，编号尚未写入数据库时 `matchNumber()` 暂为 `0`；落库后变为真实正整数。数据库编号在同一存储内共享，允许间隔；UUID 永久标识本局。`getPlayerMatches` 按编号倒序返回所有状态的记录，`limit` 为 1 到 100，`offset` 不小于 0；`getPlayerTotals` 只统计 `FINISHED` 对局，没有记录时返回全零数据。异步回调若要操作 Bukkit 玩家，必须切回主线程；查询异常通过 future 传播，不能当作没有战绩处理。旧版本没有保存逐局明细时无法从累计值反推出历史对局。
+
+5.6.1 起，异步历史查询使用两个工作线程和 128 个排队位置，查询从提交起最多等待 10 秒；超时、队列满或插件关闭都会使 future 以异常结束。调用方取消 future 时也会移除排队任务并尝试中断正在执行的查询；JDBC 驱动若忽略中断，底层访问仍需等待驱动超时。分页接口保持原有 `limit/offset` 契约，较大的 `offset` 仍有跳过记录的成本。
+
+累计战绩在结算事务中同步维护，并以已应用标记防止重复累计；首次升级会自动添加索引、回填真实编号和已有 `FINISHED` 明细，不需要重建数据库。升级期间，未回填的旧服写入仍通过明细补入查询结果。首次回填按对局分段提交，历史较多时初始化时间会增加。
+
+数据库永久错误会将关键写入保存在待写目录，修复后下次启动先重放，再处理遗留 `RUNNING` 对局。SQLite 的目录为 `Cache/matches.db.pending`；MySQL 使用 `Cache/match-pending/<数据库目标摘要>`。目录绑定原数据库目标，不能随意移到其他数据库。停服等待超过 15 秒时会转存已接受但尚未确认的关键操作；待写快照保留原始开始、结束时间。
+
+正常入队仍在内存中，强制结束进程或断电可能丢失尚未转存的操作；数据库与磁盘同时不可写时会停止消费并告警。损坏或目标不符的待写文件会保留并停止恢复，需管理员排查。共享 MySQL 的子服应一起升级：新版本使用毫秒时间保护，避免旧处罚重置清掉更新的结算；旧版本写入不会维护此保护标记。
 
 ## 安全查询竞技场
 

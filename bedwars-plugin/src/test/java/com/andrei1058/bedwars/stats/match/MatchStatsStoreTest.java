@@ -175,7 +175,7 @@ class MatchStatsStoreTest {
             transact(database, connection -> { store.writeEvent(connection, event); store.writeEvent(connection, event); return null; });
             assertEquals(1, scalar(database, "SELECT COUNT(*) FROM bw_match_events"));
             UUID next = UUID.randomUUID();
-            MatchRecordSnapshot punished = withPlayers(snapshot(next, player, "FINISHED", 0, 0, 0, 0, 1), stats);
+            MatchRecordSnapshot punished = withPlayers(snapshot(next, player, "FINISHED", 0, 0, 0, 0, 10), stats);
             transact(database, connection -> { store.writeFinish(connection, punished, List.of(player)); return null; });
             assertEquals(30, scalar(database, "SELECT crime_total_vl FROM bw_player_violation_totals"));
             assertEquals(0, scalar(database, "SELECT punishment_total_vl FROM bw_player_violation_totals"));
@@ -265,6 +265,8 @@ class MatchStatsStoreTest {
         Statement statement = mock(Statement.class);
         ResultSet migrations = mock(ResultSet.class);
         when(connection.createStatement()).thenReturn(statement);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(statement.executeQuery(startsWith("SELECT DISTINCT p.match_uuid"))).thenReturn(mock(ResultSet.class));
         when(statement.executeQuery(contains("bw_match_schema"))).thenReturn(migrations);
         when(migrations.next()).thenReturn(false);
         when(statement.executeUpdate(startsWith("CREATE OR REPLACE VIEW")))

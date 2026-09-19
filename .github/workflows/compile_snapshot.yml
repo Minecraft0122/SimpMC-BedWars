@@ -14,6 +14,19 @@ jobs:
   build:
     name: Maven 验证
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: bedwars_ci
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pbedwars_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
     permissions:
       contents: read
     steps:
@@ -28,7 +41,11 @@ jobs:
           cache: maven
 
       - name: 使用 Maven 构建并测试
-        run: mvn -B -U verify -s ci_settings.xml
+        env:
+          BEDWARS_TEST_MYSQL_URL: jdbc:mysql://127.0.0.1:3306/?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          BEDWARS_TEST_MYSQL_USER: root
+          BEDWARS_TEST_MYSQL_PASSWORD: bedwars_ci
+        run: mvn -B -ntp clean verify -s ci_settings.xml
 
       - name: 验证 Paper 1.21.11 运行契约
         shell: bash

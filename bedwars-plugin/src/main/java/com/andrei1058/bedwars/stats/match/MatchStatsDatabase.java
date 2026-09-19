@@ -1,6 +1,7 @@
 package com.andrei1058.bedwars.stats.match;
 
 import com.andrei1058.bedwars.database.MySQL;
+import com.andrei1058.bedwars.BedWars;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,8 +12,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Objects;
 import java.util.Properties;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
-/** 对局记录的数据库连接入口；每次操作都独立借用并关闭连接。 */
+/** 对局记录的数据库连接入口；查询独立借还，SQLite 写线程复用专用连接。 */
 public final class MatchStatsDatabase implements AutoCloseable {
     private final MySQL mysql;
     private final Path sqliteFile;
@@ -34,6 +39,23 @@ public final class MatchStatsDatabase implements AutoCloseable {
 
     public boolean isSqlite() {
         return sqliteFile != null;
+    }
+
+    String storageIdentity() {
+        return isSqlite() ? "sqlite:" + sqliteFile : Objects.toString(mysql.storageIdentity(), "mysql:unconfigured");
+    }
+
+    Path pendingWritesDirectory() {
+        if (isSqlite()) return sqliteFile.resolveSibling(sqliteFile.getFileName() + ".pending");
+        // 插件初始化前的单元测试不创建机器级共享目录。
+        if (BedWars.plugin == null) return null;
+        try {
+            String target = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(storageIdentity().getBytes(StandardCharsets.UTF_8)));
+            return BedWars.plugin.getDataFolder().toPath().resolve("Cache/match-pending").resolve(target);
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
     }
 
     public Connection openConnection() throws SQLException {
@@ -64,7 +86,7 @@ public final class MatchStatsDatabase implements AutoCloseable {
         return DriverManager.getConnection("jdbc:sqlite:" + sqliteFile, properties);
     }
 
-    /** 连接随各次操作关闭；MySQL 连接池归插件的旧统计数据库所有。 */
+    /** SQLite 写连接由写入器关闭；MySQL 连接池归插件的旧统计数据库所有。 */
     @Override
     public void close() {
     }

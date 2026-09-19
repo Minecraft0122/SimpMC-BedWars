@@ -639,7 +639,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
                         request == null ? "PLUGIN_DISABLE" : request.endReason(),
                         request == null ? Instant.now() : request.endedAt());
             }
-            if (snapshot != null && !store.enqueueFinish(snapshot, punishedPlayers(record))) {
+            if (snapshot != null && !store.enqueueFinishForShutdown(snapshot, punishedPlayers(record))) {
                 plugin.getLogger().warning("插件关闭时无法排队对局最终统计：" + record.getMatchUuid());
             }
         }
