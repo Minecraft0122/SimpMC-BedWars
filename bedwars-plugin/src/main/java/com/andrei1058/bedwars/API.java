@@ -286,6 +286,11 @@ public class API implements com.andrei1058.bedwars.api.BedWars {
     }
 
     @Override
+    public com.andrei1058.bedwars.api.stats.MatchHistory getMatchHistory() {
+        return BedWars.plugin == null ? null : BedWars.plugin.getMatchHistory();
+    }
+
+    @Override
     public AFKUtil getAFKUtil() {
         return afkSystem;
     }

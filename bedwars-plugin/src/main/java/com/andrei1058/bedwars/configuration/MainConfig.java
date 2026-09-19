@@ -382,8 +382,8 @@ public class MainConfig extends ConfigManager {
                 "迁移器只调整仍使用上一版默认值的配置，不覆盖管理员自定义参数。");
         setComments("database.enable", "是否使用 MySQL；关闭时使用本地 SQLite。", "启用前请正确填写下面的连接信息。");
         setComments(ConfigPath.MATCH_STATISTICS_ENABLED,
-                "是否记录按对局拆分的统计数据。此功能需要 database.enable=true 且 MySQL 连接成功。",
-                "旧 global_stats 表仍保留给历史 GUI；新数据写入独立的 InnoDB 表，不会在开局事务中锁住旧表。");
+                "是否记录每场对局及其玩家战绩；默认开启，未启用 MySQL 时保存到本地 Cache/matches.db。",
+                "跨服请使用同一 MySQL；已启用 MySQL 但连接失败时不会切换本地编号。旧 global_stats 统计保持兼容。");
         setComments(ConfigPath.MATCH_STATISTICS_TIMEZONE,
                 "竞技场统计使用的时区，默认 Asia/Shanghai。",
                 "数据库同时保存该时区名称；建议所有子服保持相同配置。无效时区会回退为 Asia/Shanghai 并记录警告。");
@@ -392,7 +392,7 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.MATCH_STATISTICS_QUEUE_CAPACITY,
                 "统计写入队列容量；队列满时记录警告，下一次周期会上报最新快照，结束结算会持续重试。");
         setComments(ConfigPath.MATCH_STATISTICS_RETRY_DELAY_SECONDS,
-                "MySQL 写入失败后的重试间隔，单位为秒。短事务失败不会影响新对局开始。");
+                "对局数据库写入失败后的重试间隔，单位为秒。短事务失败不会影响新对局开始。");
         setComments(ConfigPath.MATCH_STATISTICS_FINISH_GRACE_TICKS,
                 "收到游戏结束事件后等待的 tick 数，再写入最终结算；用于接收同一 tick 内的掉线击杀事件。");
         setComments(ConfigPath.MATCH_STATISTICS_VIOLATIONS_ENABLED,

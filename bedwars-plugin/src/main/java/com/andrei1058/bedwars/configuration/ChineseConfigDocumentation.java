@@ -109,8 +109,8 @@ public final class ChineseConfigDocumentation {
         comment(config, "database.pass", "MySQL 专用账户密码；不要沿用示例值，也不要提交到公开仓库。");
         comment(config, "database.ssl", "MySQL 连接是否启用 TLS；远程数据库建议开启并限制允许连接的来源地址。");
         comment(config, ConfigPath.MATCH_STATISTICS_ENABLED,
-                "是否记录按对局拆分的统计数据；需要 database.enable=true 且 MySQL 连接成功。",
-                "数据写入独立的 InnoDB 表，不与旧 global_stats 共用开局事务。");
+                "是否记录每场对局及其玩家战绩；默认开启，未启用 MySQL 时保存到本地 Cache/matches.db。",
+                "跨服请使用同一 MySQL；已启用 MySQL 但连接失败时不会切换本地编号。旧 global_stats 统计保持兼容。");
         comment(config, ConfigPath.MATCH_STATISTICS_TIMEZONE,
                 "竞技场统计时区，默认 Asia/Shanghai；所有子服建议保持一致。",
                 "时间列按该时区生成，数据库同时保存时区名称；无效值会回退为 Asia/Shanghai。");
@@ -119,7 +119,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.MATCH_STATISTICS_QUEUE_CAPACITY,
                 "异步统计写入队列容量；队列满时不会阻塞主线程，最终结算会继续重试。");
         comment(config, ConfigPath.MATCH_STATISTICS_RETRY_DELAY_SECONDS,
-                "MySQL 写入失败后的重试间隔，单位为秒。");
+                "对局数据库写入失败后的重试间隔，单位为秒。");
         comment(config, ConfigPath.MATCH_STATISTICS_FINISH_GRACE_TICKS,
                 "收到游戏结束事件后等待的 tick 数，再写入最终结算；用于接收同一 tick 内的掉线击杀。");
         comment(config, ConfigPath.MATCH_STATISTICS_VIOLATIONS_ENABLED,

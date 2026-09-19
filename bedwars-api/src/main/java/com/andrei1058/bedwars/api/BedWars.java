@@ -52,6 +52,13 @@ public interface BedWars {
      */
     IStats getStatsUtil();
 
+    /**
+     * 持久化对局、单局战绩与完成对局汇总。旧实现默认不提供此能力。
+     */
+    default com.andrei1058.bedwars.api.stats.MatchHistory getMatchHistory() {
+        return null;
+    }
+
     interface IStats {
         /**
          * Get player first play date.

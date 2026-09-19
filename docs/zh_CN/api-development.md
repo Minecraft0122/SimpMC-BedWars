@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>5.5.3</version>
+    <version>5.6.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -30,6 +30,62 @@ if (api == null) {
 ```
 
 不要强制转换为插件内部的 `com.andrei1058.bedwars.API`。
+
+## 对局历史 API
+
+5.6.0 起可通过 `BedWars#getMatchHistory()` 查询对局编号、UUID 和玩家战绩。`isEnabled()` 与 `getCurrentMatch(IArena)` 是即时查询；其余方法返回 `CompletableFuture`，数据库访问不会阻塞 Bukkit 主线程：
+
+```java
+import com.andrei1058.bedwars.api.stats.MatchHistory;
+import com.andrei1058.bedwars.api.stats.MatchInfo;
+import com.andrei1058.bedwars.api.stats.MatchPlayerResult;
+import com.andrei1058.bedwars.api.stats.PlayerMatchTotals;
+
+MatchHistory history = api.getMatchHistory();
+if (history == null || !history.isEnabled()) {
+    // 旧 API 实现、统计被关闭，或已配置 MySQL 但连接失败。
+    return;
+}
+
+Optional<MatchInfo> current = history.getCurrentMatch(arena);
+CompletableFuture<Optional<MatchInfo>> byNumber = history.findMatch(10001L);
+CompletableFuture<Optional<MatchInfo>> byUuid = history.findMatch(matchUuid);
+CompletableFuture<List<MatchPlayerResult>> players = history.getMatchPlayers(matchUuid);
+CompletableFuture<PlayerMatchTotals> totals = history.getPlayerTotals(playerUuid);
+CompletableFuture<List<MatchInfo>> matches = history.getPlayerMatches(playerUuid, 10, 0);
+```
+
+`MatchInfo` 表示对局本身，`MatchPlayerResult` 表示单局玩家快照，`PlayerMatchTotals` 表示所有已完成对局累计值，使用 `matchNumber()`、`matchUuid()`、`kills()`、`finalKills()` 和 `bedsDestroyed()` 等 record 访问方法。两个战绩对象的 `kdRatio()` 返回 `double`，按 `普通击杀 / max(1, 全部死亡)` 计算；最终击杀单独保存，死亡包含普通死亡与最终死亡。累计 K/D 先相加普通击杀和全部死亡再相除，不能平均各局 K/D。
+
+每场对局的开始和结束时间均会持久化，其他插件通过 `MatchInfo.startedAt()` 和 `MatchInfo.endedAt()` 读取，类型都是 `java.time.Instant`，与展示时区无关。`startedAt()` 是正式开局时间，始终非空；`RUNNING` 对局的 `endedAt()` 为 `null`。正常结算的 `FINISHED` 对局和已中止的 `ABORTED` 对局都会保存结束时间。若服务器崩溃，重启后将遗留对局标记为 `ABORTED` 时，结束时间是这次恢复标记的时间，不代表能够还原精确崩溃时刻。
+
+以下示例在附属插件的主线程入口执行；`addonPlugin` 为附属插件实例，`matchUuid` 为待查询的对局 UUID。异步回调先处理查询异常，发送玩家消息前再切回主线程：
+
+```java
+UUID viewerUuid = player.getUniqueId();
+history.findMatch(matchUuid).whenComplete((found, error) -> {
+    if (error != null) {
+        addonPlugin.getLogger().log(java.util.logging.Level.WARNING,
+                "读取对局时间失败", error);
+        return;
+    }
+    if (found.isEmpty()) return;
+
+    MatchInfo match = found.get();
+    java.time.Instant startedAt = match.startedAt();
+    java.time.Instant endedAt = match.endedAt();
+    String message = "对局 #" + match.matchNumber() + " 开始：" + startedAt
+            + "，结束：" + (endedAt == null ? "尚未结束" : endedAt.toString());
+    Bukkit.getScheduler().runTask(addonPlugin, () -> {
+        Player viewer = Bukkit.getPlayer(viewerUuid);
+        if (viewer != null && viewer.isOnline()) viewer.sendMessage(message);
+    });
+});
+```
+
+不要在 Bukkit 主线程调用查询 future 的 `join()` 或 `get()` 等待数据库。上述 `Instant` 字符串使用 UTC；需要北京时间等本地展示时，可在附属插件中用 `DateTimeFormatter.withZone(ZoneId.of("Asia/Shanghai"))` 格式化。
+
+`getCurrentMatch` 在比赛未开始时为空，编号尚未写入数据库时 `matchNumber()` 暂为 `0`；落库后变为真实正整数。数据库编号在同一存储内共享，允许间隔；UUID 永久标识本局。`getPlayerMatches` 按编号倒序返回所有状态的记录，`limit` 为 1 到 100，`offset` 不小于 0；`getPlayerTotals` 只统计 `FINISHED` 对局，没有记录时返回全零数据。异步回调若要操作 Bukkit 玩家，必须切回主线程；查询异常通过 future 传播，不能当作没有战绩处理。旧版本没有保存逐局明细时无法从累计值反推出历史对局。
 
 ## 安全查询竞技场
 
@@ -103,7 +159,7 @@ TAB 队伍色由每个查看者的 scoreboard Team 同时控制 TAB 和头顶名
 
 7.1.0 新增 `PlayerTab.PlayerListMode`。`ACTUAL` 保留目标当前真实模式；`SPECTATOR` 只向其他查看者发送 `UPDATE_GAME_MODE=SPECTATOR`，不会调用 `Player#setGameMode`，适合需要保留 ADVENTURE 交互的自定义旁观行。7.1.1 起，当目标就是 Sidebar 持有者本人时始终保留 Paper 当前真实模式；旧版本缓存过的本人伪模式会立即恢复，避免客户端移动模式与服务器分叉。旧构造器和旧 `Sidebar#playerTabCreate` 重载默认使用 `ACTUAL`；可通过带 `PlayerListMode` 的新重载创建，或对已有行调用 `setPlayerListMode`。Sidebar 释放、被覆盖或删除该行时会从 Paper 当前状态恢复真实模式和第三方 nullable 名称。
 
-游戏进行中的 TAB 页首使用 `{gameId}` 显示 `IArena#getWorldName()` 对应的本局对局编号，使用 `{gameTime}` 显示从 `IArena#getStartTime()` 计算的本局已进行时间；`{time}` 仍是下一事件倒计时。附属插件若直接使用 PlaceholderAPI，可读取 `%bw1058_elapsed_time%`，其格式与 TAB 一致：不足一小时为 `MM:SS`，一小时以上为 `HH:MM:SS`。开始时间缺失时返回空文本。
+游戏进行中的 TAB 页首使用 `{gameId}` 显示数据库分配的本局编号，使用 `{gameUuid}` 显示本局 UUID；编号尚未落库时显示“待分配”，统计未启用时为空。`{gameTime}` 显示从 `IArena#getStartTime()` 计算的本局已进行时间，`{time}` 仍是下一事件倒计时。附属插件若直接使用 PlaceholderAPI，可读取 `%bw1058_elapsed_time%`，其格式与 TAB 一致：不足一小时为 `MM:SS`，一小时以上为 `HH:MM:SS`。开始时间缺失时返回空文本。
 
 ## 配置 API
 

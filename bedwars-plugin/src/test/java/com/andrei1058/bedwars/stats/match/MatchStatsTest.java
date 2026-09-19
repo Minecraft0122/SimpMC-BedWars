@@ -6,14 +6,13 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MatchStatsTest {
 
     @Test
-    void aggregatesPlayerCountersAndComputesTotalKillDeathRatio() {
+    void aggregatesPlayerCountersAndComputesRegularKillDeathRatio() {
         UUID playerUuid = UUID.randomUUID();
         MatchPlayerStats player = new MatchPlayerStats(playerUuid, "Alice", "red");
 
@@ -34,7 +33,7 @@ class MatchStatsTest {
         assertEquals(1, snapshot.finalKills());
         assertEquals(3, snapshot.totalKills());
         assertEquals(2, snapshot.deaths());
-        assertEquals(1.5, snapshot.kdRatio().orElseThrow());
+        assertEquals(1.0, snapshot.kdRatio().orElseThrow());
         assertEquals(1, snapshot.bedsDestroyed());
         assertEquals(2, snapshot.illegalTeamVl());
         assertEquals(3, snapshot.killBoostingVl());
@@ -45,12 +44,18 @@ class MatchStatsTest {
     }
 
     @Test
-    void representsZeroDeathRatioAsEmpty() {
+    void usesRegularKillsAndTreatsZeroDeathsAsOne() {
         MatchPlayerStats player = new MatchPlayerStats(UUID.randomUUID(), null, null);
 
-        assertFalse(player.snapshot().kdRatio().isPresent());
+        assertTrue(player.snapshot().kdRatio().isPresent());
+        assertEquals(0.0, player.snapshot().kdRatio().orElseThrow());
         player.recordKill(true);
-        assertFalse(player.snapshot().kdRatio().isPresent());
+        player.recordKill(false);
+        assertEquals(1.0, player.snapshot().kdRatio().orElseThrow());
+        player.recordDeath();
+        assertEquals(1.0, player.snapshot().kdRatio().orElseThrow());
+        player.recordDeath();
+        assertEquals(0.5, player.snapshot().kdRatio().orElseThrow());
     }
 
     @Test

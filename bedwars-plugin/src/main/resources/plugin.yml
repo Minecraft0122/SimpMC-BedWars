@@ -23,6 +23,9 @@ permissions:
       bw.command.lang: true
       bw.command.gui: true
       bw.command.stats: true
+      bw.command.match: true
+      bw.command.history: true
+      bw.command.record: true
       bw.command.team: true
       bw.command.invite: true
       bw.command.teleporter: true
@@ -40,6 +43,9 @@ permissions:
       bw.command.teleporter: true
       bw.command.gui: true
       bw.command.stats: true
+      bw.command.match: true
+      bw.command.history: true
+      bw.command.record: true
       bw.command.team: true
       bw.command.invite: true
       bw.command.forcestart: true

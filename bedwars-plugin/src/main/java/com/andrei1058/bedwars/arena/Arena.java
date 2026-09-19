@@ -1176,6 +1176,10 @@ public class Arena implements IArena {
      * This will automatically kick/ remove the people from the arena.
      */
     public void disable() {
+        // Announce retirement before player evacuation. Removing the last
+        // player can synchronously call checkWinner() and emit GameEndEvent;
+        // listeners must be able to classify that transition as an abort.
+        Bukkit.getPluginManager().callEvent(new ArenaDisableEvent(getArenaName(), getWorldName()));
         for (Player p : new ArrayList<>(players)) {
             removePlayer(p, false);
         }
@@ -1190,7 +1194,6 @@ public class Arena implements IArena {
             inWorld.kick(AdventureText.section("服务器正在卸载竞技场。"));
         }
         BedWars.getAPI().getRestoreAdapter().onDisable(this);
-        Bukkit.getPluginManager().callEvent(new ArenaDisableEvent(getArenaName(), getWorldName()));
         destroyData();
     }
 
@@ -1588,6 +1591,7 @@ public class Arena implements IArena {
             return;
         }
 
+        GameState oldStatus = this.status;
         if (this.status != GameState.playing && status == GameState.playing) {
             startTime = Instant.now();
         }
@@ -1596,7 +1600,7 @@ public class Arena implements IArena {
         if (status == GameState.restarting) {
             RestartingPlayerState.prepare(this);
         }
-        Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, status, status));
+        Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, oldStatus, status));
         refreshSigns();
         if (status == GameState.playing) {
             for (Player p : players) {

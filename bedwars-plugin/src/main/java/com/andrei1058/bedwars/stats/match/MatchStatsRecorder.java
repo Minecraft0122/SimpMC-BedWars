@@ -22,6 +22,9 @@ import com.andrei1058.bedwars.api.events.player.PlayerJoinArenaEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerKillEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerLeaveArenaEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerReJoinEvent;
+import com.andrei1058.bedwars.api.events.server.ArenaDisableEvent;
+import com.andrei1058.bedwars.api.events.server.ArenaRestartEvent;
+import com.andrei1058.bedwars.api.stats.MatchInfo;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.LastHit;
 import com.andrei1058.bedwars.database.MySQL;
@@ -45,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Optional;
 
 /** Collects one immutable event stream and one counter set per playing arena. */
 public final class MatchStatsRecorder implements Listener, AutoCloseable {
@@ -75,10 +79,16 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
             Collections.synchronizedSet(new HashSet<>());
     private final Map<MatchRecord, Set<UUID>> punishmentResets =
             Collections.synchronizedMap(new IdentityHashMap<>());
+    private final Map<MatchRecord, Set<UUID>> pendingCombatLeaves = new IdentityHashMap<>();
+    private final Set<MatchRecord> retiredRecords = Collections.newSetFromMap(new IdentityHashMap<>());
     private BukkitTask reportTask;
     private boolean closed;
 
     public MatchStatsRecorder(BedWars plugin, MySQL database) {
+        this(plugin, MatchStatsDatabase.mysql(database));
+    }
+
+    public MatchStatsRecorder(BedWars plugin, MatchStatsDatabase database) {
         this.plugin = plugin;
         String configuredTimezone = BedWars.config.getYml().getString(
                 ConfigPath.MATCH_STATISTICS_TIMEZONE, DEFAULT_TIMEZONE);
@@ -133,6 +143,12 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
         synchronized (records) {
             MatchRecord current = records.get(arena);
             if (current != null && !current.isFinished()) return;
+            if (current != null) {
+                // The result identity remains available until the next match
+                // actually starts; release it when replacing that arena record.
+                removeRecord(current);
+                retiredRecords.remove(current);
+            }
 
             Instant startedAt = arena.getStartTime() == null ? Instant.now() : arena.getStartTime();
             MatchRecord record = new MatchRecord(
@@ -148,16 +164,45 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
             for (Player player : arena.getPlayersSnapshot()) {
                 registerPlayer(record, arena, player);
             }
-            store.enqueueStart(record.startSnapshot(Instant.now()));
+            MatchRecordSnapshot snapshot = record.startSnapshot(Instant.now());
+            store.enqueueStart(snapshot, record::setMatchNumber);
             enqueueEvent(record, "MATCH_START", null, null, null);
             violationDetector.matchStarted(arena, record);
         }
     }
 
+    /** Returns the live record, including a record waiting for final settlement. */
+    public Optional<MatchInfo> getCurrentMatch(IArena arena) {
+        MatchRecord record = getRecord(arena);
+        return record == null ? Optional.empty() : Optional.of(record.currentMatchInfo());
+    }
+
+    /** A state transition out of playing is a fallback only; GameEndEvent wins
+     * when it is emitted by the same server-thread operation. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayingStateExit(GameStateChangeEvent event) {
+        if (event.getOldState() != GameState.playing || event.getNewState() == GameState.playing) return;
+        MatchRecord record = getRecord(event.getArena());
+        if (record == null || record.isFinished() || gameEndAnnounced.contains(record)) return;
+        pendingFinishes.putIfAbsent(record, new FinishRequest("ABORTED", null,
+                "STATE_" + event.getNewState().name().toUpperCase(java.util.Locale.ROOT), Instant.now()));
+        scheduleFinish(record);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onArenaRestart(ArenaRestartEvent event) {
+        abortMatchingArena(event.getArenaName(), event.getWorldName(), "ARENA_RESTART");
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onArenaDisable(ArenaDisableEvent event) {
+        abortMatchingArena(event.getArenaName(), event.getWorldName(), "ARENA_DISABLE");
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onArenaJoin(PlayerJoinArenaEvent event) {
         MatchRecord record = getRecord(event.getArena());
-        if (record == null || event.isSpectator()) return;
+        if (!acceptsGameplay(event.getArena(), record) || event.isSpectator()) return;
         registerPlayer(record, event.getArena(), event.getPlayer());
         enqueueEvent(record, "PLAYER_JOIN", event.getPlayer().getUniqueId(), null, null);
     }
@@ -165,7 +210,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onArenaRejoin(PlayerReJoinEvent event) {
         MatchRecord record = getRecord(event.getArena());
-        if (record == null) return;
+        if (!acceptsGameplay(event.getArena(), record)) return;
         Player player = event.getPlayer();
         MatchPlayerStats stats = registerPlayer(record, event.getArena(), player);
         stats.recordReconnect();
@@ -177,7 +222,12 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onKill(PlayerKillEvent event) {
         MatchRecord record = getRecord(event.getArena());
-        if (record == null) return;
+        if (record == null || record.isFinished()) return;
+        Set<UUID> pendingLeaves = pendingCombatLeaves.get(record);
+        boolean pendingDisconnect = event.getCause().isPvpLogOut() && pendingLeaves != null
+                && pendingLeaves.remove(event.getVictim().getUniqueId());
+        // A combat logout may announce the winner before emitting its kill.
+        if (!acceptsGameplay(event.getArena(), record) && !pendingDisconnect) return;
 
         Player victim = event.getVictim();
         String victimTeam = teamId(event.getVictimTeam(), event.getArena(), victim.getUniqueId());
@@ -205,7 +255,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBedBreak(PlayerBedBreakEvent event) {
         MatchRecord record = getRecord(event.getArena());
-        if (record == null) return;
+        if (!acceptsGameplay(event.getArena(), record)) return;
         Player player = event.getPlayer();
         String team = teamId(event.getPlayerTeam(), event.getArena(), player.getUniqueId());
         record.getStats().registerPlayer(player.getUniqueId(), player.getName(), team).recordBedBreak();
@@ -220,8 +270,11 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
         Player player = event.getPlayer();
         IArena arena = Arena.getArenaByPlayer(player);
         MatchRecord record = arena == null ? null : getRecord(arena);
-        if (record == null) return;
-        MatchPlayerStats stats = registerPlayer(record, arena, player);
+        if (!acceptsGameplay(arena, record)) return;
+        MatchPlayerStats stats = record.getStats().getPlayer(player.getUniqueId()).orElse(null);
+        // Pure spectators never receive a participant row, while eliminated
+        // participants keep their existing row when they leave the server.
+        if (stats == null) return;
         stats.recordDisconnect();
         setOutcomeIfUnknown(stats, MatchPlayerOutcome.DISCONNECTED);
         enqueueEvent(record, "DISCONNECT", player.getUniqueId(), null,
@@ -231,7 +284,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onArenaLeave(PlayerLeaveArenaEvent event) {
         MatchRecord record = getRecord(event.getArena());
-        if (record == null) return;
+        if (record == null || record.isFinished()) return;
         Player player = event.getPlayer();
         MatchPlayerStats stats = record.getStats().getPlayer(player.getUniqueId()).orElse(null);
         /* Spectators are not match participants and may never have joined the
@@ -245,6 +298,15 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
                     ? MatchPlayerOutcome.DISCONNECTED : MatchPlayerOutcome.ABANDONED);
         }
         Player lastDamager = event.getLastDamager();
+        if (!event.isSpectator() && lastDamager != null && acceptsGameplay(event.getArena(), record)) {
+            Set<UUID> pending = pendingCombatLeaves.computeIfAbsent(record, ignored -> new HashSet<>());
+            pending.add(player.getUniqueId());
+            // Only the synchronous departure operation may emit this late kill.
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                pending.remove(player.getUniqueId());
+                if (pending.isEmpty()) pendingCombatLeaves.remove(record);
+            });
+        }
         String details = "spectator=" + event.isSpectator();
         if (lastDamager != null) details += ";last_damager=" + lastDamager.getUniqueId();
         enqueueEvent(record, "PLAYER_LEAVE", player.getUniqueId(), null,
@@ -254,7 +316,11 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onGameEnd(GameEndEvent event) {
         MatchRecord record = getRecord(event.getArena());
-        if (record == null || gameEndAnnounced.contains(record)) return;
+        if (record == null || record.isFinished() || gameEndAnnounced.contains(record)) return;
+        // Arena.disable() announces its retirement before evacuating players.
+        // Player removal may synchronously trigger checkWinner(), but that is
+        // an administrative abort rather than a completed match.
+        if (retiredRecords.contains(record)) return;
 
         List<UUID> winners = new ArrayList<>(event.getWinners());
         Set<UUID> winnerSet = new HashSet<>(winners);
@@ -281,6 +347,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
 
         Instant endedAt = Instant.now();
         FinishRequest request = new FinishRequest(
+                "FINISHED",
                 event.getTeamWinner() == null ? null : event.getTeamWinner().getName(),
                 event.getTeamWinner() == null ? "NO_WINNER" : "WINNER", endedAt);
         gameEndAnnounced.add(record);
@@ -383,25 +450,56 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
     }
 
     private void scheduleFinish(MatchRecord record) {
+        if (closed) return;
         synchronized (finishScheduled) {
             if (!finishScheduled.add(record)) return;
         }
-        Bukkit.getScheduler().runTaskLater(plugin, () -> finish(record), finishGraceTicks);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> finish(record), Math.max(1L, finishGraceTicks));
+    }
+
+    private void abortMatchingArena(String arenaName, String worldName, String reason) {
+        List<MatchRecord> matches;
+        synchronized (records) {
+            matches = records.entrySet().stream()
+                    .filter(entry -> sameArena(entry.getKey(), arenaName, worldName))
+                    .map(Map.Entry::getValue).toList();
+        }
+        Instant now = Instant.now();
+        for (MatchRecord record : matches) {
+            retiredRecords.add(record);
+            if (record.isFinished() && !pendingFinishes.containsKey(record)) {
+                removeRecord(record);
+                retiredRecords.remove(record);
+                continue;
+            }
+            pendingFinishes.putIfAbsent(record, new FinishRequest("ABORTED", null, reason, now));
+            scheduleFinish(record);
+        }
+    }
+
+    private static boolean sameArena(IArena arena, String arenaName, String worldName) {
+        // Clones can share the template name; prefer the exact runtime world.
+        return worldName != null ? worldName.equals(arena.getWorldName())
+                : arenaName != null && arenaName.equals(arena.getArenaName());
     }
 
     private void finish(MatchRecord record) {
+        if (closed || record.isFinished() && !pendingFinishes.containsKey(record)) return;
         FinishRequest request = pendingFinishes.get(record);
-        String status = request == null ? "ABORTED" : "FINISHED";
+        String status = request == null ? "ABORTED" : request.status();
         MatchRecordSnapshot snapshot = record.finish(status,
                 request == null ? null : request.winnerTeam(),
                 request == null ? "PLUGIN_DISABLE" : request.endReason(),
                 request == null ? Instant.now() : request.endedAt());
         if (store.enqueueFinish(snapshot, punishedPlayers(record))) {
             violationDetector.matchFinished(record);
-            removeRecord(record);
+            // Keep identity and final counters while this arena shows the result.
+            if (retiredRecords.remove(record)) removeRecord(record);
             pendingFinishes.remove(record);
             punishmentResets.remove(record);
             gameEndAnnounced.remove(record);
+            pendingCombatLeaves.remove(record);
+            violationEjections.removeIf(key -> key.matchUuid().equals(record.getMatchUuid()));
             synchronized (finishScheduled) {
                 finishScheduled.remove(record);
             }
@@ -422,6 +520,12 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
         synchronized (records) {
             return records.get(arena);
         }
+    }
+
+    private boolean acceptsGameplay(@Nullable IArena arena, @Nullable MatchRecord record) {
+        return arena != null && record != null && !record.isFinished()
+                && !pendingFinishes.containsKey(record) && !gameEndAnnounced.contains(record)
+                && arena.getStatus() == GameState.playing;
     }
 
     private void removeRecord(MatchRecord record) {
@@ -520,6 +624,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
             active = new ArrayList<>(records.values());
         }
         for (MatchRecord record : active) {
+            if (record.isFinished() && !pendingFinishes.containsKey(record)) continue;
             MatchRecordSnapshot snapshot;
             if (record.isFinished()) {
                 /* A previous enqueue may have been rejected because the
@@ -529,7 +634,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
             } else {
                 FinishRequest request = pendingFinishes.get(record);
                 snapshot = record.finish(
-                        request == null ? "ABORTED" : "FINISHED",
+                        request == null ? "ABORTED" : request.status(),
                         request == null ? null : request.winnerTeam(),
                         request == null ? "PLUGIN_DISABLE" : request.endReason(),
                         request == null ? Instant.now() : request.endedAt());
@@ -546,6 +651,8 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
         finishScheduled.clear();
         violationEjections.clear();
         punishmentResets.clear();
+        pendingCombatLeaves.clear();
+        retiredRecords.clear();
         store.close();
     }
 
@@ -556,7 +663,7 @@ public final class MatchStatsRecorder implements Listener, AutoCloseable {
         }
     }
 
-    private record FinishRequest(@Nullable String winnerTeam, String endReason, Instant endedAt) {
+    private record FinishRequest(String status, @Nullable String winnerTeam, String endReason, Instant endedAt) {
     }
 
     private record ViolationEjectionKey(UUID matchUuid, UUID playerUuid) {

@@ -78,6 +78,8 @@ import com.andrei1058.bedwars.shop.ShopManager;
 import com.andrei1058.bedwars.sidebar.*;
 import com.andrei1058.bedwars.stats.StatsManager;
 import com.andrei1058.bedwars.stats.match.MatchStatsRecorder;
+import com.andrei1058.bedwars.stats.match.MatchStatsDatabase;
+import com.andrei1058.bedwars.stats.match.MatchHistoryService;
 import com.andrei1058.bedwars.support.citizens.CitizensListener;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
 import com.andrei1058.bedwars.support.papi.PAPISupport;
@@ -146,6 +148,7 @@ public class BedWars extends JavaPlugin {
     //remote database
     private static Database remoteDatabase;
     private MatchStatsRecorder matchStatsRecorder;
+    private MatchHistoryService matchHistory;
 
     private boolean serverSoftwareSupport = true;
     private boolean vaultSupportInitialized;
@@ -386,18 +389,23 @@ public class BedWars extends JavaPlugin {
             remoteDatabase.init();
         }
 
-        /* Match-level statistics use the shared MySQL pool and an asynchronous
-         * writer. SQLite remains available for the legacy global statistics,
-         * but is intentionally not used as a cross-server match store. */
-        if (!isBungeeLobby() && config.getYml().getBoolean(ConfigPath.MATCH_STATISTICS_ENABLED, true)
-                && remoteDatabase instanceof com.andrei1058.bedwars.database.MySQL) {
-            matchStatsRecorder = new MatchStatsRecorder(this,
-                    (com.andrei1058.bedwars.database.MySQL) remoteDatabase);
-            registerEvents(matchStatsRecorder, matchStatsRecorder.getViolationDetector());
-            matchStatsRecorder.start();
-        } else if (config.getYml().getBoolean(ConfigPath.MATCH_STATISTICS_ENABLED, true)
-                && config.getBoolean("database.enable")) {
-            out.warning("对局统计已启用，但当前不是可用的 MySQL 连接；本次不启动跨服务器对局统计。");
+        if (config.getYml().getBoolean(ConfigPath.MATCH_STATISTICS_ENABLED, true)) {
+            MatchStatsDatabase matchDatabase = null;
+            if (remoteDatabase instanceof com.andrei1058.bedwars.database.MySQL mysql) {
+                matchDatabase = MatchStatsDatabase.mysql(mysql);
+            } else if (!config.getBoolean("database.enable") && !isBungeeLobby()) {
+                matchDatabase = MatchStatsDatabase.sqlite(getDataFolder().toPath().resolve("Cache/matches.db"));
+            } else {
+                out.warning("对局统计未启动：请检查 MySQL 连接。跨服大厅需使用与竞技场相同的 MySQL 数据库。");
+            }
+            if (matchDatabase != null) {
+                if (!isBungeeLobby()) {
+                    matchStatsRecorder = new MatchStatsRecorder(this, matchDatabase);
+                    registerEvents(matchStatsRecorder, matchStatsRecorder.getViolationDetector());
+                    matchStatsRecorder.start();
+                }
+                matchHistory = new MatchHistoryService(matchDatabase, matchStatsRecorder);
+            }
         }
 
         /* Citizens support */
@@ -589,6 +597,11 @@ public class BedWars extends JavaPlugin {
         if (matchStatsRecorder != null) {
             matchStatsRecorder.close();
             matchStatsRecorder = null;
+        }
+
+        if (matchHistory != null) {
+            matchHistory.close();
+            matchHistory = null;
         }
 
         if (remoteDatabase != null) {
@@ -829,6 +842,10 @@ public class BedWars extends JavaPlugin {
     /** Return the match recorder when MySQL match statistics are enabled. */
     public MatchStatsRecorder getMatchStatsRecorder() {
         return matchStatsRecorder;
+    }
+
+    public MatchHistoryService getMatchHistory() {
+        return matchHistory;
     }
 
     public static StatsManager getStatsManager() {

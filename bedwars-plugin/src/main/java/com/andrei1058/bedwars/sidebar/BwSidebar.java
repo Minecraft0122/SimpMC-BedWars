@@ -15,6 +15,7 @@ import com.andrei1058.bedwars.arena.ElapsedTimeFormatter;
 import com.andrei1058.bedwars.arena.stats.StatisticsOrdered;
 import com.andrei1058.bedwars.levels.internal.PlayerLevel;
 import com.andrei1058.bedwars.stats.PlayerStats;
+import com.andrei1058.bedwars.api.stats.MatchInfo;
 import com.andrei1058.spigot.sidebar.*;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -349,10 +350,8 @@ public class BwSidebar implements ISidebar {
             providers.add(new PlaceholderProvider("{on}", () -> arenaPlayerCount(arenaContext)));
             providers.add(new PlaceholderProvider("{max}", () -> String.valueOf(arenaContext.getMaxPlayers())));
             providers.add(new PlaceholderProvider("{nextEvent}", () -> getNextEventName(arenaContext)));
-            providers.add(new PlaceholderProvider("{gameId}", () -> {
-                String gameId = arenaContext.getWorldName();
-                return gameId == null ? "" : gameId;
-            }));
+            providers.add(new PlaceholderProvider("{gameId}", () -> currentMatchId(arenaContext)));
+            providers.add(new PlaceholderProvider("{gameUuid}", () -> currentMatchUuid(arenaContext)));
             providers.add(new PlaceholderProvider("{gameTime}",
                     () -> ElapsedTimeFormatter.format(arenaContext.getStartTime())));
 
@@ -683,6 +682,25 @@ public class BwSidebar implements ISidebar {
         }
         withGameTime.add(nextEventLine < 0 ? withGameTime.size() : nextEventLine, gameTimeLine);
         return withGameTime;
+    }
+
+    static String currentMatchId(@Nullable IArena arena) {
+        MatchInfo info = currentMatchInfo(arena);
+        if (info == null) return "未开始";
+        return info.matchNumber() <= 0 ? "待分配" : String.valueOf(info.matchNumber());
+    }
+
+    static String currentMatchUuid(@Nullable IArena arena) {
+        MatchInfo info = currentMatchInfo(arena);
+        return info == null ? "" : info.matchUuid().toString();
+    }
+
+    @Nullable
+    private static MatchInfo currentMatchInfo(@Nullable IArena arena) {
+        if (arena == null || BedWars.plugin == null) return null;
+        com.andrei1058.bedwars.stats.match.MatchStatsRecorder recorder =
+                BedWars.plugin.getMatchStatsRecorder();
+        return recorder == null ? null : recorder.getCurrentMatch(arena).orElse(null);
     }
 
     static List<String> insertGameIdLine(List<String> header, String gameIdLine) {

@@ -11,6 +11,7 @@
 package com.andrei1058.bedwars.stats.match;
 
 import com.andrei1058.bedwars.BedWars;
+import com.andrei1058.bedwars.api.stats.KillDeathRatio;
 import com.andrei1058.bedwars.database.MySQL;
 
 import java.math.BigDecimal;
@@ -35,13 +36,14 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongConsumer;
 import java.util.logging.Level;
 
 /**
- * Asynchronous MySQL writer for match-level statistics.
+ * Asynchronous MySQL/SQLite writer for match-level statistics.
  *
  * <p>Every queued operation owns a short transaction. No transaction is held
- * while a game is running, and the match number is allocated by MySQL's
+ * while a game is running, and the match number is allocated by the database's
  * auto-increment column. This keeps the start path independent from any
  * aggregate/player-statistics row locks.</p>
  */
@@ -52,7 +54,7 @@ public final class MatchStatsStore implements AutoCloseable {
     private static final DateTimeFormatter MYSQL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
-    private final MySQL database;
+    private final MatchStatsDatabase database;
     private final ZoneId zone;
     private final String serverId;
     private final int retryDelaySeconds;
@@ -77,10 +79,21 @@ public final class MatchStatsStore implements AutoCloseable {
     public MatchStatsStore(MySQL database, ZoneId zone, String serverId,
                            int queueCapacity, int retryDelaySeconds,
                            List<Integer> warningThresholds) {
+        this(MatchStatsDatabase.mysql(database), zone, serverId, queueCapacity, retryDelaySeconds, warningThresholds);
+    }
+
+    public MatchStatsStore(MatchStatsDatabase database, ZoneId zone, String serverId,
+                           int queueCapacity, int retryDelaySeconds) {
+        this(database, zone, serverId, queueCapacity, retryDelaySeconds, List.of(10, 20, 50, 100));
+    }
+
+    public MatchStatsStore(MatchStatsDatabase database, ZoneId zone, String serverId,
+                           int queueCapacity, int retryDelaySeconds,
+                           List<Integer> warningThresholds) {
         if (queueCapacity < 100) throw new IllegalArgumentException("queueCapacity must be at least 100");
         if (retryDelaySeconds < 1) throw new IllegalArgumentException("retryDelaySeconds must be positive");
-        this.database = database;
-        this.zone = zone;
+        this.database = Objects.requireNonNull(database, "database");
+        this.zone = Objects.requireNonNull(zone, "zone");
         this.serverId = Objects.requireNonNull(serverId, "serverId");
         this.retryDelaySeconds = retryDelaySeconds;
         List<Integer> thresholds = new ArrayList<>();
@@ -107,11 +120,18 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     public boolean enqueueStart(MatchRecordSnapshot snapshot) {
+        return enqueueStart(snapshot, ignored -> { });
+    }
+
+    /** 编号回调在事务提交之后的数据库线程执行，禁止直接操作 Bukkit 对象。 */
+    public boolean enqueueStart(MatchRecordSnapshot snapshot, LongConsumer callback) {
+        Objects.requireNonNull(callback, "callback");
+        long[] matchNumber = new long[1];
         return enqueueCritical(new QueuedOperation("start " + snapshot.matchUuid(),
                 connection -> {
-                    writeStart(connection, snapshot);
+                    matchNumber[0] = writeStart(connection, snapshot);
                     return List.of();
-                }, true));
+                }, true, () -> callback.accept(matchNumber[0])));
     }
 
     public boolean enqueueEvent(MatchEventSnapshot event) {
@@ -240,6 +260,12 @@ public final class MatchStatsStore implements AutoCloseable {
                 List<VlWarning> warnings = operation.writer.write(connection);
                 connection.commit();
                 logWarnings(warnings);
+                try {
+                    operation.afterCommit.run();
+                } catch (RuntimeException exception) {
+                    // 回调失败不能重新执行已经提交的结算。
+                    logFailure("对局写入回调 " + operation.description, exception, attempt);
+                }
                 return;
             } catch (SQLException exception) {
                 logFailure(operation.description, exception, attempt);
@@ -289,7 +315,17 @@ public final class MatchStatsStore implements AutoCloseable {
         }
     }
 
-    private void createSchema(Connection connection) throws SQLException {
+    void createSchema(Connection connection) throws SQLException {
+        if (database.isSqlite()) {
+            createSqliteSchema(connection);
+        } else {
+            createMysqlSchema(connection);
+        }
+        migrateKd(connection);
+        createSummaryView(connection);
+    }
+
+    private void createMysqlSchema(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_matches (" +
                     "match_uuid CHAR(36) NOT NULL, " +
@@ -321,7 +357,7 @@ public final class MatchStatsStore implements AutoCloseable {
                     "final_kills INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "deaths INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "beds_destroyed INT UNSIGNED NOT NULL DEFAULT 0, " +
-                    "kd_ratio DECIMAL(10,4) NULL, " +
+                    "kd_ratio DECIMAL(20,4) NOT NULL DEFAULT 0, " +
                     "illegal_team_vl INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "kill_boosting_vl INT UNSIGNED NOT NULL DEFAULT 0, " +
                     "evidence_adjustment INT NOT NULL DEFAULT 0, " +
@@ -377,20 +413,20 @@ public final class MatchStatsStore implements AutoCloseable {
             addColumnIfMissing(statement, "ALTER TABLE bw_match_players ADD COLUMN evidence_adjustment INT NOT NULL DEFAULT 0 AFTER kill_boosting_vl");
             addColumnIfMissing(statement, "ALTER TABLE bw_match_players ADD COLUMN effective_vl INT UNSIGNED NOT NULL DEFAULT 0 AFTER evidence_adjustment");
             addColumnIfMissing(statement, "ALTER TABLE bw_player_violation_totals ADD COLUMN punishment_warning_mask TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER punishment_total_vl");
+        }
+    }
 
-            /*
-             * A read-only aggregation surface for lobby dashboards and
-             * administrative comparison commands. Restricted MySQL accounts
-             * may create tables but not views, so a missing VIEW privilege is
-             * logged without preventing match writes from starting.
-             */
+    /** 视图只是额外的 SQL 查询入口；没有创建权限不影响明细保存和查询 API。 */
+    private void createSummaryView(Connection connection) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
             try {
-                statement.executeUpdate("CREATE OR REPLACE VIEW bw_player_match_summary AS " +
+                if (database.isSqlite()) statement.executeUpdate("DROP VIEW IF EXISTS bw_player_match_summary");
+                String sql = (database.isSqlite() ? "CREATE VIEW" : "CREATE OR REPLACE VIEW") + " bw_player_match_summary AS " +
                         "SELECT p.player_uuid AS player_uuid, MAX(p.player_name) AS player_name, " +
                         "COUNT(*) AS matches_played, SUM(p.normal_kills) AS normal_kills, " +
                         "SUM(p.final_kills) AS final_kills, SUM(p.normal_kills + p.final_kills) AS total_kills, " +
                         "SUM(p.deaths) AS deaths, SUM(p.beds_destroyed) AS beds_destroyed, " +
-                        "CASE WHEN SUM(p.deaths)=0 THEN NULL ELSE ROUND(SUM(p.normal_kills + p.final_kills) / SUM(p.deaths), 4) END AS kd_ratio, " +
+                        "ROUND(1.0 * SUM(p.normal_kills) / CASE WHEN SUM(p.deaths)=0 THEN 1 ELSE SUM(p.deaths) END, 4) AS kd_ratio, " +
                         "SUM(p.illegal_team_vl) AS illegal_team_vl, SUM(p.kill_boosting_vl) AS kill_boosting_vl, " +
                         "SUM(p.evidence_adjustment) AS evidence_adjustment, " +
                         "SUM(CASE WHEN p.effective_vl=0 AND (p.illegal_team_vl > 0 OR p.kill_boosting_vl > 0 OR p.evidence_adjustment <> 0) " +
@@ -405,7 +441,9 @@ public final class MatchStatsStore implements AutoCloseable {
                         "COALESCE(MAX(v.punishment_total_vl), 0) AS punishment_total_vl " +
                         "FROM bw_match_players p INNER JOIN bw_matches m ON m.match_uuid=p.match_uuid " +
                         "LEFT JOIN bw_player_violation_totals v ON v.player_uuid=p.player_uuid " +
-                        "WHERE m.status='FINISHED' GROUP BY p.player_uuid");
+                        "WHERE m.status='FINISHED' GROUP BY p.player_uuid";
+                if (database.isSqlite()) sql = sql.replace("GREATEST(", "MAX(").replace("AS SIGNED", "AS INTEGER");
+                statement.executeUpdate(sql);
             } catch (SQLException exception) {
                 if (BedWars.plugin != null) {
                     BedWars.plugin.getLogger().log(Level.WARNING,
@@ -415,40 +453,112 @@ public final class MatchStatsStore implements AutoCloseable {
         }
     }
 
-    /** Mark rows left RUNNING by a previous process on this server as aborted. */
-    private void recoverStaleMatches(Connection connection) throws SQLException {
-        String sql = "UPDATE bw_matches SET status='ABORTED', end_reason='SERVER_RESTART', " +
-                "ended_at=?, last_seen_at=? WHERE server_id=? AND status='RUNNING'";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            String timestamp = sqlTime(Instant.now());
-            statement.setString(1, timestamp);
-            statement.setString(2, timestamp);
-            statement.setString(3, serverId);
-            int recovered = statement.executeUpdate();
-            if (recovered > 0 && BedWars.plugin != null) {
-                BedWars.plugin.getLogger().info("已将本子服上次异常退出遗留的 " + recovered + " 场对局标记为 ABORTED。");
+    private void createSqliteSchema(Connection connection) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_matches ("
+                    + "match_no INTEGER PRIMARY KEY AUTOINCREMENT, match_uuid TEXT NOT NULL UNIQUE,"
+                    + "server_id TEXT NOT NULL, template_name TEXT NOT NULL, runtime_arena TEXT NOT NULL,"
+                    + "arena_group TEXT NOT NULL, arena_timezone TEXT NOT NULL, status TEXT NOT NULL,"
+                    + "winner_team TEXT, end_reason TEXT, started_at TEXT NOT NULL, ended_at TEXT,"
+                    + "last_seen_at TEXT NOT NULL, last_event_sequence INTEGER NOT NULL DEFAULT 0)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_players ("
+                    + "match_uuid TEXT NOT NULL, player_uuid TEXT NOT NULL, player_name TEXT, team_id TEXT,"
+                    + "normal_kills INTEGER NOT NULL DEFAULT 0, final_kills INTEGER NOT NULL DEFAULT 0,"
+                    + "deaths INTEGER NOT NULL DEFAULT 0, beds_destroyed INTEGER NOT NULL DEFAULT 0,"
+                    + "kd_ratio REAL NOT NULL DEFAULT 0, illegal_team_vl INTEGER NOT NULL DEFAULT 0,"
+                    + "kill_boosting_vl INTEGER NOT NULL DEFAULT 0, evidence_adjustment INTEGER NOT NULL DEFAULT 0,"
+                    + "effective_vl INTEGER NOT NULL DEFAULT 0, reconnects INTEGER NOT NULL DEFAULT 0,"
+                    + "disconnects INTEGER NOT NULL DEFAULT 0, outcome TEXT NOT NULL DEFAULT 'UNKNOWN',"
+                    + "vl_applied INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL,"
+                    + "PRIMARY KEY (match_uuid, player_uuid))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_events ("
+                    + "event_uuid TEXT PRIMARY KEY, match_uuid TEXT NOT NULL, event_sequence INTEGER NOT NULL,"
+                    + "event_type TEXT NOT NULL, actor_uuid TEXT, target_uuid TEXT, details TEXT, occurred_at TEXT NOT NULL,"
+                    + "UNIQUE (match_uuid, event_sequence))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_reports ("
+                    + "report_id INTEGER PRIMARY KEY AUTOINCREMENT, match_uuid TEXT NOT NULL, report_number INTEGER NOT NULL,"
+                    + "status TEXT NOT NULL, captured_at TEXT NOT NULL, player_count INTEGER NOT NULL,"
+                    + "last_event_sequence INTEGER NOT NULL, UNIQUE (match_uuid, report_number))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_player_violation_totals ("
+                    + "player_uuid TEXT PRIMARY KEY, crime_total_vl INTEGER NOT NULL DEFAULT 0,"
+                    + "punishment_total_vl INTEGER NOT NULL DEFAULT 0, punishment_warning_mask INTEGER NOT NULL DEFAULT 0,"
+                    + "last_punished_at TEXT, updated_at TEXT NOT NULL)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_bw_match_players_player ON bw_match_players(player_uuid)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_bw_matches_status ON bw_matches(status, started_at)");
+        }
+    }
+
+    private void migrateKd(Connection connection) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_schema (migration_id VARCHAR(64) PRIMARY KEY)"
+                    + (database.isSqlite() ? "" : " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"));
+            try (ResultSet result = statement.executeQuery("SELECT migration_id FROM bw_match_schema WHERE migration_id='normal-kd-zero-deaths-v1'")) {
+                if (result.next()) return;
+            }
+            if (!database.isSqlite()) {
+                // 旧 DECIMAL(10,4) 无法容纳零死亡时的完整 INT 击杀数。
+                statement.executeUpdate("ALTER TABLE bw_match_players MODIFY COLUMN kd_ratio DECIMAL(20,4) NULL");
+            }
+            connection.setAutoCommit(false);
+            try {
+                statement.executeUpdate("UPDATE bw_match_players SET kd_ratio=ROUND(1.0 * normal_kills / CASE WHEN deaths=0 THEN 1 ELSE deaths END, 4)");
+                statement.executeUpdate(database.isSqlite()
+                        ? "INSERT OR IGNORE INTO bw_match_schema (migration_id) VALUES ('normal-kd-zero-deaths-v1')"
+                        : "INSERT IGNORE INTO bw_match_schema (migration_id) VALUES ('normal-kd-zero-deaths-v1')");
+                connection.commit();
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
             }
         }
     }
 
-    private void writeStart(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
-        String sql = "INSERT INTO bw_matches (match_uuid, server_id, template_name, runtime_arena, arena_group, " +
-                "arena_timezone, status, started_at, last_seen_at, last_event_sequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE last_seen_at=VALUES(last_seen_at), last_event_sequence=GREATEST(last_event_sequence, VALUES(last_event_sequence))";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            setMatchFields(statement, snapshot);
-            statement.setString(7, "RUNNING");
-            statement.setString(8, sqlTime(snapshot.startedAt()));
-            statement.setString(9, sqlTime(snapshot.capturedAt()));
-            statement.setLong(10, snapshot.lastEventSequence());
-            statement.executeUpdate();
+    /** Mark rows left RUNNING by a previous process on this server as aborted. */
+    void recoverStaleMatches(Connection connection) throws SQLException {
+        List<String> timezones = new ArrayList<>();
+        try (PreparedStatement statement = prepare(connection,
+                "SELECT DISTINCT arena_timezone FROM bw_matches WHERE server_id=? AND status='RUNNING'")) {
+            statement.setString(1, serverId);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) timezones.add(result.getString(1));
+            }
+        }
+        String sql = "UPDATE bw_matches SET status='ABORTED', end_reason='SERVER_RESTART', " +
+                "ended_at=?, last_seen_at=? WHERE server_id=? AND status='RUNNING' AND arena_timezone=?";
+        Instant recoveredAt = Instant.now();
+        int recovered = 0;
+        try (PreparedStatement statement = prepare(connection, sql)) {
+            for (String timezone : timezones) {
+                // 时区配置可能在重启时变化，历史行必须沿用自身保存的时区。
+                String timestamp = sqlTime(recoveredAt, timezone);
+                statement.setString(1, timestamp);
+                statement.setString(2, timestamp);
+                statement.setString(3, serverId);
+                statement.setString(4, timezone);
+                recovered += statement.executeUpdate();
+            }
+        }
+        if (recovered > 0 && BedWars.plugin != null) {
+            BedWars.plugin.getLogger().info("已将本子服上次异常退出遗留的 " + recovered + " 场对局标记为 ABORTED。");
         }
     }
 
-    private void writeEvent(Connection connection, MatchEventSnapshot event) throws SQLException {
-        String sql = "INSERT INTO bw_match_events (event_uuid, match_uuid, event_sequence, event_type, actor_uuid, target_uuid, details, occurred_at) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE event_uuid=VALUES(event_uuid)";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+    long writeStart(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
+        ensureMatch(connection, snapshot, "RUNNING");
+        StoredMatch match = lockMatch(connection, snapshot.matchUuid());
+        if ("RUNNING".equals(match.status())) {
+            // 重试开局只补充缺失的参赛者，不覆盖已有的较新计数。
+            writePlayers(connection, snapshot, true);
+        }
+        return match.number();
+    }
+
+    void writeEvent(Connection connection, MatchEventSnapshot event) throws SQLException {
+        String sql = "INSERT INTO bw_match_events (event_uuid, match_uuid, event_sequence, event_type, actor_uuid, target_uuid, details, occurred_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE event_uuid=VALUES(event_uuid)";
+        try (PreparedStatement statement = prepare(connection, sql)) {
             statement.setString(1, event.eventId().toString());
             statement.setString(2, event.matchUuid().toString());
             statement.setLong(3, event.sequence());
@@ -461,17 +571,20 @@ public final class MatchStatsStore implements AutoCloseable {
         }
     }
 
-    private void writeReport(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
+    void writeReport(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
         ensureMatch(connection, snapshot, "RUNNING");
-        writePlayers(connection, snapshot);
-        String sql = "INSERT INTO bw_match_reports (match_uuid, report_number, status, captured_at, player_count, last_event_sequence) " +
-                "VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE captured_at=VALUES(captured_at), status=VALUES(status), " +
-                "player_count=VALUES(player_count), last_event_sequence=VALUES(last_event_sequence)";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+        StoredMatch match = lockMatch(connection, snapshot.matchUuid());
+        // 关键队列可能先提交最终结算，普通队列中的旧快照必须保持只读。
+        if (!"RUNNING".equals(match.status()) || snapshot.lastEventSequence() < match.sequence()) return;
+        writePlayers(connection, snapshot, false);
+        String sql = "INSERT INTO bw_match_reports (match_uuid, report_number, status, captured_at, player_count, last_event_sequence) "
+                + "VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE captured_at=VALUES(captured_at), status=VALUES(status), "
+                + "player_count=VALUES(player_count), last_event_sequence=VALUES(last_event_sequence)";
+        try (PreparedStatement statement = prepare(connection, sql)) {
             statement.setString(1, snapshot.matchUuid().toString());
             statement.setInt(2, snapshot.reportNumber());
             statement.setString(3, snapshot.status());
-            statement.setString(4, sqlTime(snapshot.capturedAt()));
+            statement.setString(4, sqlTime(snapshot.capturedAt(), snapshot.timezone()));
             statement.setInt(5, snapshot.playerStats().players().size());
             statement.setLong(6, snapshot.lastEventSequence());
             statement.executeUpdate();
@@ -479,26 +592,23 @@ public final class MatchStatsStore implements AutoCloseable {
         touchMatch(connection, snapshot);
     }
 
-    private List<VlWarning> writeFinish(Connection connection, MatchRecordSnapshot snapshot,
-                                        List<UUID> punishedPlayers) throws SQLException {
-        // Insert a RUNNING row if the asynchronous start operation has not
-        // completed yet; the following update then records the final state.
+    List<VlWarning> writeFinish(Connection connection, MatchRecordSnapshot snapshot,
+                                       List<UUID> punishedPlayers) throws SQLException {
         ensureMatch(connection, snapshot, "RUNNING");
-        writePlayers(connection, snapshot);
-
-        String sql = "UPDATE bw_matches SET status=?, winner_team=?, end_reason=?, ended_at=?, last_seen_at=?, " +
-                "last_event_sequence=? WHERE match_uuid=? AND status='RUNNING'";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+        if (!"RUNNING".equals(lockMatch(connection, snapshot.matchUuid()).status())) return List.of();
+        writePlayers(connection, snapshot, false);
+        String sql = "UPDATE bw_matches SET status=?, winner_team=?, end_reason=?, ended_at=?, last_seen_at=?, "
+                + "last_event_sequence=? WHERE match_uuid=? AND status='RUNNING'";
+        try (PreparedStatement statement = prepare(connection, sql)) {
             statement.setString(1, snapshot.status());
             statement.setString(2, snapshot.winnerTeam());
             statement.setString(3, snapshot.endReason());
-            statement.setString(4, sqlTime(snapshot.endedAt() == null ? snapshot.capturedAt() : snapshot.endedAt()));
-            statement.setString(5, sqlTime(snapshot.capturedAt()));
+            statement.setString(4, sqlTime(snapshot.endedAt() == null ? snapshot.capturedAt() : snapshot.endedAt(), snapshot.timezone()));
+            statement.setString(5, sqlTime(snapshot.capturedAt(), snapshot.timezone()));
             statement.setLong(6, snapshot.lastEventSequence());
             statement.setString(7, snapshot.matchUuid().toString());
             statement.executeUpdate();
         }
-
         List<VlWarning> warnings = applyViolationTotals(connection, snapshot);
         for (UUID playerUuid : punishedPlayers) {
             resetPunishmentVl(connection, playerUuid, snapshot.capturedAt());
@@ -507,28 +617,52 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     private void ensureMatch(Connection connection, MatchRecordSnapshot snapshot, String state) throws SQLException {
-        String sql = "INSERT INTO bw_matches (match_uuid, server_id, template_name, runtime_arena, arena_group, " +
-                "arena_timezone, status, started_at, last_seen_at, last_event_sequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE last_seen_at=VALUES(last_seen_at), last_event_sequence=GREATEST(last_event_sequence, VALUES(last_event_sequence))";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+        String sql = "INSERT INTO bw_matches (match_uuid, server_id, template_name, runtime_arena, arena_group, "
+                + "arena_timezone, status, started_at, last_seen_at, last_event_sequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE match_uuid=VALUES(match_uuid)";
+        try (PreparedStatement statement = prepare(connection, sql)) {
             setMatchFields(statement, snapshot);
             statement.setString(7, state);
-            statement.setString(8, sqlTime(snapshot.startedAt()));
-            statement.setString(9, sqlTime(snapshot.capturedAt()));
+            statement.setString(8, sqlTime(snapshot.startedAt(), snapshot.timezone()));
+            statement.setString(9, sqlTime(snapshot.capturedAt(), snapshot.timezone()));
             statement.setLong(10, snapshot.lastEventSequence());
             statement.executeUpdate();
         }
     }
 
+    private StoredMatch lockMatch(Connection connection, UUID matchUuid) throws SQLException {
+        String sql = "SELECT match_no, status, last_event_sequence FROM bw_matches WHERE match_uuid=? FOR UPDATE";
+        try (PreparedStatement statement = prepare(connection, sql)) {
+            statement.setString(1, matchUuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) throw new SQLException("无法读取对局 " + matchUuid);
+                return new StoredMatch(result.getLong(1), result.getString(2), result.getLong(3));
+            }
+        }
+    }
+
     private void touchMatch(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
         String sql = "UPDATE bw_matches SET last_seen_at=?, last_event_sequence=GREATEST(last_event_sequence, ?) WHERE match_uuid=?";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, sqlTime(snapshot.capturedAt()));
+        try (PreparedStatement statement = prepare(connection, sql)) {
+            statement.setString(1, sqlTime(snapshot.capturedAt(), snapshot.timezone()));
             statement.setLong(2, snapshot.lastEventSequence());
             statement.setString(3, snapshot.matchUuid().toString());
             statement.executeUpdate();
         }
     }
+
+    /** 仅转换本类固定 SQL 中的方言差异，值始终由参数绑定。 */
+    private PreparedStatement prepare(Connection connection, String sql) throws SQLException {
+        if (database.isSqlite()) {
+            sql = sql.replace("ON DUPLICATE KEY UPDATE", "ON CONFLICT DO UPDATE SET")
+                    .replaceAll("VALUES\\(([a-z_]+)\\)", "excluded.$1")
+                    .replace("GREATEST(", "MAX(")
+                    .replace(" FOR UPDATE", "");
+        }
+        return connection.prepareStatement(sql);
+    }
+
+    private record StoredMatch(long number, String status, long sequence) { }
 
     private void setMatchFields(PreparedStatement statement, MatchRecordSnapshot snapshot) throws SQLException {
         statement.setString(1, snapshot.matchUuid().toString());
@@ -539,15 +673,17 @@ public final class MatchStatsStore implements AutoCloseable {
         statement.setString(6, snapshot.timezone());
     }
 
-    private void writePlayers(Connection connection, MatchRecordSnapshot snapshot) throws SQLException {
-        String sql = "INSERT INTO bw_match_players (match_uuid, player_uuid, player_name, team_id, normal_kills, final_kills, deaths, beds_destroyed, " +
-                "kd_ratio, illegal_team_vl, kill_boosting_vl, evidence_adjustment, effective_vl, reconnects, disconnects, outcome, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE player_name=VALUES(player_name), team_id=VALUES(team_id), normal_kills=VALUES(normal_kills), " +
-                "final_kills=VALUES(final_kills), deaths=VALUES(deaths), beds_destroyed=VALUES(beds_destroyed), kd_ratio=VALUES(kd_ratio), " +
-                "illegal_team_vl=VALUES(illegal_team_vl), kill_boosting_vl=VALUES(kill_boosting_vl), evidence_adjustment=VALUES(evidence_adjustment), " +
-                "effective_vl=VALUES(effective_vl), reconnects=VALUES(reconnects), " +
-                "disconnects=VALUES(disconnects), outcome=VALUES(outcome), updated_at=VALUES(updated_at)";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+    private void writePlayers(Connection connection, MatchRecordSnapshot snapshot, boolean insertOnly) throws SQLException {
+        String sql = "INSERT INTO bw_match_players (match_uuid, player_uuid, player_name, team_id, normal_kills, final_kills, deaths, beds_destroyed, "
+                + "kd_ratio, illegal_team_vl, kill_boosting_vl, evidence_adjustment, effective_vl, reconnects, disconnects, outcome, updated_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE "
+                + (insertOnly ? "player_uuid=VALUES(player_uuid)"
+                : "player_name=VALUES(player_name), team_id=VALUES(team_id), normal_kills=VALUES(normal_kills), "
+                + "final_kills=VALUES(final_kills), deaths=VALUES(deaths), beds_destroyed=VALUES(beds_destroyed), kd_ratio=VALUES(kd_ratio), "
+                + "illegal_team_vl=VALUES(illegal_team_vl), kill_boosting_vl=VALUES(kill_boosting_vl), evidence_adjustment=VALUES(evidence_adjustment), "
+                + "effective_vl=VALUES(effective_vl), reconnects=VALUES(reconnects), "
+                + "disconnects=VALUES(disconnects), outcome=VALUES(outcome), updated_at=VALUES(updated_at)");
+        try (PreparedStatement statement = prepare(connection, sql)) {
             for (MatchPlayerSnapshot player : snapshot.playerStats().players()) {
                 statement.setString(1, snapshot.matchUuid().toString());
                 statement.setString(2, player.playerUuid().toString());
@@ -557,11 +693,7 @@ public final class MatchStatsStore implements AutoCloseable {
                 statement.setInt(6, player.finalKills());
                 statement.setInt(7, player.deaths());
                 statement.setInt(8, player.bedsDestroyed());
-                if (player.kdRatio().isPresent()) {
-                    statement.setBigDecimal(9, BigDecimal.valueOf(player.kdRatio().getAsDouble()));
-                } else {
-                    statement.setNull(9, java.sql.Types.DECIMAL);
-                }
+                statement.setBigDecimal(9, BigDecimal.valueOf(KillDeathRatio.calculate(player.kills(), player.deaths())));
                 statement.setInt(10, player.illegalTeamVl());
                 statement.setInt(11, player.killBoostingVl());
                 statement.setInt(12, player.evidenceAdjustment());
@@ -569,7 +701,7 @@ public final class MatchStatsStore implements AutoCloseable {
                 statement.setInt(14, player.reconnects());
                 statement.setInt(15, player.disconnects());
                 statement.setString(16, player.outcome().name());
-                statement.setString(17, sqlTime(snapshot.capturedAt()));
+                statement.setString(17, sqlTime(snapshot.capturedAt(), snapshot.timezone()));
                 statement.addBatch();
             }
             statement.executeBatch();
@@ -589,7 +721,7 @@ public final class MatchStatsStore implements AutoCloseable {
 
         for (MatchPlayerSnapshot player : players) {
             boolean applied;
-            try (PreparedStatement statement = connection.prepareStatement(select)) {
+            try (PreparedStatement statement = prepare(connection, select)) {
                 statement.setString(1, snapshot.matchUuid().toString());
                 statement.setString(2, player.playerUuid().toString());
                 try (ResultSet result = statement.executeQuery()) {
@@ -602,7 +734,7 @@ public final class MatchStatsStore implements AutoCloseable {
             int punishmentAmount = player.totalVl();
             if (crimeAmount > 0 || punishmentAmount > 0) {
                 String now = sqlTime(snapshot.capturedAt());
-                try (PreparedStatement statement = connection.prepareStatement(ensureTotals)) {
+                try (PreparedStatement statement = prepare(connection, ensureTotals)) {
                     statement.setString(1, player.playerUuid().toString());
                     statement.setString(2, now);
                     statement.executeUpdate();
@@ -610,7 +742,7 @@ public final class MatchStatsStore implements AutoCloseable {
                 int crimeTotal;
                 int punishmentTotal;
                 int warningMask;
-                try (PreparedStatement statement = connection.prepareStatement(selectTotals)) {
+                try (PreparedStatement statement = prepare(connection, selectTotals)) {
                     statement.setString(1, player.playerUuid().toString());
                     try (ResultSet result = statement.executeQuery()) {
                         if (!result.next()) throw new SQLException("无法锁定玩家 VL 汇总行 " + player.playerUuid());
@@ -627,7 +759,7 @@ public final class MatchStatsStore implements AutoCloseable {
                     warnings.add(new VlWarning(player.playerUuid(), player.playerName(),
                             snapshot.matchUuid(), threshold, newPunishmentTotal));
                 }
-                try (PreparedStatement statement = connection.prepareStatement(updateTotals)) {
+                try (PreparedStatement statement = prepare(connection, updateTotals)) {
                     statement.setInt(1, newCrimeTotal);
                     statement.setInt(2, newPunishmentTotal);
                     statement.setInt(3, evaluation.warningMask());
@@ -636,7 +768,7 @@ public final class MatchStatsStore implements AutoCloseable {
                     statement.executeUpdate();
                 }
             }
-            try (PreparedStatement statement = connection.prepareStatement(mark)) {
+            try (PreparedStatement statement = prepare(connection, mark)) {
                 statement.setString(1, snapshot.matchUuid().toString());
                 statement.setString(2, player.playerUuid().toString());
                 statement.executeUpdate();
@@ -648,7 +780,7 @@ public final class MatchStatsStore implements AutoCloseable {
     private void resetPunishmentVl(Connection connection, UUID playerUuid, Instant punishedAt) throws SQLException {
         String sql = "UPDATE bw_player_violation_totals SET punishment_total_vl=0, punishment_warning_mask=0, last_punished_at=?, updated_at=? " +
                 "WHERE player_uuid=?";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (PreparedStatement statement = prepare(connection, sql)) {
             String timestamp = sqlTime(punishedAt);
             statement.setString(1, timestamp);
             statement.setString(2, timestamp);
@@ -658,8 +790,11 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     private String sqlTime(Instant instant) {
-        LocalDateTime local = LocalDateTime.ofInstant(instant, zone);
-        return MYSQL_DATETIME.format(local);
+        return sqlTime(instant, zone.getId());
+    }
+
+    private static String sqlTime(Instant instant, String timezone) {
+        return MYSQL_DATETIME.format(LocalDateTime.ofInstant(instant, ZoneId.of(timezone)));
     }
 
     private static int saturatingAdd(int current, int amount) {
@@ -705,7 +840,10 @@ public final class MatchStatsStore implements AutoCloseable {
         }
     }
 
-    private record QueuedOperation(String description, SqlWriter writer, boolean critical) {
+    private record QueuedOperation(String description, SqlWriter writer, boolean critical, Runnable afterCommit) {
+        private QueuedOperation(String description, SqlWriter writer, boolean critical) {
+            this(description, writer, critical, () -> { });
+        }
     }
 
     private record VlWarning(UUID playerUuid, String playerName, UUID matchUuid,

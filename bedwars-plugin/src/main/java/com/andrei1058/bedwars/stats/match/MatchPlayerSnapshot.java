@@ -10,6 +10,7 @@
 
 package com.andrei1058.bedwars.stats.match;
 
+import com.andrei1058.bedwars.api.stats.KillDeathRatio;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -19,9 +20,10 @@ import java.util.UUID;
 /**
  * Immutable player statistics captured at one point in a match.
  *
- * <p>The K/D ratio uses regular kills plus final kills as its numerator.
- * When a player has no deaths, {@link #kdRatio()} is empty so persistence
- * code can store SQL NULL instead of an arbitrary value.</p>
+ * <p>The K/D ratio uses regular kills as its numerator. A zero-death match
+ * uses {@code 1} as the denominator, so the ratio is exactly the regular
+ * kill count. The optional return type is retained for source and binary
+ * compatibility with older integrations; it is always present.</p>
  */
 public record MatchPlayerSnapshot(
         UUID playerUuid,
@@ -73,9 +75,6 @@ public record MatchPlayerSnapshot(
     }
 
     public OptionalDouble kdRatio() {
-        if (deaths == 0) {
-            return OptionalDouble.empty();
-        }
-        return OptionalDouble.of((double) totalKills() / deaths);
+        return OptionalDouble.of(KillDeathRatio.calculate(kills, deaths));
     }
 }

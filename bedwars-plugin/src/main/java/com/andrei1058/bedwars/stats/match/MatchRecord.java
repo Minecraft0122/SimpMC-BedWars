@@ -11,6 +11,7 @@
 package com.andrei1058.bedwars.stats.match;
 
 import org.jetbrains.annotations.Nullable;
+import com.andrei1058.bedwars.api.stats.MatchInfo;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -33,6 +34,7 @@ public final class MatchRecord {
     private final String timezone;
     private final Instant startedAt;
     private final MatchStats stats = new MatchStats();
+    private long matchNumber;
 
     private long nextEventSequence;
     private int nextReportNumber;
@@ -57,6 +59,24 @@ public final class MatchRecord {
 
     public UUID getMatchUuid() {
         return matchUuid;
+    }
+
+    public synchronized long getMatchNumber() {
+        return matchNumber;
+    }
+
+    /** The database assigns the number only after its start transaction commits. */
+    public synchronized void setMatchNumber(long matchNumber) {
+        if (matchNumber <= 0) throw new IllegalArgumentException("matchNumber must be positive");
+        if (this.matchNumber != 0 && this.matchNumber != matchNumber) {
+            throw new IllegalStateException("A match number cannot change after allocation");
+        }
+        this.matchNumber = matchNumber;
+    }
+
+    public synchronized MatchInfo currentMatchInfo() {
+        return new MatchInfo(matchNumber, matchUuid, templateName, runtimeArenaName, arenaGroup,
+                serverId, status, startedAt, endedAt, winnerTeam);
     }
 
     public MatchStats getStats() {
