@@ -69,13 +69,19 @@ class MiscReturnRoutingTest {
 
     @AfterEach
     void tearDown() {
-        arenas.close();
-        bukkit.close();
-        BedWars.config = previousConfig;
-        BedWars.plugin = previousPlugin;
-        BedWars.setServerType(previousServerType);
-        BedWars.setAutoscale(previousAutoscale);
-        BedWars.setLobbyWorld(previousLobbyWorld);
+        try {
+            if (arenas != null) arenas.close();
+        } finally {
+            try {
+                if (bukkit != null) bukkit.close();
+            } finally {
+                BedWars.config = previousConfig;
+                BedWars.plugin = previousPlugin;
+                BedWars.setServerType(previousServerType);
+                BedWars.setAutoscale(previousAutoscale);
+                BedWars.setLobbyWorld(previousLobbyWorld);
+            }
+        }
     }
 
     @Test

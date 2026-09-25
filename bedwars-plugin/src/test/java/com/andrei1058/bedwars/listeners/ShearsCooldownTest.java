@@ -3,6 +3,7 @@ package com.andrei1058.bedwars.listeners;
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.configuration.MainConfig;
 import com.andrei1058.bedwars.api.server.VersionSupport;
 import com.andrei1058.bedwars.arena.Arena;
 import org.bukkit.Material;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.when;
 
 class ShearsCooldownTest {
     private VersionSupport previousSupport;
+    private MainConfig previousConfig;
     private BreakPlace listener;
     private Player player;
     private IArena arena;
@@ -40,6 +42,8 @@ class ShearsCooldownTest {
     @BeforeEach
     void setUp() {
         previousSupport = BedWars.nms;
+        previousConfig = BedWars.config;
+        BedWars.config = mock(MainConfig.class);
         BedWars.nms = mock(VersionSupport.class);
         listener = mock(BreakPlace.class, CALLS_REAL_METHODS);
         player = mock(Player.class);
@@ -59,6 +63,7 @@ class ShearsCooldownTest {
     void tearDown() {
         Arena.getArenaByPlayer().remove(player);
         BedWars.nms = previousSupport;
+        BedWars.config = previousConfig;
     }
 
     @Test
