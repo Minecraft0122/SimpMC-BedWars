@@ -82,7 +82,7 @@ import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class BreakPlace implements Listener {
 
-    static final int SHEARS_BREAK_COOLDOWN_TICKS = 10;
+    static final int SHEARS_BREAK_COOLDOWN_TICKS = 5;
     private static final Set<UUID> BUILD_SESSIONS = new HashSet<>();
     private final boolean allowFireBreak;
     private final BlastProtectionUtil blastProtection;

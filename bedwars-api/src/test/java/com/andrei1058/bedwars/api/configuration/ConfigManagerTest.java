@@ -3,10 +3,16 @@ package com.andrei1058.bedwars.api.configuration;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.lang.reflect.Proxy;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -14,6 +20,23 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigManagerTest {
+
+    @Test
+    void persistedLobbyServerValueSurvivesMigrationAndReload(@TempDir Path directory) throws IOException {
+        Path configFile = directory.resolve("settings.yml");
+        Files.writeString(configFile, "config-version: 1\nlobbyServer: login\n");
+
+        ConfigManager manager = new ConfigManager(testPlugin(), "settings", directory.toString());
+        manager.getYml().addDefault("lobbyServer", "hub");
+
+        assertTrue(manager.updateToLatestVersion(2, ignored -> {
+        }));
+
+        manager.reload();
+
+        assertEquals("login", manager.getString("lobbyServer"));
+        assertEquals("login", YamlConfiguration.loadConfiguration(configFile.toFile()).getString("lobbyServer"));
+    }
 
     @Test
     void arenaLocationUsesBlockCenterAndDropsDirection() {
@@ -167,6 +190,16 @@ class ConfigManagerTest {
                     case "equals" -> proxy == args[0];
                     case "hashCode" -> System.identityHashCode(proxy);
                     default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
+    private static Plugin testPlugin() {
+        Logger logger = Logger.getLogger(ConfigManagerTest.class.getName());
+        return (Plugin) Proxy.newProxyInstance(Plugin.class.getClassLoader(), new Class<?>[]{Plugin.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getLogger" -> logger;
+                    case "toString" -> "config-manager-test";
+                    default -> null;
                 });
     }
 

@@ -40,11 +40,16 @@ public final class LobbyAnnouncements {
         boolean inArena = Arena.isInArena(player);
         boolean inSetup = SetupSession.isInSetupSession(player.getUniqueId());
         if (inArena || inSetup) return false;
+        String playerWorld = player.getWorld().getName();
+        String lobbyWorld = BedWars.getLobbyWorld();
+        boolean lobbyWorldLoaded = lobbyWorld != null && !lobbyWorld.isBlank()
+                && Bukkit.getWorld(lobbyWorld) != null;
         return BedWars.getServerType() == ServerType.BUNGEE
                 || isLobbyPlayer(player)
-                // Match the fallback used by lobby protection and join
-                // handling when lobbyLoc is absent or its world is unloaded.
-                || LobbyProtection.isLobbyWorld(player);
+                // Match the fallback used by join handling when lobbyLoc is
+                // absent or its configured world is temporarily unavailable.
+                || isFallbackLobbyContext(playerWorld, lobbyWorld, lobbyWorldLoaded,
+                false, false, Arena.getArenaByIdentifier(playerWorld) != null);
     }
 
     static boolean isLobbyContext(ServerType serverType, String playerWorld, String lobbyWorld,
@@ -52,6 +57,18 @@ public final class LobbyAnnouncements {
         return serverType != ServerType.BUNGEE && !inArena && !inSetup
                 && playerWorld != null && lobbyWorld != null && !lobbyWorld.isBlank()
                 && playerWorld.equalsIgnoreCase(lobbyWorld);
+    }
+
+    /**
+     * Whether a non-arena world is the join handler's fallback lobby while the
+     * configured lobby world is absent or not loaded.
+     */
+    static boolean isFallbackLobbyContext(String playerWorld, String lobbyWorld,
+                                          boolean lobbyWorldLoaded, boolean inArena,
+                                          boolean inSetup, boolean arenaWorld) {
+        return !inArena && !inSetup && !arenaWorld
+                && playerWorld != null && !playerWorld.isBlank()
+                && (lobbyWorld == null || lobbyWorld.isBlank() || !lobbyWorldLoaded);
     }
 
     public static void playerEntered(Player player) {

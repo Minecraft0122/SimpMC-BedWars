@@ -32,6 +32,7 @@ import com.andrei1058.bedwars.api.region.Region;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.configuration.Sounds;
+import com.andrei1058.bedwars.listeners.LobbyAnnouncements;
 import com.andrei1058.bedwars.stats.PlayerStats;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
 import com.google.common.io.ByteArrayDataOutput;
@@ -72,10 +73,19 @@ public class Misc {
             // Keep the original two-stage route: leaving an arena first goes
             // to this server's lobby; leaving from that lobby goes through the
             // proxy to the configured group lobby.
+            if (arena == null && LobbyAnnouncements.isProxyLobbyPlayer(p)) {
+                forceKick(p, null, notAbandon);
+                return;
+            }
             String lobbyWorld = config.getLobbyWorldName();
-            if (!isConfiguredLobbyWorld(p.getWorld().getName(), lobbyWorld)) {
+            if (arena != null || p.getWorld() == null
+                    || !isConfiguredLobbyWorld(p.getWorld().getName(), lobbyWorld)) {
                 Location loc = config.getConfigLoc("lobbyLoc");
-                if (loc == null) { // Can happen when location is not set in config
+                if (loc == null || loc.getWorld() == null) {
+                    // A configured world can be unloaded during startup or a
+                    // reload. The fallback lobby is already a proxy-return
+                    // context, so do not let the invalid Location swallow the
+                    // command without a Connect request.
                     forceKick(p, arena, notAbandon);
                     return;
                 }

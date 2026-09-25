@@ -36,6 +36,22 @@ class LobbyAnnouncementsTest {
     }
 
     @Test
+    void recognizesFallbackLobbyOnlyWhenConfiguredWorldIsUnavailable() {
+        assertTrue(LobbyAnnouncements.isFallbackLobbyContext(
+                "world", "lobby", false, false, false, false));
+        assertTrue(LobbyAnnouncements.isFallbackLobbyContext(
+                "world", "", false, false, false, false));
+        assertFalse(LobbyAnnouncements.isFallbackLobbyContext(
+                "world", "lobby", true, false, false, false));
+        assertFalse(LobbyAnnouncements.isFallbackLobbyContext(
+                "arena-solo", "lobby", false, false, false, true));
+        assertFalse(LobbyAnnouncements.isFallbackLobbyContext(
+                "world", "lobby", false, true, false, false));
+        assertFalse(LobbyAnnouncements.isFallbackLobbyContext(
+                "world", "lobby", false, false, true, false));
+    }
+
+    @Test
     void onlyAPlayerWhoActuallyQuitFromTheLobbyIsAnnounced() {
         assertTrue(LobbyAnnouncements.shouldAnnounceQuit(true));
         assertFalse(LobbyAnnouncements.shouldAnnounceQuit(false));

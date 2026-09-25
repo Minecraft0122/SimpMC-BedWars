@@ -321,6 +321,7 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER,
                 "BungeeCord/Velocity 代理 [servers] 中的主大厅服务器名称，不是 IP、端口或 MotD。",
                 "名称必须与代理配置一致；Velocity 还需在 velocity.toml 的 [advanced] 中启用 bungee-plugin-message-channel。",
+                "仅缺失时补入默认值 hub；自动升级和排序会保留已有值，例如 login。",
                 "大厅里的“回到主大厅”红床会静默直接发送 Connect 请求，不向玩家显示代理信息；默认 hub。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_SERVER_ID,
                 "BUNGEE 子服在代理和对局数据库中的唯一节点 ID。每个子服必须使用不同值，不能沿用默认 bw1。",

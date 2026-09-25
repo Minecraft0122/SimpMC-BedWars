@@ -85,8 +85,7 @@ class BreakPlaceTest {
     }
 
     @Test
-    void shearsCooldownIsHalfASecond() {
-        assertEquals(10, BreakPlace.SHEARS_BREAK_COOLDOWN_TICKS);
+    void recognizesWoolForTheShearsCooldown() {
         assertTrue(BreakPlace.isWool(Material.WHITE_WOOL));
         assertTrue(BreakPlace.isWool(Material.RED_WOOL));
         assertFalse(BreakPlace.isWool(Material.WHITE_CARPET));

@@ -143,6 +143,8 @@ servers:
 
 玩家必须连接 BungeeCord/Velocity 的监听地址，不能直接连接 BedWars 后端 Paper 端口；后端端口也应通过防火墙限制为只允许代理访问。大厅“回到主大厅”红床只会立即、静默地发送 `Connect <lobbyServer>`，不会先查询代理节点或把代理配置、服务器列表和连接诊断显示给玩家。若没有切服，请检查 BedWars 后端控制台和代理日志。
 
+上面的 `hub` 只是示例。若你的 Velocity `[servers]` 使用 `login` 作为大厅键名，BedWars 必须改成 `lobbyServer: login`，然后完整重启 BedWars 后端。自动配置升级、排序和保存会保留该值，只在 `lobbyServer` 缺失时补入默认 `hub`。
+
 ## 可选依赖
 
 - PlaceholderAPI：在消息、计分板等位置解析扩展占位符。
