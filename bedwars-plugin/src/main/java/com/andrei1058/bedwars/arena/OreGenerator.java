@@ -64,6 +64,7 @@ public class OreGenerator implements IGenerator {
     private int rotate = 0, dropID = 0;
     private ITeam bwt;
     private final boolean splitEnabled;
+    private final boolean stopForEmptyTeam;
     boolean up = true;
 
     /**
@@ -86,6 +87,7 @@ public class OreGenerator implements IGenerator {
         this.bwt = bwt;
         this.type = type;
         this.splitEnabled = plugin.getConfig().getBoolean(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT);
+        this.stopForEmptyTeam = arena.getConfig().getBoolean(ConfigPath.ARENA_DISABLE_GENERATOR_FOR_EMPTY_TEAMS);
         loadDefaults();
 
         Cuboid c = new Cuboid(location, getArena().getConfig().getInt(ConfigPath.ARENA_GENERATOR_PROTECTION), true);
@@ -153,18 +155,17 @@ public class OreGenerator implements IGenerator {
         if (arena.getStatus() != GameState.playing){
             return;
         }
+        // BW1058 treats an orphan island as a team with no members and no bed.
+        // Check the current roster in the existing spawn path so ordinary
+        // travel and respawn waits never stop production, and a restored team
+        // can resume without losing its generators or upgrade state.
+        if (stopForEmptyTeam && bwt != null && bwt.isBedDestroyed() && bwt.getMembers().isEmpty()) {
+            return;
+        }
 
         if (isSpawnDue(lastSpawn)) {
             lastSpawn = delay;
 
-            if (spawnLimit > 0) {
-                int nearbyOre = 0;
-                for (Item item : location.getWorld().getNearbyEntitiesByType(Item.class, location, 3, 3, 3,
-                        nearby -> nearby.getItemStack().getType() == ore.getType())) {
-                    nearbyOre += item.getItemStack().getAmount();
-                    if (nearbyOre >= spawnLimit) return;
-                }
-            }
             if (bwt == null) {
                 dropItem(location);
                 return;

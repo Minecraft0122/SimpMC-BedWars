@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>5.7.0</version>
+    <version>5.8.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -30,6 +30,8 @@ if (api == null) {
 ```
 
 不要强制转换为插件内部的 `com.andrei1058.bedwars.API`。
+
+5.8.0 起，生成器不再因为地面资源积压停止生成。`IGenerator#setSpawnLimit(int)` 与 `getSpawnLimit()` 保留兼容签名和读写值，但不再影响实际产出；旧团队升级中的上限参数仍能加载。生成间隔和单次数量继续使用 `setDelay`、`setAmount` 控制。
 
 ## 对局历史 API
 

@@ -111,7 +111,8 @@ public interface IGenerator {
     void enableRotation();
 
     /**
-     * This is the limit when the generator will stop spawning new items until they are collected.
+     * 保存旧生成上限值，供现有附属插件兼容读取。
+     * 自 5.8.0 起，SimpMC-BedWars 不再根据此值或未拾取物品数量停止生成。
      */
     void setSpawnLimit(int value);
 
@@ -150,9 +151,7 @@ public interface IGenerator {
     int getNextSpawn();
 
     /**
-     * Get the spawn limit of the generators.
-     * If there is this amount of items dropped near the generator
-     * it will stop spawning new items.
+     * 读取旧生成上限兼容值；自 5.8.0 起，此值不再限制实际资源生成。
      */
     int getSpawnLimit();
 

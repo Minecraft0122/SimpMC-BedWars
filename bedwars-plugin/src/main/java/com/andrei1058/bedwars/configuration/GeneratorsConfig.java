@@ -67,13 +67,16 @@ public class GeneratorsConfig extends ConfigManager {
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_SPAWN_LIMIT, 8);
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_START, 1440);
         yml.options().copyDefaults(true);
-        setComments("Default", "默认资源生成器参数；delay 和 start 的单位为秒。", "amount 为每次生成数量，spawn-limit 按地面物品总数计算，不按实体数量计算。");
+        setComments("Default", "默认资源生成器参数；delay 和 start 的单位为秒。", "amount 为每次生成数量；spawn-limit 仅保留旧配置兼容，不再限制资源生成。");
         setComments(ConfigPath.GENERATOR_STACK_ITEMS, "是否在生成时直接合并同类资源，开启可降低物品实体数量。");
         ChineseConfigDocumentation.generators(this);
-        updateToLatestVersion(5, GeneratorsConfig::migrateLegacyDefaults);
+        updateToLatestVersion(6, GeneratorsConfig::migrateLegacyDefaults);
     }
 
     static void migrateLegacyDefaults(YamlConfiguration yml) {
+        // The delay migration belongs to schema 4. Later documentation-only
+        // upgrades must preserve administrators who deliberately restored 2/6.
+        if (yml.getInt(CONFIG_VERSION_PATH, 0) >= 4) return;
         replaceLegacyNumber(yml, "Default." + ConfigPath.GENERATOR_IRON_DELAY, 2, DEFAULT_IRON_DELAY);
         replaceLegacyNumber(yml, "Default." + ConfigPath.GENERATOR_GOLD_DELAY, 6, DEFAULT_GOLD_DELAY);
     }
