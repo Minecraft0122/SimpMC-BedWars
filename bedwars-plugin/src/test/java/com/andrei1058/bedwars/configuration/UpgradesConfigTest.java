@@ -13,16 +13,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class UpgradesConfigTest {
 
     @Test
-    void upgradesLegacyForgeActionsWithoutOverwritingCustomActions() {
+    void preservesExistingForgeActionsAndCustomActions() {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.set("upgrade-forge.tier-1.receive",
                 Arrays.asList("generator-edit: iron,2,2,41", "generator-edit: gold,3,1,14"));
         List<String> customTier = List.of("generator-edit: iron,5,1,10");
         configuration.set("upgrade-forge.tier-2.receive", customTier);
 
-        UpgradesConfig.migrateLegacyForgeDefaults(configuration);
+        UpgradesConfig.migrateDefaults(configuration, 11);
 
-        assertEquals(Arrays.asList("generator-edit: iron,1,3,41", "generator-edit: gold,4,3,14"),
+        assertEquals(Arrays.asList("generator-edit: iron,2,2,41", "generator-edit: gold,3,1,14"),
                 configuration.getStringList("upgrade-forge.tier-1.receive"));
         assertEquals(customTier, configuration.getStringList("upgrade-forge.tier-2.receive"));
     }

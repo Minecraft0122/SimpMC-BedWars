@@ -42,6 +42,7 @@ public class PlayerTab {
     private NameTagVisibility nameTagVisibility = NameTagVisibility.ALWAYS;
     private PlayerListMode playerListMode = PlayerListMode.ACTUAL;
     private ChatColor color = ChatColor.WHITE;
+    private NamedTextColor playerListColor;
     private boolean italic;
     private Consumer<PlayerTab> updateCallback = tab -> {
     };
@@ -147,6 +148,17 @@ public class PlayerTab {
 
     public boolean isItalic() {
         return italic;
+    }
+
+    /** Set the list name independently of the scoreboard team/name tag color. */
+    public void setPlayerListColor(@NotNull NamedTextColor color) {
+        if (java.util.Objects.equals(playerListColor, color)) return;
+        playerListColor = color;
+        updateCallback.accept(this);
+    }
+
+    public @NotNull NamedTextColor getPlayerListColor() {
+        return playerListColor == null ? getTextColor() : playerListColor;
     }
 
     @NotNull

@@ -23,6 +23,21 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class BwTabListTest {
 
     @Test
+    void listUsesWhiteNamesAndGreyItalicSpectatorsIndependentOfFormerTeam() {
+        PlayerTab active = new PlayerTab("active", player("Active"));
+        active.setColor(ChatColor.RED);
+        BwTabList.applyPlayerListStyle(active);
+        assertEquals(net.kyori.adventure.text.format.NamedTextColor.WHITE, active.getPlayerListColor());
+        assertEquals(ChatColor.RED, active.getColor());
+        PlayerTab eliminated = new PlayerTab("spec", player("Eliminated"));
+        eliminated.setColor(ChatColor.BLUE);
+        eliminated.setPlayerListMode(PlayerTab.PlayerListMode.SPECTATOR);
+        BwTabList.applyPlayerListStyle(eliminated);
+        assertEquals(net.kyori.adventure.text.format.NamedTextColor.GRAY, eliminated.getPlayerListColor());
+        assertEquals(true, eliminated.isItalic());
+    }
+
+    @Test
     void activePlayerNameUsesItsOwnTeamColor() {
         ITeam redTeam = (ITeam) Proxy.newProxyInstance(
                 ITeam.class.getClassLoader(),

@@ -29,6 +29,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SidebarTabSynchronizationTest {
 
     @Test
+    void listNameColorDoesNotLeakIntoBracketsOrChangeScoreboardColor() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        Sidebar sidebar = sidebar(renderer);
+        Player viewer = player("Viewer");
+        PlayerTab row = new PlayerTab("alice", player("Alice"),
+                new SidebarLine("&7[§c红队&r&7] "), new SidebarLine(),
+                PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
+                PlayerTab.NameTagVisibility.ALWAYS);
+        row.setPlayerListColor(NamedTextColor.WHITE);
+        sidebar.renderPlayerListName(viewer, row);
+        assertEquals("§7[§c红队§7] §fAlice", renderer.rendered.getLast().displayName());
+        assertEquals(ChatColor.RED, row.getColor());
+
+        row = new PlayerTab("spec", player("Spectator"));
+        row.setPlayerListColor(NamedTextColor.GRAY);
+        row.setItalic(true);
+        row.setPlayerListMode(PlayerTab.PlayerListMode.SPECTATOR);
+        sidebar.renderPlayerListName(viewer, row);
+        assertEquals("§7§oSpectator", renderer.rendered.getLast().displayName());
+    }
+
+    @Test
     void synchronizesHiddenPlayerInfoRowsPerViewer() {
         RecordingRenderer renderer = new RecordingRenderer();
         Sidebar sidebar = sidebar(renderer);

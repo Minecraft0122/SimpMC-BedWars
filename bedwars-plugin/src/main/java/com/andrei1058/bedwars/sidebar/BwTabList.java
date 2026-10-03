@@ -304,42 +304,10 @@ public class BwTabList {
 
     private void giveUpdateSpectatorTabFormat(@NotNull Player player, @NotNull IArena arena) {
         Sidebar handle = sidebar.getHandle();
-        ITeam team = resolvePlayerListTeam(arena, player);
-        HashMap<String, String> replacements = getTeamReplacements(team);
-        String prefixPath;
-        String suffixPath;
-        GameState status = arena.getStatus();
-        if (status == GameState.waiting) {
-            prefixPath = Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC;
-            suffixPath = Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC;
-        } else if (status == GameState.starting) {
-            prefixPath = Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC;
-            suffixPath = Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC;
-        } else if (status == GameState.playing) {
-            boolean eliminated = team != null;
-            prefixPath = eliminated
-                    ? Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX
-                    : Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX;
-            suffixPath = eliminated
-                    ? Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX
-                    : Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX;
-        } else if (status == GameState.restarting) {
-            boolean eliminated = team != null;
-            prefixPath = eliminated
-                    ? Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX
-                    : Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX;
-            suffixPath = eliminated
-                    ? Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX
-                    : Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_SUFFIX;
-        } else {
-            prefixPath = Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX;
-            suffixPath = Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX;
-        }
-        ChatColor fallbackColor = team == null ? ChatColor.WHITE : getPlayerListColor(team);
+        ChatColor fallbackColor = ChatColor.GRAY;
         PlayerTab tab = handle.playerTabCreate(
                 player.getUniqueId().toString(), player,
-                getPlayerRowText(prefixPath, player, replacements),
-                getPlayerRowText(suffixPath, player, replacements),
+                new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER,
                 sidebar.getPlaceholders(player), fallbackColor,
                 PlayerTab.NameTagVisibility.NEVER,
@@ -387,6 +355,10 @@ public class BwTabList {
             return;
         }
         boolean spectatorRow = playerListMode == PlayerTab.PlayerListMode.SPECTATOR;
+        if (spectatorRow) {
+            giveUpdateSpectatorTabFormat(player, arena);
+            return;
+        }
         GameState status = sidebar.getArena().getStatus();
         ChatColor fallbackColor = team == null ? null : getPlayerListColor(team);
 
@@ -448,6 +420,7 @@ public class BwTabList {
     }
 
     private void deployTab(@NotNull PlayerTab tab) {
+        applyPlayerListStyle(tab);
         UUID targetId = tab.getPlayer().getUniqueId();
         deployedPerPlayerTabList.put(targetId, tab);
     }
@@ -464,7 +437,8 @@ public class BwTabList {
                 continue;
             }
             tab.setColor(getPlayerListColor(resolvePlayerListTeam(arena, player)));
-            tab.setItalic(arena.isReSpawning(player));
+            tab.setItalic(arena.isSpectator(player) || arena.isReSpawning(player));
+            applyPlayerListStyle(tab);
         }
     }
 
@@ -528,7 +502,8 @@ public class BwTabList {
 
     static @NotNull String applyPlayerRowTeamMarkers(
             @NotNull String template, @Nullable Map<String, String> replacements) {
-        String rendered = template;
+        // Explicit resets also remove formatting embedded in a translated team name.
+        String rendered = template.replace("&7]", "&r&7]").replace("§7]", "§r§7]");
         if (replacements == null) {
             // Spectators without a former team still use the same configurable
             // row templates. Never leak unresolved team placeholders into TAB.
@@ -556,6 +531,13 @@ public class BwTabList {
     static ChatColor getPlayerListColor(@Nullable ITeam targetTeam) {
         if (targetTeam == null) return ChatColor.WHITE;
         return targetTeam.getColor().chat();
+    }
+
+    static void applyPlayerListStyle(PlayerTab tab) {
+        boolean spectator = tab.getPlayerListMode() == PlayerTab.PlayerListMode.SPECTATOR;
+        tab.setPlayerListColor(spectator ? net.kyori.adventure.text.format.NamedTextColor.GRAY
+                : net.kyori.adventure.text.format.NamedTextColor.WHITE);
+        if (spectator) tab.setItalic(true);
     }
 
     /** Shared scoreboard collision group for live players on the same arena team. */

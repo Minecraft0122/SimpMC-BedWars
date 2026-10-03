@@ -56,6 +56,9 @@ public final class InvisibilityManager {
 
     public static void synchronizeViewer(IArena arena, Player viewer) {
         if (arena == null || viewer == null) return;
+        for (Player spectator : arena.getSpectators()) {
+            SpectatorVisibility.hideIfSpectator(arena, viewer, spectator);
+        }
         for (Player respawning : arena.getRespawnSessions().keySet()) {
             if (respawning.equals(viewer)) continue;
             if (shouldHideRespawningEntity(arena, viewer)) {

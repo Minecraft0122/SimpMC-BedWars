@@ -660,7 +660,7 @@ public class v1_21_R3 extends VersionSupport {
 
     @Override
     public void spigotShowPlayer(Player victim, Player receiver) {
-        receiver.showEntity(getPlugin(), victim);
+        receiver.showPlayer(getPlugin(), victim);
     }
 
     @Override

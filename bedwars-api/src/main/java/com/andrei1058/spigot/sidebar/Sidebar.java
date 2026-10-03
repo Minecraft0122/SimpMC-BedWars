@@ -1035,9 +1035,9 @@ public class Sidebar {
     private static @NotNull RenderedPlayerTab renderPlayerTab(@NotNull PlayerTab tab) {
         String prefix = renderText(tab.getPrefix(), tab.getPlaceholders());
         String suffix = renderText(tab.getSuffix(), tab.getPlaceholders());
-        Component playerName = Component.text(tab.getPlayer().getName()).color(tab.getTextColor());
-        if (tab.isItalic()) playerName = playerName.decorate(TextDecoration.ITALIC);
-        Component displayName = component(prefix)
+        Component playerName = Component.text(tab.getPlayer().getName()).color(tab.getPlayerListColor())
+                .decoration(TextDecoration.ITALIC, tab.isItalic());
+        Component displayName = Component.empty().append(component(prefix))
                 .append(playerName)
                 .append(component(suffix));
         return new RenderedPlayerTab(tab, prefix, suffix,

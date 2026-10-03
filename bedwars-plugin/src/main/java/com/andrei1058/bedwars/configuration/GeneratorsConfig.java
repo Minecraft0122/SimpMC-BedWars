@@ -27,8 +27,8 @@ import org.bukkit.plugin.Plugin;
 
 public class GeneratorsConfig extends ConfigManager {
 
-    static final int DEFAULT_IRON_DELAY = 1;
-    static final int DEFAULT_GOLD_DELAY = 4;
+    static final int DEFAULT_IRON_DELAY = 2;
+    static final int DEFAULT_GOLD_DELAY = 6;
 
     public GeneratorsConfig(Plugin plugin, String name, String dir) {
         super(plugin, name, dir);
@@ -67,21 +67,11 @@ public class GeneratorsConfig extends ConfigManager {
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_SPAWN_LIMIT, 8);
         yml.addDefault("Default." + ConfigPath.GENERATOR_EMERALD_TIER_III_START, 1440);
         yml.options().copyDefaults(true);
-        setComments("Default", "默认资源生成器参数；delay 和 start 的单位为秒。", "amount 为每次生成数量，spawn-limit 按地面物品总数计算，不按实体数量计算。");
-        setComments(ConfigPath.GENERATOR_STACK_ITEMS, "是否在生成时直接合并同类资源，开启可降低物品实体数量。");
+        setComments("Default", "默认资源生成器参数；delay 和 start 的单位为秒。", "amount 为每次生成数量，spawn-limit 按附近同类掉落实体数计算；达到上限暂停，拾取后恢复。");
+        setComments(ConfigPath.GENERATOR_STACK_ITEMS, "是否允许原版合并同类资源；每次产出仍逐个生成实体。");
         ChineseConfigDocumentation.generators(this);
-        updateToLatestVersion(5, GeneratorsConfig::migrateLegacyDefaults);
-    }
-
-    static void migrateLegacyDefaults(YamlConfiguration yml) {
-        replaceLegacyNumber(yml, "Default." + ConfigPath.GENERATOR_IRON_DELAY, 2, DEFAULT_IRON_DELAY);
-        replaceLegacyNumber(yml, "Default." + ConfigPath.GENERATOR_GOLD_DELAY, 6, DEFAULT_GOLD_DELAY);
-    }
-
-    private static void replaceLegacyNumber(YamlConfiguration yml, String path, int oldValue, int newValue) {
-        Object value = yml.get(path);
-        if (value instanceof Number number && Double.compare(number.doubleValue(), oldValue) == 0) {
-            yml.set(path, newValue);
-        }
+        // Existing rates are administrator data, including values equal to
+        // previous defaults. Only missing keys receive upstream defaults.
+        updateToLatestVersion(7);
     }
 }

@@ -39,7 +39,7 @@ import java.util.List;
 
 public class ArenaConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 22;
+    private static final int CONFIG_VERSION = 24;
     static final int DEFAULT_VOID_KILL_HEIGHT = -70;
 
     @SuppressWarnings({"SpellCheckingInspection"})

@@ -137,7 +137,10 @@ public class Language extends ConfigManager {
         // SimplifiedChinese.
         addChineseDocumentation();
         if (getClass() == Language.class) {
-            updateToLatestVersion(5, Language::migrateLegacyTowerShopItem);
+            updateToLatestVersion(6, config -> {
+                migrateBuiltInTabPlayerRows(config);
+                removeRetiredSpectatorRows(config);
+            });
             save();
         }
         languages.add(this);
@@ -636,6 +639,21 @@ public class Language extends ConfigManager {
     private static void replaceKnownList(YamlConfiguration yml, String path, List<String> replacement,
                                          List<List<String>> knownValues) {
         if (knownValues.contains(yml.getStringList(path))) yml.set(path, replacement);
+    }
+
+    /** Spectators have a fixed plain grey italic name; obsolete row settings are removed on upgrade. */
+    public static void removeRetiredSpectatorRows(org.bukkit.configuration.ConfigurationSection yml) {
+        if (yml == null) return;
+        for (String path : List.of(
+                Messages.FORMATTING_SB_TAB_WAITING_PREFIX_SPEC, Messages.FORMATTING_SB_TAB_WAITING_SUFFIX_SPEC,
+                Messages.FORMATTING_SB_TAB_STARTING_PREFIX_SPEC, Messages.FORMATTING_SB_TAB_STARTING_SUFFIX_SPEC,
+                Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX, Messages.FORMATTING_SB_TAB_PLAYING_SPEC_SUFFIX,
+                Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, Messages.FORMATTING_SB_TAB_PLAYING_ELM_SUFFIX,
+                Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_PREFIX, Messages.FORMATTING_SB_TAB_RESTARTING_SPEC_SUFFIX,
+                Messages.FORMATTING_SB_TAB_RESTARTING_ELM_PREFIX, Messages.FORMATTING_SB_TAB_RESTARTING_ELM_SUFFIX,
+                Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_PREFIX, Messages.FORMATTING_SB_TAB_RESTARTING_WIN2_SUFFIX)) {
+            yml.set(path, null);
+        }
     }
 
     static void migrateShopContentKey(YamlConfiguration yml, String category, String oldContent, String newContent) {

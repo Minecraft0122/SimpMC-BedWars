@@ -31,7 +31,7 @@ import com.andrei1058.bedwars.BedWars;
 
 public class UpgradesConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 11;
+    private static final int CONFIG_VERSION = 12;
     private static final int PREVIOUS_SWORD_PRICE_SCHEMA = 10;
     private static final int PREVIOUS_ARMOR_PRICE_SCHEMA = 9;
     private static final int MAX_SWORD_TIER = 4;
@@ -74,23 +74,23 @@ public class UpgradesConfig extends ConfigManager {
             yml.addDefault("upgrade-forge.tier-1.currency", "diamond");
             yml.addDefault("upgrade-forge.tier-1.cost", 2);
             addDefaultDisplayItem("upgrade-forge.tier-1", "FURNACE", 0, 1, false);
-            yml.addDefault("upgrade-forge.tier-1.receive", Arrays.asList("generator-edit: iron,1,3,41", "generator-edit: gold,4,3,14"));
+            yml.addDefault("upgrade-forge.tier-1.receive", Arrays.asList("generator-edit: iron,2,2,41", "generator-edit: gold,3,1,14"));
 
             yml.addDefault("upgrade-forge.tier-2.currency", "diamond");
             yml.addDefault("upgrade-forge.tier-2.cost", 4);
             addDefaultDisplayItem("upgrade-forge.tier-2", "FURNACE", 0, 2, false);
-            yml.addDefault("upgrade-forge.tier-2.receive", Arrays.asList("generator-edit: iron,1,4,48", "generator-edit: gold,2,2,21"));
+            yml.addDefault("upgrade-forge.tier-2.receive", Arrays.asList("generator-edit: iron,1,2,48", "generator-edit: gold,3,2,21"));
 
             yml.addDefault("upgrade-forge.tier-3.currency", "diamond");
             yml.addDefault("upgrade-forge.tier-3.cost", 6);
             addDefaultDisplayItem("upgrade-forge.tier-3", "FURNACE", 0, 3, false);
-            yml.addDefault("upgrade-forge.tier-3.receive", Arrays.asList("generator-edit: iron,1,5,64", "generator-edit: gold,2,3,29",
+            yml.addDefault("upgrade-forge.tier-3.receive", Arrays.asList("generator-edit: iron,1,2,64", "generator-edit: gold,3,2,29",
                     "generator-edit: emerald,10,1,10"));
 
             yml.addDefault("upgrade-forge.tier-4.currency", "diamond");
             yml.addDefault("upgrade-forge.tier-4.cost", 8);
             addDefaultDisplayItem("upgrade-forge.tier-4", "FURNACE", 0, 4, false);
-            yml.addDefault("upgrade-forge.tier-4.receive", Arrays.asList("generator-edit: iron,1,8,120", "generator-edit: gold,1,4,80",
+            yml.addDefault("upgrade-forge.tier-4.receive", Arrays.asList("generator-edit: iron,1,4,120", "generator-edit: gold,2,4,80",
                     "generator-edit: emerald,10,2,20"));
 
             yml.addDefault("upgrade-heal-pool.tier-1.currency", "diamond");
@@ -186,23 +186,8 @@ public class UpgradesConfig extends ConfigManager {
         return ARMOR_TIER_COSTS.get(tier - 1);
     }
 
-    static void migrateLegacyForgeDefaults(YamlConfiguration yml) {
-        replaceLegacyList(yml, "upgrade-forge.tier-1.receive",
-                Arrays.asList("generator-edit: iron,2,2,41", "generator-edit: gold,3,1,14"),
-                Arrays.asList("generator-edit: iron,1,3,41", "generator-edit: gold,4,3,14"));
-        replaceLegacyList(yml, "upgrade-forge.tier-2.receive",
-                Arrays.asList("generator-edit: iron,1,2,48", "generator-edit: gold,3,2,21"),
-                Arrays.asList("generator-edit: iron,1,4,48", "generator-edit: gold,2,2,21"));
-        replaceLegacyList(yml, "upgrade-forge.tier-3.receive",
-                Arrays.asList("generator-edit: iron,1,2,64", "generator-edit: gold,3,2,29", "generator-edit: emerald,10,1,10"),
-                Arrays.asList("generator-edit: iron,1,5,64", "generator-edit: gold,2,3,29", "generator-edit: emerald,10,1,10"));
-        replaceLegacyList(yml, "upgrade-forge.tier-4.receive",
-                Arrays.asList("generator-edit: iron,1,4,120", "generator-edit: gold,2,4,80", "generator-edit: emerald,10,2,20"),
-                Arrays.asList("generator-edit: iron,1,8,120", "generator-edit: gold,1,4,80", "generator-edit: emerald,10,2,20"));
-    }
-
     static void migrateDefaults(YamlConfiguration yml, int storedVersion) {
-        migrateLegacyForgeDefaults(yml);
+        // Preserve existing forge actions; new files use BW1058 defaults.
         migrateLegacySwordTierCosts(yml, storedVersion);
         migrateLegacyArmorTierCosts(yml, storedVersion);
         materializeTiers(yml, "upgrade-swords", MAX_SWORD_TIER);

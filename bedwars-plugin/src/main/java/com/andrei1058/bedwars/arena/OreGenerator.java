@@ -63,7 +63,6 @@ public class OreGenerator implements IGenerator {
     private GeneratorType type;
     private int rotate = 0, dropID = 0;
     private ITeam bwt;
-    private final boolean splitEnabled;
     boolean up = true;
 
     /**
@@ -85,7 +84,6 @@ public class OreGenerator implements IGenerator {
         this.arena = arena;
         this.bwt = bwt;
         this.type = type;
-        this.splitEnabled = plugin.getConfig().getBoolean(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT);
         loadDefaults();
 
         Cuboid c = new Cuboid(location, getArena().getConfig().getInt(ConfigPath.ARENA_GENERATOR_PROTECTION), true);
@@ -144,7 +142,6 @@ public class OreGenerator implements IGenerator {
                 }
                 break;
         }
-        setDelay(delay);
         Bukkit.getPluginManager().callEvent(new GeneratorUpgradeEvent(this));
     }
 
@@ -153,6 +150,8 @@ public class OreGenerator implements IGenerator {
         if (arena.getStatus() != GameState.playing){
             return;
         }
+        if (bwt != null && bwt.getMembers().isEmpty() && bwt.isBedDestroyed()
+                && arena.getConfig().getBoolean(ConfigPath.ARENA_DISABLE_GENERATOR_FOR_EMPTY_TEAMS)) return;
 
         if (isSpawnDue(lastSpawn)) {
             lastSpawn = delay;
@@ -161,7 +160,7 @@ public class OreGenerator implements IGenerator {
                 int nearbyOre = 0;
                 for (Item item : location.getWorld().getNearbyEntitiesByType(Item.class, location, 3, 3, 3,
                         nearby -> nearby.getItemStack().getType() == ore.getType())) {
-                    nearbyOre += item.getItemStack().getAmount();
+                    nearbyOre++;
                     if (nearbyOre >= spawnLimit) return;
                 }
             }
@@ -173,7 +172,7 @@ public class OreGenerator implements IGenerator {
                 dropItem(location);
                 return;
             }
-            if (splitEnabled) {
+            if (plugin.getConfig().getBoolean(ConfigPath.GENERAL_CONFIGURATION_ENABLE_GEN_SPLIT)) {
                 Collection<Player> players = location.getWorld().getNearbyPlayers(location, 1, 1, 1, arena::isPlayer);
                 if (players.size() <= 1) {
                     dropItem(location);
@@ -204,13 +203,9 @@ public class OreGenerator implements IGenerator {
     }
 
     private void dropItem(Location location, int amount) {
-        int maxStackSize = Math.max(1, ore.getMaxStackSize());
-        int remaining = amount;
-        int entityCount = dropEntityCount(amount, maxStackSize, stack);
-        for (int index = 0; index < entityCount; index++) {
+        // BW1058 emits separate drops; stack-items lets vanilla merge them.
+        for (int index = 0; index < amount; index++) {
             ItemStack itemStack = new ItemStack(ore);
-            int stackSize = stack ? Math.min(remaining, maxStackSize) : 1;
-            itemStack.setAmount(stackSize);
             if (!stack) {
                 ItemMeta itemMeta = itemStack.getItemMeta();
                 AdventureText.displayName(itemMeta, "custom" + dropID++);
@@ -218,14 +213,7 @@ public class OreGenerator implements IGenerator {
             }
             Item item = location.getWorld().dropItem(location, itemStack);
             item.setVelocity(ZERO_VELOCITY);
-            remaining -= stackSize;
         }
-    }
-
-    static int dropEntityCount(int amount, int maxStackSize, boolean stackItems) {
-        if (amount <= 0) return 0;
-        if (!stackItems) return amount;
-        return Math.ceilDiv(amount, Math.max(1, maxStackSize));
     }
 
     /**
@@ -374,7 +362,6 @@ public class OreGenerator implements IGenerator {
     @Override
     public void setDelay(int delay) {
         this.delay = normalizeDelay(delay);
-        lastSpawn = Math.min(Math.max(1, lastSpawn), this.delay);
     }
 
     @Override
@@ -488,11 +475,11 @@ public class OreGenerator implements IGenerator {
     }
 
     static int normalizeDelay(int configuredDelay) {
-        return Math.max(1, configuredDelay);
+        return Math.max(0, configuredDelay);
     }
 
     static boolean isSpawnDue(int secondsRemaining) {
-        return secondsRemaining <= 1;
+        return secondsRemaining <= 0;
     }
 
     @Override

@@ -627,6 +627,9 @@ public class Arena implements IArena {
             InvisibilityManager.remove(this, p);
             spectators.add(p);
             players.remove(p);
+            // Remove the player entity and PlayerInfo entry as soon as the
+            // final-death/late-join transition becomes authoritative.
+            for (Player active : players) SpectatorVisibility.hideIfSpectator(this, active, p);
 
             if (!playerBefore) {
                 /* save player inv etc if isn't saved yet*/
@@ -720,7 +723,7 @@ public class Arena implements IArena {
         }
         for (Player activePlayer : players) {
             if (!activePlayer.isOnline()) continue;
-            BedWars.nms.spigotHidePlayer(spectator, activePlayer);
+            SpectatorVisibility.hideIfSpectator(this, activePlayer, spectator);
             BedWars.nms.spigotShowPlayer(activePlayer, spectator);
         }
         if (!includeOutsidePlayers) return;

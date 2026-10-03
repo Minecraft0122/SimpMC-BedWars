@@ -13,6 +13,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimplifiedChineseMigrationTest {
 
+    @Test
+    void schema22RemovesOnlyUnusedSpectatorRowsIncludingDefaultsAfterSaving() throws Exception {
+        YamlConfiguration language = new YamlConfiguration();
+        language.set("config-version", 21);
+        language.set(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX, List.of("&c旧淘汰前缀"));
+        language.addDefault(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX, List.of("&7旁观者 "));
+        language.set(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX, List.of("&d自定义 {teamName} "));
+        language.set(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER, List.of("&a自定义页首"));
+        language.set("custom-key", "retained");
+        ConfigManager.applyVersionedMigration(language, 22, SimplifiedChinese::migrateSchema22);
+        YamlConfiguration saved = new YamlConfiguration();
+        saved.loadFromString(language.saveToString());
+        org.junit.jupiter.api.Assertions.assertFalse(saved.contains(Messages.FORMATTING_SB_TAB_PLAYING_ELM_PREFIX));
+        org.junit.jupiter.api.Assertions.assertFalse(saved.contains(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_PREFIX));
+        assertEquals(List.of("&d自定义 {teamName} "), saved.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_PREFIX));
+        assertEquals(List.of("&a自定义页首"), saved.getStringList(Messages.FORMATTING_SB_TAB_PLAYING_SPEC_HEADER));
+        assertEquals("retained", saved.getString("custom-key"));
+    }
+
     private static final List<String> BRACKETED_TEAM_PREFIX = List.of("&7[{teamColor}{teamName}&7] ");
 
     @Test

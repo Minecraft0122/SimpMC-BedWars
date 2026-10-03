@@ -123,6 +123,8 @@ public class ScoreboardListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void playerShown(@NotNull PlayerShowEntityEvent event) {
         if (event.getEntity() instanceof Player target) {
+            if (com.andrei1058.bedwars.arena.SpectatorVisibility.hideIfSpectator(
+                    Arena.getArenaByPlayer(event.getPlayer()), event.getPlayer(), target)) return;
             // Paper fires this event after ADD_PLAYER has rebuilt the target's
             // PlayerInfo entry, so the replacement display name is safe now.
             SidebarService.getInstance().handlePlayerShown(event.getPlayer(), target);

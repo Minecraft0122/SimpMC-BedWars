@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,6 +66,7 @@ class SelfRescuePlatformTest {
     private final List<Runnable> nextTick = new ArrayList<>();
     private final List<Runnable> expiry = new ArrayList<>();
     private final AtomicInteger itemAmount = new AtomicInteger(2);
+    private final AtomicLong clock = new AtomicLong();
     private final AtomicReference<Float> fallDistance = new AtomicReference<>(60.0F);
     private VersionSupport previousSupport;
     private MainConfig previousConfig;
@@ -139,7 +141,7 @@ class SelfRescuePlatformTest {
         bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
         bukkit.when(() -> Bukkit.getWorld(worldId)).thenReturn(world);
         bukkit.when(() -> Bukkit.getWorld("rescue-test")).thenReturn(world);
-        listener = new SelfRescuePlatform();
+        listener = new SelfRescuePlatform(clock::get);
     }
 
     @AfterEach
@@ -185,9 +187,13 @@ class SelfRescuePlatformTest {
     }
 
     @Test
-    void anotherTickAllowsAnOverlappingPlatformWithItsOwnLifetime() throws Exception {
+    void fiveSecondsAllowsAnOverlappingPlatformWithItsOwnLifetime() throws Exception {
         deploy();
         nextTick.getFirst().run();
+        clock.set(4_999_999_999L);
+        dispatchUse(interact(Action.LEFT_CLICK_AIR, EquipmentSlot.HAND));
+        assertEquals(1, itemAmount.get());
+        clock.incrementAndGet();
         dispatchUse(interact(Action.LEFT_CLICK_AIR, EquipmentSlot.HAND));
 
         assertEquals(0, itemAmount.get());
@@ -302,6 +308,8 @@ class SelfRescuePlatformTest {
     @Test
     void ordinaryFallsOntoWoolAboveThePlatformStillDealDamage() throws Exception {
         deploy();
+        when(player.isOnGround()).thenReturn(true);
+        listener.onMove(new PlayerMoveEvent(player, position, position));
         block(0, 62, 0).setType(Material.WHITE_WOOL, false);
         position.setY(63);
         EntityDamageEvent fall = damage(EntityDamageEvent.DamageCause.FALL);
@@ -345,6 +353,52 @@ class SelfRescuePlatformTest {
     private void deploy() throws Exception {
         dispatchUse(interact(Action.RIGHT_CLICK_AIR, EquipmentSlot.HAND));
         assertEquals(Material.SLIME_BLOCK, block(0, 61, 0).getType());
+        assertEquals(0.0F, fallDistance.get());
+        fallDistance.set(60.0F);
+    }
+
+    @Test
+    void automaticAndManualUseShareCooldown() throws Exception {
+        deploy();
+        position.setY(-60.1);
+        assertFalse(SelfRescuePlatform.preventsVoidKill(player, arena, position));
+        assertEquals(1, itemAmount.get());
+        clock.set(5_000_000_000L);
+        assertTrue(SelfRescuePlatform.preventsVoidKill(player, arena, position));
+        assertEquals(0, itemAmount.get());
+    }
+
+    @Test
+    void firstRescueLandingHandlesPreMovePositionAndWoolPlacedAboveSlime() throws Exception {
+        deploy();
+        position.setY(63.32);
+        block(0, 62, 0).setType(Material.WHITE_WOOL, false);
+        EntityDamageEvent fall = damage(EntityDamageEvent.DamageCause.FALL);
+        listener.onFallDamage(fall);
+        assertTrue(fall.isCancelled());
+        EntityDamageEvent later = damage(EntityDamageEvent.DamageCause.FALL);
+        listener.onFallDamage(later);
+        assertFalse(later.isCancelled());
+    }
+
+    @Test
+    void aFallBelowTheRescueSurfaceDoesNotReceiveProtection() throws Exception {
+        deploy();
+        position.setY(59);
+        EntityDamageEvent fall = damage(EntityDamageEvent.DamageCause.FALL);
+        listener.onFallDamage(fall);
+        assertFalse(fall.isCancelled());
+    }
+
+    @Test
+    void failedPlacementDoesNotStartCooldown() throws Exception {
+        block(0, 61, 0).setType(Material.STONE, false);
+        dispatchUse(interact(Action.RIGHT_CLICK_AIR, EquipmentSlot.HAND));
+        nextTick.getFirst().run();
+        block(0, 61, 0).setType(Material.AIR, false);
+        dispatchUse(interact(Action.RIGHT_CLICK_AIR, EquipmentSlot.HAND));
+        assertEquals(1, itemAmount.get());
+        assertEquals(1, expiry.size());
     }
 
     private PlayerInteractEvent interact(Action action, EquipmentSlot hand) {
