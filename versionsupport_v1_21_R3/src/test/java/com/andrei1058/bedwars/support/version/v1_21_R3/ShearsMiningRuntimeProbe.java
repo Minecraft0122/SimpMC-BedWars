@@ -17,8 +17,7 @@ public final class ShearsMiningRuntimeProbe {
     }
 
     private static void verifyMining() throws ReflectiveOperationException {
-        Class.forName("net.minecraft.SharedConstants").getMethod("tryDetectVersion").invoke(null);
-        Class.forName("net.minecraft.server.Bootstrap").getMethod("bootStrap").invoke(null);
+        bootstrapMinecraftRegistries();
         Class<?> nativeStackClass = Class.forName("net.minecraft.world.item.ItemStack");
         Class<?> craftStackClass = Class.forName("org.bukkit.craftbukkit.inventory.CraftItemStack");
         Object nativeShears = nativeStackClass.getConstructor(Class.forName("net.minecraft.world.level.ItemLike"))
@@ -45,6 +44,21 @@ public final class ShearsMiningRuntimeProbe {
         }
         if (woolCount != 16) throw new IllegalStateException("Expected all 16 wool colors, found " + woolCount);
         System.out.println("Shears: all 16 wool colors take 10 mining ticks; other rules and clones preserved.");
+    }
+
+    private static void bootstrapMinecraftRegistries() throws ReflectiveOperationException {
+        Class.forName("net.minecraft.SharedConstants").getMethod("tryDetectVersion").invoke(null);
+        Class.forName("net.minecraft.server.Bootstrap").getMethod("bootStrap").invoke(null);
+        Class<?> registry = Class.forName("net.minecraft.core.Registry");
+        Class<?> builtIns = Class.forName("net.minecraft.core.registries.BuiltInRegistries");
+        var builtInRegistry = builtIns.getDeclaredField("WRITABLE_REGISTRY");
+        builtInRegistry.setAccessible(true);
+        Object access = Class.forName("net.minecraft.core.RegistryAccess")
+                .getMethod("fromRegistryOfRegistries", registry)
+                .invoke(null, builtInRegistry.get(null));
+        Class.forName("org.bukkit.craftbukkit.CraftRegistry")
+                .getMethod("setMinecraftRegistry", Class.forName("net.minecraft.core.RegistryAccess"))
+                .invoke(null, access);
     }
 
     private static float speed(ItemStack item, Material material) throws ReflectiveOperationException {
