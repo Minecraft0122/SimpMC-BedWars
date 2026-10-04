@@ -17,6 +17,7 @@ public final class PaperGameRulesRuntimeProbe {
         requireRule(org.bukkit.GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER,
                 "fire_spread_radius_around_player", Integer.class);
         requireRule(org.bukkit.GameRules.LOCATOR_BAR, "locator_bar", Boolean.class);
+        requireRule(org.bukkit.GameRules.REDUCED_DEBUG_INFO, "reduced_debug_info", Boolean.class);
         requireRule(org.bukkit.GameRules.SHOW_ADVANCEMENT_MESSAGES,
                 "show_advancement_messages", Boolean.class);
         requireRule(org.bukkit.GameRules.SPAWN_PHANTOMS, "spawn_phantoms", Boolean.class);

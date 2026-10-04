@@ -82,16 +82,7 @@ class BwTabListTest {
     }
 
     @Test
-    void collisionGroupsFollowTheRealTeamAndPlayingState() {
-        ITeam red = team("red", TeamColor.RED);
-
-        assertEquals(red.getIdentity().toString(), BwTabList.collisionGroup(red, false));
-        assertEquals(red.getIdentity().toString(), BwTabList.collisionGroup(red, true));
-        assertNull(BwTabList.collisionGroup(null, false));
-        Player invisible = player("Invisible");
-        assertNull(BwTabList.collisionGroup(GameState.waiting, red, invisible));
-        assertEquals(red.getIdentity().toString(),
-                BwTabList.collisionGroup(GameState.playing, red, invisible));
+    void collisionRulesFollowTheOriginalBw1058State() {
         assertEquals(PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
                 BwTabList.collisionPushingRule(GameState.playing, false, false));
         assertEquals(PlayerTab.PushingRule.NEVER,
@@ -102,6 +93,8 @@ class BwTabListTest {
                 BwTabList.collisionPushingRule(GameState.playing, false, true));
         assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(GameState.playing, true, false));
+        assertEquals(PlayerTab.PushingRule.NEVER,
+                BwTabList.collisionPushingRule(GameState.restarting, false, false));
     }
 
     @Test

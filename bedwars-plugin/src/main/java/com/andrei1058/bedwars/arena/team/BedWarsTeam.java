@@ -394,13 +394,9 @@ public class BedWarsTeam implements ITeam {
             reSpawnInvulnerability.put(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         }
         p.setCanPickupItems(false);
-        // Paper's performance path may complete this teleport asynchronously.
-        // Keep the player non-collidable until the old death location is no
-        // longer occupied; restoring collision immediately would let the
-        // respawning entity block players while the async teleport is pending.
         java.util.concurrent.CompletableFuture<Boolean> spawnTeleport =
                 SafeSpawnResolver.teleportResult(p, getSpawn());
-        p.setCollidable(false);
+        p.setCollidable(true);
         p.setVelocity(new Vector(0, 0, 0));
         p.setAllowFlight(false);
         p.setFlying(false);
@@ -411,9 +407,6 @@ public class BedWarsTeam implements ITeam {
         // after the teleport. Always restore the entity visibility when a
         // team member becomes active again.
         InvisibilityManager.showRespawningPlayer(getArena(), p);
-        // Restore normal collision only after Paper confirms the respawn
-        // teleport. If the player dies or leaves before completion, retain
-        // the non-collidable state owned by that later lifecycle.
         spawnTeleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
             if (error != null || !Boolean.TRUE.equals(success)
                     || !p.isOnline() || p.isDead()
@@ -422,7 +415,6 @@ public class BedWarsTeam implements ITeam {
                 return;
             }
             p.setCanPickupItems(true);
-            p.setCollidable(true);
         }));
         SidebarService.getInstance().handleRespawnState(getArena(), p);
         p.setHealth(20);

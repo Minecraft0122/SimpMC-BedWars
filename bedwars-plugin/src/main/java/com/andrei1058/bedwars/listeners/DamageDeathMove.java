@@ -326,14 +326,7 @@ public class DamageDeathMove implements Listener {
         respawnEligibleAtDeath.remove(victim.getUniqueId());
         ITeam killersTeam = null;
         IArena a = Arena.getArenaByPlayer(victim);
-        // A PlayerDeathEvent is fired while the old player entity is still
-        // standing in the arena. Disable its entity collision immediately;
-        // waiting for PlayerRespawnEvent leaves a short (and on some Paper
-        // settings surprisingly long) window where the corpse can block
-        // living players. The normal respawn/spectator paths restore or keep
-        // this flag as appropriate.
         if (a != null && a.getStatus() == GameState.playing && a.isPlayer(victim)) {
-            victim.setCollidable(false);
             InvisibilityManager.hideRespawningPlayer(a, victim);
         }
         if ((BedWars.getServerType() == ServerType.MULTIARENA && BedWars.getLobbyWorld().equals(e.getEntity().getWorld().getName())) || a != null) {

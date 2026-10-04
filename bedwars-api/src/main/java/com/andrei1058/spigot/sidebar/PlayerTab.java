@@ -36,7 +36,10 @@ public class PlayerTab {
     private final SidebarLine prefix;
     private final SidebarLine suffix;
     private final PushingRule pushingRule;
-    /** Optional shared scoreboard collision group for teammates. */
+    /**
+     * Retained for binary/source compatibility with 5.10.0 callers. BW1058
+     * does not use shared collision groups, so Sidebar ignores this value.
+     */
     private final String collisionGroup;
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
     private NameTagVisibility nameTagVisibility = NameTagVisibility.ALWAYS;
@@ -76,9 +79,8 @@ public class PlayerTab {
     }
 
     /**
-     * Creates a row with an optional shared collision group. The display row
-     * remains identified by {@code identifier}; the group only controls the
-     * scoreboard collision team used by the TAB renderer.
+     * 创建 TAB 行。末尾参数仅保留历史调用兼容性；渲染器始终为每行创建独立队伍，
+     * 不再使用此参数合并碰撞队伍。
      */
     public PlayerTab(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
                      @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
@@ -109,6 +111,7 @@ public class PlayerTab {
     }
 
     @Nullable
+    @Deprecated
     public String getCollisionGroup() {
         return collisionGroup;
     }

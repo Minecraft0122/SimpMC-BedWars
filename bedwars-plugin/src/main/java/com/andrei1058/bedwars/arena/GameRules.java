@@ -39,6 +39,11 @@ public final class GameRules {
         if (world != null) setTyped(world, org.bukkit.GameRules.LOCATOR_BAR, false);
     }
 
+    /** Prevent the client debug overlay from rendering entity collision boxes. */
+    public static void disableDebugCollisionBoxes(World world) {
+        if (world != null) setTyped(world, org.bukkit.GameRules.REDUCED_DEBUG_INFO, true);
+    }
+
     /**
      * Set the requested fixed time once and disable vanilla time progression.
      */
@@ -92,6 +97,7 @@ public final class GameRules {
         enforceBrightNoon(world);
         disableFireSpread(world);
         disableLocatorBar(world);
+        disableDebugCollisionBoxes(world);
     }
 
     /**

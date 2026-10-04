@@ -118,6 +118,7 @@ class SidebarTabSynchronizationTest {
     void unchangedRefreshDoesNotWriteScoreboardTeam() {
         Sidebar sidebar = sidebar();
         TeamState state = new TeamState("Alice");
+        state.collision = Team.OptionStatus.NEVER;
         Team team = team(state);
         Scoreboard scoreboard = scoreboard(team);
         Player player = player("Alice");
@@ -860,7 +861,7 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
-    void refreshesColorForAnExistingSharedCollisionTeam() {
+    void refreshesColorForAnExistingTabTeam() {
         Sidebar sidebar = sidebar();
         TeamState state = new TeamState();
         Scoreboard scoreboard = scoreboard(teamThatRejectsAdventureColorReads(state));
@@ -868,17 +869,16 @@ class SidebarTabSynchronizationTest {
         PlayerTab tab = new PlayerTab(
                 "alice", target, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.RED,
-                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
-                "red-team");
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL);
 
         sidebar.applyTab(scoreboard, tab);
 
         assertSame(NamedTextColor.RED, state.modernColor,
-                "a shared collision team must still receive later colour updates");
+                "an existing TAB team must still receive later colour updates");
     }
 
     @Test
-    void sharedCollisionTeamsBlockOnlyTeammatePushing() {
+    void playingRowsUseTheirOwnTeamWithForOtherTeams() {
         Sidebar sidebar = sidebar();
         TeamState state = new TeamState();
         Scoreboard scoreboard = scoreboard(team(state));
@@ -886,19 +886,18 @@ class SidebarTabSynchronizationTest {
         PlayerTab tab = new PlayerTab(
                 "alice", target, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.RED,
-                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
-                "red-team");
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL);
 
         sidebar.applyTab(scoreboard, tab);
 
         assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision,
-                "members of one shared team must not push each other");
+                "playing rows use the BW1058 FOR_OTHER_TEAMS rule");
         assertSame(Team.OptionStatus.ALWAYS, state.visibility,
                 "collision policy must not alter name-tag visibility");
     }
 
     @Test
-    void invisiblePlayingRowsStillUseTheirTeamCollisionGroup() {
+    void invisiblePlayingRowsKeepCollisionRuleButHideNameTag() {
         Sidebar sidebar = sidebar();
         TeamState state = new TeamState();
         Scoreboard scoreboard = scoreboard(team(state));
@@ -906,19 +905,18 @@ class SidebarTabSynchronizationTest {
         PlayerTab tab = new PlayerTab(
                 "invisible-alice", target, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.RED,
-                PlayerTab.NameTagVisibility.NEVER, PlayerTab.PlayerListMode.ACTUAL,
-                "red-team");
+                PlayerTab.NameTagVisibility.NEVER, PlayerTab.PlayerListMode.ACTUAL);
 
         sidebar.applyTab(scoreboard, tab);
 
         assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision,
-                "an invisible live player must still share teammate collision rules");
-        assertSame(Team.OptionStatus.ALWAYS, state.visibility,
-                "the shared collision team must remain usable by all teammates");
+                "an invisible live player still uses FOR_OTHER_TEAMS");
+        assertSame(Team.OptionStatus.NEVER, state.visibility,
+                "invisible rows hide their name tag without changing collision");
     }
 
     @Test
-    void activePregameRowsRestoreCollisionAfterAnInvisiblePlayingRow() {
+    void nonPlayingRowsReplaceExistingCollisionWithNever() {
         Sidebar sidebar = sidebar();
         TeamState state = new TeamState();
         Scoreboard scoreboard = scoreboard(team(state));
@@ -926,14 +924,56 @@ class SidebarTabSynchronizationTest {
         PlayerTab tab = new PlayerTab(
                 "alice", target, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
-                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
-                null);
-        state.collision = Team.OptionStatus.NEVER;
+                PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL);
+        state.collision = Team.OptionStatus.FOR_OTHER_TEAMS;
 
         sidebar.applyTab(scoreboard, tab);
 
-        assertSame(Team.OptionStatus.ALWAYS, state.collision,
-                "waiting and starting players must not retain the playing invisibility rule");
+        assertSame(Team.OptionStatus.NEVER, state.collision,
+                "waiting and starting rows must apply the upstream NEVER rule");
+        tab.setPlayerListMode(PlayerTab.PlayerListMode.SPECTATOR);
+        state.collision = Team.OptionStatus.ALWAYS;
+        sidebar.applyTab(scoreboard, tab);
+        assertSame(Team.OptionStatus.NEVER, state.collision,
+                "spectator rows must also clear stale collision rules");
+    }
+
+    @Test
+    void legacyGroupCannotMergeRowsOrOverwriteIndividualFormatting() {
+        Sidebar sidebar = sidebar();
+        Map<String, TeamState> states = new java.util.HashMap<>();
+        Map<String, Team> teams = new java.util.HashMap<>();
+        Scoreboard scoreboard = (Scoreboard) Proxy.newProxyInstance(
+                Scoreboard.class.getClassLoader(), new Class<?>[]{Scoreboard.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getTeam" -> teams.get(args[0]);
+                    case "registerNewTeam" -> {
+                        TeamState state = new TeamState();
+                        states.put((String) args[0], state);
+                        Team created = team(state);
+                        teams.put((String) args[0], created);
+                        yield created;
+                    }
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        for (String name : List.of("Alice", "Bob")) {
+            sidebar.applyTab(scoreboard, new PlayerTab(name, player(name),
+                    new SidebarLine(name), new SidebarLine(name + "-suffix"),
+                    PlayerTab.PushingRule.PUSH_OTHER_TEAMS, List.of(), ChatColor.RED,
+                    name.equals("Alice") ? PlayerTab.NameTagVisibility.NEVER : PlayerTab.NameTagVisibility.ALWAYS,
+                    PlayerTab.PlayerListMode.ACTUAL, "red-team"));
+        }
+        assertEquals(2, teams.size());
+        assertTrue(teams.keySet().stream().allMatch(name -> name.startsWith("bw_t_")));
+        for (String name : List.of("Alice", "Bob")) {
+            TeamState state = states.get(sidebar.teamName(name));
+            assertEquals(Set.of(name), state.entries);
+            assertEquals(Component.text(name), state.prefix);
+            assertEquals(Component.text(name + "-suffix"), state.suffix);
+            assertEquals(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision);
+        }
+        assertEquals(Team.OptionStatus.NEVER, states.get(sidebar.teamName("Alice")).visibility);
+        assertEquals(Team.OptionStatus.ALWAYS, states.get(sidebar.teamName("Bob")).visibility);
     }
 
     private static Sidebar sidebar() {

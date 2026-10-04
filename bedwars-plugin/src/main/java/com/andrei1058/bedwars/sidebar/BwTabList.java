@@ -272,8 +272,7 @@ public class BwTabList {
             PlayerTab t = handle.playerTabCreate(
                     playerTabId, player, prefix, suffix, collisionPushingRule(status, false, player),
                     this.sidebar.getPlaceholders(player), fallbackColor == null ? ChatColor.WHITE : fallbackColor,
-                    PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
-                    collisionGroup(status, team, player)
+                    PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL
             );
             deployTab(t);
             return;
@@ -296,7 +295,7 @@ public class BwTabList {
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
                         : PlayerTab.NameTagVisibility.ALWAYS,
-                PlayerTab.PlayerListMode.ACTUAL, collisionGroup(status, team, player)
+                PlayerTab.PlayerListMode.ACTUAL
         );
         teamTab.setItalic(arena.isReSpawning(player));
         deployTab(teamTab);
@@ -311,7 +310,7 @@ public class BwTabList {
                 PlayerTab.PushingRule.NEVER,
                 sidebar.getPlaceholders(player), fallbackColor,
                 PlayerTab.NameTagVisibility.NEVER,
-                PlayerTab.PlayerListMode.SPECTATOR, null
+                PlayerTab.PlayerListMode.SPECTATOR
         );
         deployTab(tab);
     }
@@ -359,7 +358,6 @@ public class BwTabList {
             giveUpdateSpectatorTabFormat(player, arena);
             return;
         }
-        GameState status = sidebar.getArena().getStatus();
         ChatColor fallbackColor = team == null ? null : getPlayerListColor(team);
 
         PlayerTab tab = handle.playerTabCreate(
@@ -370,7 +368,7 @@ public class BwTabList {
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
                         : PlayerTab.NameTagVisibility.ALWAYS,
-                playerListMode, spectator ? null : collisionGroup(status, team, player)
+                playerListMode
         );
         tab.setItalic(!spectator && arena.isReSpawning(player));
         deployTab(tab);
@@ -540,22 +538,6 @@ public class BwTabList {
         if (spectator) tab.setItalic(true);
     }
 
-    /** Shared scoreboard collision group for live players on the same arena team. */
-    static @Nullable String collisionGroup(@Nullable ITeam team, @NotNull Player player) {
-        return collisionGroup(team, false);
-    }
-
-    static @Nullable String collisionGroup(@NotNull GameState status, @Nullable ITeam team,
-                                           @NotNull Player player) {
-        if (status != GameState.playing || team == null) return null;
-        return team.getIdentity().toString();
-    }
-
-    static @Nullable String collisionGroup(@Nullable ITeam team, boolean invisible) {
-        if (team == null) return null;
-        return team.getIdentity().toString();
-    }
-
     private static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
                                                                boolean spectator,
                                                                @NotNull Player player) {
@@ -565,8 +547,8 @@ public class BwTabList {
     static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
                                                        boolean spectator,
                                                        boolean invisible) {
-        // Live players in an active game join a shared collision team. Waiting
-        // and starting players retain normal collision until the round begins.
+        // Match the original BW1058 TAB rule: active players use their own row
+        // with FOR_OTHER_TEAMS; all non-playing rows use NEVER.
         return status == GameState.playing && !spectator
                 ? PlayerTab.PushingRule.PUSH_OTHER_TEAMS
                 : PlayerTab.PushingRule.NEVER;

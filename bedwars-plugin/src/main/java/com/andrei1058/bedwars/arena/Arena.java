@@ -521,9 +521,6 @@ public class Arena implements IArena {
             p.closeInventory();
             players.add(p);
             setArenaByPlayer(p, this);
-            // Waiting and starting players keep normal entity collision. This
-            // also clears the disabled flag left by an earlier respawn.
-            p.setCollidable(true);
             InvisibilityManager.synchronizeViewer(this, p);
             LobbyAnnouncements.playerEnteredArena(p);
             PlayerMotion.disableFlight(p);
@@ -2828,11 +2825,6 @@ public class Arena implements IArena {
                 PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
                 SidebarService.getInstance().handleRespawnState(this, player);
-                // Do this in the same tick as the session creation. The old
-                // death entity is still at the respawn event location, and a
-                // deferred collision update leaves it able to push players
-                // until the next scheduler turn.
-                player.setCollidable(false);
                 InvisibilityManager.hideRespawningPlayer(this, player);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                     if (!player.isOnline() || !respawnSessions.containsKey(player)) return;

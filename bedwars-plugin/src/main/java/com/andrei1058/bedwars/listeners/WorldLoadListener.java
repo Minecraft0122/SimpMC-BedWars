@@ -46,6 +46,7 @@ public class WorldLoadListener implements Listener {
     public void enforceLoadedWorlds() {
         for (World world : Bukkit.getWorlds()) {
             GameRules.disableLocatorBar(world);
+            GameRules.disableDebugCollisionBoxes(world);
             enforceEnvironment(world);
         }
     }
@@ -53,12 +54,14 @@ public class WorldLoadListener implements Listener {
     @EventHandler
     public void onInit(WorldInitEvent event) {
         GameRules.disableLocatorBar(event.getWorld());
+        GameRules.disableDebugCollisionBoxes(event.getWorld());
         enforceEnvironment(event.getWorld());
     }
 
     @EventHandler
     public void onLoad(WorldLoadEvent e) {
         GameRules.disableLocatorBar(e.getWorld());
+        GameRules.disableDebugCollisionBoxes(e.getWorld());
         for (IArena a : new LinkedList<>(Arena.getEnableQueue())) {
             if (a.getWorldName().equalsIgnoreCase(e.getWorld().getName())) {
                 GameRules.enforceArenaEnvironment(e.getWorld());
@@ -79,6 +82,11 @@ public class WorldLoadListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onGameRuleChange(WorldGameRuleChangeEvent event) {
+        if (event.getGameRule().equals(org.bukkit.GameRules.REDUCED_DEBUG_INFO)) {
+            event.setValue("true");
+            event.setCancelled(false);
+            return;
+        }
         if (!BedWarsWorldEnvironment.shouldForceBrightNoon(event.getWorld())) return;
         if (event.getGameRule().equals(org.bukkit.GameRules.ADVANCE_TIME)
                 || event.getGameRule().equals(org.bukkit.GameRules.ADVANCE_WEATHER)) {

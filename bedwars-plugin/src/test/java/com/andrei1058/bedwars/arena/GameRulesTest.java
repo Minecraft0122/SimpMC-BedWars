@@ -71,6 +71,11 @@ class GameRulesTest {
         assertEquals("random_tick_speed", GameRules.toRegistryKey("randomTickSpeed"));
     }
 
+    @Test
+    void resolvesReducedDebugInfoRegistryKey() {
+        assertEquals("reduced_debug_info", GameRules.toRegistryKey("reducedDebugInfo"));
+    }
+
     private static void assertSkipLandsAtNoon(long currentFullTime) {
         long correctedFullTime = currentFullTime + GameRules.skipAmountToFixedTime(currentFullTime);
         assertEquals(GameRules.VANILLA_NOON_TIME, Math.floorMod(correctedFullTime, 24000L));
