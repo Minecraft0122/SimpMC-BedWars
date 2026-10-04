@@ -64,6 +64,7 @@ public class SetLobby extends SubCommand {
         config.reload();
         BedWars.setLobbyWorld(p.getLocation().getWorld().getName());
         BedWarsWorldEnvironment.enforceBrightNoon(p.getWorld());
+        BedWarsWorldEnvironment.enforceLobbyEnvironment(p.getWorld());
         return true;
     }
 

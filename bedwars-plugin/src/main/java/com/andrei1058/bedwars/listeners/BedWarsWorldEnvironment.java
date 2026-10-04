@@ -6,6 +6,7 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.GameRules;
 import com.andrei1058.bedwars.arena.SetupSession;
 import org.bukkit.World;
+import org.bukkit.Bukkit;
 
 /** Selects the worlds whose daylight and weather belong to BedWars. */
 public final class BedWarsWorldEnvironment {
@@ -16,6 +17,29 @@ public final class BedWarsWorldEnvironment {
     /** Apply the bright-noon invariant when BedWars owns this world's environment. */
     public static void enforceBrightNoon(World world) {
         if (shouldForceBrightNoon(world)) GameRules.enforceBrightNoon(world);
+    }
+
+    public static void enforceLobbyEnvironment(World world) {
+        if (isLobbyManagedWorld(world)) GameRules.enforceLobbyEnvironment(world);
+    }
+
+    static boolean isLobbyManagedWorld(World world) {
+        if (world == null || isArenaManagedWorld(world)) return false;
+        String configured = BedWars.getLobbyWorld();
+        boolean lobbyLoaded = configured != null && !configured.isBlank() && Bukkit.getWorld(configured) != null;
+        boolean firstWorld = !Bukkit.getWorlds().isEmpty() && Bukkit.getWorlds().getFirst().equals(world);
+        return isLobbyManagedWorld(BedWars.getServerType(), BedWars.isBungeeLobby(),
+                world.getName(), configured, lobbyLoaded, firstWorld);
+    }
+
+    static boolean isLobbyManagedWorld(ServerType mode, boolean dedicatedLobby, String worldName,
+                                        String configured, boolean lobbyLoaded, boolean firstWorld) {
+        if (mode == null || worldName == null || worldName.isBlank()) return false;
+        if (mode == ServerType.BUNGEE) return dedicatedLobby;
+        if (sameWorld(worldName, configured)) return true;
+        // MULTIARENA actually sends joins to the first world if the configured
+        // lobby is unavailable. SHARED must leave unrelated survival worlds alone.
+        return mode == ServerType.MULTIARENA && !lobbyLoaded && firstWorld;
     }
 
     static boolean shouldForceBrightNoon(World world) {

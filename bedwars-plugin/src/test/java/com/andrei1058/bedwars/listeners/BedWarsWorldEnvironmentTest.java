@@ -9,6 +9,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BedWarsWorldEnvironmentTest {
 
     @Test
+    void lobbyProtectionSelectsConfiguredAndActualFallbackWorldsOnly() {
+        assertTrue(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.SHARED, false, "Lobby", "lobby", true, false));
+        assertFalse(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.SHARED, false, "survival", "lobby", true, true));
+        assertFalse(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.SHARED, false, "survival", "", false, true));
+        assertTrue(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.MULTIARENA, false, "world", "missing", false, true));
+        assertFalse(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.MULTIARENA, false, "world_nether", "missing", false, false));
+        assertFalse(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.MULTIARENA, false, "world", "lobby", true, true));
+        assertTrue(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.BUNGEE, true, "world", "", false, true));
+        assertFalse(BedWarsWorldEnvironment.isLobbyManagedWorld(ServerType.BUNGEE, false, "world", "", false, true));
+    }
+
+    @Test
     void dedicatedModesForceEveryLoadedWorldToBrightNoon() {
         assertTrue(shouldForce(ServerType.MULTIARENA, "lobby", "", false, false, false));
         assertTrue(shouldForce(ServerType.MULTIARENA, "arena-2", "lobby", false, false, false));

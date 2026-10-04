@@ -40,6 +40,7 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
+import com.andrei1058.bedwars.support.version.common.ShearsMining;
 import com.andrei1058.bedwars.popuptower.TowerEast;
 import com.andrei1058.bedwars.popuptower.TowerNorth;
 import com.andrei1058.bedwars.popuptower.TowerSouth;
@@ -68,6 +69,7 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -82,7 +84,6 @@ import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class BreakPlace implements Listener {
 
-    static final int SHEARS_BREAK_COOLDOWN_TICKS = 5;
     private static final Set<UUID> BUILD_SESSIONS = new HashSet<>();
     private final boolean allowFireBreak;
     private final BlastProtectionUtil blastProtection;
@@ -270,8 +271,8 @@ public class BreakPlace implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onShearsBlockBreak(@NotNull BlockBreakEvent event) {
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onShearsBlockDamage(@NotNull BlockDamageEvent event) {
         Player player = event.getPlayer();
         IArena arena = Arena.getArenaByPlayer(player);
         if (arena == null || arena.getStatus() != GameState.playing
@@ -281,10 +282,19 @@ public class BreakPlace implements Listener {
             return;
         }
 
-        ItemStack heldItem = nms.getItemInHand(player);
-        if (heldItem != null && heldItem.getType() == Material.SHEARS) {
-            player.setCooldown(Material.SHEARS, SHEARS_BREAK_COOLDOWN_TICKS);
+        ItemStack heldItem = event.getItemInHand();
+        if (ShearsMining.apply(heldItem)) {
+            player.getInventory().setItemInMainHand(heldItem);
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onShearsHeld(PlayerItemHeldEvent event) {
+        IArena arena = Arena.getArenaByPlayer(event.getPlayer());
+        if (arena == null || !arena.isPlayer(event.getPlayer()) || arena.isSpectator(event.getPlayer())) return;
+        PlayerInventory inventory = event.getPlayer().getInventory();
+        ItemStack item = inventory.getItem(event.getNewSlot());
+        if (ShearsMining.apply(item)) inventory.setItem(event.getNewSlot(), item);
     }
 
     @EventHandler

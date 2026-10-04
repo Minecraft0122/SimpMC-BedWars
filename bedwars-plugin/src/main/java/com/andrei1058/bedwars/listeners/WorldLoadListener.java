@@ -97,32 +97,39 @@ public class WorldLoadListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onLeavesDecay(LeavesDecayEvent event) {
-        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (isProtectedEnvironment(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockGrow(BlockGrowEvent event) {
-        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (isProtectedEnvironment(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockSpread(BlockSpreadEvent event) {
-        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (isProtectedEnvironment(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockFade(BlockFadeEvent event) {
-        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (isProtectedEnvironment(event.getBlock().getWorld())) event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockForm(BlockFormEvent event) {
-        if (BedWarsWorldEnvironment.isArenaManagedWorld(event.getBlock().getWorld())) event.setCancelled(true);
+        if (isProtectedEnvironment(event.getBlock().getWorld())) event.setCancelled(true);
+    }
+
+    private static boolean isProtectedEnvironment(World world) {
+        return BedWarsWorldEnvironment.isArenaManagedWorld(world)
+                || BedWarsWorldEnvironment.isLobbyManagedWorld(world);
     }
 
     private static void enforceEnvironment(World world) {
         if (BedWarsWorldEnvironment.isArenaManagedWorld(world)) {
             GameRules.enforceArenaEnvironment(world);
+        } else if (BedWarsWorldEnvironment.isLobbyManagedWorld(world)) {
+            GameRules.enforceLobbyEnvironment(world);
         } else {
             BedWarsWorldEnvironment.enforceBrightNoon(world);
         }

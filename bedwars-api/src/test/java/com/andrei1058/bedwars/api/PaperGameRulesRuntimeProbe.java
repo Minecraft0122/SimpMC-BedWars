@@ -13,6 +13,7 @@ public final class PaperGameRulesRuntimeProbe {
         requireRule(org.bukkit.GameRules.ADVANCE_TIME, "advance_time", Boolean.class);
         requireRule(org.bukkit.GameRules.ADVANCE_WEATHER, "advance_weather", Boolean.class);
         requireRule(org.bukkit.GameRules.SPAWN_MOBS, "spawn_mobs", Boolean.class);
+        requireRule(org.bukkit.GameRules.MOB_GRIEFING, "mob_griefing", Boolean.class);
         requireRule(org.bukkit.GameRules.RANDOM_TICK_SPEED, "random_tick_speed", Integer.class);
         requireRule(org.bukkit.GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER,
                 "fire_spread_radius_around_player", Integer.class);

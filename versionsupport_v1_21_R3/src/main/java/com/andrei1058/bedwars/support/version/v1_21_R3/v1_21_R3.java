@@ -12,6 +12,7 @@ import com.andrei1058.bedwars.api.server.VersionSupport;
 import net.kyori.adventure.text.Component;
 import com.andrei1058.bedwars.support.version.common.DespawnableTargeting;
 import com.andrei1058.bedwars.support.version.common.VersionCommon;
+import com.andrei1058.bedwars.support.version.common.ShearsMining;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -488,7 +489,9 @@ public class v1_21_R3 extends VersionSupport {
             getPlugin().getLogger().log(Level.WARNING, material + " is not a valid " + getName() + " material!");
             type = Material.BEDROCK;
         }
-        return new ItemStack(type, amount);
+        ItemStack item = new ItemStack(type, amount);
+        ShearsMining.apply(item);
+        return item;
     }
 
     @Override

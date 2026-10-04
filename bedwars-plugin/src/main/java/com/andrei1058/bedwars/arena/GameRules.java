@@ -100,6 +100,16 @@ public final class GameRules {
         disableDebugCollisionBoxes(world);
     }
 
+    public static void enforceLobbyEnvironment(World world) {
+        if (world == null) return;
+        enforceArenaEnvironment(world);
+        if (world.getDifficulty() != org.bukkit.Difficulty.PEACEFUL) {
+            world.setDifficulty(org.bukkit.Difficulty.PEACEFUL);
+        }
+        if (world.getPVP()) world.setPVP(false);
+        setTyped(world, org.bukkit.GameRules.MOB_GRIEFING, false);
+    }
+
     /**
      * Minecraft 1.21.11 replaced doFireTick with an integer radius rule.
      * A zero radius prevents arena fire from spreading around players.

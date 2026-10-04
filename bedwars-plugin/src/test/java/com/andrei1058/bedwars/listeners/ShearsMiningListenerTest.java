@@ -6,12 +6,16 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.configuration.MainConfig;
 import com.andrei1058.bedwars.api.server.VersionSupport;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.support.version.common.ShearsMining;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.mockito.MockedStatic;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredListener;
 import org.junit.jupiter.api.AfterEach;
@@ -29,8 +33,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mockStatic;
 
-class ShearsCooldownTest {
+class ShearsMiningListenerTest {
     private VersionSupport previousSupport;
     private MainConfig previousConfig;
     private BreakPlace listener;
@@ -38,6 +43,8 @@ class ShearsCooldownTest {
     private IArena arena;
     private Block block;
     private ItemStack heldItem;
+    private PlayerInventory inventory;
+    private MockedStatic<ShearsMining> mining;
 
     @BeforeEach
     void setUp() {
@@ -56,6 +63,10 @@ class ShearsCooldownTest {
         when(block.getType()).thenReturn(Material.WHITE_WOOL);
         when(heldItem.getType()).thenReturn(Material.SHEARS);
         when(BedWars.nms.getItemInHand(player)).thenReturn(heldItem);
+        inventory = mock(PlayerInventory.class);
+        when(player.getInventory()).thenReturn(inventory);
+        mining = mockStatic(ShearsMining.class);
+        mining.when(() -> ShearsMining.apply(heldItem)).thenAnswer(call -> heldItem.getType() == Material.SHEARS);
         Arena.getArenaByPlayer().put(player, arena);
     }
 
@@ -64,18 +75,19 @@ class ShearsCooldownTest {
         Arena.getArenaByPlayer().remove(player);
         BedWars.nms = previousSupport;
         BedWars.config = previousConfig;
+        mining.close();
     }
 
     @Test
-    void successfulWoolBreakAppliesQuarterSecondShearsCooldown() throws Exception {
-        dispatch(new BlockBreakEvent(block, player));
-
-        verify(player).setCooldown(Material.SHEARS, 5);
+    void startingWoolMiningUpdatesNativeToolWithoutPostBreakCooldown() throws Exception {
+        dispatch(damageEvent());
+        verify(inventory).setItemInMainHand(heldItem);
+        verify(player, never()).setCooldown(any(Material.class), anyInt());
     }
 
     @Test
     void cancelledWoolBreakDoesNotConsumeTheShearsCooldown() throws Exception {
-        BlockBreakEvent event = new BlockBreakEvent(block, player);
+        BlockDamageEvent event = damageEvent();
         event.setCancelled(true);
 
         dispatch(event);
@@ -87,7 +99,7 @@ class ShearsCooldownTest {
     void otherToolsDoNotReceiveTheShearsCooldown() throws Exception {
         when(heldItem.getType()).thenReturn(Material.WOODEN_AXE);
 
-        dispatch(new BlockBreakEvent(block, player));
+        dispatch(damageEvent());
 
         verifyNoCooldown();
     }
@@ -96,7 +108,7 @@ class ShearsCooldownTest {
     void otherBlocksDoNotReceiveTheShearsCooldown() throws Exception {
         when(block.getType()).thenReturn(Material.WHITE_CARPET);
 
-        dispatch(new BlockBreakEvent(block, player));
+        dispatch(damageEvent());
 
         verifyNoCooldown();
     }
@@ -106,7 +118,7 @@ class ShearsCooldownTest {
     void inactiveArenaDoesNotApplyTheShearsCooldown(GameState state) throws Exception {
         when(arena.getStatus()).thenReturn(state);
 
-        dispatch(new BlockBreakEvent(block, player));
+        dispatch(damageEvent());
 
         verifyNoCooldown();
     }
@@ -115,7 +127,7 @@ class ShearsCooldownTest {
     void spectatorsDoNotReceiveTheShearsCooldown() throws Exception {
         when(arena.isSpectator(player)).thenReturn(true);
 
-        dispatch(new BlockBreakEvent(block, player));
+        dispatch(damageEvent());
 
         verifyNoCooldown();
     }
@@ -124,7 +136,7 @@ class ShearsCooldownTest {
     void respawningPlayersDoNotReceiveTheShearsCooldown() throws Exception {
         arena.getRespawnSessions().put(player, 3);
 
-        dispatch(new BlockBreakEvent(block, player));
+        dispatch(damageEvent());
 
         verifyNoCooldown();
     }
@@ -133,20 +145,25 @@ class ShearsCooldownTest {
     void playersOutsideAnArenaDoNotReceiveTheShearsCooldown() throws Exception {
         Arena.getArenaByPlayer().remove(player);
 
-        dispatch(new BlockBreakEvent(block, player));
+        dispatch(damageEvent());
 
         verifyNoCooldown();
     }
 
     private void verifyNoCooldown() {
         verify(player, never()).setCooldown(any(Material.class), anyInt());
+        verify(inventory, never()).setItemInMainHand(any());
     }
 
-    private void dispatch(BlockBreakEvent event) throws Exception {
-        EventHandler handler = BreakPlace.class.getMethod("onShearsBlockBreak", BlockBreakEvent.class)
+    private BlockDamageEvent damageEvent() {
+        return new BlockDamageEvent(player, block, BlockFace.UP, heldItem, false);
+    }
+
+    private void dispatch(BlockDamageEvent event) throws Exception {
+        EventHandler handler = BreakPlace.class.getMethod("onShearsBlockDamage", BlockDamageEvent.class)
                 .getAnnotation(EventHandler.class);
         RegisteredListener registered = new RegisteredListener(listener,
-                (target, dispatched) -> listener.onShearsBlockBreak((BlockBreakEvent) dispatched),
+                (target, dispatched) -> listener.onShearsBlockDamage((BlockDamageEvent) dispatched),
                 handler.priority(), mock(Plugin.class), handler.ignoreCancelled());
         registered.callEvent(event);
     }
