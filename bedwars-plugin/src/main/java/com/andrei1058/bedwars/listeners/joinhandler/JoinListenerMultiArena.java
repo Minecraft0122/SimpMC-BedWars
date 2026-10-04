@@ -56,19 +56,9 @@ public class JoinListenerMultiArena implements Listener {
         boolean rejoinAllowed = reJoin != null && reJoin.canReJoin();
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // Hide new player to players and spectators, and vice versa
-            // Players from lobby will remain visible
-            for (Player online : Bukkit.getOnlinePlayers()){
-                if (Arena.isInArena(online)) {
-                    BedWars.nms.spigotHidePlayer(online, p);
-                    BedWars.nms.spigotHidePlayer(p, online);
-                } else {
-                    BedWars.nms.spigotShowPlayer(online, p);
-                    BedWars.nms.spigotShowPlayer(p, online);
-                }
-            }
-
-            // To prevent invisibility issues handle ReJoin after sending invisibility packets
+            // Visibility is established synchronously by ScoreboardListener.
+            // Do not overwrite a newer arena join while waiting for reconnect.
+            if (!p.isOnline() || Arena.isInArena(p)) return;
             if (rejoinAllowed) {
                 if (reJoin.canReJoin() && reJoin.reJoin(p)) {
                     return;

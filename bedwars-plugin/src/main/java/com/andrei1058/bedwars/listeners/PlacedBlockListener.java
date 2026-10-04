@@ -40,6 +40,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.jetbrains.annotations.NotNull;
 
@@ -63,6 +64,29 @@ public final class PlacedBlockListener implements Listener {
 
     private static final String PLAYER_PLACED_FALLING_BLOCK = "bw-player-placed-falling-block";
     private final BlockPlacementResyncBuffer resyncBuffer = new BlockPlacementResyncBuffer();
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBucketEmpty(PlayerBucketEmptyEvent event) {
+        IArena arena = Arena.getArenaByPlayer(event.getPlayer());
+        Block source = event.getBlock();
+        if (event.isCancelled() || arena == null || arena.getStatus() != GameState.playing
+                || arenaAt(source) != arena) return;
+        Material fluid = switch (event.getBucket()) {
+            case WATER_BUCKET, COD_BUCKET, SALMON_BUCKET, PUFFERFISH_BUCKET,
+                 TROPICAL_FISH_BUCKET, AXOLOTL_BUCKET, TADPOLE_BUCKET -> Material.WATER;
+            case LAVA_BUCKET -> Material.LAVA;
+            default -> null;
+        };
+        if (fluid == null) return;
+        // Bucket events carry the bucket item, not the resulting fluid block.
+        // Wait for placement and final cancellation before claiming the source.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!event.isCancelled() && arena.getStatus() == GameState.playing
+                    && isCurrentArena(arena, source.getWorld()) && source.getType() == fluid) {
+                arena.addPlacedBlock(source);
+            }
+        });
+    }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -132,11 +156,10 @@ public final class PlacedBlockListener implements Listener {
     public void onFluidFlow(BlockFromToEvent event) {
         IArena arena = arenaAt(event.getBlock());
         if (arena == null || arena.getStatus() != GameState.playing) return;
-        // Player-placed fluids may still flow normally. Only an original map
-        // fluid source or a non-air original block may be changed by a flow;
-        // this prevents erosion without disabling water/lava gameplay.
+        // Player-placed fluids may flow normally, but cannot originate from
+        // an untracked map source or wash away original non-air map blocks.
         Block destination = event.getToBlock();
-        if (shouldCancelFluidFlow(arena.isBlockPlaced(event.getBlock()), destination.getType().isAir(),
+        if (shouldCancelFluidFlow(arena.isBlockPlaced(event.getBlock()), destination.isEmpty(),
                 arena.isBlockPlaced(destination), arena.isAllowMapBreak())) {
             event.setCancelled(true);
             return;
@@ -144,7 +167,7 @@ public final class PlacedBlockListener implements Listener {
         if (arena.isBlockPlaced(event.getBlock())) {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (!event.isCancelled() && arena.getStatus() == GameState.playing
-                        && !destination.getType().isAir()) {
+                        && !destination.isEmpty()) {
                     arena.addPlacedBlock(destination);
                 }
             });

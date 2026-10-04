@@ -25,6 +25,7 @@ import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.events.player.*;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.SpectatorVisibility;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -99,6 +100,7 @@ public class ScoreboardListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void serverJoin(@NotNull PlayerJoinEvent e) {
         Player player = e.getPlayer();
+        SpectatorVisibility.synchronizeJoin(player, Bukkit.getOnlinePlayers());
         awaitingInitialClientLoad.add(player.getUniqueId());
         // Paper broadcasts the new player's ADD_PLAYER entry only after
         // PlayerJoinEvent returns. This must cover BUNGEE too: that mode joins

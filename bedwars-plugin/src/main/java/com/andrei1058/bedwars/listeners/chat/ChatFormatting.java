@@ -131,7 +131,7 @@ public class ChatFormatting implements Listener {
                 // A one-player team has no private audience, but this is not a
                 // shout. Use the normal public format so it does not display
                 // the [公屏] marker or a synthetic team label.
-                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, null));
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, team));
             } else {
                 setRecipients(e, team.getMembers());
                 setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
@@ -144,6 +144,13 @@ public class ChatFormatting implements Listener {
     }
 
     private static String parsePHolders(String content, Player player, @Nullable ITeam team) {
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (team != null && arena != null && usesPublicChannel(arena.getTeamSizeAtGameStart(team))) {
+            String shoutPrefix = ShoutFormattingContext.isFormatting(player)
+                    ? getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_SHOUT) : "";
+            content = withoutSoloTeamPrefix(content, shoutPrefix);
+            team = null;
+        }
         content = withMessageSeparator(content)
                 .replace("{vPrefix}", getChatSupport().getPrefix(player))
                 .replace("{vSuffix}", getChatSupport().getSuffix(player))
@@ -157,6 +164,13 @@ public class ChatFormatting implements Listener {
             content = content.replace("{team}", teamFormat);
         }
         return SupportPAPI.getSupportPAPI().replace(player, content).replace("{message}", "%2$s");
+    }
+
+    static String withoutSoloTeamPrefix(String format, String shoutPrefix) {
+        // Cover custom chat templates as well as the built-in {team} token.
+        // Only chat formatting changes; the public team placeholder stays intact.
+        return format.replace("{team} ", "").replace("{team}", "")
+                .replace("%bw1058_player_team%", shoutPrefix);
     }
 
     static String withMessageSeparator(String content) {

@@ -541,7 +541,7 @@ public class BreakPlace implements Listener {
             }
 
             // Water placement target location
-            Block waterBlock = e.getBlockClicked().getRelative(e.getBlockFace());
+            Block waterBlock = e.getBlock();
             Location waterLocation = waterBlock.getLocation();
 
             // Build height limit
@@ -555,21 +555,6 @@ public class BreakPlace implements Listener {
                 e.setCancelled(true);
                 AdventureText.send(p, getMsg(p, Messages.INTERACT_CANNOT_PLACE_BLOCK));
                 return;
-            }
-
-            // Bucket placement does not emit BlockPlaceEvent. Track the
-            // source block after the server applies it so subsequent fluid
-            // flow is treated as player-built rather than map erosion.
-            if (e.getBucket() == Material.WATER || e.getBucket() == Material.LAVA) {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    // Other listeners may cancel this event after our normal
-                    // priority handler. Only claim the source block when the
-                    // final event state actually placed liquid.
-                    if (!e.isCancelled() && a.getStatus() == GameState.playing
-                            && !waterBlock.getType().isAir()) {
-                        a.addPlacedBlock(waterBlock);
-                    }
-                });
             }
 
             // Remove one empty bucket from player's hand after a short delay
