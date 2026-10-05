@@ -87,7 +87,8 @@ public class Sounds {
         addDefSound("arena-selector-open", "ENTITY_CHICKEN_EGG");
         addDefSound("stats-gui-open", "ENTITY_CHICKEN_EGG");
         addDefSound("trap-sound", "ENTITY_ENDERMAN_TELEPORT");
-        addDefSound("shop-auto-equip", "ITEM_ARMOR_EQUIP_GENERIC");
+        // Keep the automatic armor equip cue distinct from the game-end victory cue.
+        addDefSound("shop-auto-equip", "ITEM_ARMOR_EQUIP_IRON");
         addDefSound("egg-bridge-block", "ENTITY_CHICKEN_EGG");
         addDefSound("ender-pearl-landed", "ENTITY_ENDERMAN_TELEPORT");
         addDefSound("pop-up-tower-build", "ENTITY_CHICKEN_EGG");
@@ -101,6 +102,11 @@ public class Sounds {
             config.set("player-kill", null);
             config.set("countdown", null);
         });
+        // The former generic armor cue was easily confused with celebratory sounds.
+        if ("ITEM_ARMOR_EQUIP_GENERIC".equalsIgnoreCase(yml.getString("shop-auto-equip.sound"))) {
+            yml.set("shop-auto-equip.sound", "ITEM_ARMOR_EQUIP_IRON");
+            yml.set("shop-auto-equip.volume", 0.7);
+        }
     }
 
     private static Sound getSound(String path) {
