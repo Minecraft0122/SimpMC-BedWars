@@ -20,6 +20,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -371,6 +372,8 @@ public final class SelfRescuePlatform implements Listener {
         }
         if (placed.isEmpty()) return;
 
+        moveOwnerOutOfGeneratedBlocks(player, placed);
+
         platforms.put(platformId, placed);
         RescueArea area = new RescueArea(platformId, arena, centerX, centerZ, y, blocksAutomaticDeployment);
         UUID uuid = player.getUniqueId();
@@ -381,6 +384,31 @@ public final class SelfRescuePlatform implements Listener {
         if (!player.isOnGround()) landingProtections.put(uuid, new LandingProtection(area, center.getY(), clock.getAsLong()));
         platformTasks.put(platformId, Bukkit.getScheduler().runTaskLater(BedWars.plugin,
                 () -> removePlatform(platformId), LIFETIME_TICKS));
+    }
+
+    private void moveOwnerOutOfGeneratedBlocks(Player player, List<String> placed) {
+        if (player == null || placed.isEmpty()) return;
+        BoundingBox generated = null;
+        int highestY = Integer.MIN_VALUE;
+        for (String value : placed) {
+            String[] parts = value.split(":");
+            if (parts.length != 4) continue;
+            try {
+                int x = Integer.parseInt(parts[1]);
+                int y = Integer.parseInt(parts[2]);
+                int z = Integer.parseInt(parts[3]);
+                highestY = Math.max(highestY, y);
+                BoundingBox block = BoundingBox.of(new Location(player.getWorld(), x, y, z), 0.5, 0.5, 0.5);
+                generated = generated == null ? block : generated.union(block);
+            } catch (NumberFormatException ignored) {
+                // Ignore malformed tracking keys; normal keys are generated locally above.
+            }
+        }
+        if (generated != null && generated.overlaps(player.getBoundingBox())) {
+            Location safe = player.getLocation().clone();
+            safe.setY(highestY + 1.05);
+            player.teleport(safe);
+        }
     }
 
     private void removePlatform(long platformId) {

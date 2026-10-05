@@ -53,6 +53,7 @@ public class BwTabList {
             .thenComparing(Player::getName)
             .thenComparing(Player::getUniqueId);
     private static final Map<UUID, PlayerListOrderState> managedPlayerListOrders = new HashMap<>();
+    private static final Set<UUID> chineseTeamNames = new HashSet<>();
     private static boolean playerListOrderUpdateScheduled;
 
     // Player list container. Used to manipulate deployed player tab: lines ecc.
@@ -520,11 +521,18 @@ public class BwTabList {
     @NotNull HashMap<String, String> getTeamReplacements(@Nullable ITeam team) {
         HashMap<String, String> replacements = new HashMap<>();
         String displayName = null == team ? "" : team.getDisplayName(Language.getPlayerLanguage(sidebar.getPlayer()));
+        if (team != null && chineseTeamNames.contains(sidebar.getPlayer().getUniqueId())) {
+            displayName = TeamNameTranslations.chinese(team.getName());
+        }
         replacements.put("{teamName}", displayName);
         replacements.put("{teamLetter}", null == team || displayName.isEmpty() ? "" : team.getColor().chat() + (displayName.substring(0, 1)));
         replacements.put("{teamColor}", null == team ? "" : team.getColor().chat().toString());
 
         return replacements;
+    }
+
+    public static void setChineseTeamNames(@NotNull UUID viewer, boolean enabled) {
+        if (enabled) chineseTeamNames.add(viewer); else chineseTeamNames.remove(viewer);
     }
 
     static ChatColor getPlayerListColor(@Nullable ITeam targetTeam) {
