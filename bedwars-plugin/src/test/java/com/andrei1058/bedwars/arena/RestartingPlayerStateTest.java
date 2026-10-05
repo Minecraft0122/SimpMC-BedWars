@@ -88,7 +88,7 @@ class RestartingPlayerStateTest {
         assertTrue(state.canPickupItems);
         assertFalse(state.allowFlight);
         assertFalse(state.flying);
-        assertEquals(Boolean.FALSE, state.collidable);
+        assertNull(state.collidable);
         assertTrue(state.invisibilityRemoved);
     }
 
@@ -97,7 +97,7 @@ class RestartingPlayerStateTest {
         assertTrue(state.canPickupItems);
         assertTrue(state.allowFlight);
         assertTrue(state.flying);
-        assertEquals(Boolean.FALSE, state.collidable);
+        assertNull(state.collidable);
     }
 
     private static IArena arena(List<Player> players, List<Player> spectators,
