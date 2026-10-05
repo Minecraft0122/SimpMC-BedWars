@@ -85,6 +85,8 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -152,6 +154,9 @@ public class Arena implements IArena {
      * Players in respawn session
      */
     private ConcurrentHashMap<Player, Integer> respawnSessions = new ConcurrentHashMap<>();
+
+    private final Map<String, Team> collisionTeams = new HashMap<>();
+    private Team collisionInactiveTeam;
 
     /**
      * Invisibility for armor when you drink an invisibility potion
@@ -522,6 +527,7 @@ public class Arena implements IArena {
             players.add(p);
             setArenaByPlayer(p, this);
             PlayerCollisionState.apply(p, status, false, false);
+            updateCollisionTeam(p);
             InvisibilityManager.synchronizeViewer(this, p);
             LobbyAnnouncements.playerEnteredArena(p);
             PlayerMotion.disableFlight(p);
@@ -625,6 +631,7 @@ public class Arena implements IArena {
             InvisibilityManager.remove(this, p);
             spectators.add(p);
             players.remove(p);
+            updateCollisionTeam(p);
             // Remove the player entity and PlayerInfo entry as soon as the
             // final-death/late-join transition becomes authoritative.
             for (Player active : players) SpectatorVisibility.hideIfSpectator(this, active, p);
@@ -781,9 +788,10 @@ public class Arena implements IArena {
 
         InvisibilityManager.remove(this, p);
         if (wasRespawning) InvisibilityManager.showRespawningPlayer(this, p);
-        // A player may leave while waiting for a respawn. Restore the entity
-        // flag before the arena association is removed.
-        p.setCollidable(true);
+        removeFromCollisionTeams(p);
+        // Do not re-enable pushing while the player is still in the arena.
+        // The destination world determines whether default collision returns.
+        p.setCollidable(false);
         if (status == GameState.playing) {
             for (ITeam t : getTeams()) {
                 if (t.isMember(p)) {
@@ -818,6 +826,7 @@ public class Arena implements IArena {
         //players.remove must be under call event in order to check if the player is a spectator or not
         players.remove(p);
         removeArenaByPlayer(p, this);
+        p.setCollidable(true);
 
         for (PotionEffect pf : p.getActivePotionEffects()) {
             p.removePotionEffect(pf.getType());
@@ -1028,6 +1037,7 @@ public class Arena implements IArena {
         p.getInventory().clear();
         p.getInventory().setArmorContents(null);
         InvisibilityManager.remove(this, p);
+        removeFromCollisionTeams(p);
         p.setCollidable(true);
         Arena.afkCheck.remove(p.getUniqueId());
         BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
@@ -1603,12 +1613,9 @@ public class Arena implements IArena {
         if (status == GameState.restarting) {
             RestartingPlayerState.prepare(this);
         }
-        // Disable immediately when leaving play. When entering play, let the
-        // state-change listeners refresh private TAB teams first, then enable
-        // server physics below so client and server observe the same state.
-        if (status != GameState.playing) {
-            applyPlayerCollisionState();
-        }
+        // Disable immediately on exit. On entry, refresh client TAB rules
+        // before adding server exemptions and restoring projectile hitboxes.
+        if (status != GameState.playing) applyPlayerCollisionState();
         Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, oldStatus, status));
         refreshSigns();
         if (status == GameState.playing) {
@@ -1655,9 +1662,7 @@ public class Arena implements IArena {
 
         spectators.forEach(c -> SidebarService.getInstance().giveSidebar(c, this, false));
 
-        if (status == GameState.playing) {
-            applyPlayerCollisionState();
-        }
+        if (status == GameState.playing) applyPlayerCollisionState();
 
         if (status == GameState.starting) {
             startingTask = new GameStartingTask(this);
@@ -1966,6 +1971,20 @@ public class Arena implements IArena {
         return !inArena && !inSetup && playerWorld != null && !playerWorld.isBlank()
                 && Arena.getArenaByIdentifier(playerWorld) == null
                 && (lobbyWorld == null || lobbyWorld.isBlank() || Bukkit.getWorld(lobbyWorld) == null);
+    }
+
+    /** Refresh collision after a world change or after leaving an arena. */
+    public static void refreshPlayerCollision(Player player) {
+        IArena arena = getArenaByPlayer(player);
+        if (arena != null) {
+            PlayerCollisionState.apply(player, arena.getStatus(), arena.isSpectator(player), arena.isReSpawning(player));
+            return;
+        }
+        String worldName = player.getWorld() == null ? null : player.getWorld().getName();
+        // A removed player may still be waiting in the arena world for an
+        // asynchronous teleport. Keep pushing disabled until the move completes.
+        player.setCollidable(!isCurrentLobbyPlayer(player)
+                && (worldName == null || getArenaByIdentifier(worldName) == null));
     }
 
     private static void removeBedWarsCommandItems(Player player) {
@@ -2703,6 +2722,7 @@ public class Arena implements IArena {
         playersToRestore.addAll(spectators);
         playersToRestore.addAll(respawnSessions.keySet());
         playersToRestore.addAll(showTime.keySet());
+        clearCollisionTeams();
         for (Player player : playersToRestore) {
             boolean respawning = respawnSessions.containsKey(player);
             if (respawning || showTime.containsKey(player)) {
@@ -2839,6 +2859,7 @@ public class Arena implements IArena {
                 PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
                 PlayerCollisionState.apply(player, status, false, true);
+                updateCollisionTeam(player);
                 SidebarService.getInstance().handleRespawnState(this, player);
                 InvisibilityManager.hideRespawningPlayer(this, player);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
@@ -2860,10 +2881,66 @@ public class Arena implements IArena {
     private void applyPlayerCollisionState() {
         for (Player player : players) {
             PlayerCollisionState.apply(player, status, false, respawnSessions.containsKey(player));
+            updateCollisionTeam(player);
         }
         for (Player spectator : spectators) {
             PlayerCollisionState.apply(spectator, status, true, false);
+            updateCollisionTeam(spectator);
         }
+    }
+
+    private void updateCollisionTeam(Player player) {
+        removeFromCollisionTeams(player);
+        if (world == null) return;
+        boolean active = status == GameState.playing && players.contains(player)
+                && !respawnSessions.containsKey(player);
+        Team team = active ? collisionTeam(getTeam(player)) : inactiveCollisionTeam();
+        if (team != null) team.addEntry(player.getName());
+    }
+
+    /** Refresh the real server scoreboard team after a lifecycle transition. */
+    public void refreshCollisionTeam(Player player) {
+        updateCollisionTeam(player);
+    }
+
+    private Team collisionTeam(ITeam gameTeam) {
+        if (gameTeam == null) return inactiveCollisionTeam();
+        return collisionTeams.computeIfAbsent(gameTeam.getName(), key -> {
+            Team team = collisionScoreboard().registerNewTeam(collisionTeamName(key));
+            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
+            return team;
+        });
+    }
+
+    private Team inactiveCollisionTeam() {
+        if (collisionInactiveTeam == null) {
+            collisionInactiveTeam = collisionScoreboard().registerNewTeam(collisionTeamName("inactive"));
+            collisionInactiveTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+        }
+        return collisionInactiveTeam;
+    }
+
+    private Scoreboard collisionScoreboard() {
+        return Bukkit.getScoreboardManager().getMainScoreboard();
+    }
+
+    private String collisionTeamName(String suffix) {
+        String base = "bw_" + Integer.toUnsignedString(Objects.hash(arenaName, worldName), 36);
+        String clean = suffix.replaceAll("[^A-Za-z0-9_]", "");
+        String full = base + "_" + clean;
+        return full.substring(0, Math.min(16, full.length()));
+    }
+
+    private void removeFromCollisionTeams(Player player) {
+        for (Team team : collisionTeams.values()) team.removeEntry(player.getName());
+        if (collisionInactiveTeam != null) collisionInactiveTeam.removeEntry(player.getName());
+    }
+
+    private void clearCollisionTeams() {
+        for (Team team : collisionTeams.values()) team.unregister();
+        if (collisionInactiveTeam != null) collisionInactiveTeam.unregister();
+        collisionTeams.clear();
+        collisionInactiveTeam = null;
     }
 
     /**
@@ -3038,14 +3115,20 @@ public class Arena implements IArena {
                 CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
                         player, Bukkit.getWorlds().get(0).getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                    if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
+                    if (error == null && Boolean.TRUE.equals(success)) {
+                        enterLobby(player);
+                        refreshPlayerCollision(player);
+                    }
                 }));
                 plugin.getLogger().log(Level.SEVERE, player.getName() + " was teleported to the main world because lobby location is not set!");
             } else {
                 CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
                         player, loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
                 teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                    if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
+                    if (error == null && Boolean.TRUE.equals(success)) {
+                        enterLobby(player);
+                        refreshPlayerCollision(player);
+                    }
                 }));
             }
         } else if (BedWars.getServerType() == ServerType.MULTIARENA) {
@@ -3057,7 +3140,10 @@ public class Arena implements IArena {
             CompletableFuture<Boolean> teleport = TeleportManager.teleportC(
                     player, lobby, PlayerTeleportEvent.TeleportCause.PLUGIN);
             teleport.whenComplete((success, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                if (error == null && Boolean.TRUE.equals(success)) enterLobby(player);
+                if (error == null && Boolean.TRUE.equals(success)) {
+                    enterLobby(player);
+                    refreshPlayerCollision(player);
+                }
             }));
         }
     }

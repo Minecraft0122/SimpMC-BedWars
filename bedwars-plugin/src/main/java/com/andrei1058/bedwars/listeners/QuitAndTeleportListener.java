@@ -131,6 +131,7 @@ public class QuitAndTeleportListener implements Listener {
         IArena arena = Arena.getArenaByPlayer(e.getPlayer());
 
         if (null == arena) {
+            Arena.refreshPlayerCollision(e.getPlayer());
             return;
         }
 

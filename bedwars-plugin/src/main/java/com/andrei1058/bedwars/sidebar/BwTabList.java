@@ -29,7 +29,6 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.arena.PlayerCollisionState;
 import com.andrei1058.spigot.sidebar.PlayerTab;
 import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
@@ -550,7 +549,7 @@ public class BwTabList {
     static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
                                                        boolean spectator,
                                                        boolean respawning) {
-        return PlayerCollisionState.shouldCollide(status, spectator, respawning)
+        return status == GameState.playing && !spectator && !respawning
                 ? PlayerTab.PushingRule.PUSH_OTHER_TEAMS
                 : PlayerTab.PushingRule.NEVER;
     }
