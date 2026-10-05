@@ -9,12 +9,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LobbyPortalListenerTest {
 
     @Test
-    void onlyLobbyNetherPortalsReturnToProxyLobby() {
+    void lobbyNetherAndEndPortalsReturnToProxyLobby() {
         assertTrue(LobbyPortalListener.shouldReturnToProxyLobby(
                 true, PlayerTeleportEvent.TeleportCause.NETHER_PORTAL));
         assertFalse(LobbyPortalListener.shouldReturnToProxyLobby(
                 false, PlayerTeleportEvent.TeleportCause.NETHER_PORTAL));
-        assertFalse(LobbyPortalListener.shouldReturnToProxyLobby(
+        assertTrue(LobbyPortalListener.shouldReturnToProxyLobby(
                 true, PlayerTeleportEvent.TeleportCause.END_PORTAL));
     }
 
@@ -22,7 +22,7 @@ class LobbyPortalListenerTest {
     void proxyContextWithoutLocalLobbyStillReturnsFromNetherPortal() {
         assertTrue(LobbyPortalListener.shouldReturnToProxyLobby(
                 false, true, PlayerTeleportEvent.TeleportCause.NETHER_PORTAL));
-        assertFalse(LobbyPortalListener.shouldReturnToProxyLobby(
+        assertTrue(LobbyPortalListener.shouldReturnToProxyLobby(
                 false, true, PlayerTeleportEvent.TeleportCause.END_PORTAL));
     }
 }

@@ -76,6 +76,7 @@ class SoloChatTest {
         ITeam team = mock(ITeam.class);
         when(arena.getStatus()).thenReturn(GameState.playing);
         when(arena.getTeam(player)).thenReturn(team);
+        when(team.getName()).thenReturn("Red");
         when(arena.getTeamSizeAtGameStart(team)).thenReturn(startSize);
         when(arena.getPlayers()).thenReturn(List.of(player, opponent));
         when(arena.getSpectators()).thenReturn(List.of(spectator));
