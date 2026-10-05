@@ -415,8 +415,6 @@ public class BedWarsTeam implements ITeam {
             p.setCanPickupItems(true);
         }));
         SidebarService.getInstance().handleRespawnState(getArena(), p);
-        // Keep projectile hits enabled; the arena scoreboard team controls player pushing.
-        getArena().refreshCollisionTeam(p);
         PlayerCollisionState.apply(p, getArena().getStatus(), false, false);
         p.setHealth(20);
 

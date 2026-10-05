@@ -272,17 +272,14 @@ public class MainConfig extends ConfigManager {
             }
         });
 
-        // Only Simplified Chinese is bundled and selectable. Keep legacy
-        // language files untouched on disk, but never load them as runtime
-        // languages.
         String configuredLanguage = yml.getString("language");
-        if (!Language.isSimplifiedChineseIso(configuredLanguage)) {
-            plugin.getLogger().warning("仅支持简体中文，已将 language 配置从 "
-                    + configuredLanguage + " 迁移为 zh_cn。");
-            yml.set("language", Language.SIMPLIFIED_CHINESE_ISO);
+        if (!Language.isLanguageExist(configuredLanguage)) {
+            plugin.getLogger().warning("未找到语言 " + configuredLanguage + "，已使用默认语言。 ");
+            configuredLanguage = Language.SIMPLIFIED_CHINESE_ISO;
+            yml.set("language", configuredLanguage);
             save();
         }
-        Language def = Language.getLang(Language.SIMPLIFIED_CHINESE_ISO);
+        Language def = Language.getLang(configuredLanguage);
 
         if (def == null) {
             throw new IllegalStateException("未找到简体中文语言配置："
@@ -350,9 +347,9 @@ public class MainConfig extends ConfigManager {
                 "大厅等待竞技场节点确认玩家预加载的时间，单位为秒；默认 8 秒。", "超时会释放预约并提示玩家重试，不会阻塞服务器主线程。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_STATUS_HEARTBEAT_SECONDS,
                 "竞技场节点向大厅发送全量状态心跳的间隔，单位为秒；默认 15 秒。", "平时状态变化通过事件立即发送，心跳只用于断线重连后的恢复。");
-        setComments("language", "服务器语言固定为 zh_cn（简体中文）；旧语言值会自动迁移。");
+        setComments("language", "服务器默认语言，使用 Languages 目录中的 ISO 代码。");
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
-        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "历史兼容字段；当前版本只提供简体中文，不再加载其他语言。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "历史兼容字段；填写此处的语言不会加载。语言文件放在 Languages 目录中。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
                 "可用于匹配和竞技场选择器的全局分组名称。Default 是内置组，无需填写。",
                 "每张地图在 Arenas/<地图>.yml 的 group 中引用一个名称。");

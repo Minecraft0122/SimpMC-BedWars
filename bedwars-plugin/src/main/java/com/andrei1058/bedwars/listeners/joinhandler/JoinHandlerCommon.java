@@ -57,10 +57,10 @@ public class JoinHandlerCommon implements Listener {
         UUID uuid = e.getUniqueId();
         Bukkit.getScheduler().runTask(plugin, () -> {
             Language.setPlayerLanguage(uuid, iso);
-            if (!Language.isSimplifiedChineseIso(iso)) {
+            if (!Language.isLanguageExist(iso)) {
                 Bukkit.getScheduler().runTaskAsynchronously(plugin,
                         () -> BedWars.getRemoteDatabase().setLanguage(
-                                uuid, Language.SIMPLIFIED_CHINESE_ISO));
+                                uuid, Language.getDefaultLanguage().getIso()));
             }
         });
     }

@@ -65,12 +65,10 @@ public class QuitAndTeleportListener implements Listener {
             }
         }
 
-        // Persist the single supported player language. A stale value from an
-        // older proxy/database is migrated to Simplified Chinese on quit.
         if (Language.getLangByPlayer().containsKey(p.getUniqueId())) {
             final UUID u = p.getUniqueId();
+            final String languageToSave = Language.getPlayerLanguage(p).getIso();
             Language.getLangByPlayer().remove(u);
-            String languageToSave = Language.SIMPLIFIED_CHINESE_ISO;
             Bukkit.getScheduler().runTaskAsynchronously(plugin,
                     () -> BedWars.getRemoteDatabase().setLanguage(u, languageToSave));
         }

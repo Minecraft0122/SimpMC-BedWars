@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
 
 public class Language extends ConfigManager {
 
-    /** The only player-facing language bundled by SimpMC-BedWars. */
+    /** ISO code used when no configured or stored language is available. */
     public static final String SIMPLIFIED_CHINESE_ISO = "zh_cn";
 
     private static final Pattern LANGUAGE_FILE = Pattern.compile("^messages_([A-Za-z0-9_-]+)\\.yml$");
@@ -377,7 +377,6 @@ public class Language extends ConfigManager {
      * Check if a language exists.
      */
     public static boolean isLanguageExist(String iso) {
-        if (!isSimplifiedChineseIso(iso)) return false;
         for (Language l : languages) {
             if (l.iso.equalsIgnoreCase(iso)) {
                 return true;
@@ -387,9 +386,7 @@ public class Language extends ConfigManager {
     }
 
     /**
-     * Check whether an ISO code is supported by the bundled player language.
-     * Custom {@link Language} instances remain constructible for API
-     * compatibility, while normal plugin commands expose only this code.
+     * Check whether an ISO code is supported by a registered language.
      */
     public static boolean isSimplifiedChineseIso(String iso) {
         return SIMPLIFIED_CHINESE_ISO.equalsIgnoreCase(normalizeIso(iso));
@@ -407,7 +404,6 @@ public class Language extends ConfigManager {
      */
     public static Language getLang(String iso) {
         iso = normalizeIso(iso);
-        if (!isSimplifiedChineseIso(iso)) return getDefaultLanguage();
         for (Language l : languages) {
             if (l.iso.equalsIgnoreCase(iso)) {
                 return l;
@@ -712,14 +708,6 @@ public class Language extends ConfigManager {
         }
 
         iso = normalizeIso(iso);
-        // Old proxy/database values are deliberately not allowed to revive
-        // a language that the plugin no longer ships. Drop any stale
-        // in-memory preference so the player immediately falls back to Chinese.
-        if (!isSimplifiedChineseIso(iso)) {
-            langByPlayer.remove(uuid);
-            return false;
-        }
-
         Language newLang = Language.getLang(iso);
         if (newLang == null) return false;
         Language oldLang = Language.getPlayerLanguage(uuid);
