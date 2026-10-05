@@ -5,7 +5,7 @@
     <parent>
         <artifactId>SimpMC-BedWars</artifactId>
         <groupId>com.simpmc.bedwars</groupId>
-    <version>5.12.0</version>
+    <version>5.12.1</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>simpmc-bedwars-plugin</artifactId>
@@ -234,6 +234,9 @@
                             <shadedPattern>com.simpmc.bedwars.libs.sidebar</shadedPattern>
                         </relocation>
                     </relocations>
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                    </transformers>
                 </configuration>
                 <executions>
                     <execution>

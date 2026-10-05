@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>5.12.0</version>
+    <version>5.12.1</version>
     <scope>provided</scope>
 </dependency>
 ```

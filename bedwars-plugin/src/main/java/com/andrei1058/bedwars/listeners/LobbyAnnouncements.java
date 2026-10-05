@@ -76,6 +76,14 @@ public final class LobbyAnnouncements {
         broadcast("§e[BW] §f玩家 §b" + player.getName() + " §f加入了游戏", null);
     }
 
+    public static void consoleJoin(Player player) {
+        if (player != null) Bukkit.getConsoleSender().sendMessage("[Server thread/INFO]: " + player.getName() + " joined the game");
+    }
+
+    public static void consoleQuit(Player player) {
+        if (player != null) Bukkit.getConsoleSender().sendMessage("[Server thread/INFO]: " + player.getName() + " left the game");
+    }
+
     /** Remove stale lobby presence whenever a player enters an arena, setup world or another world. */
     public static void playerLeftLobby(Player player) {
         if (player != null) endLobbyPresence(player.getUniqueId());

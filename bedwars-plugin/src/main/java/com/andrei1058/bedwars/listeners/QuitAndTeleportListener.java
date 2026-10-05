@@ -50,6 +50,7 @@ public class QuitAndTeleportListener implements Listener {
     public void onLeave(@NotNull PlayerQuitEvent e) {
         Player p = e.getPlayer();
         boolean wasInLobby = LobbyAnnouncements.isLobbyPlayer(p);
+        LobbyAnnouncements.consoleQuit(p);
         e.setQuitMessage(null);
         // Announce before arena/database cleanup so an unrelated listener or
         // adapter failure cannot swallow a genuine lobby disconnect message.

@@ -34,6 +34,8 @@ public final class LobbyPortalListener implements Listener {
 
     static boolean shouldReturnToProxyLobby(boolean lobbyPlayer, boolean proxyServer,
                                             PlayerTeleportEvent.TeleportCause cause) {
-        return (lobbyPlayer || proxyServer) && cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL;
+        return (lobbyPlayer || proxyServer)
+                && (cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL
+                || cause == PlayerTeleportEvent.TeleportCause.END_PORTAL);
     }
 }

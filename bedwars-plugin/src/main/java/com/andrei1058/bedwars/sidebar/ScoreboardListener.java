@@ -100,6 +100,7 @@ public class ScoreboardListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void serverJoin(@NotNull PlayerJoinEvent e) {
         Player player = e.getPlayer();
+        com.andrei1058.bedwars.listeners.LobbyAnnouncements.consoleJoin(player);
         SpectatorVisibility.synchronizeJoin(player, Bukkit.getOnlinePlayers());
         awaitingInitialClientLoad.add(player.getUniqueId());
         // Paper broadcasts the new player's ADD_PLAYER entry only after

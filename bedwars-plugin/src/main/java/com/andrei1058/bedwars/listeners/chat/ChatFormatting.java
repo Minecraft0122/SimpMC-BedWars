@@ -131,10 +131,12 @@ public class ChatFormatting implements Listener {
                 // A one-player team has no private audience, but this is not a
                 // shout. Use the normal public format so it does not display
                 // the [公屏] marker or a synthetic team label.
-                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, team));
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, team),
+                        parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, team, true));
             } else {
                 setRecipients(e, team.getMembers());
-                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team),
+                        parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team, true));
             }
             return;
         }
@@ -144,6 +146,10 @@ public class ChatFormatting implements Listener {
     }
 
     private static String parsePHolders(String content, Player player, @Nullable ITeam team) {
+        return parsePHolders(content, player, team, false);
+    }
+
+    private static String parsePHolders(String content, Player player, @Nullable ITeam team, boolean console) {
         IArena arena = Arena.getArenaByPlayer(player);
         if (team != null && arena != null && usesPublicChannel(arena.getTeamSizeAtGameStart(team))) {
             String shoutPrefix = ShoutFormattingContext.isFormatting(player)
@@ -160,7 +166,7 @@ public class ChatFormatting implements Listener {
         if (team != null) {
             String teamFormat = getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_TEAM)
                     .replace("{TeamColor}", team.getColor().chat() + "")
-                    .replace("{TeamName}", team.getDisplayName(Language.getPlayerLanguage(player)));
+                    .replace("{TeamName}", console ? team.getName() : team.getDisplayName(Language.getPlayerLanguage(player)));
             content = content.replace("{team}", teamFormat);
         }
         return SupportPAPI.getSupportPAPI().replace(player, content).replace("{message}", "%2$s");
@@ -241,8 +247,14 @@ public class ChatFormatting implements Listener {
     }
 
     private static void setRenderer(AsyncChatEvent event, String format) {
+        setRenderer(event, format, format);
+    }
+
+    private static void setRenderer(AsyncChatEvent event, String format, String consoleFormat) {
         // The renderer runs once per viewer, preserving the existing recipient split.
-        event.renderer((source, sourceDisplayName, message, viewer) -> render(format, sourceDisplayName, message));
+        event.renderer((source, sourceDisplayName, message, viewer) -> render(
+                viewer instanceof org.bukkit.command.ConsoleCommandSender ? consoleFormat : format,
+                sourceDisplayName, message));
     }
 
     private static Component render(String format, Component sourceDisplayName, Component message) {
