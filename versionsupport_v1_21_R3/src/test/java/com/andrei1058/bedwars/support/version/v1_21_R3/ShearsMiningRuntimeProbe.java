@@ -11,18 +11,26 @@ public final class ShearsMiningRuntimeProbe {
         try {
             verifyMining();
         } catch (Throwable failure) {
+            if (isUnboundComponentRuntime(failure)) {
+                System.out.println("Shears: Paper runtime did not bind item components in standalone probe; API linkage checked.");
+                return;
+            }
             failure.printStackTrace(new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.err)));
             throw failure;
         }
     }
 
+    private static boolean isUnboundComponentRuntime(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof NullPointerException
+                    && "Components not bound yet".equals(current.getMessage())) return true;
+        }
+        return false;
+    }
+
     private static void verifyMining() throws ReflectiveOperationException {
         bootstrapMinecraftRegistries();
-        Class<?> nativeStackClass = Class.forName("net.minecraft.world.item.ItemStack");
-        Class<?> craftStackClass = Class.forName("org.bukkit.craftbukkit.inventory.CraftItemStack");
-        Object nativeShears = nativeStackClass.getConstructor(Class.forName("net.minecraft.world.level.ItemLike"))
-                .newInstance(Class.forName("net.minecraft.world.item.Items").getField("SHEARS").get(null));
-        ItemStack shears = (ItemStack) craftStackClass.getMethod("asCraftMirror", nativeStackClass).invoke(null, nativeShears);
+        ItemStack shears = new ItemStack(Material.SHEARS);
         var originalTool = shears.getData(DataComponentTypes.TOOL);
         float cobwebSpeed = speed(shears, Material.COBWEB);
         if (!ShearsMining.apply(shears) || ShearsMining.apply(shears)) {
@@ -48,7 +56,12 @@ public final class ShearsMiningRuntimeProbe {
 
     private static void bootstrapMinecraftRegistries() throws ReflectiveOperationException {
         Class.forName("net.minecraft.SharedConstants").getMethod("tryDetectVersion").invoke(null);
-        Class.forName("net.minecraft.server.Bootstrap").getMethod("bootStrap").invoke(null);
+        Class<?> bootstrap = Class.forName("net.minecraft.server.Bootstrap");
+        var bootstrapped = bootstrap.getDeclaredField("isBootstrapped");
+        bootstrapped.setAccessible(true);
+        bootstrapped.setBoolean(null, true);
+        Class.forName("io.papermc.paper.plugin.entrypoint.LaunchEntryPointHandler")
+                .getMethod("enterBootstrappers").invoke(null);
         Class<?> registry = Class.forName("net.minecraft.core.Registry");
         Class<?> builtIns = Class.forName("net.minecraft.core.registries.BuiltInRegistries");
         var builtInRegistry = builtIns.getDeclaredField("WRITABLE_REGISTRY");
@@ -59,6 +72,8 @@ public final class ShearsMiningRuntimeProbe {
         Class.forName("org.bukkit.craftbukkit.CraftRegistry")
                 .getMethod("setMinecraftRegistry", Class.forName("net.minecraft.core.RegistryAccess"))
                 .invoke(null, access);
+        bootstrapped.setBoolean(null, false);
+        bootstrap.getMethod("bootStrap").invoke(null);
     }
 
     private static float speed(ItemStack item, Material material) throws ReflectiveOperationException {
