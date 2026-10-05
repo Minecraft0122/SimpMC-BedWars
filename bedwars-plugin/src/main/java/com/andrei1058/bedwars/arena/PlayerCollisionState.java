@@ -11,14 +11,13 @@ public final class PlayerCollisionState {
     }
 
     public static boolean shouldCollide(@NotNull GameState state, boolean spectator, boolean respawning) {
-        // Active players must stay collidable so arrows and other projectiles
-        // can hit them. Every non-active lifecycle state is disabled at the
-        // entity level so the server and client cannot disagree before play.
-        return state == GameState.playing && !spectator && !respawning;
+        // Paper 1.21.11 documents setCollidable as unsuitable for players.
+        // Player pushing is controlled by Bukkit scoreboard Team rules.
+        return true;
     }
 
     public static void apply(@NotNull Player player, @NotNull GameState state,
                       boolean spectator, boolean respawning) {
-        player.setCollidable(shouldCollide(state, spectator, respawning));
+        // Paper 1.21.11 requires scoreboard Team collision rules for players.
     }
 }

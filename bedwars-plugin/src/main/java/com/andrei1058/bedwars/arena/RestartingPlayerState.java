@@ -100,7 +100,6 @@ public final class RestartingPlayerState {
             }
         }
         // Per-viewer TAB teams do not participate in server-side physics.
-        player.setCollidable(false);
     }
 
     private static void clearRespawnSideEffects(IArena arena, Player player) {

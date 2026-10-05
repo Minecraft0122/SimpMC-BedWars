@@ -90,6 +90,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -152,6 +154,9 @@ public class Arena implements IArena {
      * Players in respawn session
      */
     private ConcurrentHashMap<Player, Integer> respawnSessions = new ConcurrentHashMap<>();
+
+    private final Map<String, Team> collisionTeams = new HashMap<>();
+    private Team collisionInactiveTeam;
 
     /**
      * Invisibility for armor when you drink an invisibility potion
@@ -522,6 +527,7 @@ public class Arena implements IArena {
             players.add(p);
             setArenaByPlayer(p, this);
             PlayerCollisionState.apply(p, status, false, false);
+            updateCollisionTeam(p);
             InvisibilityManager.synchronizeViewer(this, p);
             LobbyAnnouncements.playerEnteredArena(p);
             PlayerMotion.disableFlight(p);
@@ -625,6 +631,7 @@ public class Arena implements IArena {
             InvisibilityManager.remove(this, p);
             spectators.add(p);
             players.remove(p);
+            updateCollisionTeam(p);
             // Remove the player entity and PlayerInfo entry as soon as the
             // final-death/late-join transition becomes authoritative.
             for (Player active : players) SpectatorVisibility.hideIfSpectator(this, active, p);
@@ -642,7 +649,6 @@ public class Arena implements IArena {
 
             SidebarService sidebarService = SidebarService.getInstance();
             if (!playerBefore) sidebarService.giveSidebar(p, this, false);
-            p.setCollidable(false);
             if (!playerBefore) {
                 if (staffTeleport == null) {
                     TeleportManager.teleportC(p, getSpectatorLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
@@ -781,9 +787,7 @@ public class Arena implements IArena {
 
         InvisibilityManager.remove(this, p);
         if (wasRespawning) InvisibilityManager.showRespawningPlayer(this, p);
-        // Do not re-enable pushing while the player is still in the arena.
-        // The destination world determines whether default collision returns.
-        p.setCollidable(false);
+        removeFromCollisionTeams(p);
         if (status == GameState.playing) {
             for (ITeam t : getTeams()) {
                 if (t.isMember(p)) {
@@ -818,7 +822,6 @@ public class Arena implements IArena {
         //players.remove must be under call event in order to check if the player is a spectator or not
         players.remove(p);
         removeArenaByPlayer(p, this);
-        p.setCollidable(true);
 
         for (PotionEffect pf : p.getActivePotionEffects()) {
             p.removePotionEffect(pf.getType());
@@ -1029,7 +1032,7 @@ public class Arena implements IArena {
         p.getInventory().clear();
         p.getInventory().setArmorContents(null);
         InvisibilityManager.remove(this, p);
-        p.setCollidable(true);
+        removeFromCollisionTeams(p);
         Arena.afkCheck.remove(p.getUniqueId());
         BedWars.getAPI().getAFKUtil().setPlayerAFK(p, false);
 
@@ -1797,7 +1800,6 @@ public class Arena implements IArena {
             return;
         }
         if (!isCurrentLobbyPlayer(p)) return;
-        p.setCollidable(false);
         p.setGameMode(GameMode.ADVENTURE);
         PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
@@ -1969,13 +1971,9 @@ public class Arena implements IArena {
         IArena arena = getArenaByPlayer(player);
         if (arena != null) {
             PlayerCollisionState.apply(player, arena.getStatus(), arena.isSpectator(player), arena.isReSpawning(player));
+            if (arena instanceof Arena concreteArena) concreteArena.updateCollisionTeam(player);
             return;
         }
-        String worldName = player.getWorld() == null ? null : player.getWorld().getName();
-        // A removed player may still be waiting in the arena world for an
-        // asynchronous teleport. Keep pushing disabled until the move completes.
-        player.setCollidable(!isCurrentLobbyPlayer(player)
-                && (worldName == null || getArenaByIdentifier(worldName) == null));
     }
 
     private static void removeBedWarsCommandItems(Player player) {
@@ -2713,13 +2711,13 @@ public class Arena implements IArena {
         playersToRestore.addAll(spectators);
         playersToRestore.addAll(respawnSessions.keySet());
         playersToRestore.addAll(showTime.keySet());
+        clearCollisionTeams();
         for (Player player : playersToRestore) {
             boolean respawning = respawnSessions.containsKey(player);
             if (respawning || showTime.containsKey(player)) {
                 InvisibilityManager.remove(this, player);
             }
             if (respawning) InvisibilityManager.showRespawningPlayer(this, player);
-            player.setCollidable(true);
         }
         for (ITeam bwt : new ArrayList<>(teams)) {
             bwt.destroyData();
@@ -2849,12 +2847,12 @@ public class Arena implements IArena {
                 PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
                 PlayerCollisionState.apply(player, status, false, true);
+                updateCollisionTeam(player);
                 SidebarService.getInstance().handleRespawnState(this, player);
                 InvisibilityManager.hideRespawningPlayer(this, player);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
                     if (!player.isOnline() || !respawnSessions.containsKey(player)) return;
                     PlayerMotion.enableFlight(player);
-                    player.setCollidable(false);
                     InvisibilityManager.synchronizePlayerEquipment(this, player);
                     InvisibilityManager.synchronizeViewer(this, player);
                 }, 10L);
@@ -2870,10 +2868,72 @@ public class Arena implements IArena {
     private void applyPlayerCollisionState() {
         for (Player player : players) {
             PlayerCollisionState.apply(player, status, false, respawnSessions.containsKey(player));
+            updateCollisionTeam(player);
         }
         for (Player spectator : spectators) {
             PlayerCollisionState.apply(spectator, status, true, false);
+            updateCollisionTeam(spectator);
         }
+    }
+
+    private void updateCollisionTeam(Player player) {
+        removeFromCollisionTeams(player);
+        Team team = status == GameState.playing && players.contains(player)
+                && !respawnSessions.containsKey(player)
+                ? collisionTeam(getTeam(player))
+                : inactiveCollisionTeam();
+        if (team != null) team.addEntry(player.getName());
+    }
+
+    public void refreshCollisionTeam(Player player) {
+        updateCollisionTeam(player);
+    }
+
+    private Team collisionTeam(ITeam gameTeam) {
+        if (gameTeam == null) return inactiveCollisionTeam();
+        return collisionTeams.computeIfAbsent(gameTeam.getName(), ignored -> {
+            Team team = getOrCreateCollisionTeam(collisionTeamName("t", gameTeam.getName()));
+            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
+            return team;
+        });
+    }
+
+    private Team inactiveCollisionTeam() {
+        if (collisionInactiveTeam == null) {
+            collisionInactiveTeam = getOrCreateCollisionTeam(collisionTeamName("n", "inactive"));
+            collisionInactiveTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+        }
+        return collisionInactiveTeam;
+    }
+
+    private Team getOrCreateCollisionTeam(String name) {
+        Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+        Team existing = scoreboard.getTeam(name);
+        return existing == null ? scoreboard.registerNewTeam(name) : existing;
+    }
+
+    private String collisionTeamName(String kind, String suffix) {
+        int arenaHash = Objects.hash(arenaName, worldName);
+        int suffixHash = suffix.toLowerCase(Locale.ROOT).hashCode();
+        String name = "bw" + kind + Integer.toUnsignedString(arenaHash, 36)
+                + Integer.toUnsignedString(suffixHash, 36);
+        return name.substring(0, Math.min(16, name.length()));
+    }
+
+    private void removeFromCollisionTeams(Player player) {
+        for (Team team : collisionTeams.values()) team.removeEntry(player.getName());
+        if (collisionInactiveTeam != null) collisionInactiveTeam.removeEntry(player.getName());
+    }
+
+    private void clearCollisionTeams() {
+        for (Team team : collisionTeams.values()) {
+            team.unregister();
+        }
+        if (collisionInactiveTeam != null) {
+            collisionInactiveTeam.unregister();
+        }
+        collisionTeams.clear();
+        collisionInactiveTeam = null;
     }
 
     /**

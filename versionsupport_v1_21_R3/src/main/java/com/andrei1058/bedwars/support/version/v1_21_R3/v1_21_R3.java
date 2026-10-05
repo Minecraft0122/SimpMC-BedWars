@@ -423,7 +423,7 @@ public class v1_21_R3 extends VersionSupport {
 
     @Override
     public void setCollide(Player p, IArena arena, boolean value) {
-        p.setCollidable(value);
+        // Paper 1.21.11 requires scoreboard Team rules for player collision.
     }
 
     @Override

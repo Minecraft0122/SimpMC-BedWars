@@ -415,6 +415,7 @@ public class BedWarsTeam implements ITeam {
             p.setCanPickupItems(true);
         }));
         SidebarService.getInstance().handleRespawnState(getArena(), p);
+        getArena().refreshCollisionTeam(p);
         PlayerCollisionState.apply(p, getArena().getStatus(), false, false);
         p.setHealth(20);
 
