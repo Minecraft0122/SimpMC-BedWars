@@ -547,8 +547,8 @@ public class BwTabList {
     static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
                                                        boolean spectator,
                                                        boolean invisible) {
-        // Match the original BW1058 TAB rule: active players use their own row
-        // with FOR_OTHER_TEAMS; all non-playing rows use NEVER.
+        // Preserve the original BW1058 TAB packets. These per-viewer teams do
+        // not control server physics; Arena owns that through setCollidable.
         return status == GameState.playing && !spectator
                 ? PlayerTab.PushingRule.PUSH_OTHER_TEAMS
                 : PlayerTab.PushingRule.NEVER;

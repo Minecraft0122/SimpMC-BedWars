@@ -717,6 +717,8 @@ public class Sidebar {
         if (team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
             team.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
         }
+        // This is a per-viewer display scoreboard, not the world's scoreboard
+        // used by the server-side entity physics simulation.
         Team.OptionStatus collision = pushOtherTeams
                 ? Team.OptionStatus.FOR_OTHER_TEAMS
                 : Team.OptionStatus.NEVER;

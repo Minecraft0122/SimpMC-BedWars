@@ -93,14 +93,14 @@ public final class RestartingPlayerState {
         player.setCanPickupItems(true);
         if (spectator) {
             PlayerMotion.enableFlight(player);
-            player.setCollidable(false);
         } else {
             PlayerMotion.disableFlight(player);
-            player.setCollidable(true);
             if (restoreRespawnSideEffects || arena.getShowTime().containsKey(player)) {
                 respawnSideEffectCleaner.accept(arena, player);
             }
         }
+        // Per-viewer TAB teams do not participate in server-side physics.
+        player.setCollidable(false);
     }
 
     private static void clearRespawnSideEffects(IArena arena, Player player) {

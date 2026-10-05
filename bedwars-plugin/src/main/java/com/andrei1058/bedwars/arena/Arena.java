@@ -521,6 +521,7 @@ public class Arena implements IArena {
             p.closeInventory();
             players.add(p);
             setArenaByPlayer(p, this);
+            PlayerCollisionState.apply(p, status, false, false);
             InvisibilityManager.synchronizeViewer(this, p);
             LobbyAnnouncements.playerEnteredArena(p);
             PlayerMotion.disableFlight(p);
@@ -1140,6 +1141,7 @@ public class Arena implements IArena {
             AdventureText.send(on, getMsg(on, Messages.COMMAND_REJOIN_PLAYER_RECONNECTED).replace("{playername}", p.getName()).replace("{player}", AdventureText.displayName(p)).replace("{on}", String.valueOf(getPlayers().size())).replace("{max}", String.valueOf(getMaxPlayers())));
         }
         setArenaByPlayer(p, this);
+        PlayerCollisionState.apply(p, status, false, true);
         /* save player inventory etc */
         if (BedWars.getServerType() != ServerType.BUNGEE) {
             // no need to backup inventory because it's empty
@@ -1579,6 +1581,7 @@ public class Arena implements IArena {
             }
         }
         this.status = status;
+        applyPlayerCollisionState();
     }
 
     /**
@@ -1600,6 +1603,7 @@ public class Arena implements IArena {
         if (status == GameState.restarting) {
             RestartingPlayerState.prepare(this);
         }
+        applyPlayerCollisionState();
         Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, oldStatus, status));
         refreshSigns();
         if (status == GameState.playing) {
@@ -1788,6 +1792,7 @@ public class Arena implements IArena {
             return;
         }
         if (!isCurrentLobbyPlayer(p)) return;
+        p.setCollidable(false);
         p.setGameMode(GameMode.ADVENTURE);
         PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
@@ -2824,6 +2829,7 @@ public class Arena implements IArena {
                 // location (team home for void deaths, death position otherwise).
                 PlayerMotion.enableFlight(player);
                 respawnSessions.put(player, seconds);
+                PlayerCollisionState.apply(player, status, false, true);
                 SidebarService.getInstance().handleRespawnState(this, player);
                 InvisibilityManager.hideRespawningPlayer(this, player);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
@@ -2840,6 +2846,15 @@ public class Arena implements IArena {
             return true;
         }
         return false;
+    }
+
+    private void applyPlayerCollisionState() {
+        for (Player player : players) {
+            PlayerCollisionState.apply(player, status, false, respawnSessions.containsKey(player));
+        }
+        for (Player spectator : spectators) {
+            PlayerCollisionState.apply(spectator, status, true, false);
+        }
     }
 
     /**

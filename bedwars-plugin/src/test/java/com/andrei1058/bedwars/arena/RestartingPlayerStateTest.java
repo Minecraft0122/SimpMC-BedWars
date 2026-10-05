@@ -88,7 +88,7 @@ class RestartingPlayerStateTest {
         assertTrue(state.canPickupItems);
         assertFalse(state.allowFlight);
         assertFalse(state.flying);
-        assertEquals(Boolean.TRUE, state.collidable);
+        assertEquals(Boolean.FALSE, state.collidable);
         assertTrue(state.invisibilityRemoved);
     }
 
