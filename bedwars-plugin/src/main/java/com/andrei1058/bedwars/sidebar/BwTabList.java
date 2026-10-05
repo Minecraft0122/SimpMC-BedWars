@@ -29,6 +29,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.PlayerCollisionState;
 import com.andrei1058.spigot.sidebar.PlayerTab;
 import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
@@ -270,7 +271,7 @@ public class BwTabList {
             }
             ChatColor fallbackColor = team == null ? null : getPlayerListColor(team);
             PlayerTab t = handle.playerTabCreate(
-                    playerTabId, player, prefix, suffix, collisionPushingRule(status, false, player),
+                    playerTabId, player, prefix, suffix, collisionPushingRule(status, false, arena.isReSpawning(player)),
                     this.sidebar.getPlaceholders(player), fallbackColor == null ? ChatColor.WHITE : fallbackColor,
                     PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL
             );
@@ -290,7 +291,7 @@ public class BwTabList {
 
         PlayerTab teamTab = handle.playerTabCreate(
                 playerTabId,
-                player, prefix, suffix, collisionPushingRule(status, false, player),
+                player, prefix, suffix, collisionPushingRule(status, false, arena.isReSpawning(player)),
                 this.sidebar.getPlaceholders(player), fallbackColor == null ? ChatColor.WHITE : fallbackColor,
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
@@ -362,7 +363,7 @@ public class BwTabList {
 
         PlayerTab tab = handle.playerTabCreate(
                 player.getUniqueId().toString(), player, new SidebarLine(), new SidebarLine(),
-                collisionPushingRule(sidebar.getArena().getStatus(), spectatorRow, player),
+                collisionPushingRule(arena.getStatus(), spectatorRow, arena.isReSpawning(player)),
                 sidebar.getPlaceholders(player),
                 fallbackColor == null ? ChatColor.WHITE : fallbackColor,
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
@@ -538,18 +539,10 @@ public class BwTabList {
         if (spectator) tab.setItalic(true);
     }
 
-    private static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
-                                                               boolean spectator,
-                                                               @NotNull Player player) {
-        return collisionPushingRule(status, spectator, player.hasPotionEffect(PotionEffectType.INVISIBILITY));
-    }
-
     static PlayerTab.PushingRule collisionPushingRule(@NotNull GameState status,
                                                        boolean spectator,
-                                                       boolean invisible) {
-        // Preserve the original BW1058 TAB packets. These per-viewer teams do
-        // not control server physics; Arena owns that through setCollidable.
-        return status == GameState.playing && !spectator
+                                                       boolean respawning) {
+        return PlayerCollisionState.shouldCollide(status, spectator, respawning)
                 ? PlayerTab.PushingRule.PUSH_OTHER_TEAMS
                 : PlayerTab.PushingRule.NEVER;
     }

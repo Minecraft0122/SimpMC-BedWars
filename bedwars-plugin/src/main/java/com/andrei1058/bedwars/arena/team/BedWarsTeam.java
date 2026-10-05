@@ -38,6 +38,7 @@ import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Cuboid;
 import com.andrei1058.bedwars.api.upgrades.EnemyBaseEnterTrap;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.PlayerCollisionState;
 import com.andrei1058.bedwars.arena.InvisibilityManager;
 import com.andrei1058.bedwars.arena.NpcFacing;
 import com.andrei1058.bedwars.arena.OreGenerator;
@@ -183,9 +184,7 @@ public class BedWarsTeam implements ITeam {
         SafeSpawnResolver.teleport(p, spawn);
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
-        // Keep the entity collidable so projectiles can still resolve a hit.
-        // Teammate pushing is disabled by the playing scoreboard team below.
-        p.setCollidable(true);
+        PlayerCollisionState.apply(p, getArena().getStatus(), false, false);
         sendDefaultInventory(p, true);
         Bukkit.getPluginManager().callEvent(new PlayerFirstSpawnEvent(p, getArena(), this));
     }
@@ -396,7 +395,6 @@ public class BedWarsTeam implements ITeam {
         p.setCanPickupItems(false);
         java.util.concurrent.CompletableFuture<Boolean> spawnTeleport =
                 SafeSpawnResolver.teleportResult(p, getSpawn());
-        p.setCollidable(true);
         p.setVelocity(new Vector(0, 0, 0));
         p.setAllowFlight(false);
         p.setFlying(false);
@@ -417,6 +415,8 @@ public class BedWarsTeam implements ITeam {
             p.setCanPickupItems(true);
         }));
         SidebarService.getInstance().handleRespawnState(getArena(), p);
+        // Refresh the viewer-specific TAB rule before enabling server physics.
+        PlayerCollisionState.apply(p, getArena().getStatus(), false, false);
         p.setHealth(20);
 
         nms.sendTitle(p, AdventureText.section(getMsg(p, Messages.PLAYER_DIE_RESPAWNED_TITLE)), Component.empty(), 0, 20, 10);

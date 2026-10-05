@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>5.11.1</version>
+    <version>5.11.2</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -163,7 +163,7 @@ sidebars.giveSidebar(player, arenaSnapshot, false);
 
 `giveSidebar` 的竞技场参数是调用时快照；实现会在应用前与实时玩家竞技场注册表核对，避免延迟任务把新竞技场面板覆盖成大厅面板。附属插件不应在竞技场内持续调用 `Player#setScoreboard` 与 BedWars 争抢同一面板；若只需扩展内容，应监听 `PlayerSidebarInitEvent` 操作公开的 `ISidebar`。SimpMC-BedWars 离开上下文时会恢复接管前最后观察到的外部 scoreboard。
 
-TAB 按查看者发送完整 PlayerInfo 显示名，不修改目标玩家的全局 `playerListName`；私有 scoreboard Team 维护头顶名牌与队伍元数据，但不会参与服务端物理碰撞判定。碰撞由插件按大厅、等待、倒计时、正式游戏、复活、旁观、结算和离场生命周期设置玩家实体状态。内置队伍行显示为 `[{队伍名字}] {玩家名字}`，方括号为灰色，其余沿用队伍颜色。附属插件应避免向同一竞技场查看者持续覆盖显示名、列表顺序、显示状态或玩家碰撞状态。
+TAB 按查看者发送完整 PlayerInfo 显示名，不修改目标玩家的全局 `playerListName`；私有 scoreboard Team 维护头顶名牌与队伍元数据，但不会参与服务端物理碰撞判定。客户端 TAB 碰撞规则与服务端实体碰撞由同一个生命周期状态计算，复活完成和正式开局时先刷新客户端规则，再开启服务端碰撞；大厅、等待、倒计时、复活、旁观、结算和离场均保持无碰撞。内置队伍行显示为 `[{队伍名字}] {玩家名字}`，方括号为灰色，其余沿用队伍颜色。附属插件应避免向同一竞技场查看者持续覆盖显示名、列表顺序、显示状态或玩家碰撞状态。
 
 5.9.0 起，最终淘汰和开局后加入的旁观者统一排在参赛玩家之后。活动玩家看不到同场旁观者行，旁观者仍能查看完整名单。`Sidebar#synchronizeHiddenPlayerList(viewer, targets)` 通过 `UPDATE_LISTED` 维护单个查看者的隐藏集合，不删除玩家档案、不修改真实游戏模式；清空集合或释放 Sidebar 时恢复服务器当前可见且允许列出的玩家。Paper 重建条目后可调用 `replayHiddenPlayerList(viewer, target)` 重放该目标的隐藏状态，离场时调用 `removeHiddenPlayerListTarget(viewer, uuid)` 清理对应状态。
 

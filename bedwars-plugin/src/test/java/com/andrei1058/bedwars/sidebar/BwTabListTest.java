@@ -82,14 +82,14 @@ class BwTabListTest {
     }
 
     @Test
-    void collisionRulesFollowTheOriginalBw1058State() {
+    void collisionRulesFollowTheSharedLifecycleState() {
         assertEquals(PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
                 BwTabList.collisionPushingRule(GameState.playing, false, false));
         assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(GameState.waiting, false, false));
         assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(GameState.starting, false, false));
-        assertEquals(PlayerTab.PushingRule.PUSH_OTHER_TEAMS,
+        assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(GameState.playing, false, true));
         assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(GameState.playing, true, false));

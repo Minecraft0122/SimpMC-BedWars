@@ -1603,7 +1603,12 @@ public class Arena implements IArena {
         if (status == GameState.restarting) {
             RestartingPlayerState.prepare(this);
         }
-        applyPlayerCollisionState();
+        // Disable immediately when leaving play. When entering play, let the
+        // state-change listeners refresh private TAB teams first, then enable
+        // server physics below so client and server observe the same state.
+        if (status != GameState.playing) {
+            applyPlayerCollisionState();
+        }
         Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, oldStatus, status));
         refreshSigns();
         if (status == GameState.playing) {
@@ -1649,6 +1654,10 @@ public class Arena implements IArena {
         players.forEach(c -> SidebarService.getInstance().giveSidebar(c, this, false));
 
         spectators.forEach(c -> SidebarService.getInstance().giveSidebar(c, this, false));
+
+        if (status == GameState.playing) {
+            applyPlayerCollisionState();
+        }
 
         if (status == GameState.starting) {
             startingTask = new GameStartingTask(this);
