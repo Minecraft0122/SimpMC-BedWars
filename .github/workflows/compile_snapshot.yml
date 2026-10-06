@@ -87,8 +87,8 @@ jobs:
           cache: maven
 
       - name: 覆盖编译 Paper 26.2 API 与运行探针
-        # 必须 clean；只切换依赖属性时 Maven 增量编译不会重新编译源码。
-        run: mvn -B -ntp clean test-compile -Dpaper.api.version=26.2.build.112-stable -DskipTests -s ci_settings.xml
+        # 必须 clean；Java 25 下使用独立 javac，避免 Plexus 内嵌编译器遍历诊断时的并发修改异常。
+        run: mvn -B -ntp clean test-compile -Dpaper.api.version=26.2.build.112-stable -Dmaven.compiler.fork=true -DskipTests -s ci_settings.xml
 
       - name: 验证 Paper 26.2 运行契约
         shell: bash
