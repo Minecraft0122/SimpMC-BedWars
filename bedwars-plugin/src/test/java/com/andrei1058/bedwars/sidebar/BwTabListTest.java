@@ -4,6 +4,7 @@ import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.arena.team.TeamColor;
+import com.andrei1058.bedwars.arena.PlayerCollisionState;
 import com.andrei1058.spigot.sidebar.PlayerTab;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -95,6 +96,19 @@ class BwTabListTest {
                 BwTabList.collisionPushingRule(GameState.playing, true, false));
         assertEquals(PlayerTab.PushingRule.NEVER,
                 BwTabList.collisionPushingRule(GameState.restarting, false, false));
+    }
+
+    @Test
+    void clientCollisionGroupMatchesTheServerTeamAcrossRows() {
+        ITeam red = team("red", TeamColor.RED);
+        Player first = player("First");
+        Player second = player("Second");
+        IArena arena = arena(List.of(red), List.of(first, second), List.of(),
+                Map.of(first.getUniqueId(), red, second.getUniqueId(), red), Map.of());
+
+        assertEquals(BwTabList.collisionGroup(arena, first), BwTabList.collisionGroup(arena, second));
+        assertEquals(PlayerCollisionState.inactiveCollisionGroupName(),
+                BwTabList.collisionGroup(arena, player("Unknown")));
     }
 
     @Test
@@ -354,6 +368,7 @@ class BwTabListTest {
                 new Class<?>[]{IArena.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getArenaName" -> name;
+                    case "getWorldName" -> name + "-world";
                     case "getTeams" -> teams;
                     case "getPlayers" -> players;
                     case "getSpectators" -> spectators;
@@ -362,6 +377,7 @@ class BwTabListTest {
                     case "getTeam" -> currentTeams.get(((Player) args[0]).getUniqueId());
                     case "getExTeam" -> formerTeams.get((UUID) args[0]);
                     case "getStatus" -> state;
+                    case "isReSpawning" -> false;
                     default -> throw new UnsupportedOperationException(method.getName());
                 }
         );

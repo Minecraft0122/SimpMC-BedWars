@@ -37,8 +37,9 @@ public class PlayerTab {
     private final SidebarLine suffix;
     private final PushingRule pushingRule;
     /**
-     * Retained for binary/source compatibility with 5.10.0 callers. BW1058
-     * does not use shared collision groups, so Sidebar ignores this value.
+     * Optional shared collision identity. Rows with the same value are put in
+     * one private scoreboard team so the client follows the server team
+     * relationship. A null value retains the legacy per-row identity.
      */
     private final String collisionGroup;
     private final ConcurrentLinkedQueue<PlaceholderProvider> placeholders = new ConcurrentLinkedQueue<>();
@@ -78,10 +79,7 @@ public class PlayerTab {
                 nameTagVisibility, playerListMode, null);
     }
 
-    /**
-     * 创建 TAB 行。末尾参数仅保留历史调用兼容性；渲染器始终为每行创建独立队伍，
-     * 不再使用此参数合并碰撞队伍。
-     */
+    /** 创建 TAB 行；末尾参数用于为同一游戏队伍共享客户端碰撞队伍。 */
     public PlayerTab(@NotNull String identifier, @NotNull Player player, @NotNull SidebarLine prefix,
                      @NotNull SidebarLine suffix, @NotNull PushingRule pushingRule,
                      @NotNull Collection<PlaceholderProvider> placeholders, @NotNull ChatColor color,

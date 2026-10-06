@@ -29,6 +29,7 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.PlayerCollisionState;
 import com.andrei1058.spigot.sidebar.PlayerTab;
 import com.andrei1058.spigot.sidebar.Sidebar;
 import com.andrei1058.spigot.sidebar.SidebarLine;
@@ -73,10 +74,6 @@ public class BwTabList {
         requestPlayerListOrderUpdate();
         synchronizePlayerListVisibility(null, null);
         boolean fullFormatting = !this.isTabFormattingDisabled();
-        if (!fullFormatting && sidebar.getArena() == null) {
-            clearDeployedTabs();
-            return;
-        }
 
         LinkedHashMap<UUID, Player> desiredPlayers = new LinkedHashMap<>();
         if (null == sidebar.getArena()) {
@@ -93,7 +90,7 @@ public class BwTabList {
             }
             // sometimes due to timing issues player is not listed yet in lobby players
             desiredPlayers.put(sidebar.getPlayer().getUniqueId(), sidebar.getPlayer());
-            synchronizeTabs(desiredPlayers, true);
+            synchronizeTabs(desiredPlayers, fullFormatting);
             return;
         }
 
@@ -227,7 +224,9 @@ public class BwTabList {
 
             PlayerTab tab = handle.playerTabCreate(
                     playerTabId, player, prefix, suffix, PlayerTab.PushingRule.NEVER,
-                    this.sidebar.getPlaceholders(player)
+                    this.sidebar.getPlaceholders(player), ChatColor.WHITE,
+                    PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                    PlayerCollisionState.inactiveCollisionGroupName()
             );
             deployTab(tab);
             return;
@@ -272,7 +271,8 @@ public class BwTabList {
             PlayerTab t = handle.playerTabCreate(
                     playerTabId, player, prefix, suffix, collisionPushingRule(status, false, arena.isReSpawning(player)),
                     this.sidebar.getPlaceholders(player), fallbackColor == null ? ChatColor.WHITE : fallbackColor,
-                    PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL
+                    PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                    collisionGroup(arena, player)
             );
             deployTab(t);
             return;
@@ -295,7 +295,8 @@ public class BwTabList {
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
                         : PlayerTab.NameTagVisibility.ALWAYS,
-                PlayerTab.PlayerListMode.ACTUAL
+                PlayerTab.PlayerListMode.ACTUAL,
+                collisionGroup(arena, player)
         );
         teamTab.setItalic(arena.isReSpawning(player));
         deployTab(teamTab);
@@ -310,7 +311,8 @@ public class BwTabList {
                 PlayerTab.PushingRule.NEVER,
                 sidebar.getPlaceholders(player), fallbackColor,
                 PlayerTab.NameTagVisibility.NEVER,
-                PlayerTab.PlayerListMode.SPECTATOR
+                PlayerTab.PlayerListMode.SPECTATOR,
+                PlayerCollisionState.inactiveCollisionGroupName()
         );
         deployTab(tab);
     }
@@ -335,8 +337,20 @@ public class BwTabList {
     private void giveUpdateTeamColor(@NotNull Player player, @Nullable Boolean spectatorOverride) {
         IArena arena = sidebar.getArena();
         Sidebar handle = sidebar.getHandle();
-        if (arena == null || handle == null) {
+        if (handle == null) {
             removeDeployedTab(player.getUniqueId());
+            return;
+        }
+        if (arena == null) {
+            PlayerTab lobbyTab = handle.playerTabCreate(
+                    player.getUniqueId().toString(), player,
+                    getPlayerRowText(Messages.FORMATTING_SB_TAB_LOBBY_PREFIX, player, null),
+                    getPlayerRowText(Messages.FORMATTING_SB_TAB_LOBBY_SUFFIX, player, null),
+                    PlayerTab.PushingRule.NEVER, sidebar.getPlaceholders(player), ChatColor.WHITE,
+                    PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                    PlayerCollisionState.inactiveCollisionGroupName()
+            );
+            deployTab(lobbyTab);
             return;
         }
 
@@ -350,6 +364,20 @@ public class BwTabList {
                 ? PlayerTab.PlayerListMode.SPECTATOR
                 : resolveMinimalPlayerListMode(team, false);
         if (playerListMode == null) {
+            // Pre-game players may not have a real team yet. Keep a minimal
+            // row so the private scoreboard still carries the shared waiting
+            // collision rule even when decorative TAB formatting is disabled.
+            if (!spectator && arena.getStatus() != GameState.playing) {
+                PlayerTab waitingTab = handle.playerTabCreate(
+                        player.getUniqueId().toString(), player,
+                        new SidebarLine(), new SidebarLine(), PlayerTab.PushingRule.NEVER,
+                        sidebar.getPlaceholders(player), ChatColor.WHITE,
+                        PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL,
+                        PlayerCollisionState.inactiveCollisionGroupName()
+                );
+                deployTab(waitingTab);
+                return;
+            }
             removeDeployedTab(player.getUniqueId());
             return;
         }
@@ -368,7 +396,8 @@ public class BwTabList {
                 player.hasPotionEffect(PotionEffectType.INVISIBILITY)
                         ? PlayerTab.NameTagVisibility.NEVER
                         : PlayerTab.NameTagVisibility.ALWAYS,
-                playerListMode
+                playerListMode,
+                collisionGroup(arena, player)
         );
         tab.setItalic(!spectator && arena.isReSpawning(player));
         deployTab(tab);
@@ -384,6 +413,18 @@ public class BwTabList {
         ITeam currentTeam = arena.getTeam(player);
         if (currentTeam != null) return currentTeam;
         return arena.getExTeam(player.getUniqueId());
+    }
+
+    /** The client scoreboard must use the same team identity as the server. */
+    static String collisionGroup(@Nullable IArena arena, @NotNull Player player) {
+        if (arena == null || arena.getStatus() != GameState.playing
+                || arena.isSpectator(player) || arena.isReSpawning(player)) {
+            return PlayerCollisionState.inactiveCollisionGroupName();
+        }
+        ITeam team = resolvePlayerListTeam(arena, player);
+        return team == null
+                ? PlayerCollisionState.inactiveCollisionGroupName()
+                : PlayerCollisionState.collisionGroupName(arena, team);
     }
 
     private void synchronizeTabs(@NotNull Map<UUID, Player> desiredPlayers, boolean fullFormatting) {

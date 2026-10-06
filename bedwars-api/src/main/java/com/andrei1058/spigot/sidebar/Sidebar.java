@@ -58,6 +58,7 @@ public class Sidebar {
     private final Map<UUID, Scoreboard> previousScoreboards = new HashMap<>();
     private final Map<String, PlayerTab> tabs = new HashMap<>();
     private final Map<String, String> tabTeamNames = new HashMap<>();
+    private final Map<String, String> collisionTeamNames = new HashMap<>();
     private int nextTabTeamId;
     private SidebarLine healthLine = new SidebarLine();
     private boolean healthEnabled = false;
@@ -298,6 +299,7 @@ public class Sidebar {
         tabs.clear();
         scoreboards.values().forEach(Sidebar::removeTabTeams);
         tabTeamNames.clear();
+        collisionTeamNames.clear();
         nextTabTeamId = 0;
     }
 
@@ -465,13 +467,14 @@ public class Sidebar {
         }
         detachTab(tab);
         String teamName = tabTeamNames.remove(identifier);
-        if (teamName != null) {
+        if (teamName != null && !tabTeamNames.containsValue(teamName)) {
             scoreboards.values().forEach(scoreboard -> {
                 Team team = scoreboard.getTeam(teamName);
                 if (team != null) {
                     team.unregister();
                 }
             });
+            collisionTeamNames.values().removeIf(teamName::equals);
         }
         restoreOrRenderRemainingTab(tab);
     }
@@ -672,6 +675,17 @@ public class Sidebar {
 
     private void applyTabToAll(@NotNull PlayerTab tab, boolean forceDisplayName) {
         RenderedPlayerTab renderedTab = renderPlayerTab(tab);
+        String collisionGroup = tab.getCollisionGroup();
+        String newTeamName = collisionGroup == null || collisionGroup.isBlank()
+                ? teamName(tab.getIdentifier())
+                : collisionTeamName(collisionGroup);
+        String previousTeamName = tabTeamNames.put(tab.getIdentifier(), newTeamName);
+        if (previousTeamName != null && !previousTeamName.equals(newTeamName)) {
+            scoreboards.values().forEach(scoreboard -> {
+                Team previousTeam = scoreboard.getTeam(previousTeamName);
+                if (previousTeam != null) previousTeam.removeEntry(tab.getPlayer().getName());
+            });
+        }
         List<Player> detachedViewers = new ArrayList<>();
         scoreboards.forEach((viewerId, scoreboard) -> {
             Player viewer = viewers.get(viewerId);
@@ -698,7 +712,15 @@ public class Sidebar {
     private void applyTab(@NotNull Scoreboard scoreboard, @NotNull RenderedPlayerTab renderedTab) {
         PlayerTab tab = renderedTab.tab();
         boolean pushOtherTeams = tab.getPushingRule() == PlayerTab.PushingRule.PUSH_OTHER_TEAMS;
-        String scoreboardTeamName = teamName(tab.getIdentifier());
+        String collisionGroup = tab.getCollisionGroup();
+        String scoreboardTeamName = collisionGroup == null || collisionGroup.isBlank()
+                ? teamName(tab.getIdentifier())
+                : collisionTeamName(collisionGroup);
+        String previousTeamName = tabTeamNames.put(tab.getIdentifier(), scoreboardTeamName);
+        if (previousTeamName != null && !previousTeamName.equals(scoreboardTeamName)) {
+            Team previousTeam = scoreboard.getTeam(previousTeamName);
+            if (previousTeam != null) previousTeam.removeEntry(tab.getPlayer().getName());
+        }
         Team team = scoreboard.getTeam(scoreboardTeamName);
         if (team == null) {
             team = scoreboard.registerNewTeam(scoreboardTeamName);
@@ -1051,6 +1073,11 @@ public class Sidebar {
         // A per-sidebar monotonic id is stable and cannot collide. String.hashCode based names
         // could merge two unrelated players into one scoreboard team and corrupt client state.
         return tabTeamNames.computeIfAbsent(identifier,
+                ignored -> TAB_TEAM_PREFIX + Integer.toString(nextTabTeamId++, Character.MAX_RADIX));
+    }
+
+    private String collisionTeamName(@NotNull String collisionGroup) {
+        return collisionTeamNames.computeIfAbsent(collisionGroup,
                 ignored -> TAB_TEAM_PREFIX + Integer.toString(nextTabTeamId++, Character.MAX_RADIX));
     }
 

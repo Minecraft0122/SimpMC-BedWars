@@ -939,7 +939,7 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
-    void legacyGroupCannotMergeRowsOrOverwriteIndividualFormatting() {
+    void sharedCollisionGroupMergesRowsForClientTeamRelationship() {
         Sidebar sidebar = sidebar();
         Map<String, TeamState> states = new java.util.HashMap<>();
         Map<String, Team> teams = new java.util.HashMap<>();
@@ -963,17 +963,10 @@ class SidebarTabSynchronizationTest {
                     name.equals("Alice") ? PlayerTab.NameTagVisibility.NEVER : PlayerTab.NameTagVisibility.ALWAYS,
                     PlayerTab.PlayerListMode.ACTUAL, "red-team"));
         }
-        assertEquals(2, teams.size());
-        assertTrue(teams.keySet().stream().allMatch(name -> name.startsWith("bw_t_")));
-        for (String name : List.of("Alice", "Bob")) {
-            TeamState state = states.get(sidebar.teamName(name));
-            assertEquals(Set.of(name), state.entries);
-            assertEquals(Component.text(name), state.prefix);
-            assertEquals(Component.text(name + "-suffix"), state.suffix);
-            assertEquals(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision);
-        }
-        assertEquals(Team.OptionStatus.NEVER, states.get(sidebar.teamName("Alice")).visibility);
-        assertEquals(Team.OptionStatus.ALWAYS, states.get(sidebar.teamName("Bob")).visibility);
+        assertEquals(1, teams.size());
+        TeamState state = states.values().iterator().next();
+        assertEquals(Set.of("Alice", "Bob"), state.entries);
+        assertEquals(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision);
     }
 
     private static Sidebar sidebar() {

@@ -1,8 +1,13 @@
 package com.andrei1058.bedwars.arena;
 
 import com.andrei1058.bedwars.api.arena.GameState;
+import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.team.ITeam;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Locale;
+import java.util.Objects;
 
 /** Owns the entity collision flag for BedWars player lifecycle states. */
 public final class PlayerCollisionState {
@@ -16,9 +21,34 @@ public final class PlayerCollisionState {
 
     public static void apply(@NotNull Player player, @NotNull GameState state,
                       boolean spectator, boolean respawning) {
-        // Keep the server-side entity flag in sync with the scoreboard rule. This
-        // prevents anti-cheat plugins from seeing a real collision while the client
-        // is merely prevented from pushing by Team.COLLISION_RULE.
+        // 这里只维护服务器实体生命周期；客户端玩家碰撞仍由 Sidebar 的
+        // scoreboard Team.COLLISION_RULE 决定，不能由这个标志单独替代。
         player.setCollidable(shouldCollide(state, spectator, respawning));
+    }
+
+    /** The shared client/server team used while a player is not active. */
+    @NotNull
+    public static String inactiveCollisionGroupName() {
+        return "bw_waiting";
+    }
+
+    /**
+     * Derive the same bounded team name for the private TAB scoreboard and the
+     * server main scoreboard. A real game team must have one shared identity
+     * for every viewer; using a player UUID here would make teammates collide
+     * on the client while the server treats them as one team.
+     */
+    @NotNull
+    public static String collisionGroupName(@NotNull IArena arena, @NotNull ITeam team) {
+        int arenaHash = Objects.hash(arena.getArenaName(), arena.getWorldName());
+        int suffixHash = team.getName().toLowerCase(Locale.ROOT).hashCode();
+        String name = "bwt" + Integer.toUnsignedString(arenaHash, 36)
+                + Integer.toUnsignedString(suffixHash, 36);
+        return name.substring(0, Math.min(16, name.length()));
+    }
+
+    /** Apply the managed-lobby side of the lifecycle. */
+    public static void applyManagedLobby(@NotNull Player player) {
+        player.setCollidable(false);
     }
 }

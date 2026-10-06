@@ -158,7 +158,7 @@ public class Arena implements IArena {
     private final Map<String, Team> collisionTeams = new HashMap<>();
     private Team collisionInactiveTeam;
     /** Shared by all arenas so waiting players always use one physical no-collision team. */
-    private static final String INACTIVE_COLLISION_TEAM_NAME = "bw_waiting";
+    private static final String INACTIVE_COLLISION_TEAM_NAME = PlayerCollisionState.inactiveCollisionGroupName();
 
     /**
      * Invisibility for armor when you drink an invisibility potion
@@ -634,6 +634,9 @@ public class Arena implements IArena {
             InvisibilityManager.remove(this, p);
             spectators.add(p);
             players.remove(p);
+            // Final-death and direct spectator joins must close the entity
+            // side before the private TAB scoreboard is refreshed.
+            PlayerCollisionState.apply(p, status, true, false);
             updateCollisionTeam(p);
             // Remove the player entity and PlayerInfo entry as soon as the
             // final-death/late-join transition becomes authoritative.
@@ -1152,6 +1155,7 @@ public class Arena implements IArena {
         }
         setArenaByPlayer(p, this);
         PlayerCollisionState.apply(p, status, false, true);
+        updateCollisionTeam(p);
         /* save player inventory etc */
         if (BedWars.getServerType() != ServerType.BUNGEE) {
             // no need to backup inventory because it's empty
@@ -1806,6 +1810,7 @@ public class Arena implements IArena {
             return;
         }
         if (!isCurrentLobbyPlayer(p)) return;
+        PlayerCollisionState.applyManagedLobby(p);
         p.setGameMode(GameMode.ADVENTURE);
         PlayerMotion.disableFlight(p);
         p.setCanPickupItems(true);
@@ -1980,7 +1985,11 @@ public class Arena implements IArena {
             if (arena instanceof Arena concreteArena) concreteArena.updateCollisionTeam(player);
             return;
         }
-        // Do not leak BedWars' no-collision state into the lobby or another plugin.
+        if (LobbyAnnouncements.isLobbyPlayer(player) || LobbyAnnouncements.isProxyLobbyPlayer(player)) {
+            PlayerCollisionState.applyManagedLobby(player);
+            return;
+        }
+        // An unmanaged world is owned by the server/another plugin again.
         player.setCollidable(true);
     }
 
@@ -2891,18 +2900,6 @@ public class Arena implements IArena {
                 ;
         Team team = active ? collisionTeam(getTeam(player)) : inactiveCollisionTeam();
         if (team != null) team.addEntry(player.getName());
-        // TAB uses a private scoreboard for each viewer. Mirror the waiting team
-        // onto that board as well; otherwise the client can still receive a
-        // collision-capable team after Sidebar replaces the main scoreboard.
-        Scoreboard viewerBoard = player.getScoreboard();
-        Team viewerWaiting = viewerBoard.getTeam(INACTIVE_COLLISION_TEAM_NAME);
-        if (!active) {
-            if (viewerWaiting == null) viewerWaiting = viewerBoard.registerNewTeam(INACTIVE_COLLISION_TEAM_NAME);
-            viewerWaiting.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-            viewerWaiting.addEntry(player.getName());
-        } else if (viewerWaiting != null) {
-            viewerWaiting.removeEntry(player.getName());
-        }
     }
 
     public void refreshCollisionTeam(Player player) {
@@ -2912,7 +2909,7 @@ public class Arena implements IArena {
     private Team collisionTeam(ITeam gameTeam) {
         if (gameTeam == null) return inactiveCollisionTeam();
         return collisionTeams.computeIfAbsent(gameTeam.getName(), ignored -> {
-            Team team = getOrCreateCollisionTeam(collisionTeamName("t", gameTeam.getName()));
+            Team team = getOrCreateCollisionTeam(PlayerCollisionState.collisionGroupName(this, gameTeam));
             team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
             return team;
         });
@@ -2923,7 +2920,7 @@ public class Arena implements IArena {
             // A per-arena team leaves waiting players in different scoreboard teams.  Keep
             // one shared team for the whole server: this also covers players waiting in
             // different arenas and makes the pre-game no-collision rule deterministic.
-            collisionInactiveTeam = getOrCreateCollisionTeam(INACTIVE_COLLISION_TEAM_NAME);
+            collisionInactiveTeam = getOrCreateCollisionTeam(PlayerCollisionState.inactiveCollisionGroupName());
             collisionInactiveTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
         }
         return collisionInactiveTeam;
@@ -2933,14 +2930,6 @@ public class Arena implements IArena {
         Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
         Team existing = scoreboard.getTeam(name);
         return existing == null ? scoreboard.registerNewTeam(name) : existing;
-    }
-
-    private String collisionTeamName(String kind, String suffix) {
-        int arenaHash = Objects.hash(arenaName, worldName);
-        int suffixHash = suffix.toLowerCase(Locale.ROOT).hashCode();
-        String name = "bw" + kind + Integer.toUnsignedString(arenaHash, 36)
-                + Integer.toUnsignedString(suffixHash, 36);
-        return name.substring(0, Math.min(16, name.length()));
     }
 
     private void removeFromCollisionTeams(Player player) {
