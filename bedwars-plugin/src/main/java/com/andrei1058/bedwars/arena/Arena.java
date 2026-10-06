@@ -560,6 +560,7 @@ public class Arena implements IArena {
 
             if (!isStatusChange) {
                 SidebarService.getInstance().giveSidebar(p, this, false);
+                updateCollisionTeam(p);
             }
             sendPreGameCommandItems(p);
             AdventureText.send(p, ChatColor.GOLD + "[组队] " + ChatColor.YELLOW
@@ -650,7 +651,10 @@ public class Arena implements IArena {
             }
 
             SidebarService sidebarService = SidebarService.getInstance();
-            if (!playerBefore) sidebarService.giveSidebar(p, this, false);
+            if (!playerBefore) {
+                sidebarService.giveSidebar(p, this, false);
+                updateCollisionTeam(p);
+            }
             if (!playerBefore) {
                 if (staffTeleport == null) {
                     TeleportManager.teleportC(p, getSpectatorLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
@@ -2882,11 +2886,23 @@ public class Arena implements IArena {
 
     private void updateCollisionTeam(Player player) {
         removeFromCollisionTeams(player);
-        Team team = status == GameState.playing && players.contains(player)
+        boolean active = status == GameState.playing && players.contains(player)
                 && !respawnSessions.containsKey(player)
-                ? collisionTeam(getTeam(player))
-                : inactiveCollisionTeam();
+                ;
+        Team team = active ? collisionTeam(getTeam(player)) : inactiveCollisionTeam();
         if (team != null) team.addEntry(player.getName());
+        // TAB uses a private scoreboard for each viewer. Mirror the waiting team
+        // onto that board as well; otherwise the client can still receive a
+        // collision-capable team after Sidebar replaces the main scoreboard.
+        Scoreboard viewerBoard = player.getScoreboard();
+        Team viewerWaiting = viewerBoard.getTeam(INACTIVE_COLLISION_TEAM_NAME);
+        if (!active) {
+            if (viewerWaiting == null) viewerWaiting = viewerBoard.registerNewTeam(INACTIVE_COLLISION_TEAM_NAME);
+            viewerWaiting.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+            viewerWaiting.addEntry(player.getName());
+        } else if (viewerWaiting != null) {
+            viewerWaiting.removeEntry(player.getName());
+        }
     }
 
     public void refreshCollisionTeam(Player player) {
