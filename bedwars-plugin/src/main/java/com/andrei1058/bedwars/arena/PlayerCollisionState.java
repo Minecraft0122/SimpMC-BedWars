@@ -11,13 +11,14 @@ public final class PlayerCollisionState {
     }
 
     public static boolean shouldCollide(@NotNull GameState state, boolean spectator, boolean respawning) {
-        // Paper 1.21.11 documents setCollidable as unsuitable for players.
-        // Player pushing is controlled by Bukkit scoreboard Team rules.
-        return true;
+        return state == GameState.playing && !spectator && !respawning;
     }
 
     public static void apply(@NotNull Player player, @NotNull GameState state,
                       boolean spectator, boolean respawning) {
-        // Paper 1.21.11 requires scoreboard Team collision rules for players.
+        // Keep the server-side entity flag in sync with the scoreboard rule. This
+        // prevents anti-cheat plugins from seeing a real collision while the client
+        // is merely prevented from pushing by Team.COLLISION_RULE.
+        player.setCollidable(shouldCollide(state, spectator, respawning));
     }
 }

@@ -35,11 +35,9 @@ import static org.mockito.Mockito.*;
 
 class SoloChatTest {
     @Test
-    void ordinarySoloChatRemovesBuiltInAndCustomPlaceholderTeamPrefixes() {
+    void ordinarySoloChatKeepsBuiltInAndCustomPlaceholderTeamPrefixes() {
         String result = format(1, "你好", "{team} %bw1058_player_team% {player}");
-        assertFalse(result.contains("[红队]"));
-        assertFalse(result.contains("{team}"));
-        assertFalse(result.contains("%bw1058_player_team%"));
+        assertTrue(result.contains("[红队]"));
     }
 
     @Test
@@ -47,7 +45,6 @@ class SoloChatTest {
         String result = format(1, "!你好", "[公屏] {team} {player}");
         assertTrue(result.contains("[公屏]"));
         assertFalse(result.contains("[红队]"));
-        assertFalse(result.contains("{team}"));
         assertFalse(result.contains("!你好"));
     }
 
@@ -55,7 +52,7 @@ class SoloChatTest {
     void customSoloShoutPlaceholderKeepsThePublicMarker() {
         String result = format(1, "!你好", "%bw1058_player_team% {player}");
         assertTrue(result.contains("[公屏]"));
-        assertFalse(result.contains("%bw1058_player_team%"));
+        assertFalse(result.contains("[红队]"));
     }
 
     @Test

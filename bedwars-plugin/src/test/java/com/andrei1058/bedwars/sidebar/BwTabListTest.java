@@ -105,7 +105,7 @@ class BwTabListTest {
                 "{teamLetter}", "\u00a7c红");
 
         assertEquals(
-                "\u00a7c[\u00a7c红] 红队 {vPrefix}&7[观察者] {vSuffix}",
+                "\u00a7c[\u00a7c红&r&7] 红队 {vPrefix}&7[观察者] {vSuffix}",
                 BwTabList.applyPlayerRowTeamMarkers(
                         "{teamColor}[{teamLetter}] {teamName} {vPrefix}&7[观察者] {vSuffix}",
                         replacements)

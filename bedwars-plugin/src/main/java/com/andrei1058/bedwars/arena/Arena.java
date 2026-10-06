@@ -157,6 +157,8 @@ public class Arena implements IArena {
 
     private final Map<String, Team> collisionTeams = new HashMap<>();
     private Team collisionInactiveTeam;
+    /** Shared by all arenas so waiting players always use one physical no-collision team. */
+    private static final String INACTIVE_COLLISION_TEAM_NAME = "bw_waiting";
 
     /**
      * Invisibility for armor when you drink an invisibility potion
@@ -1974,6 +1976,8 @@ public class Arena implements IArena {
             if (arena instanceof Arena concreteArena) concreteArena.updateCollisionTeam(player);
             return;
         }
+        // Do not leak BedWars' no-collision state into the lobby or another plugin.
+        player.setCollidable(true);
     }
 
     private static void removeBedWarsCommandItems(Player player) {
@@ -2900,7 +2904,10 @@ public class Arena implements IArena {
 
     private Team inactiveCollisionTeam() {
         if (collisionInactiveTeam == null) {
-            collisionInactiveTeam = getOrCreateCollisionTeam(collisionTeamName("n", "inactive"));
+            // A per-arena team leaves waiting players in different scoreboard teams.  Keep
+            // one shared team for the whole server: this also covers players waiting in
+            // different arenas and makes the pre-game no-collision rule deterministic.
+            collisionInactiveTeam = getOrCreateCollisionTeam(INACTIVE_COLLISION_TEAM_NAME);
             collisionInactiveTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
         }
         return collisionInactiveTeam;
@@ -2930,7 +2937,18 @@ public class Arena implements IArena {
             team.unregister();
         }
         if (collisionInactiveTeam != null) {
-            collisionInactiveTeam.unregister();
+            for (Player player : new ArrayList<>(players)) {
+                collisionInactiveTeam.removeEntry(player.getName());
+            }
+            for (Player spectator : new ArrayList<>(spectators)) {
+                collisionInactiveTeam.removeEntry(spectator.getName());
+            }
+            for (Player player : new ArrayList<>(respawnSessions.keySet())) {
+                collisionInactiveTeam.removeEntry(player.getName());
+            }
+            for (Player player : new ArrayList<>(showTime.keySet())) {
+                collisionInactiveTeam.removeEntry(player.getName());
+            }
         }
         collisionTeams.clear();
         collisionInactiveTeam = null;

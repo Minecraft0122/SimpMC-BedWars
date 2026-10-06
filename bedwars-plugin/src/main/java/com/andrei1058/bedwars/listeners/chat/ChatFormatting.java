@@ -128,10 +128,9 @@ public class ChatFormatting implements Listener {
             // Use public arena chat without requiring /shout.
             if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
                 setRecipients(e, a.getPlayers(), a.getSpectators());
-                // A one-player team has no private audience, but this is not a
-                // shout. Use the normal public format so it does not display
-                // the [公屏] marker or a synthetic team label.
-                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, team));
+                // A one-player team still uses the public audience, but keep
+                // the player's team prefix visible in the chat line.
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             } else {
                 setRecipients(e, team.getMembers());
                 setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
@@ -145,9 +144,9 @@ public class ChatFormatting implements Listener {
 
     private static String parsePHolders(String content, Player player, @Nullable ITeam team) {
         IArena arena = Arena.getArenaByPlayer(player);
-        if (team != null && arena != null && usesPublicChannel(arena.getTeamSizeAtGameStart(team))) {
-            String shoutPrefix = ShoutFormattingContext.isFormatting(player)
-                    ? getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_SHOUT) : "";
+        if (team != null && arena != null && usesPublicChannel(arena.getTeamSizeAtGameStart(team))
+                && ShoutFormattingContext.isFormatting(player)) {
+            String shoutPrefix = getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_SHOUT);
             content = withoutSoloTeamPrefix(content, shoutPrefix);
             team = null;
         }

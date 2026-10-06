@@ -513,6 +513,13 @@ public class BwTabList {
                 rendered = rendered.replace(entry.getKey(), entry.getValue() == null ? "" : entry.getValue());
             }
         }
+        // Team names may contain their own legacy color code. Reset the
+        // closing bracket after replacement so it cannot inherit that color.
+        int closingBracket = rendered.indexOf(']');
+        if (replacements != null && closingBracket >= 0) {
+            rendered = rendered.substring(0, closingBracket) + "&r&7]"
+                    + rendered.substring(closingBracket + 1);
+        }
         return rendered;
     }
 

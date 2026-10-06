@@ -78,13 +78,13 @@ public final class LobbyAnnouncements {
 
     public static void consoleJoin(Player player) {
         if (player != null && Bukkit.getConsoleSender() != null) {
-            Bukkit.getConsoleSender().sendMessage("[Server thread/INFO]: " + player.getName() + " joined the game");
+            Bukkit.getConsoleSender().sendMessage("§e" + player.getName() + " joined the game");
         }
     }
 
     public static void consoleQuit(Player player) {
         if (player != null && Bukkit.getConsoleSender() != null) {
-            Bukkit.getConsoleSender().sendMessage("[Server thread/INFO]: " + player.getName() + " left the game");
+            Bukkit.getConsoleSender().sendMessage("§e" + player.getName() + " left the game");
         }
     }
 

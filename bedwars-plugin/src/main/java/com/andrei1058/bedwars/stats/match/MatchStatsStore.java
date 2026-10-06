@@ -516,7 +516,7 @@ public final class MatchStatsStore implements AutoCloseable {
         for (VlWarning warning : warnings) {
             String player = warning.playerName() == null || warning.playerName().isBlank()
                     ? warning.playerUuid().toString() : warning.playerName() + " (" + warning.playerUuid() + ")";
-            BedWars.plugin.getLogger().warning("[VL] 玩家 " + player + " 的处罚依据累计 VL 已超过 "
+            BedWars.plugin.getLogger().info("[非法组队] 玩家 " + player + " 的处罚依据累计 VL 已超过 "
                     + warning.threshold() + "：本次结算累计值 " + warning.newTotal() + "，对局 "
                     + warning.matchUuid() + "。");
         }
