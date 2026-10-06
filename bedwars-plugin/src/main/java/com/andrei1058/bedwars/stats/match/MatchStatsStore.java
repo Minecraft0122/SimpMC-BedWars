@@ -49,8 +49,8 @@ import java.util.logging.Level;
  * Asynchronous MySQL/SQLite writer for match-level statistics.
  *
  * <p>Lifecycle writes and bounded event batches own short transactions. No transaction is held
- * while a game is running, and the match number is allocated by the database's
- * auto-increment column. This keeps the start path independent from any
+ * while a game is running, and new match numbers use a transactional sequence.
+ * Duplicate writes and rollbacks never consume numbers. This keeps the start path independent from any
  * aggregate/player-statistics row locks.</p>
  */
 public final class MatchStatsStore implements AutoCloseable {
@@ -540,6 +540,18 @@ public final class MatchStatsStore implements AutoCloseable {
         } else {
             createMysqlSchema(connection);
         }
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_number_sequence ("
+                    + "sequence_id INTEGER PRIMARY KEY, last_match_no BIGINT NOT NULL)"
+                    + (database.isSqlite() ? "" : " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"));
+            // 旧编号保持不变；升级后从已存在的最高编号继续，不能重排历史引用。
+            statement.executeUpdate((database.isSqlite() ? "INSERT OR IGNORE" : "INSERT IGNORE")
+                    + " INTO bw_match_number_sequence (sequence_id, last_match_no)"
+                    + " SELECT 1, COALESCE(MAX(match_no),0) FROM bw_matches");
+            statement.executeUpdate("UPDATE bw_match_number_sequence SET last_match_no="
+                    + (database.isSqlite() ? "MAX" : "GREATEST")
+                    + "(last_match_no,(SELECT COALESCE(MAX(match_no),0) FROM bw_matches)) WHERE sequence_id=1");
+        }
         migrateKd(connection);
         MatchHistoryIndex.initialize(connection, database.isSqlite());
         migrateViolationActivity(connection);
@@ -869,15 +881,45 @@ public final class MatchStatsStore implements AutoCloseable {
     }
 
     private void ensureMatch(Connection connection, MatchRecordSnapshot snapshot, String state) throws SQLException {
+        if (connection.getAutoCommit()) throw new SQLException("对局编号必须在保存事务内分配");
+        try (PreparedStatement statement = prepare(connection, "SELECT match_no FROM bw_matches WHERE match_uuid=?")) {
+            statement.setString(1, snapshot.matchUuid().toString());
+            try (ResultSet result = statement.executeQuery()) {
+                if (result.next()) return;
+            }
+        }
+        long previous;
+        // MySQL 子服共享这一行锁；SQLite 使用 IMMEDIATE 写事务。分配与保存一起回滚。
+        try (PreparedStatement statement = prepare(connection,
+                "SELECT last_match_no FROM bw_match_number_sequence WHERE sequence_id=1 FOR UPDATE");
+             ResultSet result = statement.executeQuery()) {
+            if (!result.next()) throw new SQLException("对局编号序列尚未初始化");
+            previous = result.getLong(1);
+        }
+        // 取得序列锁后重新检查，避免另一个子服刚刚保存了同一场对局。
+        try (PreparedStatement statement = prepare(connection,
+                "SELECT match_no FROM bw_matches WHERE match_uuid=? FOR UPDATE")) {
+            statement.setString(1, snapshot.matchUuid().toString());
+            try (ResultSet result = statement.executeQuery()) {
+                if (result.next()) return;
+            }
+        }
+        if (previous == Long.MAX_VALUE) throw new SQLException("对局编号已超出范围");
+        long number = previous + 1;
         String sql = "INSERT INTO bw_matches (match_uuid, server_id, template_name, runtime_arena, arena_group, "
-                + "arena_timezone, status, started_at, last_seen_at, last_event_sequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
-                + "ON DUPLICATE KEY UPDATE match_uuid=VALUES(match_uuid)";
+                + "arena_timezone, status, started_at, last_seen_at, last_event_sequence, match_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = prepare(connection, sql)) {
             setMatchFields(statement, snapshot);
             statement.setString(7, state);
             statement.setString(8, sqlTime(snapshot.startedAt(), snapshot.timezone()));
             statement.setString(9, sqlTime(snapshot.capturedAt(), snapshot.timezone()));
             statement.setLong(10, snapshot.lastEventSequence());
+            statement.setLong(11, number);
+            statement.executeUpdate();
+        }
+        try (PreparedStatement statement = prepare(connection,
+                "UPDATE bw_match_number_sequence SET last_match_no=? WHERE sequence_id=1")) {
+            statement.setLong(1, number);
             statement.executeUpdate();
         }
     }

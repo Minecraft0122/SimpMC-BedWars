@@ -63,8 +63,14 @@ public final class CmdMatchQuery extends SubCommand {
                     Bukkit.getScheduler().runTask(plugin, () -> {
                     if (sender instanceof Player player && !player.isOnline()) return;
                     if (error != null) {
-                        plugin.getLogger().log(Level.WARNING, "查询对局战绩失败", error);
-                        AdventureText.send(sender, "§c暂时无法读取战绩，请稍后重试；详细原因已写入服务器日志。");
+                        Throwable cause = error;
+                        while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null) cause = cause.getCause();
+                        if (cause instanceof IllegalArgumentException) {
+                            AdventureText.send(sender, "§e" + cause.getMessage());
+                        } else {
+                            plugin.getLogger().log(Level.WARNING, "查询对局战绩失败", error);
+                            AdventureText.send(sender, "§c暂时无法读取战绩，请稍后重试；详细原因已写入服务器日志。");
+                        }
                     } else {
                         lines.forEach(line -> AdventureText.send(sender, line));
                     }
@@ -130,33 +136,40 @@ public final class CmdMatchQuery extends SubCommand {
     }
 
     private CompletableFuture<List<String>> totals(String[] args, CommandSender sender, MatchHistory history) {
-        if (args.length > 1) throw new IllegalArgumentException("用法：/bw record [玩家 UUID 或在线玩家名]");
-        UUID uuid = playerId(args.length == 0 ? null : args[0], sender);
-        return history.getPlayerTotals(uuid).thenApply(total -> List.of(
+        if (args.length > 1) throw new IllegalArgumentException("用法：/bw record [玩家名或 UUID]（支持离线玩家）");
+        return playerId(args.length == 0 ? null : args[0], sender, history)
+                .thenCompose(history::getPlayerTotals).thenApply(total -> List.of(
                 "§6玩家累计战绩 §7" + total.playerUuid(),
                 "§7已完成对局：§f" + total.matchesPlayed(),
                 counters(total.kills(), total.finalKills(), total.deaths(), total.bedsDestroyed(), total.kdRatio()),
                 "§7K/D = 普通击杀 ÷ 全部死亡；死亡为 0 时等于普通击杀。"));
     }
 
-    private CompletableFuture<List<String>> history(String[] args, CommandSender sender, MatchHistory history) {
-        if (args.length > 2) throw new IllegalArgumentException("用法：/bw history [玩家 UUID 或在线玩家名] [页码]");
+    CompletableFuture<List<String>> history(String[] args, CommandSender sender, MatchHistory history) {
+        if (args.length > 2) throw new IllegalArgumentException("用法：/bw history [玩家名或 UUID] [页码]；/bw history all [页码]");
         String target = args.length == 0 ? null : args[0];
         String pageText = args.length == 2 ? args[1] : "1";
-        UUID uuid = playerId(target, sender);
         int offset = pageOffset(pageText);
         int page = offset / PAGE_SIZE + 1;
-        return history.getPlayerMatches(uuid, PAGE_SIZE, offset).thenApply(matches -> {
+        if ("all".equalsIgnoreCase(target)) {
+            return history.getMatches(PAGE_SIZE, offset).thenApply(matches -> historyLines(matches, "全部记录", page));
+        }
+        return playerId(target, sender, history).thenCompose(uuid ->
+                history.getPlayerMatches(uuid, PAGE_SIZE, offset)
+                        .thenApply(matches -> historyLines(matches, uuid.toString(), page)));
+    }
+
+    private static List<String> historyLines(List<MatchInfo> matches, String target, int page) {
             List<String> lines = new ArrayList<>();
-            lines.add("§6对局历史 §7" + uuid + " · 第 " + page + " 页");
+            lines.add("§6对局历史 §7" + target + " · 第 " + page + " 页");
             for (MatchInfo info : matches) {
                 lines.add("§e#" + info.matchNumber() + " §f" + info.arenaName() + " §7"
                         + status(info.status()) + " · " + TIME.format(info.startedAt()));
             }
             if (matches.isEmpty()) lines.add("§7这一页没有对局记录。");
-            lines.add("§7使用 /bw match <编号> 查看单局战绩；/bw record 查看正式累计。");
+            lines.add("§7使用 /bw match <编号> 查看单局战绩；/bw history "
+                    + ("全部记录".equals(target) ? "all" : target) + " " + (page + 1) + " 查看下一页。");
             return List.copyOf(lines);
-        });
     }
 
     static int pageOffset(String text) {
@@ -169,18 +182,20 @@ public final class CmdMatchQuery extends SubCommand {
         }
     }
 
-    private static UUID playerId(String value, CommandSender sender) {
+    static CompletableFuture<UUID> playerId(String value, CommandSender sender, MatchHistory history) {
         if (value == null) {
-            if (sender instanceof Player player) return player.getUniqueId();
-            throw new IllegalArgumentException("控制台请指定玩家 UUID 或在线玩家名。");
+            if (sender instanceof Player player) return CompletableFuture.completedFuture(player.getUniqueId());
+            throw new IllegalArgumentException("控制台请指定玩家名或 UUID，或使用 /bw history all。");
+        }
+        try {
+            return CompletableFuture.completedFuture(parseUuid(value));
+        } catch (IllegalArgumentException exception) {
+            if (value.contains("-")) throw new IllegalArgumentException("请输入完整的玩家 UUID。");
         }
         Player player = Bukkit.getPlayerExact(value);
-        if (player != null) return player.getUniqueId();
-        try {
-            return parseUuid(value);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("未找到在线玩家；查询离线玩家请使用完整 UUID。");
-        }
+        if (player != null) return CompletableFuture.completedFuture(player.getUniqueId());
+        return history.findPlayerUuid(value).thenApply(found -> found.orElseThrow(() ->
+                new IllegalArgumentException("历史中未找到该玩家名，请检查名字或使用完整玩家 UUID。")));
     }
 
     private static UUID parseUuid(String value) {
@@ -225,7 +240,16 @@ public final class CmdMatchQuery extends SubCommand {
 
     @Override
     public List<String> getTabComplete() {
-        return List.of();
+        return "history".equals(getSubCommandName()) ? List.of("all") : List.of();
+    }
+
+    @Override
+    public List<String> getTabComplete(CommandSender sender, String[] args) {
+        if (args.length > 1) return "history".equals(getSubCommandName()) && args.length == 2 ? List.of("1", "2", "3") : List.of();
+        List<String> options = new ArrayList<>(getTabComplete());
+        if (!"match".equals(getSubCommandName())) Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+        String prefix = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
+        return options.stream().filter(option -> option.toLowerCase(Locale.ROOT).startsWith(prefix)).toList();
     }
 
     @Override

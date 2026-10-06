@@ -92,6 +92,20 @@ public final class MatchHistoryService implements MatchHistory, AutoCloseable {
         return query(() -> reader.getPlayerMatches(playerUuid, limit, offset));
     }
 
+    @Override
+    public CompletableFuture<List<MatchInfo>> getMatches(int limit, int offset) {
+        if (limit < 1 || limit > 100 || offset < 0) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("分页参数无效"));
+        }
+        return query(() -> reader.getMatches(limit, offset));
+    }
+
+    @Override
+    public CompletableFuture<Optional<UUID>> findPlayerUuid(String playerName) {
+        Objects.requireNonNull(playerName, "playerName");
+        return query(() -> reader.findPlayerUuid(playerName));
+    }
+
     private <T> CompletableFuture<T> query(SqlQuery<T> query) {
         QueryTask<T> task = new QueryTask<>(() -> {
             // shutdownNow removes queued tasks; this gate also covers a worker

@@ -141,7 +141,7 @@ servers:
     address: 127.0.0.1:25567
 ```
 
-玩家必须连接 BungeeCord/Velocity 的监听地址，不能直接连接 BedWars 后端 Paper 端口；后端端口也应通过防火墙限制为只允许代理访问。大厅“回到主大厅”红床只会立即、静默地发送 `Connect <lobbyServer>`，不会先查询代理节点或把代理配置、服务器列表和连接诊断显示给玩家。若没有切服，请检查 BedWars 后端控制台和代理日志。
+玩家必须连接 BungeeCord/Velocity 的监听地址，不能直接连接 BedWars 后端 Paper 端口；后端端口也应通过防火墙限制为只允许代理访问。5.14.0 起大厅“回到主大厅”红床先通过 BungeeCord 兼容通道查询 `GetServers`，确认目标存在后发送 `Connect <lobbyServer>`。目标不存在或 3 秒内代理未响应时，玩家收到通用错误，具体原因写入后端控制台；不会把代理节点或服务器列表显示给玩家。目标存在不代表目标服务在线，实际连接失败仍应检查代理日志。
 
 上面的 `hub` 只是示例。若你的 Velocity `[servers]` 使用 `login` 作为大厅键名，BedWars 必须改成 `lobbyServer: login`，然后完整重启 BedWars 后端。自动配置升级、排序和保存会保留该值，只在 `lobbyServer` 缺失时补入默认 `hub`。
 

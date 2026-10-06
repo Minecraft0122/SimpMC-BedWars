@@ -142,6 +142,43 @@ class MySqlMatchHistoryIntegrationTest {
     }
 
     @Test
+    void concurrentWritersRollbackAndDuplicateStartsKeepNumbersContiguous() throws Exception {
+        MatchStatsStore first = createStore("server-one");
+        MatchStatsStore second = createStore("server-two");
+        initialize(first);
+        initialize(second);
+        UUID player = UUID.randomUUID();
+        UUID failed = UUID.randomUUID();
+        assertThrows(SQLException.class, () -> transaction(c -> {
+            first.writeStart(c, snapshot(failed, player, "server-one", "RUNNING", 0, 0, 0, 0, 0));
+            throw new SQLException("模拟回滚");
+        }));
+        CountDownLatch gate = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(4)) {
+            List<Future<Long>> futures = new ArrayList<>();
+            for (int index = 0; index < 8; index++) {
+                MatchStatsStore store = index % 2 == 0 ? first : second;
+                MatchRecordSnapshot start = snapshot(UUID.randomUUID(), player, "server-one", "RUNNING", 0, 0, 0, 0, 0);
+                futures.add(executor.submit(() -> {
+                    gate.await();
+                    long number = transaction(c -> store.writeStart(c, start));
+                    long retried = transaction(c -> store.writeStart(c, start));
+                    assertEquals(number, retried);
+                    return number;
+                }));
+            }
+            gate.countDown();
+            List<Long> numbers = new ArrayList<>();
+            for (Future<Long> future : futures) numbers.add(future.get(30, TimeUnit.SECONDS));
+            assertEquals(List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L), numbers.stream().sorted().toList());
+        }
+        MatchHistoryReader reader = new MatchHistoryReader(database);
+        assertTrue(reader.findMatch(failed).isEmpty());
+        assertEquals(8, reader.getMatches(10, 0).size());
+        assertEquals(player, reader.findPlayerUuid("mysqlplayer").orElseThrow());
+    }
+
+    @Test
     void mysqlMigrationBackfillsLegacyRowsAndRepeatedStartupPreservesTotals() throws Exception {
         MatchStatsStore store = createStore("migration-server");
         initialize(store);

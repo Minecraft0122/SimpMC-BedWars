@@ -156,6 +156,35 @@ public final class MatchHistoryReader {
         }
     }
 
+    public List<MatchInfo> getMatches(int limit, int offset) throws SQLException {
+        checkInterrupted();
+        if (limit < 1 || limit > 100 || offset < 0) throw new IllegalArgumentException("分页参数无效");
+        String sql = "SELECT " + MATCH_COLUMNS + " FROM bw_matches m ORDER BY m.match_no DESC LIMIT ? OFFSET ?";
+        try (Connection connection = database.openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(10);
+            statement.setInt(1, limit);
+            statement.setInt(2, offset);
+            return readMatches(statement);
+        }
+    }
+
+    public Optional<UUID> findPlayerUuid(String playerName) throws SQLException {
+        Objects.requireNonNull(playerName, "playerName");
+        checkInterrupted();
+        if (playerName.isBlank() || playerName.length() > 128) throw new IllegalArgumentException("玩家名无效");
+        String sql = "SELECT DISTINCT player_uuid FROM bw_match_players WHERE LOWER(player_name)=LOWER(?) LIMIT 2";
+        try (Connection connection = database.openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(10);
+            statement.setString(1, playerName);
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) return Optional.empty();
+                UUID uuid = UUID.fromString(result.getString(1));
+                if (result.next()) throw new IllegalArgumentException("历史中有多个同名玩家，请使用完整玩家 UUID 查询。");
+                return Optional.of(uuid);
+            }
+        }
+    }
+
     private static boolean hasUnbackfilledRows(Connection connection, UUID playerUuid) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT 1 FROM bw_match_players WHERE player_uuid=? AND match_no IS NULL LIMIT 1")) {

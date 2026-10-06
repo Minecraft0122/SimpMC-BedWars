@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>5.13.3</version>
+    <version>5.14.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -53,6 +53,8 @@ CompletableFuture<Optional<MatchInfo>> byUuid = history.findMatch(matchUuid);
 CompletableFuture<List<MatchPlayerResult>> players = history.getMatchPlayers(matchUuid);
 CompletableFuture<PlayerMatchTotals> totals = history.getPlayerTotals(playerUuid);
 CompletableFuture<List<MatchInfo>> matches = history.getPlayerMatches(playerUuid, 10, 0);
+CompletableFuture<List<MatchInfo>> allMatches = history.getMatches(10, 0); // 5.14.0
+CompletableFuture<Optional<UUID>> offlinePlayer = history.findPlayerUuid("Alice"); // 5.14.0
 ```
 
 `MatchInfo` 表示对局本身，`MatchPlayerResult` 表示单局玩家快照，`PlayerMatchTotals` 表示所有已完成对局累计值，使用 `matchNumber()`、`matchUuid()`、`kills()`、`finalKills()` 和 `bedsDestroyed()` 等 record 访问方法。两个战绩对象的 `kdRatio()` 返回 `double`，按 `普通击杀 / max(1, 全部死亡)` 计算；最终击杀单独保存，死亡包含普通死亡与最终死亡。累计 K/D 先相加普通击杀和全部死亡再相除，不能平均各局 K/D。
@@ -85,7 +87,7 @@ history.findMatch(matchUuid).whenComplete((found, error) -> {
 
 不要在 Bukkit 主线程调用查询 future 的 `join()` 或 `get()` 等待数据库。上述 `Instant` 字符串使用 UTC；需要北京时间等本地展示时，可在附属插件中用 `DateTimeFormatter.withZone(ZoneId.of("Asia/Shanghai"))` 格式化。
 
-`getCurrentMatch` 在比赛未开始时为空，编号尚未写入数据库时 `matchNumber()` 暂为 `0`；落库后变为真实正整数。数据库编号在同一存储内共享，允许间隔；UUID 永久标识本局。`getPlayerMatches` 按编号倒序返回所有状态的记录，`limit` 为 1 到 100，`offset` 不小于 0；`getPlayerTotals` 只统计 `FINISHED` 对局，没有记录时返回全零数据。异步回调若要操作 Bukkit 玩家，必须切回主线程；查询异常通过 future 传播，不能当作没有战绩处理。旧版本没有保存逐局明细时无法从累计值反推出历史对局。
+`getCurrentMatch` 在比赛未开始时为空，编号尚未写入数据库时 `matchNumber()` 暂为 `0`；落库后变为真实正整数。5.14.0 起数据库编号在同一存储内通过事务连续分配，重复写入和回滚不会消耗新号；升级保留旧编号和旧间隔，从历史最高编号继续。共享 MySQL 的写入子服应全部升级，避免旧版自增写入器与新序列混用。UUID 永久标识本局。`getPlayerMatches` 与 `getMatches` 按编号倒序返回所有状态的记录，`limit` 为 1 到 100，`offset` 不小于 0；`getPlayerTotals` 只统计 `FINISHED` 对局，没有记录时返回全零数据。`findPlayerUuid` 仅查询已保存的名字，不区分大小写；找不到返回空，同名对应多个 UUID 时以 `IllegalArgumentException` 异常完成，调用方应要求指定 UUID。两个新增方法提供默认异常实现，保持旧附属插件实现的二进制兼容。异步回调若要操作 Bukkit 玩家，必须切回主线程；查询异常通过 future 传播，不能当作没有战绩处理。旧版本没有保存逐局明细时无法从累计值反推出历史对局。
 
 5.6.1 起，异步历史查询使用两个工作线程和 128 个排队位置，查询从提交起最多等待 10 秒；超时、队列满或插件关闭都会使 future 以异常结束。调用方取消 future 时也会移除排队任务并尝试中断正在执行的查询；JDBC 驱动若忽略中断，底层访问仍需等待驱动超时。分页接口保持原有 `limit/offset` 契约，较大的 `offset` 仍有跳过记录的成本。
 

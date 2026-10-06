@@ -65,6 +65,8 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         super(name);
         setAliases(Arrays.asList("bedwars", "simpmcbedwars", "simpmcbw"));
         instance = this;
+        subCommandList = new ArrayList<>();
+        new CmdHelp(this, "help");
         new CmdJoin(this, "join");
         new CmdLeave(this, "leave");
         new CmdLang(this, "message");
@@ -130,36 +132,7 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
     public boolean execute(CommandSender s, String st, String[] args) {
 
         if (args.length == 0) {
-            if (!Permissions.hasCommandPermission(s, "help")) {
-                if (s instanceof Player player) {
-                    AdventureText.send(player, getMsg(player, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
-                } else {
-                    AdventureText.send(s, Language.getDefaultLanguage().m(Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
-                }
-                return true;
-            }
-            /* Set op commands*/
-            if ((s.isOp() || s.hasPermission(BedWars.mainCmd + ".*"))) {
-                if (s instanceof Player) {
-                    if (SetupSession.isInSetupSession(((Player) s).getUniqueId())) {
-                        Bukkit.dispatchCommand(s, getName() + " cmds");
-                    } else {
-                        AdventureText.send(s, "");
-                        AdventureText.send(s, "§8§l" + dot + " §6" + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion() + " §7- §c管理员命令");
-                        AdventureText.send(s, "");
-                        sendSubCommands((Player) s);
-                    }
-                } else {
-                    AdventureText.send(s, "§f   bw safemode §eenable/disable §7（启用/禁用安全模式）");
-                }
-            } else {
-                if (s instanceof ConsoleCommandSender) {
-                    AdventureText.send(s, "§f当前没有可用的控制台命令。");
-                    return true;
-                }
-                /* Send player commands */
-                Bukkit.dispatchCommand(s, mainCmd + " cmds");
-            }
+            getSubCommand("help").execute(new String[0], s);
             return true;
         }
 

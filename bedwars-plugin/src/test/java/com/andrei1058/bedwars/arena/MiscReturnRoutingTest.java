@@ -64,6 +64,11 @@ class MiscReturnRoutingTest {
         bukkit = mockStatic(Bukkit.class);
         bukkit.when(() -> Bukkit.getWorld("lobby")).thenReturn(lobbyWorld);
         bukkit.when(Bukkit::getLogger).thenReturn(Logger.getLogger(getClass().getName()));
+        var scheduler = mock(org.bukkit.scheduler.BukkitScheduler.class);
+        bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+        when(scheduler.runTaskLater(eq(BedWars.plugin), any(Runnable.class), eq(60L)))
+                .thenReturn(mock(org.bukkit.scheduler.BukkitTask.class));
+        when(BedWars.plugin.getProxyLobbyConnector()).thenReturn(new ProxyLobbyConnector(BedWars.plugin));
         arenas = mockStatic(Arena.class);
     }
 
@@ -157,8 +162,18 @@ class MiscReturnRoutingTest {
     }
 
     private void assertConnectToLogin() throws Exception {
+        ArgumentCaptor<byte[]> query = ArgumentCaptor.forClass(byte[].class);
+        verify(player).sendPluginMessage(eq(BedWars.plugin), eq(ProxyLobbyConnector.CHANNEL), query.capture());
+        try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(query.getValue()))) {
+            assertEquals("GetServers", input.readUTF());
+            assertEquals(0, input.available());
+        }
+        var response = com.google.common.io.ByteStreams.newDataOutput();
+        response.writeUTF("GetServers");
+        response.writeUTF("login, other");
+        BedWars.plugin.getProxyLobbyConnector().onPluginMessageReceived(ProxyLobbyConnector.CHANNEL, player, response.toByteArray());
         ArgumentCaptor<byte[]> payload = ArgumentCaptor.forClass(byte[].class);
-        verify(player).sendPluginMessage(eq(BedWars.plugin), eq(ProxyLobbyConnector.CHANNEL), payload.capture());
+        verify(player, times(2)).sendPluginMessage(eq(BedWars.plugin), eq(ProxyLobbyConnector.CHANNEL), payload.capture());
         try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(payload.getValue()))) {
             assertEquals("Connect", input.readUTF());
             assertEquals("login", input.readUTF());

@@ -29,4 +29,14 @@ public interface MatchHistory {
 
     /** 按编号倒序分页，包含进行中和中止的记录；limit 为 1..100，offset 不小于 0。 */
     CompletableFuture<List<MatchInfo>> getPlayerMatches(UUID playerUuid, int limit, int offset);
+
+    /** 全部对局按编号倒序分页，包含进行中和中止记录；分页参数与玩家历史相同。 */
+    default CompletableFuture<List<MatchInfo>> getMatches(int limit, int offset) {
+        return CompletableFuture.failedFuture(new UnsupportedOperationException("当前实现不支持全部对局查询"));
+    }
+
+    /** 按已保存的玩家名查找离线 UUID（不区分大小写）；重名时异常完成，要求调用方指定 UUID。 */
+    default CompletableFuture<Optional<UUID>> findPlayerUuid(String playerName) {
+        return CompletableFuture.failedFuture(new UnsupportedOperationException("当前实现不支持玩家名查询"));
+    }
 }

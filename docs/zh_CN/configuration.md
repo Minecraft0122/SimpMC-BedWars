@@ -19,7 +19,7 @@
 - BUNGEE 子服的 `server-id` 必须全网唯一；`proxy-server` 是代理 `[servers]` 中的后端键名，`lobby-sockets` 是 ARENA 连接大厅的 `主机:端口` 列表，不能与大厅监听地址混用。`arena-template` 指定单个 `Arenas/<地图>.yml`，留空才保留旧版加载全部地图的行为。
 - `bwp-time-out` 是 ARENA 子服预加载玩家等待代理登录的超时时间，单位为毫秒，默认 23000。插件会自动保证它至少覆盖大厅 `dispatch-timeout-seconds` 加 15 秒代理切服余量，旧配置中的 5000 等较小值无需手动修改。
 - `debug`：详细故障日志开关，默认 `false`；生产环境保持关闭。`/bw start debug` 仅表示单队测试开局，不会修改此项或临时开启日志。
-- `lobbyServer`：BungeeCord/Velocity 代理 `[servers]` 中的大厅服务器键名，缺失时默认 `hub`；不是 IP、端口或 MotD。如果代理配置为 `login = "地址:端口"`，这里必须填写 `login`。自动升级、排序、保存和再次启动都会保留管理员已有的值，不会将其重置为 `hub`。主大厅红床会立即静默发送 `Connect`，不查询或向玩家展示代理节点、服务器列表和故障信息；配置问题只通过后端及代理日志排查。
+- `lobbyServer`：BungeeCord/Velocity 代理 `[servers]` 中的大厅服务器键名，缺失时默认 `hub`；不是 IP、端口或 MotD。如果代理配置为 `login = "地址:端口"`，这里必须填写 `login`。自动升级、排序、保存和再次启动都会保留管理员已有的值，不会将其重置为 `hub`。5.14.0 起返回代理大厅先通过 `GetServers` 校验目标再发送 `Connect`。目标不存在时玩家收到“执行操作时发生异常，请联系服务器管理员”，控制台提示“您配置的lobbyServer不存在！”。代理 3 秒未响应时输出通道诊断；玩家不会看到节点名称或服务器列表。
 - `arenaGroups`：全局可用的匹配组名称；`Default` 是内置组，无需写入。每张竞技场地图只能选择其中一个组。
 - `language`：固定使用简体中文 `zh_cn`；旧版本的语言值会自动迁移，历史禁用语言列表仅为兼容保留。
 - `chat`：全局聊天和插件聊天格式。
@@ -106,7 +106,7 @@ match-statistics:
     cross-team-item-transfer: true
 ```
 
-每场实际开始的比赛都会生成永久唯一的 `match_uuid`，数据库分配持久化递增的 `match_no`。同一数据库的所有竞技场共享编号空间，事务回滚等情况可能产生间隔；不同服务器各自的本地 `Cache/matches.db` 不共享编号。TAB 的 `{gameId}` 使用真实数据库编号，`{gameUuid}` 显示本局 UUID；落库前编号暂显示“待分配”。BUNGEE 大厅连接同一 MySQL 后可查询竞技场子服记录；未连接共享 MySQL 的大厅不会建立一份独立的本地历史。
+每场实际开始的比赛都会生成永久唯一的 `match_uuid`，数据库通过 `bw_match_number_sequence` 在保存事务内连续分配 `match_no`。重复上报、回滚和重试不消耗新编号；中止对局保留记录。同一数据库的所有竞技场共享编号空间，不同服务器各自的本地 `Cache/matches.db` 不共享编号。升级保留旧编号及已有间隔，从最高旧编号继续；共享 MySQL 的写入子服须一起升级到 5.14.0 或更新版本，不与旧版自增写入器混用。TAB 的 `{gameId}` 使用真实数据库编号，`{gameUuid}` 显示本局 UUID；落库前编号暂显示“待分配”。BUNGEE 大厅连接同一 MySQL 后可查询竞技场子服记录；未连接共享 MySQL 的大厅不会建立一份独立的本地历史。
 
 只有参赛玩家会写入 `bw_match_players`，纯旁观者离开不会污染对局成员。正常结束的比赛标记为 `FINISHED`；插件关闭、竞技场中止或启动恢复的遗留对局标记为 `ABORTED`，保留已成功写入的快照并可查询，但不计入完成局累计战绩。旧版仅保存的玩家累计值无法反推出逐局历史；已有逐局明细会继续使用，并按新 K/D 规则查询。管理员显式设置的 `match-statistics.enabled: false` 会保留。
 

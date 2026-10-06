@@ -138,7 +138,8 @@ public class Misc {
     public static boolean connectToProxyLobby(Player player) {
         String lobbyServer = config.getYml().getString(
                 ConfigPath.GENERAL_CONFIGURATION_BUNGEE_LOBBY_SERVER, "hub");
-        return connectToProxyServer(player, lobbyServer, "代理大厅");
+        ProxyLobbyConnector connector = plugin.getProxyLobbyConnector();
+        return player != null && connector != null && connector.connect(player, lobbyServer);
     }
 
     /**
@@ -189,14 +190,7 @@ public class Misc {
             }
         }
 
-        if (getServerType() == ServerType.BUNGEE) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                // 静默重试；代理要么完成切服，要么让玩家留在当前服，不在聊天中暴露基础设施信息。
-                if (p.isOnline()) {
-                    connectToProxyLobby(p);
-                }
-            }, 30L);
-        }
+        // 连接器负责请求去重、目标校验及超时；不再延迟重复发送离场请求。
     }
 
     /**

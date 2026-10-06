@@ -1,6 +1,9 @@
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
 import com.andrei1058.bedwars.api.stats.MatchHistory;
+import com.andrei1058.bedwars.api.command.ParentCommand;
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -39,5 +42,35 @@ class CmdMatchQueryTest {
         for (String value : new String[]{"0", "-1", "one", "2147483647"}) {
             assertThrows(IllegalArgumentException.class, () -> CmdMatchQuery.pageOffset(value));
         }
+    }
+
+    @Test
+    void offlineUuidNeverRequiresAnOnlinePlayerAndNameLookupIsAsync() {
+        MatchHistory history = mock(MatchHistory.class);
+        CommandSender sender = mock(CommandSender.class);
+        UUID uuid = UUID.randomUUID();
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            assertEquals(uuid, CmdMatchQuery.playerId(uuid.toString(), sender, history).join());
+            bukkit.verifyNoInteractions();
+            CompletableFuture<Optional<UUID>> lookup = new CompletableFuture<>();
+            when(history.findPlayerUuid("Alice")).thenReturn(lookup);
+            var result = CmdMatchQuery.playerId("Alice", sender, history);
+            assertFalse(result.isDone());
+            lookup.complete(Optional.of(uuid));
+            assertEquals(uuid, result.join());
+        }
+    }
+
+    @Test
+    void allHistoryUsesGlobalPagingNotAPlayerNamedAll() {
+        ParentCommand parent = mock(ParentCommand.class);
+        when(parent.getName()).thenReturn("bw");
+        CmdMatchQuery command = new CmdMatchQuery(parent, "history");
+        MatchHistory history = mock(MatchHistory.class);
+        when(history.getMatches(10, 20)).thenReturn(CompletableFuture.completedFuture(java.util.List.of()));
+        var lines = command.history(new String[]{"all", "3"}, mock(CommandSender.class), history).join();
+        assertTrue(lines.getFirst().contains("全部记录"));
+        verify(history).getMatches(10, 20);
+        verifyNoMoreInteractions(history);
     }
 }

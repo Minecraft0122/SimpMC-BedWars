@@ -62,9 +62,75 @@ class MatchStatsStoreTest {
             assertEquals(2.5, result.kdRatio());
             long secondNumber = transact(reopened, connection -> store.writeStart(connection,
                     snapshot(UUID.randomUUID(), player, "RUNNING", 0, 0, 0, 0, 0)));
-            assertTrue(secondNumber > firstNumber);
+            assertEquals(firstNumber + 1, secondNumber);
             assertEquals(2, reader.getPlayerMatches(player, 100, 0).size());
             assertEquals(match, reader.getPlayerMatches(player, 1, 1).getFirst().matchUuid());
+        }
+    }
+
+    @Test
+    void repeatedReportsAndRolledBackStartsNeverConsumeNumbers() throws Exception {
+        MatchStatsDatabase database = database();
+        UUID player = UUID.randomUUID();
+        UUID first = UUID.randomUUID();
+        UUID failed = UUID.randomUUID();
+        try (MatchStatsStore store = initialized(database)) {
+            assertEquals(1L, MatchStatsStoreTest.<Long>transact(database, c -> store.writeStart(c, snapshot(first, player, "RUNNING", 0, 0, 0, 0, 0))));
+            for (int index = 1; index <= 5; index++) {
+                long sequence = index;
+                transact(database, c -> { store.writeReport(c, snapshot(first, player, "RUNNING", 1, 0, 0, 0, sequence)); return null; });
+            }
+            assertThrows(SQLException.class, () -> transact(database, c -> {
+                assertEquals(2, store.writeStart(c, snapshot(failed, player, "RUNNING", 0, 0, 0, 0, 0)));
+                throw new SQLException("模拟保存失败");
+            }));
+            assertTrue(new MatchHistoryReader(database).findMatch(failed).isEmpty());
+            assertEquals(2L, MatchStatsStoreTest.<Long>transact(database, c -> store.writeStart(c, snapshot(failed, player, "RUNNING", 0, 0, 0, 0, 0))));
+            assertEquals(2L, MatchStatsStoreTest.<Long>transact(database, c -> store.writeStart(c, snapshot(failed, player, "RUNNING", 0, 0, 0, 0, 0))));
+            assertEquals(3L, MatchStatsStoreTest.<Long>transact(database, c -> store.writeStart(c, snapshot(UUID.randomUUID(), player, "RUNNING", 0, 0, 0, 0, 0))));
+        }
+    }
+
+    @Test
+    void migrationPreservesHistoricalNumbersAndStartsAfterHighest() throws Exception {
+        MatchStatsDatabase database = database();
+        UUID match = UUID.randomUUID();
+        UUID player = UUID.randomUUID();
+        try (MatchStatsStore store = initialized(database)) {
+            transact(database, c -> store.writeStart(c, snapshot(match, player, "RUNNING", 0, 0, 0, 0, 0)));
+            try (Connection connection = database.openConnection(); Statement statement = connection.createStatement()) {
+                statement.executeUpdate("UPDATE bw_matches SET match_no=27");
+                statement.executeUpdate("DROP TABLE bw_match_number_sequence");
+                store.createSchema(connection);
+            }
+            assertEquals(27, new MatchHistoryReader(database).findMatch(match).orElseThrow().matchNumber());
+            assertEquals(28L, MatchStatsStoreTest.<Long>transact(database, c -> store.writeStart(c,
+                    snapshot(UUID.randomUUID(), player, "RUNNING", 0, 0, 0, 0, 0))));
+        }
+    }
+
+    @Test
+    void allHistoryAndOfflineNamesReadPersistedRowsAndRejectAmbiguity() throws Exception {
+        MatchStatsDatabase database = database();
+        UUID alice = UUID.randomUUID();
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        try (MatchStatsStore store = initialized(database)) {
+            finish(database, store, snapshot(first, alice, "FINISHED", 1, 0, 0, 0, 0));
+            transact(database, c -> store.writeStart(c, snapshot(second, alice, "RUNNING", 0, 0, 0, 0, 0)));
+            MatchHistoryReader reader = new MatchHistoryReader(database);
+            assertEquals(List.of(second, first), reader.getMatches(10, 0).stream().map(MatchInfo::matchUuid).toList());
+            assertEquals(first, reader.getMatches(1, 1).getFirst().matchUuid());
+            assertTrue(reader.getMatches(10, 2).isEmpty());
+            assertEquals(alice, reader.findPlayerUuid("aLiCe").orElseThrow());
+            assertTrue(reader.findPlayerUuid("Unknown").isEmpty());
+            assertThrows(IllegalArgumentException.class, () -> reader.getMatches(0, 0));
+            finish(database, store, snapshot(UUID.randomUUID(), UUID.randomUUID(), "ABORTED", 1, 0, 0, 0, 0));
+            assertThrows(IllegalArgumentException.class, () -> reader.findPlayerUuid("Alice"));
+            assertEquals(2, reader.getPlayerMatches(alice, 10, 0).size());
+            try (MatchHistoryService service = new MatchHistoryService(database, null)) {
+                assertEquals(3, service.getMatches(10, 0).get(5, TimeUnit.SECONDS).size());
+            }
         }
     }
 

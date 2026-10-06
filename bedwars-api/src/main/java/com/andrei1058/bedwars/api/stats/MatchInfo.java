@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-/** 一场实际开始的比赛；数据库编号可有间隔，UUID 永久标识这场比赛。 */
+/** 一场实际开始的比赛；新编号在保存事务中连续分配，旧编号保留，UUID 永久标识这场比赛。 */
 public record MatchInfo(long matchNumber, UUID matchUuid, String arenaName,
                         String runtimeArenaName, String arenaGroup, String serverId,
                         String status, Instant startedAt, Instant endedAt, String winnerTeam) {

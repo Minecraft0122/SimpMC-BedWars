@@ -34,5 +34,8 @@ class MatchHistoryServiceTest {
         assertTrue(service.findMatch(1).isCompletedExceptionally());
         assertTrue(service.getPlayerMatches(UUID.randomUUID(), 101, 0).isCompletedExceptionally());
         assertTrue(service.findMatch(0).isCompletedExceptionally());
+        assertTrue(service.getMatches(10, 0).isCompletedExceptionally());
+        assertTrue(service.getMatches(101, 0).isCompletedExceptionally());
+        assertTrue(service.findPlayerUuid("Alice").isCompletedExceptionally());
     }
 }

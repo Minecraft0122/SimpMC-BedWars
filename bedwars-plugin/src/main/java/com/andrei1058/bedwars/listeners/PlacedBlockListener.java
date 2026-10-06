@@ -64,6 +64,8 @@ public final class PlacedBlockListener implements Listener {
 
     private static final String PLAYER_PLACED_FALLING_BLOCK = "bw-player-placed-falling-block";
     private final BlockPlacementResyncBuffer resyncBuffer = new BlockPlacementResyncBuffer();
+    // 只保存尚未结算的事件；较新的放置/破坏必须取代同位置旧事件的延迟清理。
+    private final Map<BlockPosition, Object> pendingChanges = new HashMap<>();
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBucketEmpty(PlayerBucketEmptyEvent event) {
@@ -78,10 +80,12 @@ public final class PlacedBlockListener implements Listener {
             default -> null;
         };
         if (fluid == null) return;
+        Object revision = beginChange(source);
         // Bucket events carry the bucket item, not the resulting fluid block.
         // Wait for placement and final cancellation before claiming the source.
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!event.isCancelled() && arena.getStatus() == GameState.playing
+            if (finishChange(BlockPosition.of(source), revision)
+                    && !event.isCancelled() && arena.getStatus() == GameState.playing
                     && isCurrentArena(arena, source.getWorld()) && source.getType() == fluid) {
                 arena.addPlacedBlock(source);
             }
@@ -165,8 +169,11 @@ public final class PlacedBlockListener implements Listener {
             return;
         }
         if (arena.isBlockPlaced(event.getBlock())) {
+            Object revision = beginChange(destination);
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!event.isCancelled() && arena.getStatus() == GameState.playing
+                if (finishChange(BlockPosition.of(destination), revision)
+                        && !event.isCancelled() && arena.getStatus() == GameState.playing
+                        && isCurrentArena(arena, destination.getWorld())
                         && !destination.isEmpty()) {
                     arena.addPlacedBlock(destination);
                 }
@@ -206,7 +213,7 @@ public final class PlacedBlockListener implements Listener {
             if (arena.isBlockPlaced(event.getBlock())) {
                 fallingBlock.setMetadata(PLAYER_PLACED_FALLING_BLOCK, new FixedMetadataValue(plugin, true));
                 TrackedBlockSnapshot source = new TrackedBlockSnapshot(
-                        BlockPosition.of(event.getBlock()), event.getBlock().getBlockData());
+                        BlockPosition.of(event.getBlock()), event.getBlock().getBlockData(), beginChange(event.getBlock()));
                 Bukkit.getScheduler().runTask(plugin, () -> reconcileFallingSource(arena, fallingBlock, source));
             }
             return;
@@ -214,31 +221,31 @@ public final class PlacedBlockListener implements Listener {
 
         if (fallingBlock.hasMetadata(PLAYER_PLACED_FALLING_BLOCK)) {
             Block block = event.getBlock();
-            PlacementSnapshot landing = new PlacementSnapshot(block, block.getBlockData(), arena.isBlockPlaced(block));
+            PlacementSnapshot landing = new PlacementSnapshot(block, block.getBlockData(), arena.isBlockPlaced(block), beginChange(block));
             arena.addPlacedBlock(block);
             Bukkit.getScheduler().runTask(plugin,
                     () -> reconcileFallingLanding(arena, fallingBlock, event, landing));
         }
     }
 
-    private static List<PlacementSnapshot> capturePlacement(IArena arena, BlockPlaceEvent event) {
+    private List<PlacementSnapshot> capturePlacement(IArena arena, BlockPlaceEvent event) {
         List<BlockState> replacedStates = event instanceof BlockMultiPlaceEvent multiPlaceEvent
                 ? multiPlaceEvent.getReplacedBlockStates()
                 : List.of(event.getBlockReplacedState());
         List<PlacementSnapshot> snapshots = new ArrayList<>(replacedStates.size());
         for (BlockState replacedState : replacedStates) {
             Block block = replacedState.getBlock();
-            snapshots.add(new PlacementSnapshot(block, replacedState.getBlockData(), arena.isBlockPlaced(block)));
+            snapshots.add(new PlacementSnapshot(block, replacedState.getBlockData(), arena.isBlockPlaced(block), beginChange(block)));
         }
         return snapshots;
     }
 
-    private static void reconcilePlacement(IArena arena, BlockPlaceEvent event,
+    private void reconcilePlacement(IArena arena, BlockPlaceEvent event,
                                            List<PlacementSnapshot> snapshots) {
-        if (arena.getStatus() != GameState.playing) return;
         boolean accepted = !event.isCancelled() && event.canBuild();
         for (PlacementSnapshot snapshot : snapshots) {
-            if (!isCurrentArena(arena, snapshot.block().getWorld())) return;
+            if (!finishChange(BlockPosition.of(snapshot.block()), snapshot.revision())) continue;
+            if (arena.getStatus() != GameState.playing || !isCurrentArena(arena, snapshot.block().getWorld())) continue;
             if (!accepted) {
                 setTracked(arena, snapshot.block(), snapshot.wasTracked());
                 continue;
@@ -252,8 +259,9 @@ public final class PlacedBlockListener implements Listener {
         }
     }
 
-    private static void reconcileFallingSource(IArena arena, FallingBlock fallingBlock,
+    private void reconcileFallingSource(IArena arena, FallingBlock fallingBlock,
                                                TrackedBlockSnapshot source) {
+        if (!finishChange(source.position(), source.revision())) return;
         if (arena.getStatus() != GameState.playing) return;
         if (!isCurrentArena(arena, source.position().world())) return;
         Block current = source.position().currentBlockIfLoaded();
@@ -266,8 +274,9 @@ public final class PlacedBlockListener implements Listener {
         }
     }
 
-    private static void reconcileFallingLanding(IArena arena, FallingBlock fallingBlock,
+    private void reconcileFallingLanding(IArena arena, FallingBlock fallingBlock,
                                                 EntityChangeBlockEvent event, PlacementSnapshot landing) {
+        if (!finishChange(BlockPosition.of(landing.block()), landing.revision())) return;
         if (arena.getStatus() != GameState.playing) return;
         if (!isCurrentArena(arena, landing.block().getWorld())) return;
         Block current = currentBlockIfLoaded(landing.block());
@@ -301,28 +310,28 @@ public final class PlacedBlockListener implements Listener {
         return playing && originalBlock && !allowMapBreak;
     }
 
-    private static void scheduleDestructionReconciliation(IArena arena, Collection<Block> blocks) {
+    private void scheduleDestructionReconciliation(IArena arena, Collection<Block> blocks) {
         if (arena == null) return;
         Set<TrackedBlockSnapshot> snapshots = captureTrackedBlocks(arena, blocks);
         if (snapshots.isEmpty()) return;
         Bukkit.getScheduler().runTask(plugin, () -> reconcileDestroyedBlocks(arena, snapshots));
     }
 
-    private static Set<TrackedBlockSnapshot> captureTrackedBlocks(IArena arena, Collection<Block> blocks) {
+    private Set<TrackedBlockSnapshot> captureTrackedBlocks(IArena arena, Collection<Block> blocks) {
         Set<TrackedBlockSnapshot> snapshots = new LinkedHashSet<>();
         for (Block block : blocks) {
             if (arena.isBlockPlaced(block)) {
-                snapshots.add(new TrackedBlockSnapshot(BlockPosition.of(block), block.getBlockData()));
+                snapshots.add(new TrackedBlockSnapshot(BlockPosition.of(block), block.getBlockData(), beginChange(block)));
             }
         }
         return snapshots;
     }
 
-    private static void reconcileDestroyedBlocks(IArena arena, Collection<TrackedBlockSnapshot> snapshots) {
-        if (arena.getStatus() != GameState.playing) return;
+    private void reconcileDestroyedBlocks(IArena arena, Collection<TrackedBlockSnapshot> snapshots) {
         for (TrackedBlockSnapshot snapshot : snapshots) {
             BlockPosition position = snapshot.position();
-            if (!isCurrentArena(arena, position.world())) return;
+            if (!finishChange(position, snapshot.revision())) continue;
+            if (arena.getStatus() != GameState.playing || !isCurrentArena(arena, position.world())) continue;
             Block current = position.currentBlockIfLoaded();
             if (current == null) continue;
             setTracked(arena, current,
@@ -398,10 +407,20 @@ public final class PlacedBlockListener implements Listener {
                 arena.isAllowMapBreak(), true)) event.setCancelled(true);
     }
 
-    private record PlacementSnapshot(Block block, BlockData replacedData, boolean wasTracked) {
+    private Object beginChange(Block block) {
+        Object revision = new Object();
+        pendingChanges.put(BlockPosition.of(block), revision);
+        return revision;
     }
 
-    private record TrackedBlockSnapshot(BlockPosition position, BlockData originalData) {
+    private boolean finishChange(BlockPosition position, Object revision) {
+        return pendingChanges.remove(position, revision);
+    }
+
+    private record PlacementSnapshot(Block block, BlockData replacedData, boolean wasTracked, Object revision) {
+    }
+
+    private record TrackedBlockSnapshot(BlockPosition position, BlockData originalData, Object revision) {
     }
 
     private record BlockPosition(World world, int x, int y, int z) {
