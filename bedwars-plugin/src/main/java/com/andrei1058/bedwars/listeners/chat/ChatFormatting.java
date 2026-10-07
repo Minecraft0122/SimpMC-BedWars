@@ -105,6 +105,18 @@ public class ChatFormatting implements Listener {
             // formatting in the message body survives the prefix removal.
             String msg = AdventureText.section(e.message());
 
+            // 开局单人队已经使用公屏，喊话仅剥离操作前缀，不切换格式或要求喊话权限。
+            if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
+                if (isShouting(msg, language)) {
+                    msg = clearShout(msg, language);
+                    if (msg.isEmpty()) { e.setCancelled(true); return; }
+                    e.message(canUseLegacyColors ? deserializeLegacy(msg) : AdventureText.section(msg));
+                }
+                setRecipients(e, a.getPlayers(), a.getSpectators());
+                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
+                return;
+            }
+
             // shout format
             if (isShouting(msg, language)) {
                 if (!hasShoutPermission(p)) {
@@ -124,17 +136,8 @@ public class ChatFormatting implements Listener {
                 return;
             }
 
-            // A team that started alone has nobody to receive private chat.
-            // Use public arena chat without requiring /shout.
-            if (usesPublicChannel(a.getTeamSizeAtGameStart(team))) {
-                setRecipients(e, a.getPlayers(), a.getSpectators());
-                // A one-player team still uses the public audience, but keep
-                // the player's team prefix visible in the chat line.
-                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
-            } else {
-                setRecipients(e, team.getMembers());
-                setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
-            }
+            setRecipients(e, team.getMembers());
+            setRenderer(e, parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             return;
         }
 
@@ -143,13 +146,6 @@ public class ChatFormatting implements Listener {
     }
 
     private static String parsePHolders(String content, Player player, @Nullable ITeam team) {
-        IArena arena = Arena.getArenaByPlayer(player);
-        if (team != null && arena != null && usesPublicChannel(arena.getTeamSizeAtGameStart(team))
-                && ShoutFormattingContext.isFormatting(player)) {
-            String shoutPrefix = getMsg(player, Messages.FORMAT_PAPI_PLAYER_TEAM_SHOUT);
-            content = withoutSoloTeamPrefix(content, shoutPrefix);
-            team = null;
-        }
         content = withMessageSeparator(content)
                 .replace("{vPrefix}", getChatSupport().getPrefix(player))
                 .replace("{vSuffix}", getChatSupport().getSuffix(player))
@@ -165,12 +161,7 @@ public class ChatFormatting implements Listener {
         return SupportPAPI.getSupportPAPI().replace(player, content).replace("{message}", "%2$s");
     }
 
-    static String withoutSoloTeamPrefix(String format, String shoutPrefix) {
-        // Cover custom chat templates as well as the built-in {team} token.
-        // Only chat formatting changes; the public team placeholder stays intact.
-        return format.replace("{team} ", "").replace("{team}", "")
-                .replace("%bw1058_player_team%", shoutPrefix);
-    }
+
 
     static String withMessageSeparator(String content) {
         int messageIndex = content.indexOf("{message}");

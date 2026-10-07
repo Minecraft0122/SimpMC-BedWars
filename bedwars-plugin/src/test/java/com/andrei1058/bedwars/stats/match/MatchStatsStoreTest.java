@@ -337,7 +337,8 @@ class MatchStatsStoreTest {
         when(migrations.next()).thenReturn(false);
         when(statement.executeUpdate(startsWith("CREATE OR REPLACE VIEW")))
                 .thenThrow(new SQLException("CREATE VIEW command denied", "42000", 1142));
-        try (MatchStatsStore store = new MatchStatsStore(mock(MySQL.class), ZONE, "test-server", 100, 1)) {
+        try (var numbering = mockStatic(MatchNumberMigration.class);
+             MatchStatsStore store = new MatchStatsStore(mock(MySQL.class), ZONE, "test-server", 100, 1)) {
             assertDoesNotThrow(() -> store.createSchema(connection));
         }
         verify(statement).executeUpdate("ALTER TABLE bw_match_players MODIFY COLUMN kd_ratio DECIMAL(20,4) NULL");

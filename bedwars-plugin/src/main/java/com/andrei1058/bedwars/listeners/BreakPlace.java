@@ -40,7 +40,6 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.support.paper.TeleportManager;
-import com.andrei1058.bedwars.support.version.common.ShearsMining;
 import com.andrei1058.bedwars.popuptower.TowerEast;
 import com.andrei1058.bedwars.popuptower.TowerNorth;
 import com.andrei1058.bedwars.popuptower.TowerSouth;
@@ -69,7 +68,6 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -269,32 +267,6 @@ public class BreakPlace implements Listener {
         if (nms.isBed(material) || material.toString().equalsIgnoreCase("SEEDS") || material.toString().equalsIgnoreCase("WHEAT_SEEDS")) {
             event.setCancelled(true);
         }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onShearsBlockDamage(@NotNull BlockDamageEvent event) {
-        Player player = event.getPlayer();
-        IArena arena = Arena.getArenaByPlayer(player);
-        if (arena == null || arena.getStatus() != GameState.playing
-                || !arena.isPlayer(player) || arena.isSpectator(player)
-                || arena.getRespawnSessions().containsKey(player)
-                || !isWool(event.getBlock().getType())) {
-            return;
-        }
-
-        ItemStack heldItem = event.getItemInHand();
-        if (ShearsMining.apply(heldItem)) {
-            player.getInventory().setItemInMainHand(heldItem);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onShearsHeld(PlayerItemHeldEvent event) {
-        IArena arena = Arena.getArenaByPlayer(event.getPlayer());
-        if (arena == null || !arena.isPlayer(event.getPlayer()) || arena.isSpectator(event.getPlayer())) return;
-        PlayerInventory inventory = event.getPlayer().getInventory();
-        ItemStack item = inventory.getItem(event.getNewSlot());
-        if (ShearsMining.apply(item)) inventory.setItem(event.getNewSlot(), item);
     }
 
     @EventHandler

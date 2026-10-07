@@ -7,9 +7,19 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.entity.EntityPortalEnterEvent;
+import org.bukkit.PortalType;
 
-/** Sends lobby nether-portal users back to the proxy network lobby. */
+/** 大厅传送门使用代理返回通道，不依赖本服加载末地。 */
 public final class LobbyPortalListener implements Listener {
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEndPortalEnter(EntityPortalEnterEvent event) {
+        if (event.getPortalType() != PortalType.ENDER || !(event.getEntity() instanceof Player player)
+                || !shouldReturnToProxyLobby(player, PlayerTeleportEvent.TeleportCause.END_PORTAL)) return;
+        // 接触事件早于目标世界查找；即使 allow-end=false 也能返回代理大厅。
+        if (Misc.connectToProxyLobby(player)) event.setCancelled(true);
+    }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPortal(PlayerPortalEvent event) {

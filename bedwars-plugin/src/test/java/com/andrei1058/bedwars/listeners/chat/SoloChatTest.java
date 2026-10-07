@@ -41,18 +41,19 @@ class SoloChatTest {
     }
 
     @Test
-    void soloShoutAndTheShoutCommandChatPathKeepOnlyThePublicMarker() {
-        String result = format(1, "!你好", "[公屏] {team} {player}");
-        assertTrue(result.contains("[公屏]"));
-        assertFalse(result.contains("[红队]"));
+    void soloShoutUsesOrdinaryTeamFormatWithoutPublicMarker() {
+        String result = format(1, "!你好", "{team} {player}");
+        assertFalse(result.contains("[公屏]"));
+        assertTrue(result.contains("[红队]"));
         assertFalse(result.contains("!你好"));
+        assertFalse(result.contains("[喊话模板]"));
     }
 
     @Test
-    void customSoloShoutPlaceholderKeepsThePublicMarker() {
-        String result = format(1, "!你好", "%bw1058_player_team% {player}");
-        assertTrue(result.contains("[公屏]"));
-        assertFalse(result.contains("[红队]"));
+    void customSoloShoutKeepsOrdinaryTeamPlaceholder() {
+        String result = format(1, "!你好", "{team} %bw1058_player_team% {player}");
+        assertFalse(result.contains("[公屏]"));
+        assertTrue(result.contains("[红队]"));
     }
 
     @Test
@@ -68,7 +69,7 @@ class SoloChatTest {
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
         when(player.getName()).thenReturn("Alice");
         when(player.displayName()).thenReturn(Component.text("Alice"));
-        when(player.hasPermission("bw.shout")).thenReturn(true);
+        when(player.hasPermission("bw.shout")).thenReturn(startSize != 1);
         IArena arena = mock(IArena.class);
         ITeam team = mock(ITeam.class);
         when(arena.getStatus()).thenReturn(GameState.playing);
@@ -85,7 +86,7 @@ class SoloChatTest {
         when(language.m(Messages.MEANING_SHOUT)).thenReturn("公屏");
         for (String key : List.of(Messages.FORMATTING_CHAT_LOBBY, Messages.FORMATTING_CHAT_TEAM,
                 Messages.FORMATTING_CHAT_SHOUT)) {
-            when(language.m(key)).thenReturn(template + " > {message}");
+            when(language.m(key)).thenReturn((key.equals(Messages.FORMATTING_CHAT_SHOUT) ? "[喊话模板] " : "") + template + " > {message}");
         }
         Chat chat = mock(Chat.class);
         when(chat.getPrefix(player)).thenReturn("");

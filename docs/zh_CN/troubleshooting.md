@@ -66,7 +66,7 @@ Spigot、Folia、其他 Minecraft 版本，以及缺少根级 `level.dat` 与 `r
 
 ## 世界没有保持正午或仍在下雨
 
-- 先确认实际加载的是 6.0.0 或更新 JAR，并完整重启；Paper 1.21.11 的现代规则名是 `advance_time` 与 `advance_weather`，旧版本按 `do_daylight_cycle` 查找会静默失效。
+- 先确认实际加载的是 7.0.0 或更新 JAR，并完整重启；Paper 1.21.11 的现代规则名是 `advance_time` 与 `advance_weather`，旧版本按 `do_daylight_cycle` 查找会静默失效。
 - 在控制台执行 `time query daytime` 应得到 `6000`，`gamerule advance_time` 和 `gamerule advance_weather` 应为 `false`。尝试 `/time set night` 或重新开启规则后，事件守卫仍会把结果恢复为正午和关闭状态。
 - `MULTIARENA`/`BUNGEE` 会处理实例中的全部世界；`SHARED` 只处理竞技场、待加载竞技场、设置世界和 `/bw setLobby` 保存的大厅。SHARED 的其他玩法世界保持管理员原有时间与天气。
 - 已经下雨的世界切换晴天后，原版雨量视觉最多需要约 100 tick 完成淡出。正午晴天只保证普通主世界露天的最高自然天空亮度，不会照亮洞穴、屋内、下界或末地。

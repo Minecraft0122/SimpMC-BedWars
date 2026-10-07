@@ -21,6 +21,7 @@
 package com.andrei1058.bedwars.commands.shout;
 
 import com.andrei1058.bedwars.api.arena.IArena;
+import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.util.AdventureText;
@@ -41,11 +42,17 @@ public class ShoutCommand extends BukkitCommand {
     public boolean execute(CommandSender s, String st, String[] args) {
         if (s instanceof ConsoleCommandSender) return true;
         Player p = (Player) s;
+        IArena a = Arena.getArenaByPlayer(p);
+        if (a != null && a.getStatus() == GameState.playing && !a.isSpectator(p)
+                && a.getTeam(p) != null && a.getTeamSizeAtGameStart(a.getTeam(p)) == 1) {
+            String message = String.join(" ", args).trim();
+            if (!message.isEmpty()) p.chat(message);
+            return true;
+        }
         if (!Permissions.hasShoutPermission(p)) {
             AdventureText.send(p, Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             return true;
         }
-        IArena a = Arena.getArenaByPlayer(p);
         if (a == null || a.isSpectator(p)) {
             AdventureText.send(p, Language.getMsg(p, Messages.COMMAND_NOT_FOUND_OR_INSUFF_PERMS));
             return true;

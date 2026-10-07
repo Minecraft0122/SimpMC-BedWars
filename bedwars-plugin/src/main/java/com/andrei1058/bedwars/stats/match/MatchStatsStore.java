@@ -544,7 +544,7 @@ public final class MatchStatsStore implements AutoCloseable {
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_number_sequence ("
                     + "sequence_id INTEGER PRIMARY KEY, last_match_no BIGINT NOT NULL)"
                     + (database.isSqlite() ? "" : " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"));
-            // 旧编号保持不变；升级后从已存在的最高编号继续，不能重排历史引用。
+            // 先初始化锁行；历史编号的一次性压紧随后在独立事务内完成。
             statement.executeUpdate((database.isSqlite() ? "INSERT OR IGNORE" : "INSERT IGNORE")
                     + " INTO bw_match_number_sequence (sequence_id, last_match_no)"
                     + " SELECT 1, COALESCE(MAX(match_no),0) FROM bw_matches");
@@ -554,6 +554,7 @@ public final class MatchStatsStore implements AutoCloseable {
         }
         migrateKd(connection);
         MatchHistoryIndex.initialize(connection, database.isSqlite());
+        MatchNumberMigration.migrate(connection, database.isSqlite());
         migrateViolationActivity(connection);
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS bw_match_write_receipts (operation_uuid VARCHAR(36) PRIMARY KEY)"

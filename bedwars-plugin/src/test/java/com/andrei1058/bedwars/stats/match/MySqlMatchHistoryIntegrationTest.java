@@ -34,6 +34,27 @@ import static org.mockito.Mockito.when;
 /** 可选真实 MySQL 测试；未配置测试 URL 时跳过，不接触连接 URL 指向的业务数据库。 */
 @Timeout(60)
 class MySqlMatchHistoryIntegrationTest {
+    @Test
+    void historicalRenumberingIsAtomicAndSharedAcrossConcurrentStartup() throws Exception {
+        MatchStatsStore first=createStore("one");
+        initialize(first);
+        try(Connection c=database.openConnection()) { MatchNumberMigrationTest.seedLegacy(c); }
+        try(var executor=Executors.newFixedThreadPool(2)) {
+            Future<?> a=executor.submit(() -> { try(Connection c=database.openConnection()) {
+                MatchNumberMigration.migrate(c,false);
+            } catch(SQLException e) { throw new RuntimeException(e); } });
+            Future<?> b=executor.submit(() -> { try(Connection c=database.openConnection()) {
+                MatchNumberMigration.migrate(c,false);
+            } catch(SQLException e) { throw new RuntimeException(e); } });
+            a.get(30,TimeUnit.SECONDS); b.get(30,TimeUnit.SECONDS);
+        }
+        try(Connection c=database.openConnection()) { MatchNumberMigrationTest.assertMigrated(c); }
+        assertEquals(4L, this.<Long>transaction(c -> first.writeStart(c,
+                snapshot(UUID.randomUUID(),UUID.randomUUID(),"one","RUNNING",0,0,0,0,0))));
+        initialize(first);
+        assertEquals(4, scalar("SELECT COUNT(*) FROM bw_matches"));
+        assertEquals(3, scalar("SELECT COUNT(*) FROM bw_match_number_migration"));
+    }
     private static final Instant START = Instant.parse("2026-09-19T04:00:00.123Z");
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
     private final List<MatchStatsStore> stores = new ArrayList<>();

@@ -78,8 +78,6 @@ jobs:
             com.andrei1058.bedwars.api.PaperGameRulesRuntimeProbe
           java -cp "$classpath" \
             com.andrei1058.bedwars.support.version.v1_21_R3.FireballAccelerationRuntimeProbe
-          java -cp "$classpath" \
-            com.andrei1058.bedwars.support.version.v1_21_R3.ShearsMiningRuntimeProbe
 
       - name: 上传插件 JAR
         uses: actions/upload-artifact@v7
