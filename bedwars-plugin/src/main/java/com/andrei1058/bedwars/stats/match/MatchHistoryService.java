@@ -5,6 +5,7 @@ import com.andrei1058.bedwars.api.stats.*;
 
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -84,6 +85,19 @@ public final class MatchHistoryService implements MatchHistory, AutoCloseable {
     }
 
     @Override
+    public CompletableFuture<PlayerMatchTotals> getPlayerTotals(UUID playerUuid,
+                                                                  Instant fromInclusive,
+                                                                  Instant toExclusive) {
+        Objects.requireNonNull(playerUuid, "playerUuid");
+        try {
+            validateRange(fromInclusive, toExclusive);
+        } catch (IllegalArgumentException exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
+        return query(() -> reader.getPlayerTotals(playerUuid, fromInclusive, toExclusive));
+    }
+
+    @Override
     public CompletableFuture<List<MatchInfo>> getPlayerMatches(UUID playerUuid, int limit, int offset) {
         Objects.requireNonNull(playerUuid, "playerUuid");
         if (limit < 1 || limit > 100 || offset < 0) {
@@ -93,11 +107,53 @@ public final class MatchHistoryService implements MatchHistory, AutoCloseable {
     }
 
     @Override
+    public CompletableFuture<List<MatchInfo>> getPlayerMatches(UUID playerUuid,
+                                                                  Instant fromInclusive,
+                                                                  Instant toExclusive,
+                                                                  int limit, int offset) {
+        Objects.requireNonNull(playerUuid, "playerUuid");
+        try {
+            validateRange(fromInclusive, toExclusive);
+            validatePage(limit, offset);
+        } catch (IllegalArgumentException exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
+        return query(() -> reader.getPlayerMatches(playerUuid, fromInclusive, toExclusive, limit, offset));
+    }
+
+    @Override
     public CompletableFuture<List<MatchInfo>> getMatches(int limit, int offset) {
         if (limit < 1 || limit > 100 || offset < 0) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("分页参数无效"));
         }
         return query(() -> reader.getMatches(limit, offset));
+    }
+
+    @Override
+    public CompletableFuture<List<MatchInfo>> getMatches(Instant fromInclusive,
+                                                          Instant toExclusive,
+                                                          int limit, int offset) {
+        try {
+            validateRange(fromInclusive, toExclusive);
+            validatePage(limit, offset);
+        } catch (IllegalArgumentException exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
+        return query(() -> reader.getMatches(fromInclusive, toExclusive, limit, offset));
+    }
+
+    private static void validateRange(Instant fromInclusive, Instant toExclusive) {
+        Objects.requireNonNull(fromInclusive, "fromInclusive");
+        Objects.requireNonNull(toExclusive, "toExclusive");
+        if (!fromInclusive.isBefore(toExclusive)) {
+            throw new IllegalArgumentException("时间范围必须满足 fromInclusive < toExclusive");
+        }
+    }
+
+    private static void validatePage(int limit, int offset) {
+        if (limit < 1 || limit > 100 || offset < 0) {
+            throw new IllegalArgumentException("分页参数无效");
+        }
     }
 
     @Override

@@ -135,6 +135,45 @@ class MatchStatsStoreTest {
     }
 
     @Test
+    void dateRangeHistoryReturnsOnlyStartedMatchesAndAggregatesFinishedStats() throws Exception {
+        MatchStatsDatabase database = database();
+        UUID player = UUID.randomUUID();
+        UUID inside = UUID.randomUUID();
+        UUID outside = UUID.randomUUID();
+        UUID aborted = UUID.randomUUID();
+        try (MatchStatsStore store = initialized(database)) {
+            finish(database, store, snapshot(inside, player, "FINISHED", 7, 3, 2, 4, 0));
+            finish(database, store, snapshot(outside, player, "FINISHED", 100, 100, 100, 100, 0));
+            finish(database, store, snapshot(aborted, player, "ABORTED", 50, 50, 50, 50, 0));
+            try (Connection connection = database.openConnection(); PreparedStatement statement = connection.prepareStatement(
+                    "UPDATE bw_matches SET arena_timezone='UTC', started_at=?, ended_at=? WHERE match_uuid=?")) {
+                setTimes(statement, "2026-10-01 00:00:00.000", "2026-10-01 00:01:00.000", inside);
+                setTimes(statement, "2026-09-30 23:59:59.000", "2026-10-01 00:01:00.000", outside);
+                setTimes(statement, "2026-10-07 12:00:00.000", "2026-10-07 12:01:00.000", aborted);
+            }
+            MatchHistoryReader reader = new MatchHistoryReader(database);
+            Instant from = Instant.parse("2026-10-01T00:00:00Z");
+            Instant to = Instant.parse("2026-10-08T00:00:00Z");
+            assertEquals(new PlayerMatchTotals(player, 1, 7, 3, 2, 4),
+                    reader.getPlayerTotals(player, from, to));
+            assertEquals(List.of(aborted, inside), reader.getPlayerMatches(player, from, to, 10, 0)
+                    .stream().map(MatchInfo::matchUuid).toList());
+            assertEquals(List.of(aborted, inside), reader.getMatches(from, to, 10, 0)
+                    .stream().map(MatchInfo::matchUuid).toList());
+            assertEquals(List.of(inside), reader.getMatches(from, to, 1, 1)
+                    .stream().map(MatchInfo::matchUuid).toList());
+        }
+    }
+
+    private static void setTimes(PreparedStatement statement, String started, String ended, UUID match)
+            throws SQLException {
+        statement.setString(1, started);
+        statement.setString(2, ended);
+        statement.setString(3, match.toString());
+        statement.executeUpdate();
+    }
+
+    @Test
     void reportsCanCreateMissingMatchAndStartRetriesDoNotEraseStats() throws Exception {
         MatchStatsDatabase database = database();
         UUID match = UUID.randomUUID();

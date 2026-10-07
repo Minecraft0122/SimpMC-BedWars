@@ -111,6 +111,34 @@ public final class MatchHistoryReader {
         }
     }
 
+    /** 按正式开局时间筛选已完成对局；时间范围为 [fromInclusive, toExclusive)。 */
+    public PlayerMatchTotals getPlayerTotals(UUID playerUuid, Instant fromInclusive,
+                                             Instant toExclusive) throws SQLException {
+        requireRange(fromInclusive, toExclusive);
+        String sql = "SELECT m.arena_timezone, m.started_at, m.status, p.normal_kills, p.final_kills, "
+                + "p.deaths, p.beds_destroyed FROM bw_match_players p "
+                + "INNER JOIN bw_matches m ON m.match_uuid=p.match_uuid WHERE p.player_uuid=?";
+        long matches = 0, kills = 0, finalKills = 0, deaths = 0, beds = 0;
+        try (Connection connection = database.openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(10);
+            statement.setString(1, playerUuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    if (!"FINISHED".equals(result.getString("status"))) continue;
+                    Instant started = readTime(result.getString("started_at"),
+                            ZoneId.of(result.getString("arena_timezone")));
+                    if (started == null || started.isBefore(fromInclusive) || !started.isBefore(toExclusive)) continue;
+                    matches++;
+                    kills += result.getLong("normal_kills");
+                    finalKills += result.getLong("final_kills");
+                    deaths += result.getLong("deaths");
+                    beds += result.getLong("beds_destroyed");
+                }
+            }
+        }
+        return new PlayerMatchTotals(playerUuid, matches, kills, finalKills, deaths, beds);
+    }
+
     private static PlayerMatchTotals readDetailTotals(Connection connection, UUID playerUuid) throws SQLException {
         String sql = "SELECT COUNT(*) AS matches_played, COALESCE(SUM(p.normal_kills), 0) AS normal_kills, "
                 + "COALESCE(SUM(p.final_kills), 0) AS final_kills, COALESCE(SUM(p.deaths), 0) AS deaths, "
@@ -156,6 +184,21 @@ public final class MatchHistoryReader {
         }
     }
 
+    /** 按正式开局时间筛选玩家对局；时间范围为 [fromInclusive, toExclusive)。 */
+    public List<MatchInfo> getPlayerMatches(UUID playerUuid, Instant fromInclusive,
+                                            Instant toExclusive, int limit, int offset) throws SQLException {
+        requireRange(fromInclusive, toExclusive);
+        validatePage(limit, offset);
+        String sql = "SELECT " + MATCH_COLUMNS + " FROM bw_matches m INNER JOIN bw_match_players p "
+                + "ON p.match_uuid=m.match_uuid WHERE p.player_uuid=? ORDER BY m.match_no DESC";
+        try (Connection connection = database.openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(10);
+            statement.setString(1, playerUuid.toString());
+            List<MatchInfo> filtered = filterMatches(statement, fromInclusive, toExclusive);
+            return page(filtered, limit, offset);
+        }
+    }
+
     public List<MatchInfo> getMatches(int limit, int offset) throws SQLException {
         checkInterrupted();
         if (limit < 1 || limit > 100 || offset < 0) throw new IllegalArgumentException("分页参数无效");
@@ -166,6 +209,50 @@ public final class MatchHistoryReader {
             statement.setInt(2, offset);
             return readMatches(statement);
         }
+    }
+
+    /** 按正式开局时间筛选全部对局；时间范围为 [fromInclusive, toExclusive)。 */
+    public List<MatchInfo> getMatches(Instant fromInclusive, Instant toExclusive,
+                                      int limit, int offset) throws SQLException {
+        requireRange(fromInclusive, toExclusive);
+        validatePage(limit, offset);
+        String sql = "SELECT " + MATCH_COLUMNS + " FROM bw_matches m ORDER BY m.match_no DESC";
+        try (Connection connection = database.openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(10);
+            List<MatchInfo> filtered = filterMatches(statement, fromInclusive, toExclusive);
+            return page(filtered, limit, offset);
+        }
+    }
+
+    private static List<MatchInfo> filterMatches(PreparedStatement statement, Instant fromInclusive,
+                                                   Instant toExclusive) throws SQLException {
+        List<MatchInfo> matches = new ArrayList<>();
+        try (ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                MatchInfo match = readMatch(result);
+                if (!match.startedAt().isBefore(fromInclusive) && match.startedAt().isBefore(toExclusive)) {
+                    matches.add(match);
+                }
+            }
+        }
+        return matches;
+    }
+
+    private static List<MatchInfo> page(List<MatchInfo> matches, int limit, int offset) {
+        if (offset >= matches.size()) return List.of();
+        return List.copyOf(matches.subList(offset, Math.min(offset + limit, matches.size())));
+    }
+
+    private static void requireRange(Instant fromInclusive, Instant toExclusive) {
+        Objects.requireNonNull(fromInclusive, "fromInclusive");
+        Objects.requireNonNull(toExclusive, "toExclusive");
+        if (!fromInclusive.isBefore(toExclusive)) {
+            throw new IllegalArgumentException("时间范围必须满足 fromInclusive < toExclusive");
+        }
+    }
+
+    private static void validatePage(int limit, int offset) {
+        if (limit < 1 || limit > 100 || offset < 0) throw new IllegalArgumentException("分页参数无效");
     }
 
     public Optional<UUID> findPlayerUuid(String playerName) throws SQLException {

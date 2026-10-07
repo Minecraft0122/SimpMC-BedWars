@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>7.0.0</version>
+    <version>7.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -40,6 +40,7 @@ import com.andrei1058.bedwars.api.stats.MatchHistory;
 import com.andrei1058.bedwars.api.stats.MatchInfo;
 import com.andrei1058.bedwars.api.stats.MatchPlayerResult;
 import com.andrei1058.bedwars.api.stats.PlayerMatchTotals;
+import java.time.Instant;
 
 MatchHistory history = api.getMatchHistory();
 if (history == null || !history.isEnabled()) {
@@ -52,12 +53,20 @@ CompletableFuture<Optional<MatchInfo>> byNumber = history.findMatch(10001L);
 CompletableFuture<Optional<MatchInfo>> byUuid = history.findMatch(matchUuid);
 CompletableFuture<List<MatchPlayerResult>> players = history.getMatchPlayers(matchUuid);
 CompletableFuture<PlayerMatchTotals> totals = history.getPlayerTotals(playerUuid);
+CompletableFuture<PlayerMatchTotals> weekTotals = history.getPlayerTotals(playerUuid,
+        Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-08T00:00:00Z"));
 CompletableFuture<List<MatchInfo>> matches = history.getPlayerMatches(playerUuid, 10, 0);
+CompletableFuture<List<MatchInfo>> weekMatches = history.getPlayerMatches(playerUuid,
+        Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-08T00:00:00Z"), 100, 0);
 CompletableFuture<List<MatchInfo>> allMatches = history.getMatches(10, 0); // 5.14.0
+CompletableFuture<List<MatchInfo>> weekAllMatches = history.getMatches(
+        Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-08T00:00:00Z"), 100, 0);
 CompletableFuture<Optional<UUID>> offlinePlayer = history.findPlayerUuid("Alice"); // 5.14.0
 ```
 
-`MatchInfo` 表示对局本身，`MatchPlayerResult` 表示单局玩家快照，`PlayerMatchTotals` 表示所有已完成对局累计值，使用 `matchNumber()`、`matchUuid()`、`kills()`、`finalKills()` 和 `bedsDestroyed()` 等 record 访问方法。两个战绩对象的 `kdRatio()` 返回 `double`，按 `普通击杀 / max(1, 全部死亡)` 计算；最终击杀单独保存，死亡包含普通死亡与最终死亡。累计 K/D 先相加普通击杀和全部死亡再相除，不能平均各局 K/D。
+`MatchInfo` 表示对局本身，`MatchPlayerResult` 表示单局玩家快照，`PlayerMatchTotals` 表示累计值，使用 `matchNumber()`、`matchUuid()`、`kills()`、`finalKills()` 和 `bedsDestroyed()` 等 record 访问方法。两个战绩对象的 `kdRatio()` 返回 `double`，按 `普通击杀 / max(1, 全部死亡)` 计算；最终击杀单独保存，死亡包含普通死亡与最终死亡。累计 K/D 先相加普通击杀和全部死亡再相除，不能平均各局 K/D。
+
+时间范围查询使用正式开局时间 `startedAt`，区间为 `[fromInclusive, toExclusive)`：起点包含，终点不包含。参数使用 `Instant`，插件不需要知道竞技场保存的时区。例如查询 2026 年 10 月 1 日至 8 日（UTC）可以调用 `getPlayerTotals(playerUuid, Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-08T00:00:00Z"))`，返回该范围内 `FINISHED` 对局的普通击杀、最终击杀、死亡、破坏床数和 K/D。`getPlayerMatches` 和 `getMatches` 的时间范围重载返回明细，仍按对局编号倒序分页；这两个明细查询包含 `RUNNING`/`ABORTED`，但累计统计只计算 `FINISHED`。
 
 每场对局的开始和结束时间均会持久化，其他插件通过 `MatchInfo.startedAt()` 和 `MatchInfo.endedAt()` 读取，类型都是 `java.time.Instant`，与展示时区无关。`startedAt()` 是正式开局时间，始终非空；`RUNNING` 对局的 `endedAt()` 为 `null`。正常结算的 `FINISHED` 对局和已中止的 `ABORTED` 对局都会保存结束时间。若服务器崩溃，重启后将遗留对局标记为 `ABORTED` 时，结束时间是这次恢复标记的时间，不代表能够还原精确崩溃时刻。
 
