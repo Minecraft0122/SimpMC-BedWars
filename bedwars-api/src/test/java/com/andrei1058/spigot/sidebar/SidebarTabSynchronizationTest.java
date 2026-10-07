@@ -878,7 +878,7 @@ class SidebarTabSynchronizationTest {
     }
 
     @Test
-    void playingRowsUseTheirOwnTeamWithForOtherTeams() {
+    void playingRowsSuppressPushingWithinTheirOwnTeam() {
         Sidebar sidebar = sidebar();
         TeamState state = new TeamState();
         Scoreboard scoreboard = scoreboard(team(state));
@@ -890,8 +890,8 @@ class SidebarTabSynchronizationTest {
 
         sidebar.applyTab(scoreboard, tab);
 
-        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision,
-                "playing rows use the BW1058 FOR_OTHER_TEAMS rule");
+        assertSame(Team.OptionStatus.FOR_OWN_TEAM, state.collision,
+                "playing rows use the Paper FOR_OWN_TEAM rule (suppress teammate pushing)");
         assertSame(Team.OptionStatus.ALWAYS, state.visibility,
                 "collision policy must not alter name-tag visibility");
     }
@@ -909,8 +909,8 @@ class SidebarTabSynchronizationTest {
 
         sidebar.applyTab(scoreboard, tab);
 
-        assertSame(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision,
-                "an invisible live player still uses FOR_OTHER_TEAMS");
+        assertSame(Team.OptionStatus.FOR_OWN_TEAM, state.collision,
+                "an invisible live player still uses FOR_OWN_TEAM");
         assertSame(Team.OptionStatus.NEVER, state.visibility,
                 "invisible rows hide their name tag without changing collision");
     }
@@ -925,7 +925,7 @@ class SidebarTabSynchronizationTest {
                 "alice", target, new SidebarLine(), new SidebarLine(),
                 PlayerTab.PushingRule.NEVER, List.of(), ChatColor.RED,
                 PlayerTab.NameTagVisibility.ALWAYS, PlayerTab.PlayerListMode.ACTUAL);
-        state.collision = Team.OptionStatus.FOR_OTHER_TEAMS;
+        state.collision = Team.OptionStatus.FOR_OWN_TEAM;
 
         sidebar.applyTab(scoreboard, tab);
 
@@ -966,7 +966,7 @@ class SidebarTabSynchronizationTest {
         assertEquals(1, teams.size());
         TeamState state = states.values().iterator().next();
         assertEquals(Set.of("Alice", "Bob"), state.entries);
-        assertEquals(Team.OptionStatus.FOR_OTHER_TEAMS, state.collision);
+        assertEquals(Team.OptionStatus.FOR_OWN_TEAM, state.collision);
     }
 
     private static Sidebar sidebar() {

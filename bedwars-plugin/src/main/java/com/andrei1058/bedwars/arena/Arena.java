@@ -1617,8 +1617,7 @@ public class Arena implements IArena {
         if (status == GameState.restarting) {
             RestartingPlayerState.prepare(this);
         }
-        // Disable immediately on exit. On entry, refresh client TAB rules
-        // before adding server exemptions and restoring projectile hitboxes.
+        // 退出时立即关闭碰撞；正式开局先刷新客户端 TAB 规则，再恢复服务端碰撞。
         if (status != GameState.playing) applyPlayerCollisionState();
         Bukkit.getPluginManager().callEvent(new GameStateChangeEvent(this, oldStatus, status));
         refreshSigns();
@@ -2895,9 +2894,9 @@ public class Arena implements IArena {
 
     private void updateCollisionTeam(Player player) {
         removeFromCollisionTeams(player);
-        boolean active = status == GameState.playing && players.contains(player)
-                && !respawnSessions.containsKey(player)
-                ;
+        boolean active = players.contains(player)
+                && PlayerCollisionState.shouldCollide(status, spectators.contains(player),
+                respawnSessions.containsKey(player));
         Team team = active ? collisionTeam(getTeam(player)) : inactiveCollisionTeam();
         if (team != null) team.addEntry(player.getName());
     }
@@ -2908,11 +2907,10 @@ public class Arena implements IArena {
 
     private Team collisionTeam(ITeam gameTeam) {
         if (gameTeam == null) return inactiveCollisionTeam();
-        return collisionTeams.computeIfAbsent(gameTeam.getName(), ignored -> {
-            Team team = getOrCreateCollisionTeam(PlayerCollisionState.collisionGroupName(this, gameTeam));
-            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
-            return team;
-        });
+        Team team = collisionTeams.computeIfAbsent(gameTeam.getName(), ignored ->
+                getOrCreateCollisionTeam(PlayerCollisionState.collisionGroupName(this, gameTeam)));
+        team.setOption(Team.Option.COLLISION_RULE, PlayerCollisionState.ACTIVE_TEAM_RULE);
+        return team;
     }
 
     private Team inactiveCollisionTeam() {

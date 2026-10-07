@@ -62,10 +62,6 @@ public class InternalAdapter extends RestoreAdapter {
     public InternalAdapter(Plugin plugin) {
         super(plugin);
         storageLayout = WorldStorageLayout.detect();
-        if (storageLayout.usesDimensionStorage()) {
-            plugin.getLogger().info("检测到 Paper 26+ 维度运行目录；竞技场源地图与缓存强制使用旧版 Bukkit 格式。");
-            recoverInterruptedMoves();
-        }
     }
 
     private static void keepSpawnLoaded(World world) {
@@ -77,67 +73,6 @@ public class InternalAdapter extends RestoreAdapter {
     private File legacyWorldFolder(String worldName) {
         return storageLayout.legacyWorldFolder(worldName);
     }
-
-    private File runtimeWorldFolder(String worldName) {
-        return storageLayout.runtimeWorldFolder(worldName);
-    }
-
-    private File loadStagingWorldFolder(String worldName) {
-        return new File(storageLayout.levelDirectory(), ".simpmc-bedwars-source-staging/" + worldName);
-    }
-
-    private File saveBackupWorldFolder(String worldName) {
-        return new File(storageLayout.levelDirectory(), ".simpmc-bedwars-save-backup/" + worldName);
-    }
-
-    private File saveStagingWorldFolder(String worldName) {
-        return new File(storageLayout.levelDirectory(), ".simpmc-bedwars-save-staging/" + worldName);
-    }
-
-    private void recoverInterruptedMoves() {
-        recoverInterruptedMoves(new File(storageLayout.levelDirectory(), ".simpmc-bedwars-source-staging"), true);
-        recoverInterruptedMoves(new File(storageLayout.levelDirectory(), ".simpmc-bedwars-save-backup"), false);
-        cleanupInterruptedSaveStaging(new File(storageLayout.levelDirectory(), ".simpmc-bedwars-save-staging"));
-    }
-
-    private void recoverInterruptedMoves(File parent, boolean stagedSourceWins) {
-        File[] interrupted = parent.listFiles(File::isDirectory);
-        if (interrupted == null) return;
-        for (File temporary : interrupted) {
-            String worldName = temporary.getName();
-            if (!storageLayout.supportsWorldName(worldName)) continue;
-            File source = legacyWorldFolder(worldName);
-            try {
-                if (stagedSourceWins) {
-                    deleteDirectory(source);
-                    moveDirectory(temporary, source);
-                    getOwner().getLogger().warning("已恢复上次中断的竞技场源地图：" + worldName);
-                } else if (source.exists()) {
-                    deleteDirectory(temporary);
-                } else {
-                    moveDirectory(temporary, source);
-                    getOwner().getLogger().warning("已回滚上次未完成的设置地图保存：" + worldName);
-                }
-            } catch (IOException exception) {
-                getOwner().getLogger().log(java.util.logging.Level.SEVERE,
-                        "无法恢复中断的世界目录事务：" + temporary, exception);
-            }
-        }
-    }
-
-    private void cleanupInterruptedSaveStaging(File parent) {
-        File[] interrupted = parent.listFiles(File::isDirectory);
-        if (interrupted == null) return;
-        for (File temporary : interrupted) {
-            try {
-                deleteDirectory(temporary);
-            } catch (IOException exception) {
-                getOwner().getLogger().log(java.util.logging.Level.SEVERE,
-                        "无法删除中断的旧格式保存暂存目录：" + temporary, exception);
-            }
-        }
-    }
-
 
     private File archiveFile(String worldName) {
         return WorldZipper.backupFile(worldName);
@@ -170,76 +105,13 @@ public class InternalAdapter extends RestoreAdapter {
             }
 
             File legacyTarget = legacyWorldFolder(worldName);
-            boolean stageSource = storageLayout.usesDimensionStorage()
-                    && worldName.equals(sourceName) && source.exists();
-            if (stageSource) {
-                File staged = loadStagingWorldFolder(sourceName);
-                deleteDirectory(staged);
-                File parent = staged.getParentFile();
-                if (parent != null) parent.mkdirs();
-                moveDirectory(source, staged);
-            }
-            if (storageLayout.usesDimensionStorage()) deleteDirectory(runtimeWorldFolder(worldName));
             deleteDirectory(legacyTarget);
             ZipFileUtil.unzipFileIntoDirectory(archive, legacyTarget);
             return PreparationResult.EXISTING;
         } catch (IOException exception) {
-            restoreStagedSource(sourceName);
             getOwner().getLogger().severe("无法准备世界 " + worldName + " 的运行副本：" + exception.getMessage());
             return PreparationResult.FAILED;
         }
-    }
-
-    private void restoreStagedSource(String worldName) {
-        if (!storageLayout.usesDimensionStorage()) return;
-        File staged = loadStagingWorldFolder(worldName);
-        File source = legacyWorldFolder(worldName);
-        if (!staged.exists()) return;
-        try {
-            if (source.exists()) deleteDirectory(source);
-            moveDirectory(staged, source);
-        } catch (IOException exception) {
-            getOwner().getLogger().log(java.util.logging.Level.SEVERE,
-                    "无法恢复世界源目录 " + worldName + "，请立即备份 "
-                            + loadStagingWorldFolder(worldName).getParent(), exception);
-        }
-    }
-
-    private void restoreSourceAfterCreate(String worldName) {
-        restoreStagedSource(worldName);
-        if (!storageLayout.usesDimensionStorage()) return;
-        File source = legacyWorldFolder(worldName);
-        if (source.exists()) return;
-        try {
-            ZipFileUtil.unzipFileIntoDirectory(archiveFile(worldName), source);
-        } catch (IOException exception) {
-            getOwner().getLogger().log(java.util.logging.Level.SEVERE,
-                    "Paper 26+ 已迁移旧世界，但无法恢复权威源目录 " + worldName, exception);
-        }
-    }
-
-    private void moveDirectory(File from, File to) throws IOException {
-        WorldStorageFiles.moveDirectory(from, to);
-    }
-
-    private boolean syncRuntimeToLegacy(String worldName) {
-        if (!storageLayout.usesDimensionStorage()) return true;
-        File runtime = runtimeWorldFolder(worldName);
-        File source = legacyWorldFolder(worldName);
-        if (!runtime.exists()) {
-            getOwner().getLogger().severe("找不到 Paper 26+ 运行目录，无法保存设置地图：" + runtime);
-            return false;
-        }
-        try {
-            WorldStorageFiles.mergeRuntimeIntoLegacy(runtime, source, storageLayout.levelDirectory(),
-                    saveStagingWorldFolder(worldName), saveBackupWorldFolder(worldName));
-            deleteDirectory(runtime);
-        } catch (IOException exception) {
-            getOwner().getLogger().log(java.util.logging.Level.SEVERE,
-                    "无法把世界 " + worldName + " 保存为旧版 Bukkit 目录格式", exception);
-            return false;
-        }
-        return true;
     }
 
     private WorldCreator createWorldCreator(String worldName) {
@@ -272,8 +144,6 @@ public class InternalAdapter extends RestoreAdapter {
                     } catch (RuntimeException exception) {
                         failArenaLoad(a, exception);
                         return;
-                    } finally {
-                        restoreSourceAfterCreate(a.getArenaName());
                     }
                     if (w == null) {
                         throw new IllegalStateException("World could not be created: " + a.getWorldName());
@@ -338,7 +208,7 @@ public class InternalAdapter extends RestoreAdapter {
     public void onSetupSessionStart(ISetupSession s) {
         if (!storageLayout.supportsWorldName(s.getWorldName())) {
             AdventureText.send(s.getPlayer(), ChatColor.RED
-                    + "世界名不受当前 Paper 版本支持；Paper 26+ 仅允许小写英文字母、数字、点、下划线和连字符。");
+                    + "世界名无效；不能包含目录分隔符或路径跳转。");
             s.close();
             return;
         }
@@ -355,12 +225,7 @@ public class InternalAdapter extends RestoreAdapter {
                     if (existing) {
                         AdventureText.send(s.getPlayer(), ChatColor.GREEN + "正在从旧版 Bukkit 世界目录加载 " + s.getWorldName() + "。");
                         deleteWorldTrash(s.getWorldName());
-                        World w;
-                        try {
-                            w = Bukkit.createWorld(createWorldCreator(s.getWorldName()));
-                        } finally {
-                            restoreSourceAfterCreate(s.getWorldName());
-                        }
+                        World w = Bukkit.createWorld(createWorldCreator(s.getWorldName()));
                         keepSpawnLoaded(w);
                     } else {
                         try {
@@ -407,11 +272,8 @@ public class InternalAdapter extends RestoreAdapter {
             }
         }
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            if (syncRuntimeToLegacy(session.getWorldName())) {
-                new WorldZipper(session.getWorldName(), true, legacyWorldFolder(session.getWorldName()));
-            }
-        });
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                new WorldZipper(session.getWorldName(), true, legacyWorldFolder(session.getWorldName())));
     }
 
     private void retrySetupWorldClose(ISetupSession session, int attempt, String reason) {
@@ -444,8 +306,7 @@ public class InternalAdapter extends RestoreAdapter {
 
     private void deleteWorldFiles(String name, boolean deleteArchive) {
         try {
-            WorldStorageFiles.deleteWorldFiles(storageLayout, archiveFile(name), name, deleteArchive,
-                    loadStagingWorldFolder(name), saveStagingWorldFolder(name), saveBackupWorldFolder(name));
+            WorldStorageFiles.deleteWorldFiles(storageLayout, archiveFile(name), name, deleteArchive);
         } catch (IOException exception) {
             getOwner().getLogger().log(java.util.logging.Level.SEVERE,
                     "无法完整删除世界文件 " + name, exception);
@@ -564,16 +425,11 @@ public class InternalAdapter extends RestoreAdapter {
             files.addAll(toAdd);
         }
         Bukkit.getScheduler().runTaskAsynchronously(getOwner(), () -> {
-            Set<File> roots = new LinkedHashSet<>();
-            roots.add(storageLayout.getWorldContainer());
-            roots.add(storageLayout.runtimeWorldsDirectory());
-            for (File root : roots) {
-                File[] files = root.listFiles();
-                if (files == null) continue;
-                for (File f : files) {
-                    if (f != null && f.isDirectory() && f.getName().startsWith("bw_temp_")) {
-                        deleteWorldFiles(f.getName(), true);
-                    }
+            File[] files = storageLayout.getWorldContainer().listFiles();
+            if (files == null) return;
+            for (File f : files) {
+                if (f != null && f.isDirectory() && f.getName().startsWith("bw_temp_")) {
+                    deleteWorldFiles(f.getName(), true);
                 }
             }
         });
@@ -586,10 +442,7 @@ public class InternalAdapter extends RestoreAdapter {
 
     private void deleteWorldTrash(String world) {
         File legacy = legacyWorldFolder(world);
-        File runtime = runtimeWorldFolder(world);
         deleteWorldIdentity(legacy);
-        if (!runtime.equals(legacy)) deleteWorldIdentity(runtime);
-        if (storageLayout.usesDimensionStorage()) return;
         for (File f : new File[]{new File(legacy, "level.dat"),
                 new File(legacy, "level.dat_mcr"),
                 new File(legacy, "level.dat_old")}) {

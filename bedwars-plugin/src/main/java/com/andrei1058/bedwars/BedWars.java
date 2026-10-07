@@ -70,7 +70,6 @@ import com.andrei1058.bedwars.lobbysocket.LobbySocketServer;
 import com.andrei1058.bedwars.lobbysocket.LoadedUsersCleaner;
 import com.andrei1058.bedwars.lobbysocket.SendTask;
 import com.andrei1058.bedwars.maprestore.internal.InternalAdapter;
-import com.andrei1058.bedwars.maprestore.internal.LegacyWorldSourceGuard;
 import com.andrei1058.bedwars.maprestore.internal.WorldStorageLayout;
 import com.andrei1058.bedwars.metrics.MetricsManager;
 import com.andrei1058.bedwars.money.internal.MoneyListeners;
@@ -179,7 +178,7 @@ public class BedWars extends JavaPlugin {
         if (!MinecraftVersionPolicy.isSupported(version)) {
             serverSoftwareSupport = false;
             this.getLogger().severe("不支持当前 Minecraft 版本：" + version);
-            this.getLogger().severe("本构建仅支持 Paper 1.21.11 和 Paper 26.2。");
+            this.getLogger().severe("本构建仅支持 Paper 1.21.11。");
             return;
         }
 
@@ -258,8 +257,9 @@ public class BedWars extends JavaPlugin {
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 if (!config.getLobbyWorldName().isEmpty()) {
                     WorldStorageLayout lobbyStorage = WorldStorageLayout.detect();
-                    boolean lobbyExists = LegacyWorldSourceGuard.hasRecoverableLobbySource(
-                            lobbyStorage, config.getLobbyWorldName());
+                    boolean lobbyExists = lobbyStorage.supportsWorldName(config.getLobbyWorldName())
+                            && new File(lobbyStorage.legacyWorldFolder(config.getLobbyWorldName()), "level.dat").isFile()
+                            && new File(lobbyStorage.legacyWorldFolder(config.getLobbyWorldName()), "region").isDirectory();
                     if (Bukkit.getWorld(config.getLobbyWorldName()) == null && lobbyExists) {
                         if (!config.getLobbyWorldName().equalsIgnoreCase(Bukkit.getServer().getWorlds().get(0).getName())) {
                             Bukkit.getScheduler().runTaskLater(this,
@@ -522,47 +522,25 @@ public class BedWars extends JavaPlugin {
 
     private void loadLegacyLobbyWorld(WorldStorageLayout storageLayout, String worldName) {
         if (!storageLayout.supportsWorldName(worldName)) {
-            getLogger().severe("无法加载大厅世界 " + worldName
-                    + "：Paper 26+ 仅支持小写 ASCII 世界名。");
+            getLogger().severe("无法加载大厅世界：世界名无效 " + worldName);
             return;
         }
-        File staging = LegacyWorldSourceGuard.lobbyStagingFolder(storageLayout, worldName);
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            try {
-                LegacyWorldSourceGuard.prepare(storageLayout, worldName, staging);
-            } catch (IOException exception) {
-                getLogger().log(java.util.logging.Level.SEVERE,
-                        "无法从旧版 Bukkit 目录准备大厅世界 " + worldName, exception);
-                return;
+        try {
+            if (Bukkit.getWorld(worldName) == null) {
+                Bukkit.createWorld(storageLayout.createWorldCreator(worldName));
             }
-            Bukkit.getScheduler().runTask(this, () -> {
-                try {
-                    if (Bukkit.getWorld(worldName) == null) {
-                        Bukkit.createWorld(storageLayout.createWorldCreator(worldName));
-                    }
-                } catch (RuntimeException exception) {
-                    getLogger().log(java.util.logging.Level.SEVERE,
-                            "无法加载大厅世界 " + worldName, exception);
-                } finally {
-                    try {
-                        LegacyWorldSourceGuard.restore(storageLayout, worldName, staging);
-                    } catch (IOException exception) {
-                        getLogger().log(java.util.logging.Level.SEVERE,
-                                "无法恢复大厅世界旧格式源目录；请立即备份 " + staging, exception);
-                    }
+        } catch (RuntimeException exception) {
+            getLogger().log(java.util.logging.Level.SEVERE, "无法加载大厅世界 " + worldName, exception);
+            return;
+        }
+        if (Bukkit.getWorld(worldName) != null) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                World lobby = Bukkit.getWorld(worldName);
+                if (lobby != null) {
+                    lobby.getEntities().stream().filter(entity -> entity instanceof Monster).forEach(Entity::remove);
                 }
-
-                if (Bukkit.getWorld(worldName) != null) {
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        World lobby = Bukkit.getWorld(worldName);
-                        if (lobby != null) {
-                            lobby.getEntities().stream().filter(entity -> entity instanceof Monster)
-                                    .forEach(Entity::remove);
-                        }
-                    }, 20L);
-                }
-            });
-        });
+            }, 20L);
+        }
     }
 
     private void registerDelayedCommands() {

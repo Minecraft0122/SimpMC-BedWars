@@ -17,6 +17,8 @@
 
 ## 已修复问题
 
+| BUG-222 | 正式对局同队碰撞 | 6.0.0 | 将 `FOR_OTHER_TEAMS` 误当成只允许敌队碰撞，真实 Paper 判定反而允许同队互推并排除敌队 | 主 scoreboard 与私有 TAB 队伍统一改用 `FOR_OWN_TEAM`，更新 API 语义说明 | 真实 Paper 1.21.11 CraftTeam + EntitySelector 双向判定、TAB 生命周期回归及全量构建 | 已修复 |
+
 | BUG-221 | 5.14.0 构建 | 5.14.0 | Java 25 下 Maven 内嵌编译器处理测试诊断时抛出 ConcurrentModificationException，阻止 Paper 26.2 验证和发布 | 覆盖编译改用独立 javac 进程，保留全部源码编译与运行探针 | 本地同源内嵌失败/独立编译成功对照及 GitHub 双版本验证 | 已修复 |
 | BUG-217 | 5.13.3 | 5.14.0 | 重复上报通过 upsert 消耗数据库自增编号，造成跳号 | 事务内序列分配，重复写入复用原编号，回滚同时回滚序列 | SQLite 重复上报、回滚、重启迁移及 MySQL 并发写入回归 | 已修复 |
 | BUG-218 | 5.13.3 | 5.14.0 | 控制台裸 bw 只显示不存在的 safemode；离线名字与全局历史没有查询入口 | 新增完整 help、离线数据库名字解析和 history all 分页 | 控制台帮助、权限过滤、异步名字解析、重名和全局分页回归 | 已修复 |

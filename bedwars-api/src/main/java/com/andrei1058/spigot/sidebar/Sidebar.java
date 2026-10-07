@@ -739,10 +739,10 @@ public class Sidebar {
         if (team.getOption(Team.Option.NAME_TAG_VISIBILITY) != visibility) {
             team.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
         }
-        // This is a per-viewer display scoreboard, not the world's scoreboard
-        // used by the server-side entity physics simulation.
+        // 私有 scoreboard 负责客户端预测；服务端主 scoreboard 使用同一规则。
+        // Paper 1.21.11 的 FOR_OWN_TEAM 对应 pushOwnTeam，实际含义是禁止同队互推。
         Team.OptionStatus collision = pushOtherTeams
-                ? Team.OptionStatus.FOR_OTHER_TEAMS
+                ? Team.OptionStatus.FOR_OWN_TEAM
                 : Team.OptionStatus.NEVER;
         if (team.getOption(Team.Option.COLLISION_RULE) != collision) {
             team.setOption(Team.Option.COLLISION_RULE, collision);

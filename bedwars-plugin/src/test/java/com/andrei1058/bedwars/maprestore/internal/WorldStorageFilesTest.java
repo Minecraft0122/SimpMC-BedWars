@@ -8,7 +8,6 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WorldStorageFilesTest {
@@ -17,33 +16,18 @@ class WorldStorageFilesTest {
     Path temporaryDirectory;
 
     @Test
-    void removesLegacyRuntimeStagingAndArchiveCopiesTogether() throws Exception {
-        Path container = temporaryDirectory.resolve("server");
-        Path level = container.resolve("world");
-        WorldStorageLayout layout = WorldStorageLayout.forTests(container, level);
-        Path legacy = layout.legacyWorldFolder("arena").toPath();
-        Path runtime = layout.runtimeWorldFolder("arena").toPath();
-        Path staging = temporaryDirectory.resolve("plugin/Cache/.source-staging/arena");
-        Path archive = temporaryDirectory.resolve("plugin/Cache/arena.zip");
-        Files.createDirectories(legacy.resolve("region"));
-        Files.createDirectories(runtime.resolve("region"));
-        Files.createDirectories(staging.resolve("region"));
-        Files.createDirectories(archive.getParent());
+    void removesBukkitWorldAndOptionallyItsArchive() throws Exception {
+        WorldStorageLayout layout = WorldStorageLayout.forTests(temporaryDirectory.resolve("server"));
+        Path world = layout.legacyWorldFolder("arena").toPath();
+        Path archive = temporaryDirectory.resolve("arena.zip");
+        Files.createDirectories(world.resolve("region"));
         Files.writeString(archive, "cache");
 
-        Path saveBackup = temporaryDirectory.resolve("plugin/Cache/.save-backup/arena");
-        Path saveStaging = temporaryDirectory.resolve("plugin/Cache/.save-staging/arena");
-        Files.createDirectories(saveBackup.resolve("region"));
-        Files.createDirectories(saveStaging.resolve("region"));
+        WorldStorageFiles.deleteWorldFiles(layout, archive.toFile(), "arena", false);
+        assertFalse(Files.exists(world));
+        assertEquals("cache", Files.readString(archive));
 
-        WorldStorageFiles.deleteWorldFiles(layout, archive.toFile(), "arena", true,
-                staging.toFile(), saveStaging.toFile(), saveBackup.toFile());
-
-        assertFalse(Files.exists(legacy));
-        assertFalse(Files.exists(runtime));
-        assertFalse(Files.exists(staging));
-        assertFalse(Files.exists(saveStaging));
-        assertFalse(Files.exists(saveBackup));
+        WorldStorageFiles.deleteWorldFiles(layout, archive.toFile(), "arena", true);
         assertFalse(Files.exists(archive));
     }
 
@@ -66,54 +50,4 @@ class WorldStorageFilesTest {
         assertFalse(Files.exists(world.resolve("data/paper/metadata.dat")));
     }
 
-    @Test
-    void mergesPaperRuntimeBackIntoTheLegacyDirectory() throws Exception {
-        Path legacy = temporaryDirectory.resolve("server/arena");
-        Path runtime = temporaryDirectory.resolve("server/world/dimensions/minecraft/arena");
-        Path staging = temporaryDirectory.resolve("server/world/.save-staging/arena");
-        Path backup = temporaryDirectory.resolve("server/world/.save-backup/arena");
-        Files.createDirectories(legacy.resolve("region"));
-        Files.createDirectories(legacy.resolve("data/paper"));
-        Files.writeString(legacy.resolve("level.dat"), "legacy-level");
-        Files.writeString(legacy.resolve("region/stale.mca"), "stale");
-        Files.writeString(legacy.resolve("uid.dat"), "old-identity");
-        Files.writeString(legacy.resolve("data/paper/metadata.dat"), "old-metadata");
-        Files.createDirectories(runtime.resolve("region"));
-        Files.createDirectories(runtime.resolve("data/paper"));
-        Files.writeString(runtime.resolve("region/current.mca"), "current");
-        Files.writeString(runtime.resolve("data/paper/metadata.dat"), "runtime-metadata");
-
-        WorldStorageFiles.mergeRuntimeIntoLegacy(runtime.toFile(), legacy.toFile(),
-                temporaryDirectory.resolve("unused-template").toFile(), staging.toFile(), backup.toFile());
-
-        assertEquals("legacy-level", Files.readString(legacy.resolve("level.dat")));
-        assertEquals("current", Files.readString(legacy.resolve("region/current.mca")));
-        assertFalse(Files.exists(legacy.resolve("region/stale.mca")));
-        assertFalse(Files.exists(legacy.resolve("uid.dat")));
-        assertFalse(Files.exists(legacy.resolve("data/paper/metadata.dat")));
-        assertFalse(Files.exists(staging));
-        assertFalse(Files.exists(backup));
-        assertTrue(Files.exists(runtime.resolve("region/current.mca")));
-        assertTrue(WorldStorageFiles.isLegacyWorld(legacy.toFile()));
-    }
-
-    @Test
-    void rejectsRuntimeCopiesWithoutRegionDataBeforeChangingTheLegacySource() throws Exception {
-        Path legacy = temporaryDirectory.resolve("server/arena");
-        Path runtime = temporaryDirectory.resolve("server/world/dimensions/minecraft/arena");
-        Path staging = temporaryDirectory.resolve("server/world/.save-staging/arena");
-        Path backup = temporaryDirectory.resolve("server/world/.save-backup/arena");
-        Files.createDirectories(legacy.resolve("region"));
-        Files.writeString(legacy.resolve("level.dat"), "legacy-level");
-        Files.createDirectories(runtime.resolve("data"));
-
-        assertThrows(java.io.IOException.class, () -> WorldStorageFiles.mergeRuntimeIntoLegacy(
-                runtime.toFile(), legacy.toFile(), temporaryDirectory.toFile(),
-                staging.toFile(), backup.toFile()));
-
-        assertEquals("legacy-level", Files.readString(legacy.resolve("level.dat")));
-        assertTrue(Files.isDirectory(legacy.resolve("region")));
-        assertFalse(Files.exists(staging));
-        assertFalse(Files.exists(backup));
-    }
 }

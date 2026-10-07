@@ -4,6 +4,7 @@ import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Locale;
@@ -11,6 +12,10 @@ import java.util.Objects;
 
 /** Owns the entity collision flag for BedWars player lifecycle states. */
 public final class PlayerCollisionState {
+
+    // Paper 1.21.11 将此值映射为 pushOwnTeam；实际判定是排除同队碰撞。
+    // FOR_OTHER_TEAMS 反而排除敌队碰撞，不能按枚举名称直译为允许互推的对象。
+    public static final Team.OptionStatus ACTIVE_TEAM_RULE = Team.OptionStatus.FOR_OWN_TEAM;
 
     private PlayerCollisionState() {
     }

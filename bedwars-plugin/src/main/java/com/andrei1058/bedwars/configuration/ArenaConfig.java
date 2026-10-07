@@ -49,7 +49,7 @@ public class ArenaConfig extends ConfigManager {
         super(plugin, name, dir);
 
         YamlConfiguration yml = getYml();
-        yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 与 26.2 服务器。");
+        yml.options().header(plugin.getName() + " 竞技场配置，适用于 Paper 1.21.11 服务器。");
         yml.addDefault(ArenaGroupPolicy.GROUP_PATH, ArenaGroupPolicy.DEFAULT_GROUP);
         yml.addDefault(ConfigPath.ARENA_DISPLAY_NAME, "");
         yml.addDefault("minPlayers", 2);

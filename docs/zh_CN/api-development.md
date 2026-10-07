@@ -8,7 +8,7 @@ Maven：
 <dependency>
     <groupId>com.simpmc.bedwars</groupId>
     <artifactId>simpmc-bedwars-api</artifactId>
-    <version>5.14.0</version>
+    <version>6.0.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -165,7 +165,7 @@ sidebars.giveSidebar(player, arenaSnapshot, false);
 
 `giveSidebar` 的竞技场参数是调用时快照；实现会在应用前与实时玩家竞技场注册表核对，避免延迟任务把新竞技场面板覆盖成大厅面板。附属插件不应在竞技场内持续调用 `Player#setScoreboard` 与 BedWars 争抢同一面板；若只需扩展内容，应监听 `PlayerSidebarInitEvent` 操作公开的 `ISidebar`。SimpMC-BedWars 离开上下文时会恢复接管前最后观察到的外部 scoreboard。
 
-TAB 按查看者发送完整 PlayerInfo 显示名，不修改目标玩家的全局 `playerListName`；私有 scoreboard Team 维护客户端头顶名牌、TAB 元数据和碰撞预测，服务器主 scoreboard Team 维护实际玩家碰撞。等待、倒计时、复活、旁观和结算使用 `NEVER`，正式对局活动玩家按真实游戏队伍使用 `FOR_OTHER_TEAMS`。Paper 1.21.11 不应使用 `Player#setCollidable` 控制玩家碰撞。附属插件应避免覆盖这些队伍、显示名、列表顺序或显示状态。
+TAB 按查看者发送完整 PlayerInfo 显示名，不修改目标玩家的全局 `playerListName`；私有 scoreboard Team 维护客户端头顶名牌、TAB 元数据和碰撞预测，服务器主 scoreboard Team 维护实际玩家碰撞。等待、倒计时、复活、旁观和结算使用 `NEVER`，正式对局活动玩家按真实游戏队伍使用 `FOR_OWN_TEAM`。`FOR_OWN_TEAM` 在 Paper 1.21.11 中排除同队互推并保留敌队碰撞；`Player#setCollidable` 不能单独代替队伍规则。附属插件应避免覆盖这些队伍、显示名、列表顺序或显示状态。
 
 5.9.0 起，最终淘汰和开局后加入的旁观者统一排在参赛玩家之后。活动玩家看不到同场旁观者行，旁观者仍能查看完整名单。`Sidebar#synchronizeHiddenPlayerList(viewer, targets)` 通过 `UPDATE_LISTED` 维护单个查看者的隐藏集合，不删除玩家档案、不修改真实游戏模式；清空集合或释放 Sidebar 时恢复服务器当前可见且允许列出的玩家。Paper 重建条目后可调用 `replayHiddenPlayerList(viewer, target)` 重放该目标的隐藏状态，离场时调用 `removeHiddenPlayerListTarget(viewer, uuid)` 清理对应状态。
 
