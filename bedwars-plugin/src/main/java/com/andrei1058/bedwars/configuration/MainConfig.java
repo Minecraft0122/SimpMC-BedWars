@@ -42,7 +42,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 34;
+    private static final int CONFIG_VERSION = 35;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -106,7 +106,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, Collections.singletonList("0.0.0.0:2019"));
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, 40);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_HALF, 25);
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RESTART, 60);
+        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RESTART, 30);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN, 5);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_BEDS_DESTROY_COUNTDOWN, 360);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_DRAGON_SPAWN_COUNTDOWN, 600);
@@ -266,7 +266,9 @@ public class MainConfig extends ConfigManager {
         LegacyLobbyItemHistory legacyLobbyItemHistory = findLegacyLobbyItemHistory(
                 plugin.getDataFolder(), storedConfigVersion);
         updateToLatestVersion(CONFIG_VERSION, config -> {
-            if (migrateLegacyConfig(config, legacyLobbyItemHistory)) {
+            boolean restoredLobbyItem = migrateLegacyConfig(config, legacyLobbyItemHistory);
+            migrateRestartCountdownDefault(config, storedConfigVersion);
+            if (restoredLobbyItem) {
                 plugin.getLogger().info("已从 " + legacyLobbyItemHistory.fileName()
                         + " 恢复曾被旧版本迁移误删的大厅返回物品配置。");
             }
@@ -368,7 +370,7 @@ public class MainConfig extends ConfigManager {
                 "仅覆盖大厅 TAB 顶部文字；支持 & 颜色代码及 {serverIp}、{on} 等占位符。",
                 "空列表使用语言文件中的加宽大厅页首；自定义文字也会自动保留内置宽度行，页尾不受影响。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_RESTART,
-                "游戏结束后竞技场重置倒计时，单位为秒；默认 60 秒。",
+                "游戏结束后竞技场重置倒计时，单位为秒；默认 30 秒。",
                 "聊天栏只在 60、30、15、10、5、4、3、2、1、0 秒时广播，避免刷屏。",
                 "0 秒后先把所有玩家安全送回大厅；确认竞技场世界无人后才卸载，传送失败不会踢人。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME, "玩家掉线后的可重连时间，单位为秒。", "超过该时间未重连将直接视为离开；默认 30 秒。");
@@ -500,6 +502,13 @@ public class MainConfig extends ConfigManager {
 
     static void removeRetiredFullArenaCountdownSetting(YamlConfiguration yml) {
         yml.set("countdowns.game-start-shortened", null);
+    }
+
+    /** Schema 35 shortens only the previous built-in arena reset countdown. */
+    static void migrateRestartCountdownDefault(YamlConfiguration yml, int storedConfigVersion) {
+        if (storedConfigVersion < 35) {
+            upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 60.0, 30.0);
+        }
     }
 
     /**

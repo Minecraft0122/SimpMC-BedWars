@@ -328,6 +328,24 @@ class MainConfigTest {
     }
 
     @Test
+    void schemaThirtyFiveShortensOnlyThePreviousDefaultRestartCountdown() {
+        YamlConfiguration builtIn = new YamlConfiguration();
+        builtIn.set(ConfigPath.GENERAL_CONFIGURATION_RESTART, 60);
+        YamlConfiguration customized = new YamlConfiguration();
+        customized.set(ConfigPath.GENERAL_CONFIGURATION_RESTART, 75);
+        YamlConfiguration current = new YamlConfiguration();
+        current.set(ConfigPath.GENERAL_CONFIGURATION_RESTART, 60);
+
+        MainConfig.migrateRestartCountdownDefault(builtIn, 34);
+        MainConfig.migrateRestartCountdownDefault(customized, 34);
+        MainConfig.migrateRestartCountdownDefault(current, 35);
+
+        assertEquals(30, builtIn.getInt(ConfigPath.GENERAL_CONFIGURATION_RESTART));
+        assertEquals(75, customized.getInt(ConfigPath.GENERAL_CONFIGURATION_RESTART));
+        assertEquals(60, current.getInt(ConfigPath.GENERAL_CONFIGURATION_RESTART));
+    }
+
+    @Test
     void restoresBackToLobbyItemWithoutOverwritingCustomValues() {
         YamlConfiguration configuration = new YamlConfiguration();
         String path = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";

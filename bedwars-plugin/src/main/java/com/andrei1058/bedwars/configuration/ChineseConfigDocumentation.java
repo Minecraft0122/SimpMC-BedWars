@@ -70,7 +70,7 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_BUNGEE_OPTION_LOBBY_SERVERS, "大厅套接字地址列表，格式为 主机:端口。", "协议使用共享密钥认证但不加密，只能填写受信任的内网地址，并使用防火墙禁止公网访问。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_START_COUNTDOWN_REGULAR, "游戏各阶段倒计时，单位为秒。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_RESTART,
-                "游戏结束后的竞技场重置倒计时，单位为秒。",
+                "游戏结束后的竞技场重置倒计时，单位为秒；默认 30 秒。",
                 "倒计时结束后先安全返回大厅；确认世界无人后才卸载，传送失败会重试而不是踢出玩家。");
         comment(config, ConfigPath.GENERAL_CONFIG_PLACEHOLDERS_REPLACEMENTS_SERVER_IP, "内置占位符显示的服务器地址和品牌文本。");
         comment(config, ConfigPath.GENERAL_CONFIGURATION_HUNGER_WAITING, "是否允许等待阶段和游戏阶段消耗饥饿值。");
