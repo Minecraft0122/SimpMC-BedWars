@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ReJoinInvalidStateTest {
 
@@ -27,6 +28,14 @@ class ReJoinInvalidStateTest {
         assertFalse(ReJoin.belongsToPlayer(UUID.randomUUID(), player));
         assertFalse(ReJoin.belongsToPlayer(null, player));
         assertFalse(ReJoin.isActiveReservation(List.of(), null));
+    }
+
+    @Test
+    void noticeUsesConfiguredReconnectWindowAndPlayerName() {
+        assertEquals("Alice 离线，30 秒后结算",
+                ReJoin.rejoinNotice("{player} 离线，{time} 秒后结算", "Alice", 30));
+        assertEquals("Alice 离线，1 秒后结算",
+                ReJoin.rejoinNotice("{player} 离线，{time} 秒后结算", "Alice", 0));
     }
 
     private static Object defaultValue(Class<?> returnType) {

@@ -11,7 +11,7 @@
 | `/bw`、`/bw help` | 无 | 列出有权限的命令、中文说明和参数用法，支持控制台；游戏内命令会单独标记 |
 | `/bw cmds` | 无 | 玩家命令列表；地图设置会话内查看设置进度 |
 | `/bw join <竞技场/分组/random>` | 无 | 加入竞技场 |
-| `/bw leave`、`/leave` | 无 | 离开当前竞技场 |
+| `/bw leave`、`/leave` | 无 | 离开当前竞技场；进行中的参赛玩家会立即投降并失去本局重连资格，旁观者只退出观战 |
 | `/bw gui [分组+分组]` | 无 | 打开支持多页浏览的竞技场选择菜单 |
 | `/bw stats` | 无 | 保留原有历史战绩菜单 |
 | `/bw match [编号或UUID]` | 无 | 查看当前或指定对局的编号、UUID、状态与参赛玩家战绩 |
@@ -29,6 +29,8 @@
 | `/rejoin` | `bw.rejoin` | 在有效窗口内重连 |
 
 `bw.player` 不再是普通玩家使用基础命令的前置条件。`bw.shout` 自 2.11.0 起默认授予所有玩家，权限插件仍可显式设为 `false`；`bw.rejoin` 仍需单独授予。
+
+旧 `mark-leave-as-abandon` 开关已移除：主动执行 `/leave` 的语义固定为投降，不能再通过配置保留重连占位；普通断线仍按 `rejoin-time` 等待。
 
 `match`、`history` 和 `record` 从持久化对局明细异步查询；离线玩家可以使用完整 UUID，或数据库曾保存的名字（不区分大小写）。历史中同名对应多个 UUID 时会要求指定 UUID，不会猜测身份。例：`/bw history Alice 1`、`/bw record 93d85f35-7bba-32ff-9e0c-ae4abfd53dfc`、`/bw history all 2`。`history` 包含进行中与中止的对局，`record` 只累计 `FINISHED` 对局；K/D = 普通击杀数 ÷ 死亡数，死亡数为 0 时 K/D = 普通击杀数。旧版仅保存的总战绩不能反推每场对局明细，因此 `/bw stats` 与新对局累计统计可能不同。BUNGEE 大厅配置同一 MySQL 后可查询竞技场子服保存的记录。
 

@@ -24,13 +24,14 @@
 - `language`：固定使用简体中文 `zh_cn`；旧版本的语言值会自动迁移，历史禁用语言列表仅为兼容保留。
 - `chat`：全局聊天和插件聊天格式。
 - `scoreboard-settings`：大厅/游戏计分板、TAB、队伍颜色、血量和刷新周期。
-- `rejoin-time`：普通断线或网络超时的重连窗口，默认 30 秒；服务器命令、封禁或反作弊造成的踢出不会保留重连资格。
+- `rejoin-time`：普通断线或网络超时的重连窗口，默认 30 秒；创建重连占位时会向同局玩家与旁观者提示“若该玩家未在多少秒内返回，游戏将结算”。服务器命令、封禁或反作弊造成的踢出不会保留重连资格。
 - `countdowns`：开局、床消失、决战、结束和复活倒计时。
 - `party-settings`：内部及外部组队集成。
 - `tnt-jump-settings`、`blast-protection`、`tnt-prime-settings`：TNT 参数。`damage-others: 6` 是玩家 TNT 对敌方玩家的固定伤害（5.3.0 由 10 降低），`knockback-multiplier: 0.6` 按倍率缩放玩家 TNT 对对局内玩家的原版爆炸击退（1.0 为原版，范围 0 到 3），TNT 跳跃自身的力度公式不受该倍率影响。
 - `fireball`：火球速度、射程、爆炸、击退、冷却和伤害。`speed-multiplier: 15` 对应普通初速度 1.5 格/tick；潜行时 `sneak-speed-multiplier: 1.6` 使初速度达到 2.4 格/tick，形成明显的初速度差异。`sneak-acceleration-multiplier: 2.0` 保持不变，持续加速度仍由普通火球的每 tick 0.1 提高到潜行火球的 0.2。每次发射会在 `flight-range.min: 200` 与 `flight-range.max: 300` 之间随机一次最大飞行距离，并按实际路径累计；碰撞、世界边界、服务端视距和未加载区块仍可能让火球提前结束。`sneak-recoil: 0.10` 会沿火球发射速度的完整三维反方向推动玩家，代码硬限制最大为 0.20；`cooldown: 0.4` 的持续射速约为每秒 2.5 发，一个 1 秒窗口内通常可发射 2 至 3 个。`explosion-size` 是以火球位置为球心的三维半径，伤害和击退只对欧氏距离不超过该半径的玩家生效，不会覆盖外接立方体的角落；队友始终不会受到火球伤害，但仍会按原有规则受到击退。当前默认值为爆炸范围 3.25、水平击退 1.35、垂直击退 0.75、敌方伤害 3.5；5.3.0 起水平击退沿水平面单独归一化，不会因玩家与爆炸中心的高度差而减弱。`make-fire` 只决定爆炸处是否生成火焰，竞技场不会允许火势向周围蔓延。
 - `database`：MySQL；关闭时使用 SQLite。
 - `match-statistics`：按对局保存统计和事件，默认启用。配置了可用的 MySQL 时使用共享连接池和共享对局编号；未启用 MySQL 时使用本地 `Cache/matches.db`。已配置 MySQL 但连接失败会明确标记统计未启用，不会静默切换到本地编号。默认时区为 `Asia/Shanghai`，上报间隔默认 300 秒（5 分钟）。MySQL 数据写入 `bw_matches`、`bw_match_players`、`bw_match_events`、`bw_match_reports` 和 `bw_player_violation_totals`，均使用 InnoDB 短事务；SQLite 使用同一组逻辑表保存本服数据。`bw_player_match_summary` 是按已结束对局汇总的只读视图，可直接用于大厅排行榜和玩家比较；若数据库账户没有 `CREATE VIEW` 权限，明细表仍会正常工作。
+- PlaceholderAPI/ajLeaderboards 可用 `/ajlb add %bw1058_stats_gamesplayed%` 创建生涯对局数榜，用 `/ajlb add %bw1058_stats_kd%` 创建 K/D 榜。K/D 只使用普通击杀，死亡数包含普通死亡与最终死亡；仅生涯对局数严格超过 100（至少 101 场）的玩家返回数值，其他玩家返回非数字 `N/A`，ajLeaderboards 会忽略该次更新。创建 K/D 榜时若有在线玩家，建议先让无玩家在线，或确认首个被校验的在线玩家已达到 101 场，否则 ajLeaderboards 的占位符校验可能拒绝创建。榜单显示可分别使用 `%ajlb_lb_bw1058_stats_gamesplayed_1_alltime_name%`、`%ajlb_lb_bw1058_stats_kd_1_alltime_name%` 等占位符。
 - `performance-settings`：Paper 传送、资源旋转等优化。
 - `lobby-items`、`pre-game-items`、`spectator-items`：不同阶段的命令物品。主大厅默认提供历史战绩、竞技场选择器和第 9 格的“回到主大厅”红床。所有命令物品都执行配置中的命令；默认红床执行 `bw leave`，无需额外离场权限。MULTIARENA/SHARED 模式下，竞技场玩家先返回本服 BedWars 大厅，从大厅再次离开才连接代理的 `lobbyServer`；BUNGEE 模式直接连接代理大厅。末地门触发的返回同样走 lobbyServer，即使末地目标世界不存在也会在 Paper 事件阶段直接连接代理。5.7.0 起，本服大厅缺失或其世界未加载时，备用大厅也能直接连接代理大厅。4.0.8 起，删除整个物品节点后，后续配置升级不会再次生成；旧架构 15 曾误删的自定义 `leave` 会在当前值仍为内置默认值时，从架构 15 删除前的最后快照，或架构 15–17 中重新配置过的最新 `config.yml.v*.bak` 自动恢复；架构 18 后的删除或改写快照会否决旧值。进入或跨世界到达大厅后会刷新大厅物品；无效物品只跳过自身，同槽位配置会输出中文警告。完整代理示例见[安装文档](installation.md#bungee)。
 - 大厅进入/离开提示只向同样位于 BedWars 大厅的玩家发送；竞技场、观战者和地图设置会话不会收到。大厅世界名直接从 `lobbyLoc` 文本读取，即使该世界在插件加载时尚未加载也能正确识别。大厅和加入 NPC 的旧朝向会自动迁移为最近的 90 度 yaw，pitch 固定为 0。
@@ -262,6 +263,8 @@ blocks-category:
 ```
 
 例如 TNT 默认路径是 `utility-category.category-content.tnt.content-tiers.tier1.tier-settings.cost`。修改 `cost` 后完整重启服务器。
+
+购买物品无法完全放入背包时，未放入的部分会掉落在玩家脚下；付款仍按本次购买数量结算。药水不会再因满背包而被静默丢失。
 
 回城卷轴的商品 ID 是 `recall-scroll`，默认价格为 3 个钻石，价格路径为 `utility-category.category-content.recall-scroll.content-tiers.tier1.tier-settings.cost`。购买物品中的 `bedwars-item: recall-scroll` 是核心行为标识；可以修改价格、槽位、显示材质和名称，但不要删除或改写该标识。
 

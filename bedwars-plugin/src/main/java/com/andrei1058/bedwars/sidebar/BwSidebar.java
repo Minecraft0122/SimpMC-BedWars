@@ -34,7 +34,6 @@ import static com.andrei1058.bedwars.api.language.Language.*;
 
 public class BwSidebar implements ISidebar {
 
-    private static final String TAB_TITLE = "&fSimpMC Bedwars";
 
     static final int TAB_MIN_WIDTH = 128;
     private static final String TAB_WIDTH_SPACER = " ".repeat(TAB_MIN_WIDTH);
@@ -614,8 +613,6 @@ public class BwSidebar implements ISidebar {
                     language.m(Messages.FORMATTING_SB_TAB_GAME_TIME), arena.getStatus());
             headerLines = ensureTabWidth(headerLines);
         }
-        headerLines = prependTabTitle(headerLines);
-
         this.headerFooter = new TabHeaderFooter(
                 this.normalizeLines(headerLines),
                 this.normalizeLines(language.l(footerPath)),
@@ -623,19 +620,6 @@ public class BwSidebar implements ISidebar {
         );
 
         SidebarManager.getInstance().sendHeaderFooter(player, headerFooter);
-    }
-
-    private static List<String> prependTabTitle(List<String> lines) {
-        List<String> result = lines == null ? new ArrayList<>() : new ArrayList<>(lines);
-        if (result.isEmpty()) {
-            result.add(TAB_TITLE);
-            return result;
-        }
-        String visible = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', result.get(0)));
-        if (visible == null || !visible.startsWith("SimpMC Bedwars")) {
-            result.set(0, TAB_TITLE + " " + result.get(0));
-        }
-        return result;
     }
 
     static List<String> selectLobbyHeader(List<String> configuredHeader, List<String> languageHeader) {

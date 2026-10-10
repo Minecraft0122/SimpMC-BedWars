@@ -42,7 +42,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 35;
+    private static final int CONFIG_VERSION = 36;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -75,7 +75,6 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_CHAT_GLOBAL, yml.get("globalChat", false));
         yml.addDefault(ConfigPath.GENERAL_CHAT_FORMATTING, yml.get("formatChat", true));
         yml.addDefault("debug", false);
-        yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON, false);
         // parties category
         yml.addDefault(ConfigPath.GENERAL_ENABLE_PARTY_CMD, true);
         yml.addDefault(ConfigPath.GENERAL_CONFIGURATION_ALLOW_PARTIES, true);
@@ -268,6 +267,7 @@ public class MainConfig extends ConfigManager {
         updateToLatestVersion(CONFIG_VERSION, config -> {
             boolean restoredLobbyItem = migrateLegacyConfig(config, legacyLobbyItemHistory);
             migrateRestartCountdownDefault(config, storedConfigVersion);
+            removeRetiredLeaveAbandonSetting(config);
             if (restoredLobbyItem) {
                 plugin.getLogger().info("已从 " + legacyLobbyItemHistory.fileName()
                         + " 恢复曾被旧版本迁移误删的大厅返回物品配置。");
@@ -509,6 +509,10 @@ public class MainConfig extends ConfigManager {
         if (storedConfigVersion < 35) {
             upgradeLegacyNumber(yml, ConfigPath.GENERAL_CONFIGURATION_RESTART, 60.0, 30.0);
         }
+    }
+
+    static void removeRetiredLeaveAbandonSetting(YamlConfiguration yml) {
+        yml.set(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON, null);
     }
 
     /**

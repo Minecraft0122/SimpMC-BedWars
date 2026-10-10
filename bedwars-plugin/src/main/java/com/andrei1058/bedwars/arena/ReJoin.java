@@ -41,8 +41,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
@@ -72,6 +74,15 @@ public class ReJoin {
         this.arena = arena;
         reJoinList.add(this);
         BedWars.debug("Created ReJoin for " + player.getName() + " " + player.getUniqueId() + " at " + arena.getArenaName());
+        int timeoutSeconds = Math.max(1, BedWars.config.getInt(ConfigPath.GENERAL_CONFIGURATION_REJOIN_TIME));
+        List<Player> recipients = new ArrayList<>(arena.getPlayers());
+        recipients.addAll(arena.getSpectators());
+        Set<UUID> notified = new HashSet<>();
+        for (Player recipient : recipients) {
+            if (recipient.getUniqueId().equals(player.getUniqueId()) || !notified.add(recipient.getUniqueId())) continue;
+            AdventureText.send(recipient, rejoinNotice(
+                    Language.getMsg(recipient, Messages.REJOIN_WAITING), player.getName(), timeoutSeconds));
+        }
         task = new ReJoinTask(this, arena, bwt);
         this.permanentsAndNonDowngradables.addAll(cachedArmor);
 
@@ -178,6 +189,11 @@ public class ReJoin {
     static boolean belongsToPlayer(@Nullable UUID reservationPlayer, @Nullable Player candidate) {
         return reservationPlayer != null && candidate != null
                 && reservationPlayer.equals(candidate.getUniqueId());
+    }
+
+    static String rejoinNotice(String template, String playerName, int timeoutSeconds) {
+        return template.replace("{player}", playerName)
+                .replace("{time}", String.valueOf(Math.max(1, timeoutSeconds)));
     }
 
     private boolean removeActiveReservation() {

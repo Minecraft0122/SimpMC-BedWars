@@ -75,6 +75,8 @@ public class Language extends ConfigManager {
                 "&aReturned to your team spawn.");
         getYml().addDefault(Messages.RECALL_SCROLL_FAILED,
                 "&cRecall teleport failed.");
+        getYml().addDefault(Messages.REJOIN_WAITING,
+                "&e{player} 已离线；如果在 &c{time} &e秒内没有返回，游戏将结算。");
         getYml().addDefault(Messages.ARENA_RESTART_COUNTDOWN,
                 "&eArena resets in &c{time}&e seconds.");
         getYml().addDefault(Messages.FORMATTING_SB_TAB_GAME_TIME,

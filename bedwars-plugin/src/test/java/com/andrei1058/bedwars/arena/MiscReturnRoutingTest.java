@@ -144,6 +144,34 @@ class MiscReturnRoutingTest {
     }
 
     @Test
+    void activePlayerLeaveAlwaysSurrendersEvenWhenLegacySettingIsFalse() {
+        IArena arena = mock(IArena.class);
+        when(arena.getStatus()).thenReturn(com.andrei1058.bedwars.api.arena.GameState.playing);
+        when(player.teleport(lobbyLocation)).thenReturn(true);
+        when(BedWars.config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON))
+                .thenReturn(false);
+
+        Misc.moveToLobbyOrKick(player, arena, false);
+
+        verify(arena).removePlayer(player, false);
+        verify(arena).abandonGame(player);
+    }
+
+    @Test
+    void proxyLeaveRemovesPlayerBeforeTransferSoQuitCannotReserveRejoin() {
+        BedWars.setServerType(ServerType.BUNGEE);
+        IArena arena = mock(IArena.class);
+        when(arena.getStatus()).thenReturn(com.andrei1058.bedwars.api.arena.GameState.playing);
+
+        Misc.moveToLobbyOrKick(player, arena, false);
+
+        var order = inOrder(arena, player);
+        order.verify(arena).removePlayer(player, false);
+        order.verify(arena).abandonGame(player);
+        order.verify(player).sendPluginMessage(eq(BedWars.plugin), eq(ProxyLobbyConnector.CHANNEL), any(byte[].class));
+    }
+
+    @Test
     void otherWorldReturnsLocallyWhileConfiguredLobbyIsAvailable() {
         placePlayerIn("survival");
         when(player.teleport(lobbyLocation)).thenReturn(true);

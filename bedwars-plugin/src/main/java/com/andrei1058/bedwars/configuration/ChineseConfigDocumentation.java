@@ -30,7 +30,6 @@ public final class ChineseConfigDocumentation {
         comment(config, ConfigPath.GENERAL_CONFIGURATION_ENABLE_HALLOWEEN, "是否启用万圣节季节效果。");
         comment(config, ConfigPath.GENERAL_CHAT_GLOBAL, "聊天设置：global 控制不同竞技场是否互通，format 控制是否使用插件聊天格式。");
         comment(config, "debug", "调试日志开关；排查问题时临时开启，正常运行建议关闭。");
-        comment(config, ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON, "玩家主动离开进行中的游戏时，是否记为中途退出。");
         comment(config, ConfigPath.GENERAL_ENABLE_PARTY_CMD, "组队系统设置：是否启用命令、是否允许组队以及外部 Parties 的最低等级。");
         comment(config, ConfigPath.SB_CONFIG_SIDEBAR_USE_LOBBY_SIDEBAR, "计分板、TAB 玩家列表、血量显示及刷新周期设置。", "TAB 页首和页尾按游戏状态读取玩家语言文件。", "刷新周期单位为 tick，20 tick 约等于 1 秒。");
         comment(config, ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH,

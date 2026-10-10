@@ -90,6 +90,7 @@ public class SimplifiedChinese extends Language {
         yml.addDefault(Messages.REJOIN_NO_ARENA, "{prefix}&c没有可以重新加入的游戏！");
         yml.addDefault(Messages.REJOIN_DENIED, "{prefix}&c由于你所属队伍的床被破坏或游戏已经结束，你不能重新加入。");
         yml.addDefault(Messages.REJOIN_ALLOWED, "{prefix}&e正在重新加入&a{arena}&e！");
+        yml.addDefault(Messages.REJOIN_WAITING, "{prefix}&e玩家 &f{player} &e已离线；如果在 &c{time} &e秒内没有返回，游戏将结算。");
         yml.addDefault(Messages.COMMAND_REJOIN_PLAYER_RECONNECTED, "{prefix}&7{player}&e重新连接。");
         yml.addDefault(Messages.COMMAND_LEAVE_DENIED_NOT_IN_ARENA, "{prefix}&c你不在一场起床战争游戏中！");
         yml.addDefault(Messages.COMMAND_LEAVE_MSG, "{prefix}&7{player}&e离开了！");

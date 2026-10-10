@@ -448,6 +448,7 @@ public class Messages {
     public static final String RECALL_SCROLL_CANCELLED = "recall-scroll.cancelled";
     public static final String RECALL_SCROLL_COMPLETED = "recall-scroll.completed";
     public static final String RECALL_SCROLL_FAILED = "recall-scroll.failed";
+    public static final String REJOIN_WAITING = "rejoin.waiting";
     public static final String SHOP_PATH = "shop-items-messages";
     public static final String SHOP_LORE_STATUS_CANT_AFFORD = "shop-lore-status-cant-afford";
     public static final String SHOP_LORE_STATUS_CAN_BUY = "shop-lore-status-can-buy";

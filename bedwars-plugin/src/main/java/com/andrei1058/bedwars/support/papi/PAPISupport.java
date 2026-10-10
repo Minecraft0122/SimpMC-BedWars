@@ -151,6 +151,17 @@ public class PAPISupport extends PlaceholderExpansion {
                     return String.valueOf(stats.getBedsDestroyed());
                 case "gamesplayed":
                     return String.valueOf(stats.getGamesPlayed());
+                case "gamesplayed_leaderboard":
+                    // ajLeaderboards reads this as the persistent career
+                    // match-count value. It is intentionally numeric for all
+                    // players so a new player can enter the board at zero.
+                    return gamesPlayedLeaderboardValue(stats);
+                case "kd":
+                case "kd_leaderboard":
+                    // ajLeaderboards ignores non-numeric placeholder values;
+                    // use that contract to keep players with 100 or fewer
+                    // completed games out of the K/D board.
+                    return qualifiedKdLeaderboardValue(stats);
             }
         }
 
@@ -257,5 +268,16 @@ public class PAPISupport extends PlaceholderExpansion {
                 break;
         }
         return response;
+    }
+
+    static String gamesPlayedLeaderboardValue(PlayerStats stats) {
+        return String.valueOf(stats.getGamesPlayed());
+    }
+
+    static String qualifiedKdLeaderboardValue(PlayerStats stats) {
+        if (stats.getGamesPlayed() <= 100) return "N/A";
+        long deaths = (long) stats.getDeaths() + stats.getFinalDeaths();
+        double kd = deaths == 0 ? stats.getKills() : (double) stats.getKills() / deaths;
+        return Double.toString(kd);
     }
 }

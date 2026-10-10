@@ -106,8 +106,7 @@ public class Misc {
                         arena.removeSpectator(p, false);
                     } else {
                         arena.removePlayer(p, false);
-                        if (!notAbandon && arena.getStatus() == GameState.playing
-                                && config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
+                        if (!notAbandon && arena.getStatus() == GameState.playing) {
                             arena.abandonGame(p);
                         }
                     }
@@ -183,12 +182,14 @@ public class Misc {
 
 
     private static void forceKick(Player p, @Nullable IArena arena, boolean notAbandon) {
-        connectToProxyLobby(p);
         if (arena != null && !notAbandon && arena.getStatus() == GameState.playing) {
-            if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
-                arena.abandonGame(p);
-            }
+            // A proxy transfer may fire PlayerQuitEvent after the player has
+            // already left this server. Finalize /leave synchronously so that
+            // it cannot create a fresh reconnect reservation on that quit.
+            arena.removePlayer(p, false);
+            arena.abandonGame(p);
         }
+        connectToProxyLobby(p);
 
         // 连接器负责请求去重、目标校验及超时；不再延迟重复发送离场请求。
     }

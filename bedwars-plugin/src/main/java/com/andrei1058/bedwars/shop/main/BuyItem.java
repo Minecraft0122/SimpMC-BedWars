@@ -42,6 +42,8 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.Map;
+
 import static com.andrei1058.bedwars.BedWars.nms;
 import static com.andrei1058.bedwars.BedWars.plugin;
 
@@ -287,8 +289,19 @@ public class BuyItem implements IBuyItem {
             }
         }
         //
-        player.getInventory().addItem(PurchaseBatch.createStacks(i, purchases));
+        dropOverflow(player, player.getInventory().addItem(PurchaseBatch.createStacks(i, purchases)));
         if (synchronizeInventory) player.updateInventory();
+    }
+
+    static void dropOverflow(Player player, Map<Integer, ItemStack> leftovers) {
+        if (leftovers == null) return;
+        for (ItemStack leftover : leftovers.values()) {
+            if (leftover == null || leftover.getType() == Material.AIR || leftover.getAmount() <= 0) continue;
+            // Bukkit returns items that do not fit instead of inserting them.
+            // Dropping the remainder keeps a full inventory from consuming a
+            // potion (or any other purchased item) without delivering it.
+            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+        }
     }
 
     static boolean shouldSellArmorPiece(Material material) {

@@ -610,6 +610,16 @@ class MainConfigTest {
     }
 
     @Test
+    void removesRetiredOptionalLeaveAbandonSetting() {
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON, false);
+
+        MainConfig.removeRetiredLeaveAbandonSetting(configuration);
+
+        assertFalse(configuration.isSet(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON));
+    }
+
+    @Test
     void normalizesStoredJoinNpcDirectionWithoutChangingMetadata() {
         assertEquals("1.5,64.0,2.5,-90.0,0.0,lobby,skin,名称,Default,42",
                 MainConfig.normalizeNpcLocationEntry(
