@@ -75,7 +75,8 @@ public class CmdProcess implements Listener {
 
     /** Commands implemented by BedWars that must remain usable during a game. */
     private static boolean isBuiltInArenaCommand(String command) {
-        return isShoutCommand(command) || command.equalsIgnoreCase("rejoin");
+        return isShoutCommand(command) || command.equalsIgnoreCase("rejoin")
+                || command.equalsIgnoreCase("list") || command.equalsIgnoreCase("minecraft:list");
     }
 
     private static boolean isShoutCommand(String command) {

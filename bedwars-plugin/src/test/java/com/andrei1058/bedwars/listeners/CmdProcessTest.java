@@ -24,6 +24,12 @@ class CmdProcessTest {
     }
 
     @Test
+    void customServerListRemainsUsableInArena() {
+        assertTrue(CmdProcess.isAllowedInArena("list", List.of()));
+        assertTrue(CmdProcess.isAllowedInArena("minecraft:list", List.of()));
+    }
+
+    @Test
     void configuredCommandsAreComparedCaseInsensitively() {
         assertTrue(CmdProcess.isAllowedInArena("BW", List.of("bw", "leave")));
         assertFalse(CmdProcess.isAllowedInArena("plugins", List.of("bw", "leave")));

@@ -1,6 +1,6 @@
 # SimpMC-BedWars 完整中文教程
 
-本教程对应当前 SimpMC-BedWars，目标运行环境是 **Paper 1.21.11 + Java 21**。其他 Minecraft 版本、Spigot、Folia 和更旧的 Java 不在支持范围内。仓库面向维护者和服主的说明、Issue/PR 模板及工作流显示文本均使用中文。
+本教程对应当前 SimpMC-BedWars，目标运行环境是 **Paper 1.21.11 + Java 21 或 Java 25**，插件字节码以 Java 21 为目标。其他 Minecraft 版本、Spigot、Folia 和更旧的 Java 不在支持范围内。仓库面向维护者和服主的说明、Issue/PR 模板及工作流显示文本均使用中文。
 
 ## 文档导航
 
@@ -16,7 +16,7 @@
 
 ## 最短开服流程
 
-1. 创建 Paper 1.21.11 + Java 21 服务端。
+1. 创建 Paper 1.21.11 + Java 21 或 Java 25 服务端。
 2. 将插件 JAR 放入 `plugins`，启动并等待配置生成。
 3. 停服，确认 `plugins/SimpMC-BedWars/config.yml` 中的 `serverType`；`language` 默认 `zh_cn`，也可设置为已加载语言的 ISO 代码。
 4. MULTIARENA 模式进入主大厅执行 `/bw setLobby`。

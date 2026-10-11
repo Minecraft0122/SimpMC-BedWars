@@ -209,6 +209,7 @@ public class BedWars extends JavaPlugin {
         // Persist the shared Chinese documentation after its defaults load.
         for (Language language : Language.getLanguages()) {
             MatchQueryMessages.install(language);
+            MatchmakingMessages.install(language);
             language.addChineseDocumentation();
             language.save();
         }
@@ -282,7 +283,7 @@ public class BedWars extends JavaPlugin {
         registerEvents(
                 new EnderPearlLanded(), new QuitAndTeleportListener(), new ArenaWorldProtection(), new BreakPlace(),
                 new PlacedBlockListener(), new DamageDeathMove(), new TntKnockbackListener(),
-                new Inventory(), new Interact(), new LobbyProtection(), new LobbyWorldProtection(), new LobbyPortalListener(), new LegacyShearsMigration(), new RefreshGUI(), new HungerWeatherSpawn(), new CmdProcess(),
+                new Inventory(), new Interact(), new LobbyProtection(), new LobbyWorldProtection(), new LobbyPortalListener(), new LegacyShearsMigration(), new RefreshGUI(), new HungerWeatherSpawn(), new CmdProcess(), new PlayerListCommandListener(),
                 new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(),
                 new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), new VanillaAdvancementListener(), new MoneyListeners(),

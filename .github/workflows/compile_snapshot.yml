@@ -12,8 +12,12 @@ concurrency:
 
 jobs:
   build:
-    name: Maven 验证
+    name: Maven 验证 (JDK ${{ matrix.java-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: ['21', '25']
     services:
       mysql:
         image: mysql:8.4
@@ -33,10 +37,10 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v7
 
-      - name: 配置 JDK 21
+      - name: 配置 JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v5
         with:
-          java-version: '21'
+          java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
           cache: maven
 
@@ -80,6 +84,7 @@ jobs:
             com.andrei1058.bedwars.support.version.v1_21_R3.FireballAccelerationRuntimeProbe
 
       - name: 上传插件 JAR
+        if: matrix.java-version == '21'
         uses: actions/upload-artifact@v7
         with:
           name: SimpMC-BedWars

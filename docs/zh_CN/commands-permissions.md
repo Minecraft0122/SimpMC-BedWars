@@ -8,6 +8,7 @@
 
 | 命令 | 官方权限 | 作用 |
 | --- | --- | --- |
+| `/list`、`/minecraft:list` | 无 | 将当前 Bukkit 服务器的在线玩家按大厅和各竞技场分行列出；竞技场内和控制台均可使用，不跨代理节点统计 |
 | `/bw`、`/bw help` | 无 | 列出有权限的命令、中文说明和参数用法，支持控制台；游戏内命令会单独标记 |
 | `/bw cmds` | 无 | 玩家命令列表；地图设置会话内查看设置进度 |
 | `/bw join <竞技场/分组/random>` | 无 | 加入竞技场 |
@@ -42,6 +43,8 @@
 | --- | --- | --- |
 | `/bw start`、`/bw forceStart` | `bw.forcestart` | `bw.command.start`、`bw.command.forcestart` |
 | `/bw start debug` | 仅 OP | 允许本局以单支非空队伍开始；不启用详细日志。其他权限（包括 `bw.*`）不能代替 OP 状态 |
+| `/bw stopGames` | `bw.command.stopgames`（默认 OP） | 暂停本服务器新对局；倒计时中的场次退回等待，已开始的对局继续 |
+| `/bw resumeGames` | `bw.command.resumegames`（默认 OP） | 恢复本服务器新对局；符合开局条件的竞技场重新倒计时 |
 | `/bw setLobby` | `bw.setup` | `bw.command.setlobby` |
 | `/bw setupArena <世界>` | `bw.setup` | `bw.command.setuparena` |
 | `/bw delArena <世界>` | `bw.delete` | `bw.command.delarena` |
@@ -54,6 +57,8 @@
 | `/bw reload` | `bw.reload` | `bw.command.reload` |
 | `/bw npc ...` | `bw.npc` | `bw.command.npc` |
 | `/bw tp ...` | `bw.tp` | `bw.command.tp` |
+
+`stopGames` / `resumeGames` 的开关只保存在当前服务器进程中，不会暂停已经进行的比赛，也不会同步到其他代理节点；服务器重启后默认允许新对局。
 
 官方 Wiki 曾把启用竞技场写成 `bw.enable`，而旧源码使用 `bw.enableRotation`。本插件以文档节点 `bw.enable` 为主，同时接受旧节点，方便现有 LuckPerms 数据平滑迁移。
 

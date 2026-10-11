@@ -31,7 +31,7 @@
 
 ## 本地开发
 
-需要 Git、Java 21 和 Maven。克隆后执行：
+需要 Git、Java 21 或 Java 25 和 Maven。请在两个 JDK 下分别执行完整验证；Java 25 构建会使用独立 javac 进程。克隆后执行：
 
 ```bash
 mvn -B clean verify

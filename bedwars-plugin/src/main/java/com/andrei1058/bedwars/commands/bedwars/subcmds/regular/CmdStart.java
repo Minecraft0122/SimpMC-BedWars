@@ -27,10 +27,12 @@ import com.andrei1058.bedwars.api.command.ParentCommand;
 import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
+import com.andrei1058.bedwars.arena.MatchStartGate;
 import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.arena.tasks.GameStartingTask;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.configuration.Permissions;
+import com.andrei1058.bedwars.language.MatchmakingMessages;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -71,6 +73,11 @@ public class CmdStart extends SubCommand {
         }
         if (debugStart && !hasDebugStartPermission(p)) {
             AdventureText.send(p, getMsg(p, Messages.COMMAND_FORCESTART_NO_PERM));
+            return true;
+        }
+        if (!MatchStartGate.isOpen()) {
+            AdventureText.send(p, MatchmakingMessages.forSender(p)
+                    .text(MatchmakingMessages.Key.MATCHES_BLOCKED));
             return true;
         }
         if (a.getStatus() == GameState.playing) return true;

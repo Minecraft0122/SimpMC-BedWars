@@ -34,6 +34,7 @@ import com.andrei1058.bedwars.api.util.AdventureText;
 import com.andrei1058.bedwars.api.tasks.StartingTask;
 import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.ArenaStartPolicy;
+import com.andrei1058.bedwars.arena.MatchStartGate;
 import com.andrei1058.bedwars.arena.team.BedWarsTeam;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.support.papi.SupportPAPI;
@@ -102,6 +103,10 @@ public class GameStartingTask implements Runnable, StartingTask {
 
     @Override
     public void run() {
+        if (!MatchStartGate.isOpen()) {
+            getArena().changeStatus(GameState.waiting);
+            return;
+        }
         if (countdown == 0) {
             getArena().getTeamAssigner().assignTeams(getArena());
             java.util.List<Integer> teamSizes = getArena().getTeams().stream()

@@ -33,9 +33,12 @@ import net.citizensnpcs.npc.skin.SkinnableEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -43,13 +46,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.NPC.createArmorStand;
-
 public class JoinNPC {
     private static boolean citizensSupport = false;
+    private static final String HOLOGRAM_METADATA = "bw1058-join-npc-hologram";
 
-    /* Here are stored NPC holograms without colors and placeholders translated used for refresh*/
+    /* Legacy extension surface retained for compatibility; new holograms use TextDisplay below. */
+    @Deprecated
     public static HashMap<ArmorStand, List<String>> npcs_holos = new HashMap<>();
+    /** Text holograms without colors and placeholders translated, used for refresh. */
+    public static HashMap<TextDisplay, List<String>> npcs_text_displays = new HashMap<>();
     /* Here are stored all the NPCs*/
     public static HashMap<Integer, String> npcs = new HashMap<>();
 
@@ -115,28 +120,20 @@ public class JoinNPC {
         npc.setName("");
         String separator = "\\\\n";
         String[] nume = name.split(separator);
-        for (Entity e : l.getWorld().getNearbyEntities(l, 1, 3, 1)) {
-            if (e.getType() == EntityType.ARMOR_STAND) e.remove();
-        }
+        removeNearbyHolograms(l);
         if (nume.length >= 2) {
-            ArmorStand a = createArmorStand(l.clone().add(0, 0.05, 0));
-            a.setMarker(false);
-            a.setCustomNameVisible(true);
-            a.customName(AdventureText.ampersand(nume[0].replace("{players}", String.valueOf(Arena.getPlayers(group))).replace('\u00a7', '&')));
+            TextDisplay a = createTextDisplay(l.clone().add(0, 0.05, 0));
+            a.text(AdventureText.ampersand(nume[0].replace("{players}", String.valueOf(Arena.getPlayers(group))).replace('\u00a7', '&')));
             npcs.put(npc.getId(), group);
-            ArmorStand a2 = createArmorStand(l.clone().subtract(0, 0.25, 0));
-            a2.setMarker(false);
-            a2.customName(AdventureText.ampersand(nume[1].replace("{players}", String.valueOf(Arena.getPlayers(group))).replace('\u00a7', '&')));
-            a2.setCustomNameVisible(true);
-            npcs_holos.put(a, Arrays.asList(group, nume[0]));
-            npcs_holos.put(a2, Arrays.asList(group, nume[1]));
+            TextDisplay a2 = createTextDisplay(l.clone().subtract(0, 0.25, 0));
+            a2.text(AdventureText.ampersand(nume[1].replace("{players}", String.valueOf(Arena.getPlayers(group))).replace('\u00a7', '&')));
+            npcs_text_displays.put(a, Arrays.asList(group, nume[0]));
+            npcs_text_displays.put(a2, Arrays.asList(group, nume[1]));
         } else if (nume.length == 1) {
             npcs.put(npc.getId(), group);
-            ArmorStand a2 = createArmorStand(l.clone().subtract(0, 0.25, 0));
-            a2.setMarker(false);
-            a2.customName(AdventureText.ampersand(nume[0].replace("{players}", String.valueOf(Arena.getPlayers(group))).replace('\u00a7', '&')));
-            a2.setCustomNameVisible(true);
-            npcs_holos.put(a2, Arrays.asList(group, nume[0]));
+            TextDisplay a2 = createTextDisplay(l.clone().subtract(0, 0.25, 0));
+            a2.text(AdventureText.ampersand(nume[0].replace("{players}", String.valueOf(Arena.getPlayers(group))).replace('\u00a7', '&')));
+            npcs_text_displays.put(a2, Arrays.asList(group, nume[0]));
         }
         npc.teleport(l, PlayerTeleportEvent.TeleportCause.PLUGIN);
         npc.setName("");
@@ -184,6 +181,12 @@ public class JoinNPC {
      */
     public static void updateNPCs(String group) {
         String x = String.valueOf(Arena.getPlayers(group));
+        for (Map.Entry<TextDisplay, List<String>> e : npcs_text_displays.entrySet()) {
+            if (e.getValue().get(0).equalsIgnoreCase(group) && e.getKey() != null && !e.getKey().isDead()) {
+                e.getKey().text(AdventureText.ampersand(
+                        e.getValue().get(1).replace("{players}", x).replace('\u00a7', '&')));
+            }
+        }
         for (Map.Entry<ArmorStand, List<String>> e : npcs_holos.entrySet()) {
             if (e.getValue().get(0).equalsIgnoreCase(group)) {
                 if (e.getKey() != null) {
@@ -194,5 +197,32 @@ public class JoinNPC {
 
             }
         }
+    }
+
+    public static void removeNearbyHolograms(Entity npcEntity) {
+        if (npcEntity != null) removeNearbyHolograms(npcEntity.getLocation());
+    }
+
+    private static void removeNearbyHolograms(Location location) {
+        for (Entity entity : location.getWorld().getNearbyEntities(location, 1, 3, 1)) {
+            if (entity.getType() == EntityType.ARMOR_STAND
+                    || (entity instanceof TextDisplay && entity.hasMetadata(HOLOGRAM_METADATA))) {
+                entity.remove();
+            }
+        }
+        npcs_holos.keySet().removeIf(Entity::isDead);
+        npcs_text_displays.keySet().removeIf(Entity::isDead);
+    }
+
+    private static TextDisplay createTextDisplay(Location location) {
+        TextDisplay display = location.getWorld().spawn(location, TextDisplay.class);
+        display.setBillboard(Display.Billboard.CENTER);
+        display.setDefaultBackground(false);
+        display.setSeeThrough(true);
+        display.setShadowed(true);
+        display.setPersistent(false);
+        display.setLineWidth(200);
+        display.setMetadata(HOLOGRAM_METADATA, new FixedMetadataValue(BedWars.plugin, true));
+        return display;
     }
 }

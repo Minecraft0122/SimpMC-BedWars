@@ -249,15 +249,15 @@ public class OreGenerator implements IGenerator {
     @SuppressWarnings("WeakerAccess")
     public class HoloGram implements IGenHolo {
         String iso;
-        ArmorStand tier, timer, name;
+        TextDisplay tier, timer, name;
 
         public HoloGram(String iso) {
             this.iso = iso;
-            this.tier = createArmorStand(Language.getLang(iso).m(Messages.GENERATOR_HOLOGRAM_TIER)
+            this.tier = createTextDisplay(Language.getLang(iso).m(Messages.GENERATOR_HOLOGRAM_TIER)
                     .replace("{tier}", Language.getLang(iso).m(Messages.FORMATTING_GENERATOR_TIER1)), location.clone().add(0, 3, 0));
-            this.timer = createArmorStand(Language.getLang(iso).m(Messages.GENERATOR_HOLOGRAM_TIMER)
+            this.timer = createTextDisplay(Language.getLang(iso).m(Messages.GENERATOR_HOLOGRAM_TIMER)
                     .replace("{seconds}", String.valueOf(lastSpawn)), location.clone().add(0, 2.4, 0));
-            this.name = createArmorStand(Language.getLang(iso).m(getOre().getType() == Material.DIAMOND ? Messages.GENERATOR_HOLOGRAM_TYPE_DIAMOND
+            this.name = createTextDisplay(Language.getLang(iso).m(getOre().getType() == Material.DIAMOND ? Messages.GENERATOR_HOLOGRAM_TYPE_DIAMOND
                     : Messages.GENERATOR_HOLOGRAM_TYPE_EMERALD), location.clone().add(0, 2.7, 0));
 
         }
@@ -280,7 +280,7 @@ public class OreGenerator implements IGenerator {
         @Override
         public void setTierName(String name) {
             if (tier.isDead()) return;
-            AdventureText.customName(tier, name);
+            tier.text(AdventureText.ampersand(name));
         }
 
         @Override
@@ -291,7 +291,7 @@ public class OreGenerator implements IGenerator {
         @Override
         public void setTimerName(String name) {
             if (timer.isDead()) return;
-            AdventureText.customName(timer, name);
+            timer.text(AdventureText.ampersand(name));
         }
 
         @Override
@@ -300,6 +300,19 @@ public class OreGenerator implements IGenerator {
             timer.remove();
             name.remove();
         }
+    }
+
+    private static TextDisplay createTextDisplay(String text, Location location) {
+        if (location == null || location.getWorld() == null) return null;
+        TextDisplay display = location.getWorld().spawn(location, TextDisplay.class);
+        display.text(AdventureText.ampersand(text));
+        display.setBillboard(Display.Billboard.CENTER);
+        display.setDefaultBackground(false);
+        display.setSeeThrough(true);
+        display.setShadowed(true);
+        display.setPersistent(false);
+        display.setLineWidth(200);
+        return display;
     }
 
     private static ArmorStand createArmorStand(String name, Location l) {

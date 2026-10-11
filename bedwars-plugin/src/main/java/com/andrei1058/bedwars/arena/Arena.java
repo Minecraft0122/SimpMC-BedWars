@@ -1279,6 +1279,13 @@ public class Arena implements IArena {
     /** Re-check normal start eligibility after players or pre-game squads change. */
     public boolean reevaluateStartEligibility() {
         if (status != GameState.waiting && status != GameState.starting) return false;
+        if (!MatchStartGate.isOpen()) {
+            if (status == GameState.starting) {
+                changeStatus(GameState.waiting);
+                return true;
+            }
+            return false;
+        }
         if (startingTask != null && startingTask.isSingleTeamDebugStart()) return false;
 
         boolean eligible = TeamAssigner.canFormValidTeams(this);

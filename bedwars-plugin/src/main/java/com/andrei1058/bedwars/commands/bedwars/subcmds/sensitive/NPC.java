@@ -132,11 +132,7 @@ public class NPC extends SubCommand {
                 }
             }
             JoinNPC.npcs.remove(npc.getId());
-            for (Entity e2 : npc.getEntity().getNearbyEntities(0, 3, 0)) {
-                if (e2.getType() == EntityType.ARMOR_STAND) {
-                    e2.remove();
-                }
-            }
+            JoinNPC.removeNearbyHolograms(npc.getEntity());
             BedWars.config.set(ConfigPath.GENERAL_CONFIGURATION_NPC_LOC_STORAGE, locations);
             npc.destroy();
             String NPC_REMOVED = "§c▪ §b目标 NPC 已删除！";

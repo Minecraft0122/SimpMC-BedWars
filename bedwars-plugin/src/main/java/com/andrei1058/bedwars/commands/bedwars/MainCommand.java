@@ -85,6 +85,8 @@ public class MainCommand extends BukkitCommand implements ParentCommand {
         new CmdInvite(this, "invite");
         new CmdStart(this, "forceStart");
         new CmdStart(this, "start");
+        new CmdMatchmakingGate(this, "stopGames", CmdMatchmakingGate.Action.STOP);
+        new CmdMatchmakingGate(this, "resumeGames", CmdMatchmakingGate.Action.RESUME);
         if (BedWars.getServerType() != ServerType.BUNGEE) {
             new com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.SetLobby(this, "setLobby"); //priority 1
         }
