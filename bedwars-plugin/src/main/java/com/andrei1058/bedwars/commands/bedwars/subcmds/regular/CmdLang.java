@@ -27,17 +27,13 @@ import com.andrei1058.bedwars.api.command.SubCommand;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.arena.SetupSession;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.andrei1058.bedwars.BedWars.plugin;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class CmdLang extends SubCommand {
@@ -51,35 +47,42 @@ public class CmdLang extends SubCommand {
 
     @Override
     public boolean execute(String[] args, CommandSender s) {
-        if (s instanceof ConsoleCommandSender) return false;
-        Player p = (Player) s;
-        if (Arena.getArenaByPlayer(p) != null) return false;
+        if (!(s instanceof Player p)) {
+            AdventureText.send(s, Language.getDefaultLanguage().m(Messages.COMMAND_LANG_PLAYER_ONLY));
+            return true;
+        }
         if (args.length == 0) {
-            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
-            for (Language l : Language.getLanguages()) {
-                AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
-            }
+            sendLanguageList(p);
+            return true;
+        }
+        if (args.length != 1) {
             AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE));
             return true;
-        } else if (Language.isLanguageExist(args[0])) {
-            if (Arena.getArenaByPlayer(p) == null) {
-                if (Language.setPlayerLanguage(p.getUniqueId(), args[0])) {
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY)), 3L);
-                } else {
-                    AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_HEADER));
-                    for (Language l : Language.getLanguages()) {
-                        AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_LIST_FORMAT).replace("{iso}", l.getIso()).replace("{name}", l.getLangName()));
-                    }
-                    AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE));
-                    return true;
-                }
-            } else {
-                AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE_DENIED));
-            }
-        } else {
+        }
+        if (Arena.getArenaByPlayer(p) != null) {
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_USAGE_DENIED));
+            return true;
+        }
+        if (!Language.isLanguageExist(args[0])) {
             AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_SELECTED_NOT_EXIST));
+            return true;
+        }
+        if (Language.getPlayerLanguage(p).getIso().equalsIgnoreCase(args[0])
+                || Language.setPlayerLanguage(p.getUniqueId(), args[0])) {
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY));
+        } else {
+            AdventureText.send(p, getMsg(p, Messages.COMMAND_LANG_CHANGE_CANCELLED));
         }
         return true;
+    }
+
+    private static void sendLanguageList(Player player) {
+        AdventureText.send(player, getMsg(player, Messages.COMMAND_LANG_LIST_HEADER));
+        for (Language language : Language.getLanguages()) {
+            AdventureText.send(player, getMsg(player, Messages.COMMAND_LANG_LIST_FORMAT)
+                    .replace("{iso}", language.getIso()).replace("{name}", language.getLangName()));
+        }
+        AdventureText.send(player, getMsg(player, Messages.COMMAND_LANG_USAGE));
     }
 
     @Override
@@ -93,12 +96,6 @@ public class CmdLang extends SubCommand {
 
     @Override
     public boolean canSee(CommandSender s, BedWars api) {
-        if (s instanceof ConsoleCommandSender) return false;
-
-        Player p = (Player) s;
-        if (Arena.isInArena(p)) return false;
-
-        if (SetupSession.isInSetupSession(p.getUniqueId())) return false;
-        return hasPermission(s);
+        return s instanceof Player && hasPermission(s);
     }
 }

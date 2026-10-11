@@ -1,13 +1,17 @@
 package com.andrei1058.bedwars.commands.bedwars.subcmds.regular;
 
 import com.andrei1058.bedwars.api.stats.MatchHistory;
+import com.andrei1058.bedwars.api.stats.MatchInfo;
 import com.andrei1058.bedwars.api.command.ParentCommand;
+import com.andrei1058.bedwars.language.MatchQueryMessages;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -72,5 +76,51 @@ class CmdMatchQueryTest {
         assertTrue(lines.getFirst().contains("全部记录"));
         verify(history).getMatches(10, 20);
         verifyNoMoreInteractions(history);
+    }
+
+    @Test
+    void allHistoryShowsOlderNumbersAboveNewerNumbersWithoutChangingApiPage() {
+        ParentCommand parent = mock(ParentCommand.class);
+        when(parent.getName()).thenReturn("bw");
+        CmdMatchQuery command = new CmdMatchQuery(parent, "history");
+        MatchHistory history = mock(MatchHistory.class);
+        List<MatchInfo> descendingPage = java.util.stream.LongStream.iterate(5, number -> number - 1)
+                .limit(5).mapToObj(this::match).toList();
+        when(history.getMatches(10, 0)).thenReturn(CompletableFuture.completedFuture(descendingPage));
+
+        List<String> lines = command.history(new String[]{"all"}, mock(CommandSender.class), history,
+                MatchQueryMessages.defaults(false)).join();
+
+        assertTrue(lines.getFirst().contains("All matches"));
+        for (int index = 1; index <= 5; index++) {
+            assertTrue(lines.get(index).contains("#" + index + " "), lines.get(index));
+        }
+        assertEquals(List.of(5L, 4L, 3L, 2L, 1L),
+                descendingPage.stream().map(MatchInfo::matchNumber).toList());
+        verify(history).getMatches(10, 0);
+    }
+
+    @Test
+    void playerHistoryKeepsItsExistingNewestFirstOrder() {
+        ParentCommand parent = mock(ParentCommand.class);
+        when(parent.getName()).thenReturn("bw");
+        CmdMatchQuery command = new CmdMatchQuery(parent, "history");
+        MatchHistory history = mock(MatchHistory.class);
+        org.bukkit.entity.Player sender = mock(org.bukkit.entity.Player.class);
+        UUID playerId = UUID.randomUUID();
+        when(sender.getUniqueId()).thenReturn(playerId);
+        when(history.getPlayerMatches(playerId, 10, 0)).thenReturn(
+                CompletableFuture.completedFuture(List.of(match(2), match(1))));
+
+        List<String> lines = command.history(new String[0], sender, history,
+                MatchQueryMessages.defaults(false)).join();
+
+        assertTrue(lines.get(1).contains("#2 "));
+        assertTrue(lines.get(2).contains("#1 "));
+    }
+
+    private MatchInfo match(long number) {
+        return new MatchInfo(number, UUID.randomUUID(), "Map", "Map", "solo", "local",
+                "FINISHED", Instant.parse("2026-10-10T00:00:00Z"), Instant.parse("2026-10-10T00:05:00Z"), null);
     }
 }

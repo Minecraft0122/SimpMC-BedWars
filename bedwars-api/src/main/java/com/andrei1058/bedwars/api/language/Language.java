@@ -135,8 +135,8 @@ public class Language extends ConfigManager {
         }
 
         // API-created language instances do not have a later defaults phase,
-        // so finish their migration here. The plugin itself only registers
-        // SimplifiedChinese.
+        // so finish their migration here. Built-in languages add their own
+        // defaults after this constructor returns.
         addChineseDocumentation();
         if (getClass() == Language.class) {
             updateToLatestVersion(6, config -> {
@@ -217,7 +217,7 @@ public class Language extends ConfigManager {
                 path2 = String.valueOf(path2.charAt(0)).toUpperCase() + path2.substring(1).toLowerCase();
                 path2 = sp[0] + "." + path2 + "." + sp[2];
                 if (language.exists(path2)) {
-                    return language.l(path);
+                    return language.l(path2);
                 } else if (language.exists(sp[0] + "." + sp[1].toUpperCase() + "." + sp[2])) {
                     return language.l(sp[0] + "." + sp[1].toUpperCase() + "." + sp[2]);
                 }
@@ -296,6 +296,9 @@ public class Language extends ConfigManager {
         String resolvedPath = resolveMessagePath(path);
         String message = getYml().getString(resolvedPath);
         if (message == null) {
+            if (defaultLanguage != null && defaultLanguage != this && defaultLanguage.exists(path)) {
+                return defaultLanguage.m(path);
+            }
             plugin.getLogger().warning("Missing message key " + path + " in language " + getIso());
             message = "MISSING_LANG";
         }
@@ -321,6 +324,9 @@ public class Language extends ConfigManager {
         String resolvedPath = resolveMessagePath(path);
         List<String> lines;
         if (!getYml().isList(resolvedPath)) {
+            if (defaultLanguage != null && defaultLanguage != this && defaultLanguage.getYml().isList(path)) {
+                return defaultLanguage.l(path);
+            }
             plugin.getLogger().warning("Missing message list key " + path + " in language " + getIso());
             lines = Collections.emptyList();
         } else {

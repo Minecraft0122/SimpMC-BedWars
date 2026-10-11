@@ -58,10 +58,11 @@ public class Persian extends Language {
         yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<arena/group>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " start &3(vip)"));
         yml.addDefault(Messages.COMMAND_LANG_LIST_HEADER, "{prefix} &2Zaban haye mojood:");
         yml.addDefault(Messages.COMMAND_LANG_LIST_FORMAT, "&a▪  &7{iso} - &f{name}");
-        yml.addDefault(Messages.COMMAND_LANG_USAGE, "{prefix}&7Ravesh Estefade: /lang &f&o<iso>");
+        yml.addDefault(Messages.COMMAND_LANG_USAGE, "{prefix}&7Ravesh Estefade: /bw lang &f&o<iso>");
         yml.addDefault(Messages.COMMAND_LANG_SELECTED_NOT_EXIST, "{prefix}&cIn zaban vojood nadarad!");
         yml.addDefault(Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY, "{prefix}&aZaban taghir kard!");
         yml.addDefault(Messages.COMMAND_LANG_USAGE_DENIED, "{prefix}&cShoma nemitavanid hengami ke dar game hastid zaban ra agvaz konid.");
+        MatchQueryMessages.registerDefaults(this);
         yml.addDefault(Messages.COMMAND_JOIN_USAGE, "§a▪ §7Ravesh Estefade: /" + mainCmd + " join §o<arena/group>");
         yml.addDefault(Messages.COMMAND_JOIN_GROUP_OR_ARENA_NOT_FOUND, "{prefix}&cHich arena ya arena group i be in nam vojood nadarad: {name}");
         yml.addDefault(Messages.COMMAND_JOIN_DENIED_IS_FULL, "{prefix}&cIn arena por shode!\n&aBaraye dashtan ghabeliat haye bishtar mitoonid ma ro donate konid. &7&o(click)");

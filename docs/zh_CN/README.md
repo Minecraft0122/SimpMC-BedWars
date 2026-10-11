@@ -18,7 +18,7 @@
 
 1. 创建 Paper 1.21.11 + Java 21 服务端。
 2. 将插件 JAR 放入 `plugins`，启动并等待配置生成。
-3. 停服，将 `plugins/SimpMC-BedWars/config.yml` 的 `language` 改为 `zh_cn`，确认 `serverType`。
+3. 停服，确认 `plugins/SimpMC-BedWars/config.yml` 中的 `serverType`；`language` 默认 `zh_cn`，也可设置为已加载语言的 ISO 代码。
 4. MULTIARENA 模式进入主大厅执行 `/bw setLobby`。
 5. 把竞技场世界文件夹放到服务端世界目录，执行 `/bw setupArena <世界名>`。
 6. 按聊天中的引导设置等待点、队伍、出生点、NPC 和生成器。

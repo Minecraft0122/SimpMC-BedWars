@@ -54,6 +54,8 @@ public class Messages {
     public static String COMMAND_LANG_SELECTED_NOT_EXIST = "cmd-lang-not-exist";
     public static String COMMAND_LANG_SELECTED_SUCCESSFULLY = "cmd-lang-set";
     public static String COMMAND_LANG_USAGE_DENIED = "cmd-lang-not-set";
+    public static String COMMAND_LANG_PLAYER_ONLY = "cmd-lang-player-only";
+    public static String COMMAND_LANG_CHANGE_CANCELLED = "cmd-lang-change-cancelled";
     public static String COMMAND_JOIN_USAGE = "cmd-join-usage";
     public static String COMMAND_JOIN_GROUP_OR_ARENA_NOT_FOUND = "cmd-join-not-found";
     public static String COMMAND_JOIN_DENIED_IS_FULL = "cmd-join-arena-full";

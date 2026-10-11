@@ -208,6 +208,7 @@ public class BedWars extends JavaPlugin {
 
         // Persist the shared Chinese documentation after its defaults load.
         for (Language language : Language.getLanguages()) {
+            MatchQueryMessages.install(language);
             language.addChineseDocumentation();
             language.save();
         }

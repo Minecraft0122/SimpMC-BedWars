@@ -57,10 +57,11 @@ public class Indonesia extends Language {
         yml.addDefault(Messages.COMMAND_MAIN, Arrays.asList("", "&2▪ &7/" + mainCmd + " stats", "&2▪ &7/" + mainCmd + " join &o<arena/grup>", "&2▪ &7/" + mainCmd + " leave", "&2▪ &7/" + mainCmd + " lang", "&2▪ &7/" + mainCmd + " gui", "&2▪ &7/" + mainCmd + " start &3(vip)"));
         yml.addDefault(Messages.COMMAND_LANG_LIST_HEADER, "{prefix} &2Bahasa Tersedia:");
         yml.addDefault(Messages.COMMAND_LANG_LIST_FORMAT, "&a▪  &7{iso} - &f{name}");
-        yml.addDefault(Messages.COMMAND_LANG_USAGE, "{prefix}&7Gunakan: /lang &f&o<bahasa>");
+        yml.addDefault(Messages.COMMAND_LANG_USAGE, "{prefix}&7Gunakan: /bw lang &f&o<bahasa>");
         yml.addDefault(Messages.COMMAND_LANG_SELECTED_NOT_EXIST, "{prefix}&cBahasa ini tidak tersedia!");
         yml.addDefault(Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY, "{prefix}&aBahasa terganti!");
         yml.addDefault(Messages.COMMAND_LANG_USAGE_DENIED, "{prefix}&cAnda tidak bisa ganti bahasa saat dalam permainan.");
+        MatchQueryMessages.registerDefaults(this);
         yml.addDefault(Messages.COMMAND_JOIN_USAGE, "§a▪ §7Gunakan: /" + mainCmd + " join §o<arena/grup>");
         yml.addDefault(Messages.COMMAND_JOIN_GROUP_OR_ARENA_NOT_FOUND, "{prefix}&cTidak ada arena atau group yang bernama: {name}");
         yml.addDefault(Messages.COMMAND_JOIN_DENIED_IS_FULL, "{prefix}&cArena tersebut penuh!\n&aSilakan pertimbangkan untuk menyumbang untuk lebih banyak fitur. &7&o(click)");
