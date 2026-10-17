@@ -1,6 +1,5 @@
 package com.simpmc.bedwars.libs.slf4jbridge;
 
-import com.andrei1058.bedwars.BedWars;
 import org.slf4j.Marker;
 import org.slf4j.helpers.MessageFormatter;
 
@@ -23,15 +22,30 @@ final class JulBridgeLogger implements org.slf4j.Logger {
     private final String name;
 
     JulBridgeLogger(String name) {
-        BedWars plugin = BedWars.plugin;
-        // 插件主类尚未初始化时（例如单元测试环境），退回到按名称解析的 JUL logger。
-        this.target = plugin != null ? plugin.getLogger() : Logger.getLogger(name);
+        this.target = resolvePluginLogger(name);
         this.name = name;
     }
 
     @Override
     public String getName() {
         return name;
+    }
+
+    /** 优先挂到插件 logger；插件类尚未就绪时退回按名称的 JUL logger。 */
+    private static Logger resolvePluginLogger(String name) {
+        try {
+            // 反射读取 BedWars.plugin，不触发插件主类初始化；契约探针等
+            // 直接类路径加载环境下插件本体可能不可用，必须安静地退回。
+            Class<?> pluginClass = Class.forName("com.andrei1058.bedwars.BedWars",
+                    false, JulBridgeLogger.class.getClassLoader());
+            Object plugin = pluginClass.getField("plugin").get(null);
+            if (plugin != null) {
+                return (Logger) plugin.getClass().getMethod("getLogger").invoke(plugin);
+            }
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            // 插件主类或可选依赖不可用：使用按名称解析的 JUL logger。
+        }
+        return Logger.getLogger(name);
     }
 
     @Override

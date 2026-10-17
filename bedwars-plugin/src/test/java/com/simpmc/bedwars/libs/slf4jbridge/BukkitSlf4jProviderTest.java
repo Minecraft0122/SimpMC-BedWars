@@ -4,7 +4,6 @@ import com.andrei1058.bedwars.BedWars;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -19,7 +18,9 @@ class BukkitSlf4jProviderTest {
         assertNull(BedWars.plugin, "单元测试环境不应初始化插件主类");
         BukkitSlf4jServiceProvider provider = new BukkitSlf4jServiceProvider();
         provider.initialize();
-        assertEquals("2.0.99", provider.getRequestedApiVersion());
+        String version = provider.getRequestedApiVersion();
+        // 契约探针等应用类路径环境返回 2.0.0 让位服务器提供器；插件类加载器下为 2.0.99。
+        assertTrue(version.equals("2.0.0") || version.equals("2.0.99"), "API 版本随类加载环境自适应: " + version);
         assertNotNull(provider.getLoggerFactory());
         assertNotNull(provider.getMarkerFactory());
         assertNotNull(provider.getMDCAdapter());

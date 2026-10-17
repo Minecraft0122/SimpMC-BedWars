@@ -2,7 +2,7 @@
 
 ## 7.6.0 - 2026-10-17
 
-- 修复 MySQL 连接池启动与关机日志经 System.err 输出的问题：重定位后的 HikariCP 改用插件内置 SLF4J 桥接（`BukkitSlf4jServiceProvider`）输出到插件 logger，控制台不再出现 `[STDERR]` 错误行和作者提醒。
+- 修复 MySQL 连接池启动与关机日志经 System.err 输出的问题：重定位后的 HikariCP 改用插件内置 SLF4J 桥接（`BukkitSlf4jServiceProvider`）输出到插件 logger，控制台不再出现 `[STDERR]` 错误行和作者提醒。桥接在探针等“插件直接位于应用类路径”的环境下自动让位服务器自带日志提供器，不影响 Paper 自身日志。
 - 大厅的下界/末地传送门对大厅玩家一律先取消原版传送，再提交代理返回；即使 `allow-end` 启用或代理未响应，玩家也不会被送进末地/下界或反复卡在门内。
 - `lobbyServer` 配置错误或代理未响应时，玩家提示改为语言文件可覆盖的 `misc-proxy-lobby-unavailable`（默认“代理大厅暂不可用，请联系管理员。”），同一玩家 4 秒内不重复提示；控制台保留详细诊断。
 
