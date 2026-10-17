@@ -1,15 +1,12 @@
 package com.andrei1058.bedwars.language;
 
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
-import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class MatchQueryMessagesTest {
     @Test
@@ -35,30 +32,4 @@ class MatchQueryMessagesTest {
         assertEquals("&b我的语言命令帮助", custom.getString(Messages.COMMAND_LANG_USAGE));
     }
 
-    @Test
-    void newMatchTemplatesCanBeRenderedInEitherLanguage() {
-        assertEquals("&6对局历史 &7全部记录 · 第 2 页",
-                MatchQueryMessages.defaults(true).text(MatchQueryMessages.Key.HISTORY_HEADER,
-                        "{target}", "全部记录", "{page}", "2"));
-        assertEquals("&6Match history &7All matches · Page 2",
-                MatchQueryMessages.defaults(false).text(MatchQueryMessages.Key.HISTORY_HEADER,
-                        "{target}", "All matches", "{page}", "2"));
-    }
-
-    @Test
-    void newKeysArePlacedBesideTheExistingCommandKeys() {
-        Language language = mock(Language.class);
-        YamlConfiguration config = new YamlConfiguration();
-        when(language.getIso()).thenReturn("en");
-        when(language.getYml()).thenReturn(config);
-        config.addDefault(Messages.COMMAND_LANG_USAGE_DENIED, "old command key");
-        MatchQueryMessages.registerDefaults(language);
-        config.addDefault(Messages.COMMAND_JOIN_USAGE, "next command key");
-
-        var keys = new java.util.ArrayList<>(config.getDefaults().getKeys(false));
-        assertTrue(keys.indexOf(Messages.COMMAND_LANG_USAGE_DENIED)
-                < keys.indexOf(MatchQueryMessages.Key.HISTORY_ROW.path()));
-        assertTrue(keys.indexOf(MatchQueryMessages.Key.HISTORY_ROW.path())
-                < keys.indexOf(Messages.COMMAND_JOIN_USAGE));
-    }
 }

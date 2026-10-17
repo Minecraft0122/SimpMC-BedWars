@@ -42,6 +42,7 @@ import org.bukkit.Sound;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
@@ -54,6 +55,8 @@ import static com.andrei1058.bedwars.BedWars.*;
 
 @SuppressWarnings("WeakerAccess")
 public class OreGenerator implements IGenerator {
+
+    private static final String GENERATOR_HOLOGRAM_METADATA = "bw1058-generator-hologram";
 
     private static final Vector ZERO_VELOCITY = new Vector();
     private Location location;
@@ -271,10 +274,16 @@ public class OreGenerator implements IGenerator {
 
         @Override
         public void updateForPlayer(Player p, String lang) {
-            if (lang.equalsIgnoreCase(iso)) return;
-            nms.hideEntity(tier, p);
-            nms.hideEntity(timer, p);
-            nms.hideEntity(name, p);
+            if (tier == null || timer == null || name == null || p == null) return;
+            if (lang.equalsIgnoreCase(iso)) {
+                p.showEntity(BedWars.plugin, tier);
+                p.showEntity(BedWars.plugin, timer);
+                p.showEntity(BedWars.plugin, name);
+            } else {
+                nms.hideEntity(tier, p);
+                nms.hideEntity(timer, p);
+                nms.hideEntity(name, p);
+            }
         }
 
         @Override
@@ -312,6 +321,7 @@ public class OreGenerator implements IGenerator {
         display.setShadowed(true);
         display.setPersistent(false);
         display.setLineWidth(200);
+        display.setMetadata(GENERATOR_HOLOGRAM_METADATA, new FixedMetadataValue(BedWars.plugin, true));
         return display;
     }
 

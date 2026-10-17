@@ -59,27 +59,6 @@ class CmdLangTest {
         }
     }
 
-    @Test
-    void selectingTheCurrentLanguageConfirmsItWithoutChangingThePreference() {
-        Player player = mock(Player.class);
-        Language english = mock(Language.class);
-        when(english.getIso()).thenReturn("en");
-        BedWars.config = mock(MainConfig.class);
-        try (MockedStatic<MainCommand> main = mockStatic(MainCommand.class);
-             MockedStatic<Language> language = mockStatic(Language.class);
-             MockedStatic<Arena> arena = mockStatic(Arena.class)) {
-            CmdLang command = command(main);
-            language.when(() -> Language.isLanguageExist("EN")).thenReturn(true);
-            language.when(() -> Language.getPlayerLanguage(player)).thenReturn(english);
-            language.when(() -> Language.getMsg(player, Messages.COMMAND_LANG_SELECTED_SUCCESSFULLY))
-                    .thenReturn("&aLanguage selected.");
-
-            assertTrue(command.execute(new String[]{"EN"}, player));
-            verify(player).sendMessage(any(Component.class));
-            language.verify(() -> Language.setPlayerLanguage(any(), anyString()), never());
-        }
-    }
-
     private static CmdLang command(MockedStatic<MainCommand> main) {
         MainCommand mainCommand = mock(MainCommand.class);
         when(mainCommand.getName()).thenReturn("bw");

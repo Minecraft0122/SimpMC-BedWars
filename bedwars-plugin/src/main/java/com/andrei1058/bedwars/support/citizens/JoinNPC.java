@@ -205,8 +205,8 @@ public class JoinNPC {
 
     private static void removeNearbyHolograms(Location location) {
         for (Entity entity : location.getWorld().getNearbyEntities(location, 1, 3, 1)) {
-            if (entity.getType() == EntityType.ARMOR_STAND
-                    || (entity instanceof TextDisplay && entity.hasMetadata(HOLOGRAM_METADATA))) {
+            if ((entity instanceof TextDisplay && entity.hasMetadata(HOLOGRAM_METADATA))
+                    || (entity instanceof ArmorStand armorStand && npcs_holos.containsKey(armorStand))) {
                 entity.remove();
             }
         }
