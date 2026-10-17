@@ -13,9 +13,9 @@ public final class MatchmakingMessages {
     private MatchmakingMessages() { }
 
     public enum Key {
-        LIST_HEADER("cmd-list-header", "&6Online players &7({online}/{max})", "&6在线玩家 &7({online}/{max})"),
-        LIST_LOBBY("cmd-list-lobby", "&eLobby &7({count})&f: {players}", "&e大厅 &7({count})&f：{players}"),
-        LIST_ARENA("cmd-list-arena", "&bArena {arena} &7({count})&f: {players}", "&b竞技场 {arena} &7({count})&f：{players}"),
+        LIST_HEADER("cmd-list-header", "&fThere are {online} players online, with a maximum capacity of {max} players.", "&f当前有 {online} 位玩家在线，可容纳最大在线人数为 {max} 位玩家。"),
+        LIST_LOBBY("cmd-list-lobby", "&fLobby: {players}", "&f大厅：{players}"),
+        LIST_ARENA("cmd-list-arena", "&fArena [{arena}]: {players}", "&f竞技场 [{arena}]：{players}"),
         LIST_EMPTY("cmd-list-empty", "none", "无"),
         MATCHES_BLOCKED("cmd-matchmaking-blocked", "&cNew matches are currently disabled by an administrator.", "&c管理员已暂停新对局。"),
         MATCHES_ALREADY_BLOCKED("cmd-matchmaking-already-blocked", "&eNew matches are already disabled.", "&e新对局已经处于暂停状态。"),
@@ -40,9 +40,21 @@ public final class MatchmakingMessages {
         for (Key key : Key.values()) {
             language.getYml().addDefault(key.path, chinese ? key.chinese : key.english);
         }
+        migrateLegacyListDefaults(language, chinese);
         language.setComments(Key.LIST_HEADER.path, "服务器 /list 玩家总数行；保留 {online} 和 {max}。");
-        language.setComments(Key.LIST_LOBBY.path, "服务器 /list 大厅玩家行；保留 {count} 和 {players}。");
-        language.setComments(Key.LIST_ARENA.path, "服务器 /list 竞技场玩家行；保留 {arena}、{count} 和 {players}。");
+        language.setComments(Key.LIST_LOBBY.path, "服务器 /list 大厅玩家行；保留 {players}。");
+        language.setComments(Key.LIST_ARENA.path, "服务器 /list 竞技场玩家行；保留 {arena} 和 {players}。");
+    }
+
+    private static void migrateLegacyListDefaults(Language language, boolean chinese) {
+        var yml = language.getYml();
+        migrateIfBuiltin(yml, Key.LIST_HEADER.path, chinese ? "&6在线玩家 &7({online}/{max})" : "&6Online players &7({online}/{max})", chinese ? Key.LIST_HEADER.chinese : Key.LIST_HEADER.english);
+        migrateIfBuiltin(yml, Key.LIST_LOBBY.path, chinese ? "&e大厅 &7({count})&f：{players}" : "&eLobby &7({count})&f: {players}", chinese ? Key.LIST_LOBBY.chinese : Key.LIST_LOBBY.english);
+        migrateIfBuiltin(yml, Key.LIST_ARENA.path, chinese ? "&b竞技场 {arena} &7({count})&f：{players}" : "&bArena {arena} &7({count})&f: {players}", chinese ? Key.LIST_ARENA.chinese : Key.LIST_ARENA.english);
+    }
+
+    private static void migrateIfBuiltin(YamlConfiguration yml, String path, String oldValue, String newValue) {
+        if (oldValue.equals(yml.getString(path))) yml.set(path, newValue);
     }
 
     public static Snapshot forSender(CommandSender sender) {
