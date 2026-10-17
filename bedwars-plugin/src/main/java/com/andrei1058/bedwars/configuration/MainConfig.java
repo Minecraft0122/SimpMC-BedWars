@@ -29,6 +29,9 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.arena.ArenaSelectorPagination;
 import com.andrei1058.bedwars.arena.Misc;
+import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
+import com.andrei1058.bedwars.language.MatchmakingMessages;
+import com.andrei1058.bedwars.language.MatchQueryMessages;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -274,6 +277,27 @@ public class MainConfig extends ConfigManager {
             }
         });
 
+        // BW1058 workflow: languages dropped into the Languages folder are
+        // registered automatically; the server default language always stays
+        // loaded. Only canonical message_<iso>.yml files count; migration
+        // backups never match.
+        boolean registeredCustomLanguage = false;
+        for (String customIso : collectCustomLanguageIsos(new File(plugin.getDataFolder(), "/Languages").listFiles())) {
+            if (Language.isLanguageExist(customIso)) continue;
+            Language customLanguage = new Language(plugin, customIso);
+            customLanguage.getYml().addDefault("name", customIso);
+            MatchQueryMessages.install(customLanguage);
+            MatchmakingMessages.install(customLanguage);
+            customLanguage.save();
+            plugin.getLogger().info("已从 Languages 目录加载自定义语言 " + customIso + "。");
+            registeredCustomLanguage = true;
+        }
+        // Languages scanned here missed the onLoad fallback pass for shop
+        // features; fill their missing defaults once a custom file loaded.
+        if (registeredCustomLanguage) {
+            SelfRescuePlatform.installLanguageFallbacks();
+        }
+
         String configuredLanguage = yml.getString("language");
         if (!Language.isLanguageExist(configuredLanguage)) {
             plugin.getLogger().warning("未找到语言 " + configuredLanguage + "，已使用默认语言。 ");
@@ -288,6 +312,17 @@ public class MainConfig extends ConfigManager {
                     + Language.SIMPLIFIED_CHINESE_ISO);
         }
         Language.setDefaultLanguage(def);
+
+        // Restore the BW1058 disabled-language behavior: listed languages are
+        // removed after startup while the server default language always stays
+        // loaded. Unknown ISO values resolve to the default language, so they
+        // are ignored.
+        for (String disabledIso : yml.getStringList(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES)) {
+            Language disabledLanguage = Language.getLang(disabledIso);
+            if (disabledLanguage != def && Language.getLanguages().remove(disabledLanguage)) {
+                plugin.getLogger().info("已按 disabled-languages 配置停用语言 " + disabledIso + "。");
+            }
+        }
 
         BedWars.setDebug(yml.getBoolean("debug"));
         new ConfigManager(plugin, "bukkit", Bukkit.getWorldContainer().getPath()).set("ticks-per.autosave", -1);
@@ -351,7 +386,9 @@ public class MainConfig extends ConfigManager {
                 "竞技场节点向大厅发送全量状态心跳的间隔，单位为秒；默认 15 秒。", "平时状态变化通过事件立即发送，心跳只用于断线重连后的恢复。");
         setComments("language", "服务器默认语言，使用 Languages 目录中的 ISO 代码。");
         setComments("storeLink", "商店或官方网站链接，可在消息占位符中使用。");
-        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES, "历史兼容字段；填写此处的语言不会加载。语言文件放在 Languages 目录中。");
+        setComments(ConfigPath.GENERAL_CONFIGURATION_DISABLED_LANGUAGES,
+                "在此填写的语言启动后不会加载，也不会出现在 /bw lang 中；服务器默认语言始终保留。",
+                "语言文件放在 Languages 目录中，文件名必须为 messages_<iso>.yml。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_GROUPS,
                 "可用于匹配和竞技场选择器的全局分组名称。Default 是内置组，无需填写。",
                 "每张地图在 Arenas/<地图>.yml 的 group 中引用一个名称。");
@@ -616,6 +653,21 @@ public class MainConfig extends ConfigManager {
                 target.set(path + '.' + key, section.get(key));
             }
         }
+    }
+
+    /**
+     * Canonical custom language files in a Languages directory listing, in
+     * the BW1058 sense: regular files named {@code messages_<iso>.yml}.
+     * Migration backups and other file types are ignored.
+     */
+    static List<String> collectCustomLanguageIsos(final File[] files) {
+        List<String> isos = new ArrayList<>();
+        if (files == null) return isos;
+        for (File file : files) {
+            if (!file.isFile()) continue;
+            Language.isoFromFileName(file.getName()).ifPresent(isos::add);
+        }
+        return isos;
     }
 
     static LegacyLobbyItemHistory findLegacyLobbyItemHistory(File dataFolder, int storedConfigVersion) {

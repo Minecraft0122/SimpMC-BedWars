@@ -181,10 +181,9 @@ public class Language extends ConfigManager {
     }
 
     /**
-     * Return the ISO portion of a canonical language filename. This generic
-     * parser remains for legacy API callers; the plugin runtime only loads
-     * {@link #SIMPLIFIED_CHINESE_ISO}. Migration backups such as
-     * messages_zh_cn.yml.v1.bak are intentionally rejected.
+     * Return the ISO portion of a canonical language filename. The plugin
+     * runtime registers such files from the Languages folder; migration
+     * backups such as messages_zh_cn.yml.v1.bak are intentionally rejected.
      */
     public static Optional<String> isoFromFileName(String fileName) {
         if (fileName == null) return Optional.empty();

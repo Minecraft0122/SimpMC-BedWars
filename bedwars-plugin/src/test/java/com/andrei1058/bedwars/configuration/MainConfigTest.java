@@ -7,8 +7,11 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -624,5 +627,25 @@ class MainConfigTest {
         assertEquals("1.5,64.0,2.5,-90.0,0.0,lobby,skin,名称,Default,42",
                 MainConfig.normalizeNpcLocationEntry(
                         "1.5,64.0,2.5,-88.328,35.0,lobby,skin,名称,Default,42", "world"));
+    }
+
+    @Test
+    void languagesDirectoryScanAcceptsOnlyCanonicalMessageFiles(@TempDir Path directory) throws IOException {
+        assertTrue(MainConfig.collectCustomLanguageIsos(null).isEmpty());
+        assertTrue(MainConfig.collectCustomLanguageIsos(new File[0]).isEmpty());
+
+        Path languages = directory;
+
+        new YamlConfiguration().save(languages.resolve("messages_fr_fr.yml").toFile());
+        new YamlConfiguration().save(languages.resolve("messages_ZH_HK.yml").toFile());
+        new YamlConfiguration().save(languages.resolve("messages_legacy.yml.v1.bak").toFile());
+        new YamlConfiguration().save(languages.resolve("messages_.yml").toFile());
+        new YamlConfiguration().save(languages.resolve("note.txt").toFile());
+        Files.createDirectory(languages.resolve("messages_dir.yml"));
+
+        List<String> isos = MainConfig.collectCustomLanguageIsos(languages.toFile().listFiles());
+        Collections.sort(isos);
+
+        assertEquals(List.of("ZH_HK", "fr_fr"), isos);
     }
 }
