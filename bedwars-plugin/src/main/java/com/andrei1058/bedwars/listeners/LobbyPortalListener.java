@@ -17,8 +17,10 @@ public final class LobbyPortalListener implements Listener {
     public void onEndPortalEnter(EntityPortalEnterEvent event) {
         if (event.getPortalType() != PortalType.ENDER || !(event.getEntity() instanceof Player player)
                 || !shouldReturnToProxyLobby(player, PlayerTeleportEvent.TeleportCause.END_PORTAL)) return;
-        // 接触事件早于目标世界查找；即使 allow-end=false 也能返回代理大厅。
-        if (Misc.connectToProxyLobby(player)) event.setCancelled(true);
+        // 大厅玩家不进入原版末地流程：接触事件先无条件取消，再提交代理返回。
+        // 即便代理不可用或 allow-end=true，玩家也不会被送进末地或卡在门内。
+        event.setCancelled(true);
+        Misc.connectToProxyLobby(player);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -26,10 +28,10 @@ public final class LobbyPortalListener implements Listener {
         Player player = event.getPlayer();
         if (!shouldReturnToProxyLobby(player, event.getCause())) return;
 
-        // Send the proxy request while the portal event is still on the main
-        // thread. If the channel/configuration is unavailable, preserve the
-        // prior cancellation state so another protection plugin still wins.
-        if (Misc.connectToProxyLobby(player)) event.setCancelled(true);
+        // 原版下界/末地跳转对大厅玩家一律取消；代理连接失败也必须留在本服。
+        // 提示由代理连接器的统一入口负责，失败时不会执行任何原版传送。
+        event.setCancelled(true);
+        Misc.connectToProxyLobby(player);
     }
 
     static boolean shouldReturnToProxyLobby(Player player, PlayerTeleportEvent.TeleportCause cause) {

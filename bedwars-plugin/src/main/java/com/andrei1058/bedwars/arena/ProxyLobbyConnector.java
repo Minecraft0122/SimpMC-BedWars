@@ -11,7 +11,7 @@
 package com.andrei1058.bedwars.arena;
 
 import com.andrei1058.bedwars.BedWars;
-import com.andrei1058.bedwars.api.util.AdventureText;
+import com.andrei1058.bedwars.language.ProxyLobbyMessages;
 import com.google.common.io.ByteStreams;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -31,7 +31,9 @@ import java.util.UUID;
 
 /**
  * 管理用于返回代理大厅的 BungeeCord 兼容出站通道。
- * 返回操作先通过 {@code GetServers} 校验目标，只向玩家显示通用错误，不暴露代理配置。
+ * 返回操作先通过 {@code GetServers} 校验目标；玩家提示由语言键
+ * {@code misc-proxy-lobby-unavailable} 提供，控制台保留详细诊断，
+ * 不暴露代理配置。
  */
 public final class ProxyLobbyConnector implements PluginMessageListener, Listener {
 
@@ -117,7 +119,7 @@ public final class ProxyLobbyConnector implements PluginMessageListener, Listene
 
     private void fail(Player player, String diagnostic) {
         plugin.getLogger().warning(diagnostic);
-        AdventureText.send(player, "§c执行操作时发生异常，请联系服务器管理员");
+        ProxyLobbyMessages.sendUnavailable(player);
     }
 
     private void discard(UUID playerId) {

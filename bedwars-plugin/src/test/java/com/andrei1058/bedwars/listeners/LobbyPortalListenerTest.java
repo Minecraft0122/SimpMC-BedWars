@@ -11,6 +11,7 @@ import org.bukkit.PortalType;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPortalEnterEvent;
+import org.bukkit.event.player.PlayerPortalEvent;
 
 class LobbyPortalListenerTest {
 
@@ -28,17 +29,40 @@ class LobbyPortalListenerTest {
     }
 
     @Test
-    void unrelatedWorldAndFailedProxyRequestDoNotCancelPortalContact() {
+    void unrelatedPlayersKeepVanillaPortalTeleport() {
         Player player = mock(Player.class);
         try (var lobby = mockStatic(LobbyAnnouncements.class); var misc = mockStatic(Misc.class)) {
             var event = new EntityPortalEnterEvent(player, new Location(null, 0, 0, 0), PortalType.ENDER);
             new LobbyPortalListener().onEndPortalEnter(event);
             assertFalse(event.isCancelled());
             misc.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    void lobbyPlayersNeverFallThroughPortalsEvenWhenProxyFails() {
+        Player player = mock(Player.class);
+        try (var lobby = mockStatic(LobbyAnnouncements.class); var misc = mockStatic(Misc.class)) {
             lobby.when(() -> LobbyAnnouncements.isProxyLobbyPlayer(player)).thenReturn(true);
             misc.when(() -> Misc.connectToProxyLobby(player)).thenReturn(false);
+            var event = new EntityPortalEnterEvent(player, new Location(null, 0, 0, 0), PortalType.ENDER);
             new LobbyPortalListener().onEndPortalEnter(event);
-            assertFalse(event.isCancelled());
+            assertTrue(event.isCancelled());
+            misc.verify(() -> Misc.connectToProxyLobby(player));
+        }
+    }
+
+    @Test
+    void playerPortalEventCancelsVanillaEndTravelForLobbyPlayers() {
+        Player player = mock(Player.class);
+        try (var lobby = mockStatic(LobbyAnnouncements.class); var misc = mockStatic(Misc.class)) {
+            lobby.when(() -> LobbyAnnouncements.isLobbyPlayer(player)).thenReturn(true);
+            misc.when(() -> Misc.connectToProxyLobby(player)).thenReturn(false);
+            var event = new PlayerPortalEvent(player, new Location(null, 0, 0, 0), new Location(null, 0, 0, 0),
+                    PlayerTeleportEvent.TeleportCause.END_PORTAL);
+            new LobbyPortalListener().onPortal(event);
+            assertTrue(event.isCancelled());
+            misc.verify(() -> Misc.connectToProxyLobby(player));
         }
     }
 

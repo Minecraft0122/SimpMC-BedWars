@@ -2,6 +2,7 @@ package com.andrei1058.bedwars.arena;
 
 import com.andrei1058.bedwars.BedWars;
 import com.andrei1058.bedwars.api.util.AdventureText;
+import com.andrei1058.bedwars.language.ProxyLobbyMessages;
 import com.google.common.io.ByteStreams;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -48,7 +49,7 @@ class ProxyLobbyConnectorTest {
             misc.verifyNoInteractions();
             connector.onPluginMessageReceived("BungeeCord", player, servers("hub, login"));
             verify(logger).warning(contains("您配置的lobbyServer不存在！"));
-            text.verify(() -> AdventureText.send(player, "§c执行操作时发生异常，请联系服务器管理员"));
+            text.verify(() -> AdventureText.send(player, ProxyLobbyMessages.UNAVAILABLE_FALLBACK));
             misc.verifyNoInteractions();
             misc.when(() -> Misc.connectToProxyServer(player, "login")).thenReturn(true);
             assertTrue(connector.connect(player, " login "));
@@ -79,7 +80,7 @@ class ProxyLobbyConnectorTest {
             connector.onPluginMessageReceived("BungeeCord", player, new byte[]{0});
             task.get().run();
             verify(logger).warning(contains("代理未响应 GetServers"));
-            text.verify(() -> AdventureText.send(player, "§c执行操作时发生异常，请联系服务器管理员"));
+            text.verify(() -> AdventureText.send(player, ProxyLobbyMessages.UNAVAILABLE_FALLBACK));
             misc.verifyNoInteractions();
             assertTrue(connector.connect(player, "hub"));
             connector.onQuit(new org.bukkit.event.player.PlayerQuitEvent(player, (net.kyori.adventure.text.Component) null));

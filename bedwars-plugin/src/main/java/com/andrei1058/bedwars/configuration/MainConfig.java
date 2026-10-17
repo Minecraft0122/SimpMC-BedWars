@@ -32,6 +32,7 @@ import com.andrei1058.bedwars.arena.Misc;
 import com.andrei1058.bedwars.arena.feature.SelfRescuePlatform;
 import com.andrei1058.bedwars.language.MatchmakingMessages;
 import com.andrei1058.bedwars.language.MatchQueryMessages;
+import com.andrei1058.bedwars.language.ProxyLobbyMessages;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -288,6 +289,7 @@ public class MainConfig extends ConfigManager {
             customLanguage.getYml().addDefault("name", customIso);
             MatchQueryMessages.install(customLanguage);
             MatchmakingMessages.install(customLanguage);
+            ProxyLobbyMessages.install(customLanguage);
             customLanguage.save();
             plugin.getLogger().info("已从 Languages 目录加载自定义语言 " + customIso + "。");
             registeredCustomLanguage = true;

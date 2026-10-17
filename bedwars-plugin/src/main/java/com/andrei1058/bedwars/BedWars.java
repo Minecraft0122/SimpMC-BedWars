@@ -210,6 +210,7 @@ public class BedWars extends JavaPlugin {
         for (Language language : Language.getLanguages()) {
             MatchQueryMessages.install(language);
             MatchmakingMessages.install(language);
+            ProxyLobbyMessages.install(language);
             language.addChineseDocumentation();
             language.save();
         }
