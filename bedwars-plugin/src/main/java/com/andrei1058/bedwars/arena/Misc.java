@@ -86,9 +86,7 @@ public class Misc {
                     } else {
                         arena.removePlayer(p, false);
                         if (!notAbandon && arena.getStatus() == GameState.playing) {
-                            if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
-                                arena.abandonGame(p);
-                            }
+                            arena.abandonGame(p);
                         }
                     }
                 }
@@ -127,12 +125,11 @@ public class Misc {
     }
 
     private static void forceKick(Player p, @Nullable IArena arena, boolean notAbandon) {
-        connectToProxyLobby(p);
         if (arena != null && !notAbandon && arena.getStatus() == GameState.playing) {
-            if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
-                arena.abandonGame(p);
-            }
+            arena.removePlayer(p, false);
+            arena.abandonGame(p);
         }
+        connectToProxyLobby(p);
 
         if (getServerType() == ServerType.BUNGEE) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -140,9 +137,8 @@ public class Misc {
                 if (p.isOnline()) {
                     p.kickPlayer(getMsg(p, Messages.ARENA_RESTART_PLAYER_KICK));
                     if (arena != null && !notAbandon && arena.getStatus() == GameState.playing) {
-                        if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_MARK_LEAVE_AS_ABANDON)) {
-                            arena.abandonGame(p);
-                        }
+                        arena.removePlayer(p, false);
+                        arena.abandonGame(p);
                     }
                 }
             }, 30L);

@@ -71,6 +71,7 @@ public class Messages {
     public static String REJOIN_NO_ARENA = "cmd-rejoin-no-arena";
     public static String REJOIN_DENIED = "cmd-rejoin-denied";
     public static String REJOIN_ALLOWED = "cmd-rejoin-allowed";
+    public static String REJOIN_WAITING = "cmd-rejoin-waiting";
     public static String COMMAND_REJOIN_PLAYER_RECONNECTED = "cmd-rejoin-player-reconnected";
     public static String COMMAND_LEAVE_MSG = "cmd-leave";
     public static String COMMAND_NOT_ALLOWED_IN_GAME = "cmd-blocked-in-game";
