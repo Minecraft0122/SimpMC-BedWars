@@ -50,6 +50,7 @@ public class SimplifiedChinese extends Language {
 
         YamlConfiguration yml = getYml();
         yml.options().copyDefaults(true);
+        migrateTowerShopTranslation(yml);
         yml.addDefault(Messages.PREFIX, "");
         yml.addDefault("name", "简体中文");
         yml.addDefault(Messages.FORMATTING_SB_TAB_GAME_TIME, "&7游戏时间：&a{gameTime}");
@@ -1156,6 +1157,20 @@ public class SimplifiedChinese extends Language {
         migrateSchema16(yml);
         Language.removeRetiredSpectatorRows(yml);
         Language.removeRetiredSpectatorRows(yml.getDefaults());
+    }
+
+    static void migrateTowerShopTranslation(YamlConfiguration yml) {
+        String namePath = Messages.SHOP_CONTENT_TIER_ITEM_NAME.replace("%category%", ConfigPath.SHOP_PATH_CATEGORY_UTILITY).replace("%content%", "tower");
+        String lorePath = Messages.SHOP_CONTENT_TIER_ITEM_LORE.replace("%category%", ConfigPath.SHOP_PATH_CATEGORY_UTILITY).replace("%content%", "tower");
+        String currentName = yml.getString(namePath);
+        if ("{color}Compact Pop-up Tower".equals(currentName) || "&cName not set".equals(currentName)) {
+            yml.set(namePath, "{color}袖珍弹出塔");
+        }
+        List<String> currentLore = yml.getStringList(lorePath);
+        if (currentLore.equals(List.of("&7Cost: {cost} {currency}", "", "&7Place a compact pop-up", "&7tower defense!", "", "{quick_buy}", "{buy_status}"))
+                || currentLore.equals(List.of("&8Lore not set")) || currentLore.equals(List.of("&7Fallback lore"))) {
+            yml.set(lorePath, List.of("&7花费：{cost} {currency}", "", "&7放置后自动生成一座", "&7带梯子的队伍色防御塔。", "", "{quick_buy}", "{buy_status}"));
+        }
     }
 
     static void migrateLegacyMessages(YamlConfiguration yml) {

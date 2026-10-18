@@ -13,10 +13,10 @@ public final class MatchmakingMessages {
     private MatchmakingMessages() { }
 
     public enum Key {
-        LIST_HEADER("cmd-list-header", "&fThere are {online} players online, with a maximum capacity of {max} players.", "&f当前有 {online} 位玩家在线，可容纳最大在线人数为 {max} 位玩家。"),
-        LIST_LOBBY("cmd-list-lobby", "&fLobby: {players}", "&f大厅：{players}"),
-        LIST_ARENA("cmd-list-arena", "&fArena [{arena}]: {players}", "&f竞技场 [{arena}]：{players}"),
-        LIST_EMPTY("cmd-list-empty", "none", "无"),
+        LIST_HEADER("cmd-list-header", "&6ONLINE &8» &fThere are {online} players online, with a maximum capacity of {max} players.", "&6在线玩家 &8» &f当前有 {online} 位玩家在线，可容纳最大在线人数为 {max} 位玩家。"),
+        LIST_LOBBY("cmd-list-lobby", "&aLOBBY &8» &f{players}", "&a大厅 &8» &f{players}"),
+        LIST_ARENA("cmd-list-arena", "&bARENA &8[&f{arena}&8] &8» &f{players}", "&b竞技场 &8[&f{arena}&8] &8» &f{players}"),
+        LIST_EMPTY("cmd-list-empty", "&7None", "&7无人"),
         MATCHES_BLOCKED("cmd-matchmaking-blocked", "&cNew matches are currently disabled by an administrator.", "&c管理员已暂停新对局。"),
         MATCHES_ALREADY_BLOCKED("cmd-matchmaking-already-blocked", "&eNew matches are already disabled.", "&e新对局已经处于暂停状态。"),
         MATCHES_RESUMED("cmd-matchmaking-resumed", "&aNew matches are enabled again.", "&a已恢复新对局。"),

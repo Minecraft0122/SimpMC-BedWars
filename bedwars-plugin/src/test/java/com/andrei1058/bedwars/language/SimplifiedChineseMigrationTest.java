@@ -3,6 +3,7 @@ package com.andrei1058.bedwars.language;
 import com.andrei1058.bedwars.api.configuration.ConfigManager;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
+import com.andrei1058.bedwars.api.configuration.ConfigPath;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +34,23 @@ class SimplifiedChineseMigrationTest {
     }
 
     private static final List<String> BRACKETED_TEAM_PREFIX = List.of("&7[{teamColor}{teamName}&7] ");
+
+    @Test
+    void towerDefaultsBecomeChineseButCustomTranslationIsPreserved() {
+        String namePath = Messages.SHOP_CONTENT_TIER_ITEM_NAME.replace("%category%", ConfigPath.SHOP_PATH_CATEGORY_UTILITY).replace("%content%", "tower");
+        String lorePath = Messages.SHOP_CONTENT_TIER_ITEM_LORE.replace("%category%", ConfigPath.SHOP_PATH_CATEGORY_UTILITY).replace("%content%", "tower");
+        YamlConfiguration language = new YamlConfiguration();
+        language.set(namePath, "{color}Compact Pop-up Tower");
+        language.set(lorePath, List.of("&7Cost: {cost} {currency}", "", "&7Place a compact pop-up", "&7tower defense!", "", "{quick_buy}", "{buy_status}"));
+
+        SimplifiedChinese.migrateTowerShopTranslation(language);
+        assertEquals("{color}袖珍弹出塔", language.getString(namePath));
+        assertEquals(List.of("&7花费：{cost} {currency}", "", "&7放置后自动生成一座", "&7带梯子的队伍色防御塔。", "", "{quick_buy}", "{buy_status}"), language.getStringList(lorePath));
+
+        language.set(namePath, "{color}管理员自定义防御塔");
+        SimplifiedChinese.migrateTowerShopTranslation(language);
+        assertEquals("{color}管理员自定义防御塔", language.getString(namePath));
+    }
 
     @Test
     void schemaSixteenKeepsGameTimeAndCustomMessages() {
