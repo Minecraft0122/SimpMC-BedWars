@@ -105,6 +105,22 @@ class PlayerListLifecycleTest {
     }
 
     @Test
+    void missingArenaRowsAreEligibleForReplayOnlyWhenThePlayerIsInThatArena() {
+        Player arenaPlayer = player("ArenaPlayer");
+        Player outsidePlayer = player("OutsidePlayer");
+        IArena arena = (IArena) Proxy.newProxyInstance(
+                IArena.class.getClassLoader(), new Class<?>[]{IArena.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getPlayers" -> List.of(arenaPlayer);
+                    case "getSpectators" -> List.of();
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+
+        assertEquals(true, BwTabList.isArenaRosterMember(arena, arenaPlayer));
+        assertEquals(false, BwTabList.isArenaRosterMember(arena, outsidePlayer));
+    }
+
+    @Test
     void leavingRemovesHiddenStateEvenWithoutAFormattedRow() {
         BwSidebar sidebar = mock(BwSidebar.class);
         Sidebar handle = mock(Sidebar.class);

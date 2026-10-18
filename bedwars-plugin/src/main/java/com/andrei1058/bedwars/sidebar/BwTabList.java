@@ -322,8 +322,22 @@ public class BwTabList {
         if (sidebar.getHandle() != null) {
             sidebar.getHandle().replayHiddenPlayerList(sidebar.getPlayer(), player);
         }
-        if (!deployedPerPlayerTabList.containsKey(player.getUniqueId())) return;
+        if (!deployedPerPlayerTabList.containsKey(player.getUniqueId())) {
+            // Paper can rebuild a PlayerInfo entry after the arena-join event
+            // has already run. In that window the viewer knows the player is
+            // in the same arena, but no private scoreboard row exists yet.
+            // Recreate only an actual arena roster member; a generic show
+            // event must not pull an unrelated player into this arena TAB.
+            IArena arena = sidebar.getArena();
+            if (arena == null || !isArenaRosterMember(arena, player)) return;
+        }
         giveUpdateTabFormat(player, false, null);
+    }
+
+    static boolean isArenaRosterMember(@NotNull IArena arena, @NotNull Player player) {
+        UUID playerId = player.getUniqueId();
+        return arena.getPlayers().stream().anyMatch(candidate -> playerId.equals(candidate.getUniqueId()))
+                || arena.getSpectators().stream().anyMatch(candidate -> playerId.equals(candidate.getUniqueId()));
     }
 
     /** Remove one target from this viewer's deployed TAB state. */
