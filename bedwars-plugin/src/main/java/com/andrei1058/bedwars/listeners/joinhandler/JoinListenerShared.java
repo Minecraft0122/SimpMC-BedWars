@@ -51,20 +51,18 @@ public class JoinListenerShared implements Listener {
             }
         }
 
+        JoinVisibility.synchronize(p);
+
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!p.isOnline()) return;
-            // Hide new player to players and spectators, and vice versa
-            for (Player inArena : Arena.getArenaByPlayer().keySet()){
-                if (inArena.equals(p)) continue;
-                BedWars.nms.spigotHidePlayer(p, inArena);
-                BedWars.nms.spigotHidePlayer(inArena, p);
-            }
-
             // Apply the reconnect after visibility packets, matching the
             // multi-arena listener and avoiding a stale reservation race.
             if (rejoinAllowed) {
                 if (Arena.isInArena(p)) return;
-                if (reJoin.canReJoin() && reJoin.reJoin(p)) return;
+                if (reJoin.canReJoin() && reJoin.reJoin(p)) {
+                    JoinVisibility.synchronize(p);
+                    return;
+                }
                 applyLobbyState(p);
             }
         }, 14L);

@@ -147,11 +147,21 @@ public class FireballListener implements Listener {
         }
 
         towardExplosion.multiply(1D / Math.sqrt(lengthSquared));
-        Vector knockback = towardExplosion.clone().multiply(-safeHorizontal);
+        Vector knockback = horizontalKnockback(explosion, player, safeHorizontal);
         double y = towardExplosion.getY();
         if (y < 0) y += 1.5;
         y = y <= 0.5 ? safeVertical * 1.5D : y * safeVertical * 1.5D;
         return knockback.setY(y);
+    }
+
+    /** Keep configured horizontal fireball strength independent of vertical distance. */
+    private static Vector horizontalKnockback(Vector explosion, Vector player, double horizontal) {
+        Vector away = new Vector(player.getX() - explosion.getX(), 0D, player.getZ() - explosion.getZ());
+        double lengthSquared = away.lengthSquared();
+        if (!Double.isFinite(lengthSquared) || lengthSquared <= 1.0E-12D) {
+            return new Vector(0D, 0D, 0D);
+        }
+        return away.multiply(horizontal / Math.sqrt(lengthSquared));
     }
 
     static boolean isWithinExplosionRadius(Vector explosion, Vector player, double radius) {

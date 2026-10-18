@@ -118,12 +118,13 @@ public class ChatFormatting implements Listener {
             }
 
             // player team chat
-            if (a.getMaxInTeam() == 1) {
+            if (a instanceof Arena && ((Arena) a).getTeamSizeAtGameStart(team) <= 1) {
                 setRecipients(e, a.getPlayers(), a.getSpectators());
+                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_LOBBY), p, team));
             } else {
                 setRecipients(e, team.getMembers());
+                e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             }
-            e.setFormat(parsePHolders(language.m(Messages.FORMATTING_CHAT_TEAM), p, team));
             return;
         }
 
@@ -132,6 +133,11 @@ public class ChatFormatting implements Listener {
     }
 
     private static String parsePHolders(String content, Player player, @Nullable ITeam team) {
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (team != null && arena instanceof Arena && ((Arena) arena).getTeamSizeAtGameStart(team) <= 1) {
+            content = withoutSoloTeamPrefix(content);
+            team = null;
+        }
         content = content
                 .replace("{vPrefix}", getChatSupport().getPrefix(player))
                 .replace("{vSuffix}", getChatSupport().getSuffix(player))
@@ -145,6 +151,10 @@ public class ChatFormatting implements Listener {
             content = content.replace("{team}", teamFormat);
         }
         return SupportPAPI.getSupportPAPI().replace(player, content).replace("{message}", "%2$s");
+    }
+
+    static String withoutSoloTeamPrefix(String format) {
+        return format.replace("{team} ", "").replace("{team}", "");
     }
 
     private static boolean isShouting(String msg, Language lang) {

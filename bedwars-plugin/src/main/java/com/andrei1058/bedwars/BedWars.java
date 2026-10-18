@@ -274,7 +274,6 @@ public class BedWars extends JavaPlugin {
                 new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK(),
                 new GameEndListener(), new DefaultStatsHandler(), selfRescuePlatform
         );
-        Bukkit.getScheduler().runTaskTimer(this, selfRescuePlatform, 1L, 1L);
 
         if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE)) {
             registerEvents(new HealPoolListner());

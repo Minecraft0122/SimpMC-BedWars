@@ -134,14 +134,7 @@ public class JoinListenerBungee implements Listener {
                 if (mainWorld != null) {
                     TeleportManager.teleportC(p, mainWorld.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 }
-                // hide admin to in game users
-                for (Player inGame : Bukkit.getOnlinePlayers()){
-                    if (inGame.equals(p)) continue;
-                    if (Arena.isInArena(inGame)) {
-                        BedWars.nms.spigotHidePlayer(p, inGame);
-                        BedWars.nms.spigotHidePlayer(inGame, p);
-                    }
-                }
+                JoinVisibility.synchronize(p);
             } else {
                 // The player is not an admin and he joined using /server or equivalent
                 p.kickPlayer(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY));
@@ -162,6 +155,7 @@ public class JoinListenerBungee implements Listener {
                     JoinHandlerCommon.displayCustomerDetails(p);
                     // Cache player language
                     Language.setPlayerLanguage(p.getUniqueId(), playerLang.getIso());
+                    JoinVisibility.synchronize(p);
                 } else {
                     p.kickPlayer(playerLang.m(Messages.REJOIN_DENIED));
                 }
@@ -196,6 +190,8 @@ public class JoinListenerBungee implements Listener {
                         // Add to arena
                         if (!arena.addPlayer(p, true)) {
                             p.kickPlayer(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY));
+                        } else {
+                            JoinVisibility.synchronize(p);
                         }
                     } else {
                         // If is member or owner of a remote party
@@ -227,6 +223,8 @@ public class JoinListenerBungee implements Listener {
                         }
                         if (!arena.addPlayer(p, true)) {
                             p.kickPlayer(Language.getMsg(p, Messages.ARENA_JOIN_DENIED_NO_PROXY));
+                        } else {
+                            JoinVisibility.synchronize(p);
                         }
                     }
                     break;
@@ -241,6 +239,7 @@ public class JoinListenerBungee implements Listener {
                         }
                     }
                     arena.addSpectator(p, false, spectatorTarget);
+                    JoinVisibility.synchronize(p);
                     break;
                 default:
                     throw new IllegalStateException("Unhandled game status!");

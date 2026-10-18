@@ -23,7 +23,9 @@ public class FireballListenerTest {
                 explosion, new Vector(-2, 64, 0), 1.25, 0.8);
 
         assertTrue(east.getX() > 0);
+        assertEquals(1.25D, east.getX(), 1.0E-9D);
         assertTrue(west.getX() < 0);
+        assertEquals(-1.25D, west.getX(), 1.0E-9D);
         assertTrue(east.getY() > 0);
         assertEquals(new Vector(0, 65, 0), explosion);
     }

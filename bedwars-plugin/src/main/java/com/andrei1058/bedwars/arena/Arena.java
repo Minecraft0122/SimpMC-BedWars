@@ -127,6 +127,7 @@ public class Arena implements IArena {
     private World world;
     private String group = "Default", arenaName, worldName;
     private List<ITeam> teams = new ArrayList<>();
+    private final Map<String, Integer> teamSizesAtGameStart = new HashMap<>();
     private LinkedList<org.bukkit.util.Vector> placed = new LinkedList<>();
     private List<String> nextEvents = new ArrayList<>();
     private List<Region> regionsList = new ArrayList<>();
@@ -1379,6 +1380,20 @@ public class Arena implements IArena {
         return teams;
     }
 
+    /** Capture team sizes once so chat routing cannot change after a disconnect. */
+    public void captureTeamSizesAtGameStart() {
+        teamSizesAtGameStart.clear();
+        for (ITeam team : teams) {
+            teamSizesAtGameStart.put(team.getName(), team.getMembers().size());
+        }
+    }
+
+    public int getTeamSizeAtGameStart(ITeam team) {
+        if (team == null) return 0;
+        Integer size = teamSizesAtGameStart.get(team.getName());
+        return size == null ? team.getMembers().size() : size;
+    }
+
     @Override
     public ArenaConfig getConfig() {
         return cm;
@@ -2467,6 +2482,7 @@ public class Arena implements IArena {
         }
         playerLocation.entrySet().removeIf(e -> Objects.requireNonNull(e.getValue().getWorld()).getName().equalsIgnoreCase(worldName));
         teams = null;
+        teamSizesAtGameStart.clear();
         placed = null;
         nextEvents = null;
         regionsList = null;

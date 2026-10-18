@@ -27,6 +27,7 @@ import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
@@ -43,9 +44,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public final class SelfRescuePlatform implements Listener, Runnable {
+public final class SelfRescuePlatform implements Listener {
     public static final String ITEM_DATA = "SELF_RESCUE_PLATFORM";
     private static final long LIFETIME_TICKS = 16L * 20L;
+    private static final long COOLDOWN_MILLIS = 5_000L;
     private static final int[][] PATTERN = {
             {0, 1, 0, 1, 0},
             {1, 1, 1, 1, 1},
@@ -60,6 +62,7 @@ public final class SelfRescuePlatform implements Listener, Runnable {
     private final Map<Long, List<String>> platforms = new HashMap<>();
     private final Map<Long, BukkitTask> platformTasks = new HashMap<>();
     private final Map<UUID, RescueArea> rescueAreas = new HashMap<>();
+    private final Map<UUID, Long> cooldowns = new HashMap<>();
     private long nextPlatformId;
 
     public SelfRescuePlatform() {
@@ -75,11 +78,14 @@ public final class SelfRescuePlatform implements Listener, Runnable {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onUse(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (event.getAction() != Action.LEFT_CLICK_AIR && event.getAction() != Action.LEFT_CLICK_BLOCK
+                && event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         Player player = event.getPlayer();
         IArena arena = activeArena(player);
         if (arena == null || !isItem(event.getItem())) return;
         event.setCancelled(true);
+        UUID uuid = player.getUniqueId();
+        if (isCoolingDown(uuid)) return;
 
         Location center = player.getLocation();
         int targetY = center.getBlockY() - 3;
@@ -140,15 +146,18 @@ public final class SelfRescuePlatform implements Listener, Runnable {
         UUID uuid = event.getPlayer().getUniqueId();
         automaticDeployments.remove(uuid);
         rescueAreas.remove(uuid);
+        cooldowns.remove(uuid);
     }
 
-    @Override
-    public void run() {
-        for (IArena arena : new ArrayList<>(Arena.getArenas())) {
-            if (arena == null || arena.getStatus() != GameState.playing) continue;
-            for (Player player : new ArrayList<>(arena.getPlayers())) {
-                tryAutomaticDeploy(player, player.getLocation());
-            }
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void protectLanding(EntityDamageEvent event) {
+        if (event.getCause() != EntityDamageEvent.DamageCause.FALL || !(event.getEntity() instanceof Player)) return;
+        Player player = (Player) event.getEntity();
+        IArena arena = activeArena(player);
+        RescueArea area = rescueAreas.get(player.getUniqueId());
+        if (arena != null && isInsideActiveArea(area, arena, player.getLocation())) {
+            player.setFallDistance(0.0F);
+            event.setCancelled(true);
         }
     }
 
@@ -168,8 +177,8 @@ public final class SelfRescuePlatform implements Listener, Runnable {
         for (Language language : Language.getLanguages()) {
             if (language.exists(namePath)) continue;
             Language.addContentMessages(language.getYml(), "self-rescue-platform", ConfigPath.SHOP_PATH_CATEGORY_UTILITY,
-                    "{color}Self-Rescue Platform", Arrays.asList("&7Cost: {cost} {currency}", "",
-                            "&7Deploys a temporary slime platform", "&7to save you from the void.", "",
+                    "{color}自救平台", Arrays.asList("&7花费：{cost} {currency}", "",
+                            "&7生成临时史莱姆平台", "&7并保护救援落地。", "",
                             "{quick_buy}", "{buy_status}"));
             language.getYml().options().copyDefaults(true);
             language.save();
@@ -196,7 +205,7 @@ public final class SelfRescuePlatform implements Listener, Runnable {
 
         // Custom arenas may kill players above the fixed rescue trigger. Let a player who can
         // still be rescued reach that trigger; the normal void kill resumes if deployment fails.
-        return location.getY() > automaticTriggerY() && hasItem(player);
+        return location.getY() > automaticTriggerY() && hasItem(player) && !isCoolingDown(player.getUniqueId());
     }
 
     private void tryAutomaticDeploy(Player player, Location location) {
@@ -219,6 +228,7 @@ public final class SelfRescuePlatform implements Listener, Runnable {
 
         int targetY = automaticPlatformY();
         if (location.getY() < targetY - 3) return;
+        if (isCoolingDown(uuid)) return;
         if (!canDeploy(location, targetY) || !consume(player)) return;
         automaticDeployments.add(uuid);
         deploy(arena, player, location, targetY, true);
@@ -305,6 +315,7 @@ public final class SelfRescuePlatform implements Listener, Runnable {
         if (placed.isEmpty()) return;
 
         platforms.put(platformId, placed);
+        cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
         rescueAreas.put(player.getUniqueId(), new RescueArea(platformId, arena, centerX, centerZ, y,
                 blocksAutomaticDeployment));
         platformTasks.put(platformId, Bukkit.getScheduler().runTaskLater(BedWars.plugin,
@@ -351,6 +362,7 @@ public final class SelfRescuePlatform implements Listener, Runnable {
             for (Player player : new ArrayList<>(arena.getPlayers())) affectedPlayers.add(player.getUniqueId());
         }
         automaticDeployments.removeAll(affectedPlayers);
+        for (UUID uuid : affectedPlayers) cooldowns.remove(uuid);
     }
 
     private void discardWorld(String worldName, boolean changeBlocks) {
@@ -375,6 +387,14 @@ public final class SelfRescuePlatform implements Listener, Runnable {
 
     private boolean isAir(Block block) {
         return block.getType() == Material.AIR;
+    }
+
+    private boolean isCoolingDown(UUID uuid) {
+        Long started = cooldowns.get(uuid);
+        if (started == null) return false;
+        if (System.currentTimeMillis() - started < COOLDOWN_MILLIS) return true;
+        cooldowns.remove(uuid);
+        return false;
     }
 
     private boolean isValidY(World world, int y) {

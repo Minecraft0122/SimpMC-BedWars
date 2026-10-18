@@ -147,6 +147,10 @@ public class OreGenerator implements IGenerator {
         if (arena.getStatus() != GameState.playing){
             return;
         }
+        if (bwt != null && bwt.getMembers().isEmpty() && bwt.isBedDestroyed()
+                && arena.getConfig().getBoolean(ConfigPath.ARENA_DISABLE_GENERATOR_FOR_EMPTY_TEAMS)) {
+            return;
+        }
 
         if (lastSpawn == 0) {
             lastSpawn = delay;

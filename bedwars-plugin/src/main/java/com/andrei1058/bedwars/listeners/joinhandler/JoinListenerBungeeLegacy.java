@@ -126,6 +126,7 @@ public class JoinListenerBungeeLegacy implements Listener {
             if (arena.getStatus() == GameState.waiting || arena.getStatus() == GameState.starting) {
                 if (arena.addPlayer(p, false)) {
                     Sounds.playSound("join-allowed", p);
+                    JoinVisibility.synchronize(p);
                 } else {
                     p.kickPlayer(getMsg(p, Messages.COMMAND_JOIN_DENIED_IS_FULL));
                 }
@@ -134,6 +135,7 @@ public class JoinListenerBungeeLegacy implements Listener {
                 ReJoin reJoin = ReJoin.getPlayer(p);
                 if (reJoin != null) {
                     if (reJoin.canReJoin() && reJoin.reJoin(p)) {
+                        JoinVisibility.synchronize(p);
                         return;
                     } else {
                         p.sendMessage(getMsg(p, Messages.REJOIN_DENIED));
@@ -144,6 +146,7 @@ public class JoinListenerBungeeLegacy implements Listener {
                 // Add spectator
                 if (arena.addSpectator(p, false, null)) {
                     Sounds.playSound("spectate-allowed", p);
+                    JoinVisibility.synchronize(p);
                 } else {
                     p.kickPlayer(getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_DENIED_MSG));
                 }

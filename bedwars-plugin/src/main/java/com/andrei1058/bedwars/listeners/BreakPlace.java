@@ -73,10 +73,7 @@ import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
 public class BreakPlace implements Listener {
 
-    static final long SHEARS_BREAK_COOLDOWN_MILLIS = 1000L;
-
     private static final List<Player> buildSession = new ArrayList<>();
-    private final Map<UUID, Long> lastShearsBreakAt = new HashMap<>();
     private final boolean allowFireBreak;
     private final BlastProtectionUtil blastProtection;
 
@@ -234,51 +231,6 @@ public class BreakPlace implements Listener {
         IArena a = Arena.getArenaByPlayer(event.getPlayer());
         if (a != null) {
             a.removePlacedBlock(event.getBlock());
-        }
-    }
-
-    /**
-     * Limit wool breaks to roughly one successful block per second while
-     * leaving all protection decisions to the normal BlockBreakEvent handler.
-     */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onShearsBlockDamage(@NotNull BlockDamageEvent event) {
-        Player player = event.getPlayer();
-        IArena arena = Arena.getArenaByPlayer(player);
-        if (arena == null || arena.getStatus() != GameState.playing
-                || !arena.isPlayer(player) || arena.isSpectator(player)
-                || arena.getRespawnSessions().containsKey(player)) {
-            return;
-        }
-
-        if (!isWool(event.getBlock().getType())) {
-            return;
-        }
-
-        org.bukkit.inventory.ItemStack heldItem = nms.getItemInHand(player);
-        if (heldItem != null && heldItem.getType() == Material.SHEARS) {
-            if (!isShearsBreakReady(lastShearsBreakAt.get(player.getUniqueId()), System.currentTimeMillis())) {
-                event.setCancelled(true);
-                return;
-            }
-            event.setInstaBreak(true);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onShearsBlockBreak(@NotNull BlockBreakEvent event) {
-        Player player = event.getPlayer();
-        IArena arena = Arena.getArenaByPlayer(player);
-        if (arena == null || arena.getStatus() != GameState.playing
-                || !arena.isPlayer(player) || arena.isSpectator(player)
-                || arena.getRespawnSessions().containsKey(player)
-                || !isWool(event.getBlock().getType())) {
-            return;
-        }
-
-        org.bukkit.inventory.ItemStack heldItem = nms.getItemInHand(player);
-        if (heldItem != null && heldItem.getType() == Material.SHEARS) {
-            lastShearsBreakAt.put(player.getUniqueId(), System.currentTimeMillis());
         }
     }
 
@@ -541,6 +493,61 @@ public class BreakPlace implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBucketEmptyTrack(PlayerBucketEmptyEvent e) {
+        Player player = e.getPlayer();
+        IArena arena = Arena.getArenaByPlayer(player);
+        if (arena == null || arena.getStatus() != GameState.playing) return;
+        Block source = e.getBlockClicked().getRelative(e.getBlockFace());
+        Material fluid = e.getBucket() == Material.WATER_BUCKET ? Material.WATER
+                : e.getBucket() == Material.LAVA_BUCKET ? Material.LAVA : null;
+        if (fluid == null) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!e.isCancelled() && arena.getStatus() == GameState.playing
+                    && isFluid(source.getType(), fluid) && !arena.isBlockPlaced(source)) {
+                arena.addPlacedBlock(source);
+            }
+        });
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onFluidFlow(BlockFromToEvent e) {
+        IArena arena = Arena.getArenaByIdentifier(e.getBlock().getWorld().getName());
+        if (arena == null || arena.getStatus() != GameState.playing) return;
+        Block source = e.getBlock();
+        Block destination = e.getToBlock();
+        boolean sourcePlaced = arena.isBlockPlaced(source);
+        boolean destinationPlaced = arena.isBlockPlaced(destination);
+        if (shouldCancelFluidFlow(sourcePlaced, destinationPlaced, destination.getType() == Material.AIR,
+                arena.isAllowMapBreak())) {
+            e.setCancelled(true);
+            return;
+        }
+        if (sourcePlaced) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (!e.isCancelled() && arena.getStatus() == GameState.playing
+                        && isFluid(destination.getType(), source.getType())) {
+                    arena.addPlacedBlock(destination);
+                }
+            });
+        }
+    }
+
+    static boolean shouldCancelFluidFlow(boolean sourcePlaced, boolean destinationPlaced,
+                                         boolean destinationAir, boolean allowMapBreak) {
+        return !allowMapBreak && !destinationPlaced && !destinationAir;
+    }
+
+    private static boolean isFluid(Material actual, Material expected) {
+        if (expected == Material.WATER || expected == Material.STATIONARY_WATER) {
+            return actual == Material.WATER || actual == Material.STATIONARY_WATER;
+        }
+        if (expected == Material.LAVA || expected == Material.STATIONARY_LAVA) {
+            return actual == Material.LAVA || actual == Material.STATIONARY_LAVA;
+        }
+        return false;
+    }
+
     @EventHandler
     public void onBlow(@NotNull EntityExplodeEvent e) {
         if (e.isCancelled()) return;
@@ -678,16 +685,6 @@ public class BreakPlace implements Listener {
     @EventHandler
     public void onQuit(@NotNull PlayerQuitEvent event) {
         removeBuildSession(event.getPlayer());
-        lastShearsBreakAt.remove(event.getPlayer().getUniqueId());
-    }
-
-    private static boolean isWool(@NotNull Material material) {
-        String name = material.name();
-        return "WOOL".equals(name) || name.endsWith("_WOOL");
-    }
-
-    static boolean isShearsBreakReady(Long lastBreakAt, long now) {
-        return lastBreakAt == null || now - lastBreakAt >= SHEARS_BREAK_COOLDOWN_MILLIS;
     }
 
     static boolean shouldProtectFireballBlock(boolean fireball, Material material) {

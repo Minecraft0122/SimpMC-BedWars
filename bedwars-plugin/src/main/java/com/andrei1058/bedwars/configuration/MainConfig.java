@@ -44,6 +44,10 @@ public class MainConfig extends ConfigManager {
         super(plugin, name, BedWars.plugin.getDataFolder().getPath());
 
         YamlConfiguration yml = getYml();
+        boolean hadFireballHorizontal = yml.contains(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL);
+        double oldFireballHorizontal = yml.getDouble(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, Double.NaN);
+        boolean hadTntEnemyDamage = yml.contains(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS);
+        double oldTntEnemyDamage = yml.getDouble(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, Double.NaN);
 
         yml.options().header(plugin.getDescription().getName() + " by andrei1058. https://www.spigotmc.org/members/39904/\n" +
                 "Documentation here: https://gitlab.com/andrei1058/BedWars1058/wikis/home\n");
@@ -120,7 +124,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_Y_REDUCTION, 2);
         yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_SELF, 1);
         yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_TEAMMATES, 5);
-        yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, 10);
+        yml.addDefault(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, 6.0);
 
         // tnd block blast resistance
         // on 1.8.8 it has to be around 69, on 1.20 and 1.18 it works fine with 12 (tested)
@@ -136,7 +140,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_EXPLOSION_SIZE, 3);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_SPEED_MULTIPLIER, 10);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_MAKE_FIRE, false);
-        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.0);
+        yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.35);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_VERTICAL, 0.65);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_COOLDOWN, 0.5);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_SELF, 2.0);
@@ -220,6 +224,12 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_GAME_END_SB_TOP_STATISTIC, DefaultStatistics.KILLS.toString());
         yml.addDefault(ConfigPath.GENERAL_GAME_END_SB_TOP_HIDE_MISSING, true);
         yml.options().copyDefaults(true);
+        if (hadFireballHorizontal && Double.compare(oldFireballHorizontal, 1.0D) == 0) {
+            yml.set(ConfigPath.GENERAL_FIREBALL_KNOCKBACK_HORIZONTAL, 1.35D);
+        }
+        if (hadTntEnemyDamage && Double.compare(oldTntEnemyDamage, 10.0D) == 0) {
+            yml.set(ConfigPath.GENERAL_TNT_JUMP_DAMAGE_OTHERS, 6.0D);
+        }
         save();
 
         //remove old config
