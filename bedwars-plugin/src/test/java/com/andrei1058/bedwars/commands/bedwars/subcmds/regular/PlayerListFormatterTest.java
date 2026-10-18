@@ -33,9 +33,9 @@ class PlayerListFormatterTest {
                 new PlayerListFormatter.Group("MapA", List.of("Cy")));
 
         assertEquals(List.of(
-                "&6&l在线玩家 &8» &f当前有 3 位玩家在线，可容纳最大在线人数为 100 位玩家。",
-                "&a&l大厅 &8» &fAri, Bo",
-                "&b&l竞技场 &8[&fMapA&8] &8» &fCy"),
+                "&6在线玩家 &8» &f当前有 3 位玩家在线，可容纳最大在线人数为 100 位玩家。",
+                "&a大厅 &8» &fAri, Bo",
+                "&b竞技场 &8[&fMapA&8] &8» &fCy"),
                 PlayerListFormatter.format(groups, 3, 100, MatchmakingMessages.defaults(true)));
     }
 
