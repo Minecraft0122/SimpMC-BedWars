@@ -610,15 +610,6 @@ public class BreakPlace implements Listener {
                     }
                 }
             }
-            //if (bed) return;
-            /*Object[] players = e.getBlock().getWorld().getNearbyEntities(e.getBlock().getLocation(), 1, 1, 1).stream().filter(ee -> ee.getType() == EntityType.PLAYER).toArray();
-            for (Object o : players) {
-                Player p = (Player) o;
-                if (a.isSpectator(p)) {
-                    if (e.getBlock().getType() == Material.AIR) e.setBuildable(true);
-                    return;
-                }
-            }**/
         }
     }
 

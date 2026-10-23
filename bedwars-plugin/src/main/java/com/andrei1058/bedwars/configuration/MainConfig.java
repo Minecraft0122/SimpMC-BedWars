@@ -46,7 +46,7 @@ import java.util.*;
 
 public class MainConfig extends ConfigManager {
 
-    private static final int CONFIG_VERSION = 36;
+    static final int CONFIG_VERSION = 36;
     private static final int LOBBY_LEAVE_BROKEN_FROM_VERSION = 15;
     private static final int LOBBY_LEAVE_RESTORED_IN_VERSION = 18;
     private static final String LOBBY_LEAVE_PATH = ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH + ".leave";
@@ -451,7 +451,6 @@ public class MainConfig extends ConfigManager {
         setComments(ConfigPath.GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH,
                 "多竞技场大厅固定物品。默认提供历史战绩、竞技场选择器和“回到主大厅”红床。",
                 "已有节点升级时只补齐缺失字段；删除整个节点后不会被后续架构升级重新创建。",
-                "4.0.8 会从架构 15 删除前的最后快照，或架构 15–17 中重新配置过的快照，一次性恢复被误删的自定义 leave 节点。",
                 "leave 节点会写入代理大厅目标标记；等待区和旁观区的 leave 节点则固定返回本服大厅。");
         setComments(ConfigPath.GENERAL_CONFIGURATION_ARENA_SELECTOR_SETTINGS_SIZE,
                 "竞技场选择菜单设置；默认 54 格、每页显示 45 个竞技场，竞技场更多时自动分页。",
@@ -673,6 +672,7 @@ public class MainConfig extends ConfigManager {
     }
 
     static LegacyLobbyItemHistory findLegacyLobbyItemHistory(File dataFolder, int storedConfigVersion) {
+        if (storedConfigVersion <= 0 || storedConfigVersion >= CONFIG_VERSION) return null;
         File[] files = dataFolder.listFiles((directory, name) ->
                 name.startsWith("config.yml.v") && name.endsWith(".bak"));
         if (files == null) return null;

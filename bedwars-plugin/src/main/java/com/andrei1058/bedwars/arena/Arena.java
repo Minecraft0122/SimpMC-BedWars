@@ -477,9 +477,6 @@ public class Arena implements IArena {
                     if (mem == p) continue;
                     IArena a = Arena.getArenaByPlayer(mem);
                     if (a != null) {
-                        /*if (a.isPlayer(mem)) {
-                            a.removePlayer(mem, false);
-                        } else */
                         if (a.isSpectator(mem)) {
                             a.removeSpectator(mem, false);
                         }
@@ -1159,7 +1156,6 @@ public class Arena implements IArena {
         /* save player inventory etc */
         if (BedWars.getServerType() != ServerType.BUNGEE) {
             // no need to backup inventory because it's empty
-            //new PlayerGoods(p, true, true);
             playerLocation.put(p, p.getLocation());
         }
         TeleportManager.teleportC(p, getSpectatorLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);

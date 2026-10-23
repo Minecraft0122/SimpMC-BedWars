@@ -38,9 +38,6 @@ public class PlayerEffectAction implements UpgradeAction {
         this.type = type;
         this.duration = duration;
         if (duration < 0 ) this.duration *= -1;
-        /*if (type == ApplyType.ENEMY_BASE_ENTER && duration <= 0){
-            this.duration = 20;
-        }*/
         if (duration == 0){
             this.duration = Integer.MAX_VALUE;
         } else {
@@ -55,9 +52,7 @@ public class PlayerEffectAction implements UpgradeAction {
             bwt.addBaseEffect(potionEffectType, amplifier, duration);
         } else if (type == ApplyType.TEAM){
             bwt.addTeamEffect(potionEffectType, amplifier, duration);
-        }/* else if (type == ApplyType.ENEMY_BASE_ENTER){
-            bwt.addEnemyBaseEnterEffect(potionEffectType, amplifier, duration);
-        }*/
+        }
     }
 
     public enum ApplyType {

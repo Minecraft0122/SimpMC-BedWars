@@ -114,7 +114,6 @@ public class CategoryContent implements ICategoryContent {
         ContentTier ctt;
         for (String s : yml.getConfigurationSection(path + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS).getKeys(false)) {
             ctt = new ContentTier(path + "." + ConfigPath.SHOP_CATEGORY_CONTENT_CONTENT_TIERS + "." + s, s, path, yml);
-            /*if (ctt.isLoaded())*/
             contentTiers.add(ctt);
         }
 

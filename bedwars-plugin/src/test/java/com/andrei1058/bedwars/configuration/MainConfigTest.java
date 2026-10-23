@@ -563,6 +563,14 @@ class MainConfigTest {
     }
 
     @Test
+    void skipsLegacyBackupSearchForCurrentOrNewerConfiguration(@TempDir Path directory) throws IOException {
+        saveLobbyReturnBackup(directory, 14, "ENDER_PEARL", "server old-hub");
+
+        assertNull(MainConfig.findLegacyLobbyItemHistory(directory.toFile(), MainConfig.CONFIG_VERSION));
+        assertNull(MainConfig.findLegacyLobbyItemHistory(directory.toFile(), MainConfig.CONFIG_VERSION + 1));
+    }
+
+    @Test
     void preDeletionTombstoneBlocksBrokenWindowDefaultRepair(@TempDir Path directory) throws IOException {
         new YamlConfiguration().save(directory.resolve("config.yml.v14.bak").toFile());
         MainConfig.LegacyLobbyItemHistory history =
