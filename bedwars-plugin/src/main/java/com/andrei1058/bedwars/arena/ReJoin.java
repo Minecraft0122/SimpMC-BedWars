@@ -101,9 +101,13 @@ public class ReJoin {
      */
     public static boolean exists(@NotNull Player pl) {
         BedWars.debug("ReJoin exists check " + pl.getUniqueId());
+        return hasPendingForPlayer(pl.getUniqueId());
+    }
+
+    static boolean hasPendingForPlayer(@NotNull UUID playerId) {
         for (ReJoin rj : getReJoinList()) {
             BedWars.debug("ReJoin exists check list scroll: " + rj.getPl().toString());
-            if (rj.getPl().equals(pl.getUniqueId())) {
+            if (rj.getPl().equals(playerId)) {
                 return true;
             }
         }
@@ -263,6 +267,7 @@ public class ReJoin {
         boolean eliminateTeam = bwt != null && ArenaAbandonPolicy.eliminatesTeam(
                 bwt.getMembers().size(), hasPendingForTeam(bwt, this));
         destroy(eliminateTeam);
+        PlayerGoods.discard(player);
         if (arena != null && arena.getStatus() == GameState.playing
                 && arena.getPlayers().isEmpty() && !hasPendingForArena(arena)) {
             arena.changeStatus(GameState.restarting);

@@ -434,7 +434,9 @@ public class ArenaGUI {
     }
 
     private static boolean preventCalledTwice(@NotNull Player player) {
-        return antiCalledTwice.getOrDefault(player.getUniqueId(), 0L) > System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        antiCalledTwice.entrySet().removeIf(entry -> entry.getValue() <= now);
+        return antiCalledTwice.getOrDefault(player.getUniqueId(), 0L) > now;
     }
 
     private static void updateCalledTwice(@NotNull Player player) {

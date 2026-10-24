@@ -32,6 +32,7 @@ import com.andrei1058.bedwars.configuration.Permissions;
 import com.andrei1058.bedwars.maprestore.internal.WorldNameValidator;
 import net.kyori.adventure.text.event.ClickEvent;
 import org.apache.commons.io.FileUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -40,14 +41,17 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 import static com.andrei1058.bedwars.BedWars.plugin;
 import static com.andrei1058.bedwars.arena.Arena.getArenaByName;
 
 public class DelArena extends SubCommand {
 
-    private static HashMap<Player, Long> delArenaConfirm = new HashMap<>();
+    private static final long CONFIRMATION_WINDOW_MILLIS = 2000L;
+    private static final Map<UUID, Long> delArenaConfirm = new HashMap<>();
 
     public DelArena(ParentCommand parent, String name) {
         super(parent, name);
@@ -84,20 +88,27 @@ public class DelArena extends SubCommand {
             AdventureText.send(p, "§c▪ §7该竞技场不存在！");
             return true;
         }
-        if (delArenaConfirm.containsKey(p)) {
-            if (System.currentTimeMillis() - 2000 <= delArenaConfirm.get(p)) {
-                BedWars.getAPI().getRestoreAdapter().deleteWorld(args[0]);
-                FileUtils.deleteQuietly(ac);
-                AdventureText.send(p, "§c▪ §7已删除 " + args[0] + "！");
-                return true;
-            }
-            AdventureText.send(p, "§6 ▪ §7请再次输入命令确认删除。");
-            delArenaConfirm.replace(p, System.currentTimeMillis());
+        if (consumeConfirmation(delArenaConfirm, p.getUniqueId(), System.currentTimeMillis())) {
+            BedWars.getAPI().getRestoreAdapter().deleteWorld(args[0]);
+            FileUtils.deleteQuietly(ac);
+            AdventureText.send(p, "§c▪ §7已删除 " + args[0] + "！");
+            return true;
         } else {
+            UUID playerId = p.getUniqueId();
+            long confirmedAt = delArenaConfirm.get(playerId);
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    () -> delArenaConfirm.remove(playerId, confirmedAt), 40L);
             AdventureText.send(p, "§6 ▪ §7请再次输入命令确认删除。");
-            delArenaConfirm.put(p, System.currentTimeMillis());
         }
         return true;
+    }
+
+    static boolean consumeConfirmation(Map<UUID, Long> confirmations, UUID playerId, long now) {
+        confirmations.entrySet().removeIf(entry -> now - entry.getValue() > CONFIRMATION_WINDOW_MILLIS);
+        Long previous = confirmations.remove(playerId);
+        if (previous != null && now - previous <= CONFIRMATION_WINDOW_MILLIS) return true;
+        confirmations.put(playerId, now);
+        return false;
     }
 
     @Override

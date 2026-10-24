@@ -130,6 +130,11 @@ class PlayerGoods {
         return playerGoods.containsKey(p.getUniqueId());
     }
 
+    static void discard(UUID playerId) {
+        PlayerGoods goods = playerGoods.remove(playerId);
+        if (goods != null) goods.clearSnapshot();
+    }
+
     /**
      * get a player vault
      */
@@ -142,8 +147,11 @@ class PlayerGoods {
      */
     void restore() {
         Player player = Bukkit.getPlayer(uuid);
-        if (player == null) return;
-        playerGoods.remove(player.getUniqueId());
+        if (player == null) {
+            if (!ReJoin.hasPendingForPlayer(uuid)) discard(uuid);
+            return;
+        }
+        playerGoods.remove(uuid, this);
 
 
         for (PotionEffect pf : player.getActivePotionEffects()) {
@@ -190,11 +198,16 @@ class PlayerGoods {
         if (!displayName.equals(player.displayName())) {
             player.displayName(displayName);
         }
+        clearSnapshot();
+    }
+
+    private void clearSnapshot() {
         uuid = null;
         items = null;
         potions = null;
         armor = null;
         enderchest = null;
+        displayName = null;
     }
 
 }
